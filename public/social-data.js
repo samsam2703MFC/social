@@ -378,7 +378,7 @@
     // le serveur, lui, refuse de créer une pub sans la vraie position (ou l'adresse géocodée).
     META.geo = {}; SHOPS.forEach(s => { META.geo[s.id] = (m.geo && m.geo[s.id]) || [50.8466, 4.3528]; });
     cache = { posts: L.posts || [], ads: L.ads || [], campaigns: L.campaigns || [], shops: L.shops || [], activity: L.activity || [], leadforms: L.leadforms || [],
-      groups: L.groups || [], templates: L.templates || [], leads: L.leads || [], params: L.params || {}, meta: { version: META.version, dsa: META.dsa, ids: META.ids, networkAccount: META.networkAccount, lastCheck: m.lastCheck } };
+      groups: L.groups || [], templates: L.templates || [], leads: L.leads || [], params: L.params || {}, tfb: L.tfb || {}, tfbAudit: L.tfbAudit || {}, brand: L.brand || null, meta: { version: META.version, dsa: META.dsa, ids: META.ids, networkAccount: META.networkAccount, lastCheck: m.lastCheck } };
     base = {}; KINDS.forEach(k => { base[k] = snap(cache[k]); }); base.shops = snap(cache.shops); base.meta = JSON.stringify(cache.meta);
     known = new WeakSet(); cache.activity.forEach(a => known.add(a));
     if (window.SA) Object.assign(window.SA, { TODAY, MARGIN, user: L.user, live: true, metaStatus: L.metaStatus });

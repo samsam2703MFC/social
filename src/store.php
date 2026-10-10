@@ -166,6 +166,7 @@ function socStateGet(): array
     $shops = socShops();
     $ids = []; $geo = [];
     foreach ($shops as $s) { $ids[$s['id']] = $s['ids']; if ($s['geo']) { $geo[$s['id']] = $s['geo']; } }
+    $ids['marque'] = socBrand()['ids'];
     $checked = array_filter(array_column($shops, 'checkedAt'));
     $d = socDefaults();
     return [
@@ -174,13 +175,16 @@ function socStateGet(): array
         'boUrl' => (string) (socSetting('url_bo') ?? '/consulant_bo/'),
         'metaStatus' => Meta::statut(),
         'shops' => $shops,
+        'brand' => socBrand(),
+        'tfb' => Tfb::statut(),
+        'tfbAudit' => ['resume' => socSetting('tfb_audit')],
         'posts' => socItems('posts'), 'ads' => socItems('ads'), 'campaigns' => socItems('campaigns'),
         'leadforms' => socItems('leadforms'), 'groups' => socItems('groups'), 'templates' => socItems('templates'),
         'leads' => socLeads(),
         'activity' => array_map(static fn ($r) => ['at' => substr((string) $r['at'], 0, 16), 'who' => $r['who'], 'what' => $r['what'], 'detail' => $r['detail']],
             Db::rows('SELECT le AS at, qui AS who, quoi AS what, detail FROM social_activite ORDER BY le DESC, id DESC LIMIT 400')),
         'meta' => ['version' => Meta::config()['version'], 'dsa' => (array) (socSetting('meta_dsa') ?? ($d['dsa'] ?? [])),
-            'networkAccount' => (string) (socSetting('meta_compte_reseau') ?? ''), 'ids' => $ids, 'geo' => $geo,
+            'networkAccount' => socBrand()['ids']['ad_account_id'], 'ids' => $ids, 'geo' => $geo,
             'lastCheck' => $checked ? max($checked) : null],
         'results' => socResults(),
         'catalogue' => socCatalogue(),
@@ -212,7 +216,7 @@ function socStateSave(array $b): array
         if (isset($m['networkAccount'])) { socSettingPut('meta_compte_reseau', preg_replace('/[^\w]/', '', trim((string) $m['networkAccount']))); }
         if (isset($m['dsa']) && is_array($m['dsa'])) { socSettingPut('meta_dsa', ['beneficiary' => (string) ($m['dsa']['beneficiary'] ?? ''), 'payor' => (string) ($m['dsa']['payor'] ?? '')]); }
         if (isset($m['ids']) && is_array($m['ids'])) {
-            $shops = []; foreach (socShops() as $s) { $shops[$s['id']] = $s; }
+            $shops = ['marque' => socBrand()]; foreach (socShops() as $s) { $shops[$s['id']] = $s; }
             foreach ($m['ids'] as $sid => $ids) {
                 if (!isset($shops[$sid]) || !is_array($ids)) { continue; }
                 $n = $shops[$sid]['ids'];

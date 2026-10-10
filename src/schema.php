@@ -96,6 +96,7 @@ function socInstall(): void
         . 'ca_reference DECIMAL(12,2) NULL, data LONGTEXT NOT NULL, synchro_le DATETIME NOT NULL, PRIMARY KEY (campagne_id, shop_id))' . $t);
 
     socParamsInit();
+    socTfbInit();
 }
 
 /**

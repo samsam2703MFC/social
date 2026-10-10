@@ -125,7 +125,7 @@ function socAdCreate(array $ad): array
     $form = $isLeads && !empty($w['leadForm']) ? socLeadformMetaIds((string) $w['leadForm']) : [];
 
     // Les unités : [compte, [boutiques]] — une par boutique, ou une seule réseau.
-    $unites = $reseau ? [[socActId((string) (socSetting('meta_compte_reseau') ?? '')), $cibles]]
+    $unites = $reseau ? [[socActId(socBrand()['ids']['ad_account_id']), $cibles]]
         : array_map(static fn ($id) => [socActId((string) $shops[$id]['ids']['ad_account_id']), [$id]], $cibles);
 
     foreach ($unites as [$act, $ids]) {

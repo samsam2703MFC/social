@@ -11,12 +11,14 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/schema.php';
 require_once __DIR__ . '/meta.php';
+require_once __DIR__ . '/tfb.php';
 require_once __DIR__ . '/shops.php';
 require_once __DIR__ . '/store.php';
 require_once __DIR__ . '/publish.php';
 require_once __DIR__ . '/ads.php';
 require_once __DIR__ . '/leads.php';
 require_once __DIR__ . '/results.php';
+require_once __DIR__ . '/audit.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -77,6 +79,30 @@ function socRoute(string $method, string $path): array
         }
         if ($faits) { socLog(socUser(), 'Paramètres', 'Modifiés : ' . implode(', ', $faits)); }
         return [200, ['ok' => true, 'params' => socParams()]];
+    }
+    if ($method === 'GET' && $path === '/audit/api') { return [200, socAuditGet()]; }
+    if ($method === 'POST' && $path === '/audit/api') {
+        // Plusieurs minutes possibles : l'audit continue si le navigateur se ferme.
+        ignore_user_abort(true);
+        return [200, ['resume' => socAuditRun((int) (body()['max'] ?? 0))] + socAuditGet()];
+    }
+    if ($method === 'GET' && $path === '/shops/api') { return [200, ['shops' => socApiShops(isset($_GET['forcer'])), 'tfb' => Tfb::statut()]]; }
+    if ($method === 'POST' && $path === '/parametres/tfb') {
+        // Le compte de l'API TFBuddy, en base. Un mot de passe vide ne change rien.
+        $b = body(); $faits = [];
+        if (isset($b['base']) && preg_match('#^https://[\w.\-]+(/[\w.\-/]*)?$#', trim((string) $b['base']))) { socSettingPut('tfb_base', rtrim(trim((string) $b['base']), '/'), false); $faits[] = 'base'; }
+        foreach (['admin', 'consultant'] as $r) {
+            if (isset($b[$r . 'Phone'])) { socSettingPut('tfb_' . $r . '_phone', trim((string) $b[$r . 'Phone']), false); $faits[] = $r . ' (téléphone)'; }
+            if (trim((string) ($b[$r . 'Password'] ?? '')) !== '') { socSettingPut('tfb_' . $r . '_password', (string) $b[$r . 'Password'], true); $faits[] = $r . ' (mot de passe)'; }
+            Db::exec('DELETE FROM social_parametre WHERE cle = ?', ['tfb_jeton_' . $r]);
+        }
+        Tfb::reset();
+        $test = [];
+        foreach (['admin', 'consultant'] as $r) {
+            try { Tfb::jeton($r, true); $test[$r] = 'ok'; } catch (Throwable $e) { $test[$r] = $e->getMessage(); }
+        }
+        if ($faits) { socLog(socUser(), 'Connexion', 'API TFBuddy : ' . implode(', ', $faits)); }
+        return [200, ['ok' => true, 'test' => $test, 'tfb' => Tfb::statut()]];
     }
     if ($method === 'POST' && $path === '/connexions/test') {
         $sid = isset(body()['shop']) ? (string) body()['shop'] : null;

@@ -218,6 +218,56 @@
         <sc-if value="{{ logEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:28px;text-align:center;font-size:13px;color:#666666;">Aucune entrée pour ce filtre.</div></sc-if>
       </section>
     </sc-if>
+
+    <sc-if value="{{ isTfb }}" hint-placeholder-val="{{ false }}">
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Compte de l'API TFBuddy</span><span style="font-size:11px;color:#666666;">Source principale des données du module · stocké en base (social_parametre) · swagger : <span style="font-family:ui-monospace,monospace;">{{ tfbSwagger }}</span></span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+          <sc-for list="{{ tfbFields }}" as="k" hint-placeholder-count="5">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;"><span>{{ k.label }} <span style="font-size:11px;color:{{ k.stFg }};">{{ k.state }}</span></span>
+              <input type="{{ k.type }}" autocomplete="off" value="{{ k.value }}" onChange="{{ k.set }}" placeholder="{{ k.ph }}" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;"></label>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button onClick="{{ saveTfb }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Enregistrer et tester le compte</button>
+          <span style="font-size:12px;color:#444444;">{{ tfbTest }}</span>
+        </div>
+      </section>
+
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:0.5px solid rgba(34,34,34,0.10);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:13px;font-weight:500;">Boutiques de l'API (shop) · {{ apiShopsCount }}</span>
+          <button onClick="{{ reloadShops }}" style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;">Relire l'API</button>
+        </div>
+        <div style="display:grid;grid-template-columns:50px 1.2fr 1.6fr 110px 1.2fr 110px 1.3fr;gap:10px;padding:8px 16px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#666666;background:#FBF8F4;"><span>id</span><span>Boutique</span><span>Adresse</span><span>Horaires</span><span>Contact</span><span>TVA</span><span>Sources</span></div>
+        <sc-for list="{{ apiShops }}" as="b" hint-placeholder-count="5">
+          <div style="display:grid;grid-template-columns:50px 1.2fr 1.6fr 110px 1.2fr 110px 1.3fr;gap:10px;padding:9px 16px;border-top:0.5px solid rgba(34,34,34,0.06);font-size:12px;align-items:center;">
+            <span style="font-family:ui-monospace,monospace;">{{ b.id }}</span><span><b style="font-weight:500;">{{ b.name }}</b><br><span style="color:#666666;font-size:11px;">{{ b.fullName }}</span></span>
+            <span>{{ b.address }}</span><span>{{ b.hours }}</span><span style="font-size:11px;">{{ b.email }}<br>{{ b.phone }}</span><span style="font-size:11px;">{{ b.vat }}</span><span style="font-size:11px;color:#666666;">{{ b.sources }}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:0.5px solid rgba(34,34,34,0.10);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+          <span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:13px;font-weight:500;">Routes de l'API sur {{ tfbHost }} · fonctionnent / ne fonctionnent pas</span><span style="font-size:11px;color:#666666;">{{ auditSummary }}</span></span>
+          <button onClick="{{ runAudit }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">{{ auditLabel }}</button>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;align-items:center;">
+          <sc-for list="{{ auditFilters }}" as="f" hint-placeholder-count="5"><button onClick="{{ f.pick }}" style="border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};">{{ f.label }}</button></sc-for>
+          <input value="{{ auditQ }}" onChange="{{ setAuditQ }}" placeholder="Filtrer (chemin, tag)…" style="margin-left:auto;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 10px;width:220px;">
+        </div>
+        <sc-for list="{{ auditRows }}" as="r" hint-placeholder-count="10">
+          <div style="display:grid;grid-template-columns:96px minmax(0,2.2fr) 120px 70px 64px minmax(0,2fr);gap:10px;padding:8px 16px;border-top:0.5px solid rgba(34,34,34,0.06);font-size:12px;align-items:center;">
+            <span style="justify-self:start;font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ r.bg }};color:{{ r.fg }};">{{ r.label }}</span>
+            <span style="font-family:ui-monospace,monospace;font-size:11px;word-break:break-all;">GET {{ r.chemin }}<sc-if value="{{ r.used }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--font-ui);margin-left:6px;font-size:10px;border-radius:999px;padding:2px 6px;background:#EDE9F5;color:#3B3468;">utilisée · {{ r.utilise }}</span></sc-if></span>
+            <span style="font-size:11px;color:#666666;">{{ r.tag }}</span><span style="font-size:11px;">{{ r.http }}</span><span style="font-size:11px;color:#666666;">{{ r.ms }}</span>
+            <span style="font-size:11px;color:#444444;">{{ r.detail }}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ auditEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:28px;text-align:center;font-size:13px;color:#666666;">{{ auditEmptyText }}</div></sc-if>
+      </section>
+    </sc-if>
   </main>
 
   <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
@@ -227,7 +277,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { tab: 'conn', busy: {}, testing: false, logF: '', toast: '', tick: 0, keys: { systemToken: '', appSecret: '', verifyToken: '' }, publicUrl: null };
+  state = { tab: 'conn', busy: {}, testing: false, logF: '', toast: '', tick: 0, keys: { systemToken: '', appSecret: '', verifyToken: '' }, publicUrl: null, tfb: {}, tfbTest: '', audit: null, auditing: false, auditF: 'ko', auditQ: '' };
   componentDidMount() { const SA = window.SA; const t = SA && SA.param('tab'); if (t) this.setState({ tab: t }); this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h); }
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2800); }
@@ -237,7 +287,7 @@ class Component extends DCLogic {
     const st = SA.state(), alerts = SA.alerts();
     const groups = st.groups || SA.GROUPS, templates = st.templates || SA.TEMPLATES;
     const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
-    const tabsDef = [['conn', 'Connexions', alerts.length], ['api', 'API Meta', 0], ['tpl', 'Modèles de posts', 0], ['grp', 'Groupes de boutiques', 0], ['rights', 'Droits', 0], ['log', "Journal d'activité", 0]];
+    const tabsDef = [['conn', 'Connexions', alerts.length], ['api', 'API Meta', 0], ['tpl', 'Modèles de posts', 0], ['grp', 'Groupes de boutiques', 0], ['rights', 'Droits', 0], ['log', "Journal d'activité", 0]].concat(SA.live ? [['tfb', 'API TFBuddy', (() => { const r = (st.tfbAudit || {}).resume || {}; return (r.refuse || 0) + (r.erreur || 0) + (r.injoignable || 0); })()]] : []);
     const fixConn = (shopId, key, label) => {
       const k = shopId + key; this.setState({ busy: Object.assign({}, this.state.busy, { [k]: true }) });
       if (SA.live) {
@@ -281,7 +331,40 @@ class Component extends DCLogic {
     const logRows = st.activity.filter(l => !s.logF || (s.logF === 'Échec' ? l.what.indexOf('Échec') === 0 : l.what === s.logF)).map(l => { const c = LOGC[l.what] || ['#F4EFE8', '#444444']; return Object.assign({ bg: c[0], fg: c[1] }, l, { at: l.at.slice(8, 10) + '/' + l.at.slice(5, 7) + ' ' + l.at.slice(11) }); });
     return {
       tabs: tabsDef.map(([k, label, badge]) => ({ label, badge, hasBadge: badge > 0, fg: s.tab === k ? '#8D1D2C' : '#444444', line: s.tab === k ? '#8D1D2C' : 'transparent', pick: () => this.setState({ tab: k }) })),
-      isConn: s.tab === 'conn', isApi: s.tab === 'api', live: !!SA.live,
+      isConn: s.tab === 'conn', isApi: s.tab === 'api', live: !!SA.live, isTfb: s.tab === 'tfb',
+      ...(() => {
+        // Onglet API TFBuddy : compte, boutiques de l'API, audit des routes (GET /audit/api).
+        if (!SA.live) return {};
+        const T = st.tfb || {}, A = s.audit || st.tfbAudit || { routes: [], resume: null }, R = A.resume || null;
+        if (s.tab === 'tfb' && !s.audit && !this._auditLoading) { this._auditLoading = true; SA.api('GET', '/audit/api').then(a => this.setState({ audit: a })).catch(() => {}); }
+        const host = String(T.base || 'https://atelierby.tfbuddy.com/api/v1').replace(/^https?:\/\//, '').split('/')[0];
+        const ST = { ok: ['Fonctionne', '#E2F0E8', '#0F6B4A'], parametre: ['Paramètre', '#FCE7C8', '#8A4B00'], refuse: ['Refusée', '#F6DCDF', '#8D1D2C'], erreur: ['Erreur', '#8D1D2C', '#FFFFFF'], injoignable: ['Injoignable', '#8D1D2C', '#FFFFFF'], absent: ['Absente (404)', '#EAE4DC', '#555555'], non_teste: ['Non testée', '#F4EFE8', '#666666'] };
+        const KO = ['refuse', 'erreur', 'injoignable', 'absent', 'parametre'];
+        const q = s.auditQ.toLowerCase();
+        const rows = (A.routes || []).filter(r => (s.auditF === 'all' || (s.auditF === 'ok' ? r.statut === 'ok' : s.auditF === 'ko' ? KO.includes(r.statut) : s.auditF === 'used' ? !!r.utilise : r.statut === 'non_teste')) && (!q || (r.chemin + ' ' + (r.tag || '')).toLowerCase().includes(q)));
+        const n = (k) => (A.routes || []).filter(r => k === 'ko' ? KO.includes(r.statut) : r.statut === k).length;
+        const fld = (k, label, type, ph, state, ok) => ({ label, type, ph, value: s.tfb[k] != null ? s.tfb[k] : (type === 'password' ? '' : (k === 'base' ? T.base : k === 'adminPhone' ? (T.admin || {}).phone : (T.consultant || {}).phone) || ''), state: state || '', stFg: ok ? '#0F6B4A' : '#8D1D2C',
+          set: (e) => this.setState({ tfb: Object.assign({}, this.state.tfb, { [k]: e.target.value }) }) });
+        return {
+          tfbSwagger: T.swagger || '', tfbHost: host, tfbTest: s.tfbTest,
+          tfbFields: [fld('base', "Adresse de l'API", 'text', 'https://atelierby.tfbuddy.com/api/v1'),
+            fld('adminPhone', 'Compte admin (ERP) · téléphone', 'text', '04…', (T.admin || {}).configure ? '· configuré' : '· absent', (T.admin || {}).configure),
+            fld('adminPassword', 'Compte admin · mot de passe', 'password', 'inchangé si vide'),
+            fld('consultantPhone', 'Compte consultant (panel) · téléphone', 'text', '04…', (T.consultant || {}).configure ? '· configuré' : '· absent', (T.consultant || {}).configure),
+            fld('consultantPassword', 'Compte consultant · mot de passe', 'password', 'inchangé si vide')],
+          saveTfb: () => { this.setState({ tfbTest: 'Test en cours…' }); SA.api('POST', '/parametres/tfb', s.tfb).then(r => { this.setState({ tfb: {}, tfbTest: 'Connexion admin : ' + r.test.admin + ' · consultant : ' + r.test.consultant }); SA.refresh(); }).catch(e => this.setState({ tfbTest: 'Échec : ' + e.message })); },
+          apiShopsCount: SA.SHOPS.length + ' boutique' + (SA.SHOPS.length > 1 ? 's' : ''),
+          apiShops: SA.SHOPS.map(b => ({ id: b.id, name: b.name, fullName: b.fullName || '', address: b.address || '—', hours: b.hours || '—', email: b.email || '', phone: b.phone || '', vat: b.vat || '', sources: (b.sources || []).join(' · ') })),
+          reloadShops: () => SA.api('GET', '/shops/api?forcer=1').then(() => SA.refresh()).then(() => this.toast('Boutiques relues dans l’API.')).catch(e => this.toast(e.message)),
+          auditSummary: R ? (R.ok + ' fonctionnent · ' + (R.refuse || 0) + ' refusées · ' + ((R.erreur || 0) + (R.injoignable || 0)) + ' en erreur · ' + (R.absent || 0) + ' absentes · ' + (R.parametre || 0) + ' paramètre requis · ' + (R.non_teste || 0) + ' non testées — sur ' + R.total + ' routes GET · audit du ' + String(R.le).slice(8, 10) + '/' + String(R.le).slice(5, 7) + ' à ' + String(R.le).slice(11, 16) + ' (' + R.duree + ' s)') : 'Aucun audit encore : lancez-le (une à deux minutes).',
+          auditLabel: s.auditing ? 'Audit en cours…' : 'Lancer l’audit',
+          runAudit: () => { if (s.auditing) return; this.setState({ auditing: true }); SA.api('POST', '/audit/api', {}).then(a => { this.setState({ audit: a, auditing: false }); this.toast(a.resume.ok + ' routes fonctionnent sur ' + a.resume.total + '.'); }).catch(e => { this.setState({ auditing: false }); this.toast('Audit impossible : ' + e.message); }); },
+          auditFilters: [['ko', 'Ne fonctionnent pas · ' + n('ko')], ['ok', 'Fonctionnent · ' + n('ok')], ['non_teste', 'Non testées · ' + n('non_teste')], ['used', 'Utilisées par le module'], ['all', 'Toutes · ' + (A.routes || []).length]].map(([k, label]) => Object.assign(chip(s.auditF === k), { label, pick: () => this.setState({ auditF: k }) })),
+          auditQ: s.auditQ, setAuditQ: (e) => this.setState({ auditQ: e.target.value }),
+          auditRows: rows.slice(0, 400).map(r => { const c = ST[r.statut] || ST.non_teste; return { label: c[0], bg: c[1], fg: c[2], chemin: r.chemin, tag: r.tag || '', http: r.http || '—', ms: r.ms != null ? r.ms + ' ms' : '', used: !!r.utilise, utilise: r.utilise || '', detail: r.statut === 'ok' ? (r.apercu || '') : (r.resume || '') }; }),
+          auditEmpty: rows.length === 0, auditEmptyText: (A.routes || []).length ? 'Aucune route pour ce filtre.' : 'Aucun audit encore.',
+        };
+      })(),
       keyFields: (() => { const ms = SA.metaStatus || {}; return [['systemToken', 'Token du System User', 'tokenDefini', 'EAAG…'], ['appSecret', "Clé secrète de l'app", 'secretDefini', 'app secret'], ['verifyToken', 'Jeton du webhook', 'verifyDefini', 'chaîne libre']]
         .map(([k, label, flag, ph]) => ({ label, ph, value: s.keys[k], state: ms[flag] ? 'enregistré' : 'absent', stFg: ms[flag] ? '#0F6B4A' : '#8D1D2C',
           set: (e) => this.setState({ keys: Object.assign({}, this.state.keys, { [k]: e.target.value }) }) })); })(),
@@ -294,7 +377,7 @@ class Component extends DCLogic {
           dsaB: meta.dsa.beneficiary, dsaP: meta.dsa.payor, setDsaB: (e) => setMeta({ dsa: Object.assign({}, meta.dsa, { beneficiary: e.target.value }) }), setDsaP: (e) => setMeta({ dsa: Object.assign({}, meta.dsa, { payor: e.target.value }) }),
           networkAccount: meta.networkAccount || M.networkAccount || 'non renseigné', setNetworkAccount: (e) => setMeta({ networkAccount: e.target.value.trim() }), live: !!SA.live,
           idHead: [['Boutique', 'inherit'], ['page_id', 'ui-monospace,monospace'], ['ad_account_id', 'ui-monospace,monospace'], ['instagram_user_id', 'ui-monospace,monospace'], ['pixel_id', 'ui-monospace,monospace']].map(([l, f]) => ({ l, f })),
-          idRows: SA.SHOPS.map(sh => ({ name: sh.name, cells: ['page_id', 'ad_account_id', 'instagram_user_id', 'pixel_id'].map(k => { const v = (meta.ids[sh.id] || {})[k] || ''; return { v, ph: k === 'ad_account_id' ? 'act_… (non connecté)' : '—', bg: v ? '#FFFFFF' : '#FFFBF5',
+          idRows: (SA.live ? [{ id: 'marque', name: 'Marque · ' + ((SA.state().brand || {}).name || 'L\u2019Atelier By') }] : []).concat(SA.SHOPS).map(sh => ({ name: sh.name, cells: ['page_id', 'ad_account_id', 'instagram_user_id', 'pixel_id'].map(k => { const v = (meta.ids[sh.id] || {})[k] || ''; return { v, ph: k === 'ad_account_id' ? 'act_… (non connecté)' : '—', bg: v ? '#FFFFFF' : '#FFFBF5',
             set: (e) => setMeta({ ids: Object.assign({}, meta.ids, { [sh.id]: Object.assign({}, meta.ids[sh.id], { [k]: e.target.value.trim() }) }) }) }; }) })) }; })(), isTpl: s.tab === 'tpl', isGrp: s.tab === 'grp', isRights: s.tab === 'rights', isLog: s.tab === 'log',
       hasAlerts: alerts.length > 0, alertText: alerts.length + ' connexion(s) en défaut : ' + alerts.map(a => a.shop + ' · ' + a.what + ' (' + SA.CONN[a.st].label + ')').join(' — ') + '. Les publications concernées échoueront tant qu\u2019elles ne sont pas rétablies.',
       connSummary: nOk + ' connexions actives sur ' + st.shops.length * 3 + (SA.live ? ((st.meta || {}).lastCheck ? ' · dernier contrôle ' + String(st.meta.lastCheck).slice(8, 10) + '/' + String(st.meta.lastCheck).slice(5, 7) + ' à ' + String(st.meta.lastCheck).slice(11, 16) : ' · jamais contrôlées') : ' · dernier contrôle aujourd\u2019hui à 07:00'),

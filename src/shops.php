@@ -58,61 +58,92 @@ function socCol(array $row, array $noms): ?string
 
 /**
  * Les boutiques telles que les écrans les lisent :
- * {id, name, langs, address, hours, hoursNl, page, ig, fb, igs, ads, ids, geo, …}
+ * {id, name, langs, address, hours, hoursNl, page, ig, fb, igs, ads, ids, geo, sources, …}
+ *
+ * Ordre des sources, champ par champ :
+ *  1. l'API TFBuddy (socApiShops) — la liste des boutiques, leur identifiant
+ *     (celui de la caisse), adresse, horaires, e-mail, téléphone, TVA ;
+ *  2. le module (social_boutique) — langues, identifiants Meta, connexions,
+ *     et ce que l'API ne donne pas ;
+ *  3. le BO, s'il partage la base — franchisé et zone (ceo_shop), page
+ *     Facebook résolue par Brand Guard, position GPS de la caisse (shops).
+ * Sans API joignable, la liste vient du BO (ceo_shop + Brand Guard).
  */
 function socShops(): array
 {
-    $base = [];
+    // Le BO, s'il est là : par identifiant de caisse (pwa_shop_id).
+    $bo = []; $boParId = [];
     if (Db::hasTable('ceo_shop')) {
-        foreach (Db::rows("SELECT id, code, name, franchisee, zone, status, pwa_shop_id FROM ceo_shop WHERE status <> 'Fermé' ORDER BY name") as $r) {
-            $base[(string) $r['id']] = ['id' => (string) $r['id'], 'name' => (string) $r['name'], 'code' => (string) $r['code'],
-                'franchisee' => (string) $r['franchisee'], 'zone' => (string) $r['zone'], 'shopStatus' => (string) $r['status'],
-                'pwaShopId' => $r['pwa_shop_id'] !== null ? (int) $r['pwa_shop_id'] : null];
+        foreach (Db::rows("SELECT id, code, name, franchisee, zone, status, pwa_shop_id FROM ceo_shop ORDER BY name") as $r) {
+            $x = ['ceoId' => (string) $r['id'], 'name' => (string) $r['name'], 'code' => (string) $r['code'], 'franchisee' => (string) $r['franchisee'],
+                'zone' => (string) $r['zone'], 'shopStatus' => (string) $r['status'], 'pwaShopId' => $r['pwa_shop_id'] !== null ? (int) $r['pwa_shop_id'] : null];
+            $boParId[(string) $r['id']] = $x;
+            $bo[$x['pwaShopId'] !== null ? (string) $x['pwaShopId'] : 'ceo:' . $r['id']] = $x;
         }
     }
-    $pages = [];
+    $pages = [];   // clé : identifiant de caisse, sinon « bg<id> »
     if (Db::hasTable('brand_guard_pages')) {
         foreach (Db::rows('SELECT id, shop_id, boutique, franchise, page_url, page_id, page_nom FROM brand_guard_pages WHERE actif = 1 ORDER BY id') as $p) {
-            $sid = $p['shop_id'] !== null && $p['shop_id'] !== '' ? (string) $p['shop_id'] : null;
-            // Une page sans boutique du cockpit reste une boutique du réseau :
-            // elle publie, on la montre (identifiant stable « bg<id> »).
-            // Rattachée à une boutique fermée (absente de $base) : on ne la montre pas.
-            if ($sid !== null && !isset($base[$sid]) && Db::hasTable('ceo_shop')) { continue; }
-            $sid = $sid ?? ('bg' . $p['id']);
-            if (!isset($base[$sid])) {
-                $base[$sid] = ['id' => $sid, 'name' => (string) $p['boutique'], 'code' => '', 'franchisee' => (string) $p['franchise'],
-                    'zone' => '', 'shopStatus' => 'Ouvert', 'pwaShopId' => null];
-            }
-            $pages[$sid] = $p;
-            if (trim((string) $p['boutique']) !== '') { $base[$sid]['short'] = (string) $p['boutique']; }
+            $c = $p['shop_id'] !== null && isset($boParId[(string) $p['shop_id']]) ? $boParId[(string) $p['shop_id']] : null;
+            $cle = $c && $c['pwaShopId'] !== null ? (string) $c['pwaShopId'] : ($c ? 'ceo:' . $c['ceoId'] : 'bg' . $p['id']);
+            $pages[$cle] = $p;
         }
     }
 
-    // L'adresse et la position, lues dans la caisse du panel si elle les porte.
+    $api = socApiShops();
+    $liste = [];
+    if ($api) {
+        foreach ($api as $a) {
+            if (array_key_exists('active', $a) && $a['active'] === false) { continue; }
+            $liste[$a['id']] = ['api' => $a];
+        }
+        // Une page Brand Guard sans boutique du cockpit : rattachée par le nom de la ville.
+        foreach ($pages as $cle => $p) {
+            if (isset($liste[$cle])) { continue; }
+            foreach ($liste as $id => $l) {
+                if (mb_strtolower(trim((string) $p['boutique'])) === mb_strtolower($l['api']['name']) && !isset($pages[$id])) { $pages[$id] = $p; }
+            }
+        }
+    } else {
+        foreach ($bo as $cle => $x) { if ($x['shopStatus'] !== 'Fermé') { $liste[$cle] = []; } }
+        foreach ($pages as $cle => $p) { if (!isset($liste[$cle]) && str_starts_with($cle, 'bg')) { $liste[$cle] = ['bg' => $p]; } }
+    }
+
+    // La position GPS de la caisse (table shops du panel), si la base la porte.
     $caisse = [];
-    $pwa = array_values(array_filter(array_map(static fn ($s) => $s['pwaShopId'], $base)));
-    if ($pwa && Db::hasTable('shops')) {
+    // Les clés numériques deviennent des entiers en PHP : on les repasse en texte.
+    $ids = array_values(array_filter(array_map('strval', array_keys($liste)), 'ctype_digit'));
+    if ($ids && Db::hasTable('shops')) {
         try {
-            $in = implode(',', array_fill(0, count($pwa), '?'));
-            foreach (Db::rows("SELECT * FROM shops WHERE id IN ($in)", $pwa) as $r) { $caisse[(int) $r['id']] = $r; }
+            $in = implode(',', array_fill(0, count($ids), '?'));
+            foreach (Db::rows("SELECT * FROM shops WHERE id IN ($in)", array_map('intval', $ids)) as $r) { $caisse[(string) $r['id']] = $r; }
         } catch (Throwable $e) { $caisse = []; }
     }
 
     $ov = socShopOverrides();
     $out = [];
-    foreach ($base as $id => $s) {
+    foreach ($liste as $id => $l) {
+        $id = (string) $id;
+        $a = $l['api'] ?? [];
+        $x = $bo[$id] ?? null;
+        $p = $pages[$id] ?? ($l['bg'] ?? null);
+        $c = $caisse[$id] ?? [];
         $o = $ov[$id] ?? [];
-        $p = $pages[$id] ?? null;
-        $c = $s['pwaShopId'] !== null ? ($caisse[$s['pwaShopId']] ?? []) : [];
-        $nom = (string) ($o['name'] ?? ($s['short'] ?? $s['name']));
-        $adresse = $o['address'] ?? null;
-        if ($adresse === null && $c) {
+        $sources = [];
+        if ($a) { $sources[] = 'API ' . ($a['source'] ?? 'shops'); }
+        if ($x) { $sources[] = 'BO ceo_shop'; }
+        if ($p) { $sources[] = 'Brand Guard'; }
+        if ($o) { $sources[] = 'social_boutique'; }
+        $nom = (string) (($a['name'] ?? '') ?: ($p['boutique'] ?? '') ?: ($x['name'] ?? $id));
+        $adresse = (string) (($a['address'] ?? '') ?: ($o['address'] ?? ''));
+        if ($adresse === '' && $c) {
             $rue = socCol($c, ['address', 'street', 'address_line', 'adresse', 'rue']);
             $cp = socCol($c, ['zip', 'postal_code', 'postcode', 'zipcode', 'code_postal']);
             $ville = socCol($c, ['city', 'town', 'locality', 'ville']);
             $adresse = trim(implode(', ', array_filter([$rue, trim(($cp ?? '') . ' ' . ($ville ?? ''))])));
         }
         $geo = $o['geo'] ?? null;
+        if (!$geo && isset($a['lat'], $a['lng'])) { $geo = [$a['lat'], $a['lng']]; }
         if (!$geo && $c) {
             $lat = socCol($c, ['latitude', 'lat']); $lng = socCol($c, ['longitude', 'lng', 'lon']);
             if (is_numeric($lat) && is_numeric($lng)) { $geo = [(float) $lat, (float) $lng]; }
@@ -122,21 +153,41 @@ function socShops(): array
         if ($ids['page_id'] === '' && $p && $p['page_id']) { $ids['page_id'] = (string) $p['page_id']; }
         $conn = (array) ($o['conn'] ?? []);
         $out[] = [
-            'id' => (string) $id, 'name' => $nom, 'code' => $s['code'], 'franchisee' => $s['franchisee'], 'zone' => $s['zone'],
-            'shopStatus' => $s['shopStatus'], 'pwaShopId' => $s['pwaShopId'],
+            'id' => $id, 'name' => $nom, 'fullName' => (string) ($a['fullName'] ?? ''), 'code' => (string) ($x['code'] ?? ''),
+            'franchisee' => (string) (($x['franchisee'] ?? '') ?: ($p['franchise'] ?? '')), 'zone' => (string) ($x['zone'] ?? ''),
+            'shopStatus' => (string) ($x['shopStatus'] ?? 'Ouvert'), 'pwaShopId' => ctype_digit($id) ? (int) $id : ($x['pwaShopId'] ?? null),
+            'email' => (string) ($a['email'] ?? ''), 'phone' => (string) ($a['phone'] ?? ''), 'vat' => (string) ($a['vat'] ?? ''),
             'langs' => array_values(array_filter((array) ($o['langs'] ?? ['fr']), static fn ($l) => in_array($l, ['fr', 'nl'], true))) ?: ['fr'],
-            'address' => (string) ($adresse ?? ''), 'hours' => (string) ($o['hours'] ?? ''), 'hoursNl' => (string) ($o['hoursNl'] ?? ''),
-            'page' => (string) ($o['page'] ?? ($p['page_nom'] ?? '') ?: "L'Atelier By " . $nom),
+            'address' => $adresse,
+            'hours' => (string) (($a['hours'] ?? '') ?: ($o['hours'] ?? '')), 'hoursNl' => (string) (($a['hoursNl'] ?? '') ?: ($o['hoursNl'] ?? '')),
+            'page' => (string) (($o['page'] ?? '') ?: ($p['page_nom'] ?? '') ?: "L'Atelier By " . $nom),
             'pageUrl' => (string) ($p['page_url'] ?? ''),
             'ig' => (string) ($o['ig'] ?? ''),
-            // Une connexion n'est « connectée » qu'une fois VÉRIFIÉE chez Meta
-            // (bouton Tester, ou le contrôle du cron) — jamais par défaut.
+            // Une connexion n'est « connectée » qu'une fois VÉRIFIÉE chez Meta.
             'fb' => (string) ($conn['fb'] ?? 'none'), 'igs' => (string) ($conn['igs'] ?? 'none'), 'ads' => (string) ($conn['ads'] ?? 'none'),
             'connDetail' => (array) ($conn['detail'] ?? []), 'checkedAt' => $conn['at'] ?? null,
-            'ids' => $ids, 'geo' => $geo,
+            'ids' => $ids, 'geo' => $geo, 'sources' => $sources,
         ];
     }
     return $out;
+}
+
+/**
+ * La MARQUE (L'Atelier By) : sa Page, son compte Instagram, son compte
+ * publicitaire (le compte réseau des publicités) et son pixel — une ligne
+ * « marque » de social_boutique, à côté des boutiques.
+ */
+function socBrand(): array
+{
+    $o = socShopOverrides()['marque'] ?? [];
+    $ids = array_fill_keys(SOC_IDS, '');
+    foreach (SOC_IDS as $k) { $ids[$k] = (string) ($o['ids'][$k] ?? ''); }
+    // Le compte réseau saisi avant la ligne marque reste valable.
+    if ($ids['ad_account_id'] === '') { $ids['ad_account_id'] = (string) (socSetting('meta_compte_reseau') ?? ''); }
+    $conn = (array) ($o['conn'] ?? []);
+    return ['id' => 'marque', 'name' => (string) ($o['name'] ?? "L'Atelier By"), 'ids' => $ids, 'langs' => ['fr', 'nl'],
+        'fb' => (string) ($conn['fb'] ?? 'none'), 'igs' => (string) ($conn['igs'] ?? 'none'), 'ads' => (string) ($conn['ads'] ?? 'none'),
+        'connDetail' => (array) ($conn['detail'] ?? []), 'checkedAt' => $conn['at'] ?? null, 'address' => '', 'hours' => '', 'hoursNl' => '', 'geo' => null];
 }
 
 function socShop(string $id): ?array
@@ -152,7 +203,7 @@ function socShop(string $id): ?array
  */
 function socTestConnexions(?string $seule = null): array
 {
-    $shops = array_values(array_filter(socShops(), static fn ($s) => $seule === null || $s['id'] === $seule));
+    $shops = array_values(array_filter(array_merge([socBrand()], socShops()), static fn ($s) => $seule === null || $s['id'] === $seule));
     $now = date('Y-m-d H:i:s');
     $tokens = null; $global = null;
     if (!Meta::configured()) {

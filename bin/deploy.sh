@@ -86,6 +86,7 @@ SHELL=/bin/bash
 * * * * *   www-data php ${TARGET_DIR}/bin/cron.php queue >> /var/log/social-cron.log 2>&1
 7 * * * *   www-data php ${TARGET_DIR}/bin/cron.php sync  >> /var/log/social-cron.log 2>&1
 40 6 * * *  www-data php ${TARGET_DIR}/bin/cron.php conn  >> /var/log/social-cron.log 2>&1
+20 5 * * *  www-data php ${TARGET_DIR}/bin/cron.php audit >> /var/log/social-cron.log 2>&1
 CRON
 chmod 644 /etc/cron.d/social
 touch /var/log/social-cron.log; chown www-data:www-data /var/log/social-cron.log

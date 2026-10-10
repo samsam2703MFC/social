@@ -7,6 +7,7 @@ declare(strict_types=1);
  *   * * * * *   php bin/cron.php queue      la file de publication (posts échus)
  *   7 * * * *   php bin/cron.php sync       pubs (statut, dépense), leads, résultats
  *   40 6 * * *  php bin/cron.php conn       contrôle des connexions Meta
+ *   20 5 * * *  php bin/cron.php audit      audit des routes de l'API TFBuddy
  *
  * Un verrou par tâche : une exécution longue n'en chevauche pas une autre.
  */
@@ -22,7 +23,8 @@ try {
         'queue' => ['publies' => count(socRunQueue())],
         'sync'  => ['ads' => socAdsSync(), 'leads' => socLeadsSync(), 'results' => socResultsSync()],
         'conn'  => ['boutiques' => count(socTestConnexions())],
-        default => throw new InvalidArgumentException('tâche inconnue : ' . $tache . ' (queue | sync | conn)'),
+        'audit' => socAuditRun(),
+        default => throw new InvalidArgumentException('tâche inconnue : ' . $tache . ' (queue | sync | conn | audit)'),
     };
     if ($tache !== 'queue' || $r['publies'] > 0) {
         echo date('Y-m-d H:i:s') . ' ' . $tache . ' ' . json_encode($r, JSON_UNESCAPED_UNICODE) . "\n";
