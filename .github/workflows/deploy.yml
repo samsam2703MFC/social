@@ -85,6 +85,15 @@ jobs:
           tar -czf - --exclude='.git' . | sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
             "rm -rf ${SRC_DIR} && mkdir -p ${SRC_DIR} && tar -xzf - -C ${SRC_DIR}"
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "cd ${SRC_DIR} && bash bin/deploy.sh"
+      - name: Sonde de l'API TFBuddy (si « sonde » dans deploy.trigger)
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          if grep -qiw 'sonde' deploy.trigger; then
+            sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "runuser -u www-data -- php /var/www/social/bin/sonde.php" || true
+          else
+            echo "pas de sonde demandée"
+          fi
       - name: Recette publique
         run: |
           fail=0
