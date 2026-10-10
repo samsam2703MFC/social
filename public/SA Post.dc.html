@@ -54,6 +54,7 @@
             <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">2 · Produit ou gamme du catalogue</span>
             <span style="font-size:12px;color:#666666;">Pré-remplit photo, nom, prix et texte</span>
           </div>
+          <input value="{{ catQ }}" onChange="{{ setCatQ }}" placeholder="{{ catPh }}" style="font-family:var(--font-ui);font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 10px;width:100%;box-sizing:border-box;">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;">
             <sc-for list="{{ catalogue }}" as="c" hint-placeholder-count="0">
               <button onClick="{{ c.pick }}" style="display:flex;flex-direction:column;align-items:stretch;padding:0;border-radius:8px;border:2px solid {{ c.ring }};background:#FFFFFF;cursor:pointer;overflow:hidden;text-align:left;">
@@ -540,7 +541,9 @@ class Component extends DCLogic {
     return {
       calHref: SA.href('cal'), pageTitle: s.id ? (locked ? 'POST PUBLIE' : 'MODIFIER LE POST') : 'NOUVEAU POST', locked, notLocked: !locked,
       types: SA.POST_TYPES.map(n => Object.assign(chip(s.type === n), { name: n, pick: () => !locked && this.setState({ type: n }) })),
-      catalogue: SA.CATALOGUE.map(c => ({ img: c.img, name: c.name, meta: (c.kind === 'gamme' ? 'Gamme · ' : '') + c.price + ' €', ring: s.product === c.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)',
+      // Le catalogue vient de l'API (plusieurs centaines de produits) : recherche, 24 résultats, la sélection en tête.
+      catQ: this.state.catQ || '', setCatQ: (e) => this.setState({ catQ: e.target.value }), catPh: 'Rechercher parmi ' + SA.CATALOGUE.length + ' produits et gammes…',
+      catalogue: (s.product && !(() => { const q = String(this.state.catQ || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); const hit = SA.CATALOGUE.filter(c => !q || norm(c.name + ' ' + (c.nameNl || '') + ' ' + (c.gamme || '')).includes(q)); return hit.slice(0, 24); })().some(c => c.id === s.product) ? [SA.CATALOGUE.find(c => c.id === s.product)].filter(Boolean) : []).concat((() => { const q = String(this.state.catQ || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); const hit = SA.CATALOGUE.filter(c => !q || norm(c.name + ' ' + (c.nameNl || '') + ' ' + (c.gamme || '')).includes(q)); return hit.slice(0, 24); })()).map(c => ({ img: c.img, name: c.name, meta: (c.kind === 'gamme' ? 'Gamme · ' : '') + c.price + ' €', ring: s.product === c.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)',
         pick: () => { if (locked) return; if (s.product === c.id) { this.setState({ product: null }); return; }
           const camp = c.gamme === 'Gamme Automne' || c.id === 'g-automne' ? 'c-automne' : s.campaign;
           this.setState({ product: c.id, campaign: camp, type: c.kind === 'gamme' ? 'Gamme saisonnière' : 'Produit',

@@ -115,7 +115,12 @@ function socResultsSync(?string $seule = null): int
             $shop = $shops[$sid] ?? null;
             if (!$shop) { continue; }
             $m = $meta[$sid] ?? ['spend' => 0.0, 'reach' => 0, 'impr' => 0, 'clicks' => 0, 'eng' => 0, 'vv' => 0];
-            [$v, $motif] = socVentes($shop['pwaShopId'], (array) ($c['products'] ?? []), $du, $au);
+            // Les ventes : l'API TFBuddy d'abord, la caisse de la base partagée en repli.
+            [$v, $motif] = Tfb::configured('admin') ? socVentesApi((string) $sid, (array) ($c['products'] ?? []), $du, $au) : [null, 'compte API non configuré'];
+            if ($v === null) {
+                [$v2, $motif2] = socVentes($shop['pwaShopId'], (array) ($c['products'] ?? []), $du, $au);
+                if ($v2 !== null) { $v = $v2 + ['source' => 'base (caisse)']; $motif = null; } else { $motif = $motif . ' · base : ' . $motif2; }
+            }
             $d = $m + ($v ?? ['caRef' => null, 'caCamp' => null, 'tRef' => null, 'tCamp' => null, 'qRef' => null, 'qCamp' => null]);
             $d['spend'] = round((float) $d['spend'], 2);
             if ($motif !== null) { $d['noSales'] = $motif; }

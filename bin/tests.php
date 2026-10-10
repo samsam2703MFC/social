@@ -95,6 +95,10 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
         return [200, ['data' => [['spend' => '40.50', 'reach' => '1200', 'impressions' => '3000', 'clicks' => '60',
             'actions' => [['action_type' => 'post_engagement', 'value' => '90'], ['action_type' => 'video_view', 'value' => '15']]]]]];
     }
+    if ($m === 'GET' && $path === 'debug_token') {
+        return [200, ['data' => ['is_valid' => true, 'expires_at' => strtotime('2027-01-01 12:00'), 'app_id' => '424242', 'application' => 'Atelier Social',
+            'type' => 'SYSTEM_USER', 'scopes' => ['pages_manage_posts', 'ads_management']]]];
+    }
     if ($m === 'GET' && preg_match('#^\d+$#', $path)) { return [200, ['effective_status' => 'ACTIVE']]; }
     if ($m === 'POST' && preg_match('#^\w+$#', $path)) { return [200, ['success' => true]]; }
     return [404, ['error' => ['code' => 803, 'message' => 'route simulée inconnue : ' . $m . ' ' . $path]]];
@@ -126,6 +130,20 @@ Tfb::$transport = static function (string $m, string $url, array $h, ?string $bo
     if ($p === '/api/v1/shops') { return [200, json_encode(['data' => [['id' => 4, 'name' => 'Halle', 'active' => true], ['id' => 5, 'name' => 'Wavre', 'active' => true]]])]; }
     if ($p === '/api/v1/shops/4' || $p === '/api/v1/consultant/shops') { return [200, '{"id":4}']; }
     if ($p === '/api/v1/products') { return [403, '{"message":"Forbidden"}']; }
+    if ($p === '/api/v1/shops/4/products/available') {
+        $nl = str_contains($url, 'lang_code=nl');
+        return [200, json_encode([['id' => 1, 'name' => $nl ? 'Krokante brioche' : 'Brioche croustillante', 'is_active' => 1, 'category_name' => 'Viennoiseries', 'portion_price' => '4.20'],
+            ['id' => 2, 'name' => 'Carton pro', 'is_active' => 1, 'category_name' => 'B.2.B - Cartons', 'portion_price' => '39.60'],
+            ['id' => 3, 'name' => 'Ancien', 'is_active' => 0, 'category_name' => 'Pains', 'portion_price' => '2']])];
+    }
+    if ($p === '/api/v1/product-availability-periods') { return [200, json_encode([['id' => 14, 'name' => '🍂 Gamme Automne', 'is_active' => 1], ['id' => 15, 'name' => 'Vieille', 'is_active' => 0]])]; }
+    if (preg_match('#^/api/v1/shops/(4|5)/statistics/sales/(product-category-groups|kpis)$#', $p, $mm) && getenv('SOCIAL_TFB_VENTES')) {
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $q);
+        $camp = ($q['date_from'] ?? '') >= date('Y-m-d', strtotime('-6 days'));
+        if ($mm[2] === 'kpis') { return [200, json_encode(['tickets' => $camp ? 300 : 200, 'ca' => 1])]; }
+        return [200, json_encode([['product_name' => 'Brioche croustillante', 'category_name' => 'Viennoiseries', 'sold_qty' => $camp ? '50' : '30', 'sales_value' => $camp ? '210.00' : '126.00'],
+            ['product_name' => 'Pain', 'category_name' => 'Pains', 'sold_qty' => '9', 'sales_value' => '99']])];
+    }
     if (str_starts_with($p, '/api/v1/franchisee-shop/4/transactions/')) { return [200, '[]']; }
     if ($p === '/api/v1/broken') { return [500, '{"message":"Server Error"}']; }
     if ($p === '/api/v1/consultant/shops/sales-kpis') { return str_contains($url, 'date_from=') ? [200, '{"kpis":{}}'] : [500, '{"status":"error","description":"Validation errors in request"}']; }
@@ -185,7 +203,7 @@ $post = ['id' => 'p1', 'date' => date('Y-m-d', strtotime('+2 days')), 'time' => 
     'img' => $img, 'media' => [['src' => $img, 'kind' => 'img']], 'shops' => ['4', '5'],
     'ch' => ['4' => ['fb' => true, 'ig' => true], '5' => ['fb' => true, 'ig' => false]], 'fb' => true, 'ig' => true,
     'status' => 'Programmé', 'text' => 'Brioche à {ville}, {prix} €. {horaires}', 'textNl' => 'Brioche in {ville}, {prix} €. {horaires}',
-    'product' => 'brioche', 'spread' => 10];
+    'product' => 'p1', 'spread' => 10];
 $r = socStateSave(['changes' => ['posts' => ['upsert' => [$post]]]]);
 $p1 = socItem('posts', 'p1');
 check('post enregistré dans social_content', Db::row("SELECT titre, statut, boutiques FROM social_content WHERE id = 'p1'") === ['titre' => 'Brioche', 'statut' => 'Programmé', 'boutiques' => '4,5']);
@@ -296,6 +314,36 @@ check('audit : paramètre boutique deviné', ($st['/api/v1/shops/{id}'] ?? '') =
 check('audit : réalm consultant', ($st['/api/v1/consultant/shops'] ?? '') === 'ok');
 check('audit : refus, erreur, non testée', ($st['/api/v1/products'] ?? '') === 'refuse' && ($st['/api/v1/broken'] ?? '') === 'erreur' && ($st['/api/v1/recipes/{param1}'] ?? '') === 'non_teste');
 check('audit : résumé en base', ($aud['ok'] ?? 0) === 6 && socSetting('tfb_audit')['total'] === 9, json_encode($aud));
+
+echo "Catalogue et ventes depuis l'API\n";
+$cat = socApiCatalogue(true);
+$ids = array_column($cat, 'id');
+check('catalogue API : produits actifs hors B2B + gammes actives', $ids === ['g14', 'p1'], json_encode($ids));
+check('catalogue API : prix et nom NL', ($cat[1]['price'] ?? '') === '4,20' && ($cat[1]['nameNl'] ?? '') === 'Krokante brioche');
+check('catalogue API : gamme sans emoji', ($cat[0]['name'] ?? '') === 'Gamme Automne');
+check('catalogue des écrans = celui de l’API', array_column(socStateGet()['catalogue'], 'id') === ['g14', 'p1']);
+putenv('SOCIAL_TFB_VENTES=1');
+[$v] = socVentesApi('5', ['Brioche croustillante'], date('Y-m-d', strtotime('-6 days')), date('Y-m-d'));
+check('ventes API : CA campagne / référence (6 semaines)', ($v['caCamp'] ?? 0) == 210.0 && ($v['caRef'] ?? 0) == 126.0 && ($v['qCamp'] ?? 0) == 50.0, json_encode($v));
+check('ventes API : tickets de la boutique', ($v['tCamp'] ?? 0) === 300 && ($v['tRef'] ?? 0) === 200);
+socResultsSync('c1');
+check('retour sur campagne : l’API prime sur la base', (socResults()['c1']['4']['source'] ?? '') === 'API TFBuddy', json_encode(socResults()['c1']['4'] ?? null));
+putenv('SOCIAL_TFB_VENTES');
+
+echo "Clés Meta : App ID et vérification du token\n";
+socSettingPut('meta_app_id', '424242', false); socSettingPut('meta_app_secret', 'SECRET', true);
+$info = Meta::verifierJeton();
+check('debug_token : valide, expiration, permissions', ($info['valide'] ?? false) && ($info['expire'] ?? '') === '2027-01-01' && in_array('pages_manage_posts', $info['scopes'] ?? [], true), json_encode($info));
+check('debug_token appelé avec le jeton d’application', ($appelsVers('#^debug_token$#')[0][2]['access_token'] ?? '') === '424242|SECRET');
+check('état Meta : App ID et token exposés sans secret', Meta::statut()['appId'] === '424242' && !str_contains(json_encode(Meta::statut()), 'SECRET'));
+$GLOBALS['SOC_BODY'] = ['base' => 'https://pirate.example.com/api/v1', 'adminPhone' => '0470'];
+socRoute('POST', '/parametres/tfb');
+check('adresse de l’API refusée hors tfbuddy.com (les mots de passe n’y partent pas)', Tfb::base() === 'https://atelierby.tfbuddy.com/api/v1', Tfb::base());
+$GLOBALS['SOC_BODY'] = ['base' => 'https://demo.tfbuddy.com/api/v1'];
+socRoute('POST', '/parametres/tfb');
+check('adresse de l’API acceptée sur tfbuddy.com', Tfb::base() === 'https://demo.tfbuddy.com/api/v1');
+socSettingPut('tfb_base', 'https://atelierby.tfbuddy.com/api/v1', false);
+unset($GLOBALS['SOC_BODY']);
 
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');

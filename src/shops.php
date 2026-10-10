@@ -204,6 +204,7 @@ function socShop(string $id): ?array
 function socTestConnexions(?string $seule = null): array
 {
     $shops = array_values(array_filter(array_merge([socBrand()], socShops()), static fn ($s) => $seule === null || $s['id'] === $seule));
+    if ($seule === null) { Meta::verifierJeton(); }
     $now = date('Y-m-d H:i:s');
     $tokens = null; $global = null;
     if (!Meta::configured()) {

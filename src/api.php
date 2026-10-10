@@ -59,12 +59,14 @@ function socRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/parametres/cles') {
         // Les clés Meta, écrites en base (social_parametre). Un champ vide n'efface rien.
         $map = ['systemToken' => 'meta_system_token', 'appSecret' => 'meta_app_secret', 'verifyToken' => 'meta_verify_token'];
+        if (preg_match('/^\d{5,20}$/', trim((string) (body()['appId'] ?? '')))) { socSettingPut('meta_app_id', trim((string) body()['appId']), false); }
         $faits = [];
         foreach ($map as $k => $cle) {
             $v = trim((string) (body()[$k] ?? ''));
             if ($v !== '') { socSettingPut($cle, $v, true); $faits[] = $cle; }
         }
         Meta::reset();
+        Meta::verifierJeton();
         if ($faits) { socLog(socUser(), 'Connexion', 'Clés Meta mises à jour : ' . implode(', ', $faits)); }
         return [200, ['ok' => true, 'maj' => $faits, 'metaStatus' => Meta::statut()]];
     }
@@ -90,7 +92,8 @@ function socRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/parametres/tfb') {
         // Le compte de l'API TFBuddy, en base. Un mot de passe vide ne change rien.
         $b = body(); $faits = [];
-        if (isset($b['base']) && preg_match('#^https://[\w.\-]+(/[\w.\-/]*)?$#', trim((string) $b['base']))) { socSettingPut('tfb_base', rtrim(trim((string) $b['base']), '/'), false); $faits[] = 'base'; }
+        // L'adresse de l'API reçoit les mots de passe à la connexion : seuls les hôtes tfbuddy.com sont acceptés.
+        if (isset($b['base']) && preg_match('#^https://([\w\-]+\.)*tfbuddy\.com(/[\w.\-/]*)?$#', trim((string) $b['base']))) { socSettingPut('tfb_base', rtrim(trim((string) $b['base']), '/'), false); $faits[] = 'base'; }
         foreach (['admin', 'consultant'] as $r) {
             if (isset($b[$r . 'Phone'])) { socSettingPut('tfb_' . $r . '_phone', trim((string) $b[$r . 'Phone']), false); $faits[] = $r . ' (téléphone)'; }
             if (trim((string) ($b[$r . 'Password'] ?? '')) !== '') { socSettingPut('tfb_' . $r . '_password', (string) $b[$r . 'Password'], true); $faits[] = $r . ' (mot de passe)'; }

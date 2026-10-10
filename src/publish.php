@@ -23,7 +23,9 @@ declare(strict_types=1);
 /** Le catalogue (prix et noms FR/NL) : src/data/catalogue.json, modifiable par réglage. */
 function socCatalogue(): array
 {
-    $c = socSetting('catalogue');  // social_parametre
+    $api = Tfb::configured('admin') ? socApiCatalogue() : [];
+    if ($api) { return $api; }
+    $c = socSetting('catalogue');  // social_parametre (repli)
     if (is_array($c) && $c) { return $c; }
     $j = json_decode((string) @file_get_contents(__DIR__ . '/data/catalogue.json'), true);
     return is_array($j) ? $j : [];
@@ -45,7 +47,9 @@ function socMessage(array $post, array $shop): string
 {
     $product = null;
     if (!empty($post['product'])) {
-        foreach (socCatalogue() as $p) { if (($p['id'] ?? null) === $post['product']) { $product = $p; break; } }
+        // Le catalogue de l'API d'abord ; un post plus ancien peut citer un produit de l'ancien catalogue.
+        $legacy = json_decode((string) @file_get_contents(__DIR__ . '/data/catalogue.json'), true) ?: [];
+        foreach (array_merge(socCatalogue(), (array) (socSetting('catalogue') ?: []), $legacy) as $p) { if (($p['id'] ?? null) === $post['product']) { $product = $p; break; } }
     }
     $parts = [];
     foreach ((array) ($shop['langs'] ?: ['fr']) as $L) {

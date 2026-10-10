@@ -235,6 +235,7 @@ function socLog(string $who, string $what, string $detail, ?string $at = null): 
 function body(): array
 {
     static $b = null;
+    if (array_key_exists('SOC_BODY', $GLOBALS)) { return (array) $GLOBALS['SOC_BODY']; }  // recette
     if ($b === null) {
         $raw = file_get_contents('php://input') ?: '';
         $b = json_decode($raw, true);

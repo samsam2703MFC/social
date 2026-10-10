@@ -191,3 +191,106 @@ function socApiShopNorm(array $s, string $source): array
         'lat' => is_numeric($s['latitude'] ?? null) ? (float) $s['latitude'] : null, 'lng' => is_numeric($s['longitude'] ?? null) ? (float) $s['longitude'] : null,
         'active' => true, 'source' => $source];
 }
+
+/* --- catalogue ------------------------------------------------------------------------ */
+
+/** Une illustration du design system d'après la catégorie (l'API ne fournit pas de photo). */
+function socIllus(string $cat, string $nom = ''): string
+{
+    $t = mb_strtolower($cat . ' ' . $nom);
+    foreach ([
+        'croissant|viennois' => 'img/illus/products/croissant.png', 'cookie|biscui' => 'img/illus/products/cookies.png',
+        'cupcake|muffin' => 'img/illus/products/cupcake.png', 'tartelette' => 'img/illus/products/sweet-tart-small.png',
+        'tarte|flan' => 'img/illus/products/sweet-tart-big.png', 'quiche|salé|sale' => 'img/illus/products/savoury-tart.png',
+        'gâteau|gateau|entremet|cake|pâtisserie|patisserie' => 'img/illus/products/cake.png', 'sandwich|wrap|panini' => 'img/illus/products/sandwiches.png',
+        'salade' => 'img/illus/products/salads.png', 'pistolet|petit pain|roll' => 'img/illus/products/rolls.png',
+        'baguette|pain|boulang' => 'img/illus/products/bread-1.png', 'café|cafe|thé|chocolat chaud|boisson chaude' => 'img/illus/category-icons/hot-drink.png',
+        'boisson|jus|soda|limonade|eau' => 'img/illus/category-icons/cold-drink.png', 'fromage|charcut' => 'img/illus/category-icons/cheese-fine-cuts.png',
+    ] as $re => $img) {
+        if (preg_match('/' . $re . '/u', $t)) { return $img; }
+    }
+    return 'img/illus/decorative/bubble.png';
+}
+
+/**
+ * Le catalogue des écrans (Créer un post, Campagnes) depuis l'API :
+ *  - produits : GET /shops/{id}/products/available (prix de vente
+ *    `portion_price`), noms NL par ?lang_code=nl ; actifs, hors B2B ;
+ *  - gammes : GET /product-availability-periods (actives).
+ * Mémorisé 6 h (`tfb_cache_catalogue`) ; sans API, le catalogue en base.
+ */
+function socApiCatalogue(bool $forcer = false): array
+{
+    $cache = socSetting('tfb_cache_catalogue');
+    if (!$forcer && is_array($cache) && ($cache['le'] ?? 0) > time() - 21600 && !empty($cache['items'])) { return $cache['items']; }
+    try {
+        $shop = (string) (socApiShops()[0]['id'] ?? '');
+        if ($shop === '') { throw new TfbError('aucune boutique'); }
+        $fr = Tfb::liste(Tfb::get('/shops/' . $shop . '/products/available'));
+        $nl = [];
+        try { foreach (Tfb::liste(Tfb::get('/shops/' . $shop . '/products/available?lang_code=nl')) as $p) { $nl[(string) $p['id']] = (string) ($p['name'] ?? ''); } }
+        catch (Throwable $e) { /* sans NL */ }
+        $items = [];
+        foreach (Tfb::liste(Tfb::get('/product-availability-periods')) as $g) {
+            if (empty($g['is_active'])) { continue; }
+            $nom = trim(preg_replace('/^[^\p{L}\p{N}]+/u', '', (string) ($g['name'] ?? '')));
+            $items[] = ['id' => 'g' . $g['id'], 'apiId' => (int) $g['id'], 'kind' => 'gamme', 'name' => $nom, 'nameNl' => $nom, 'price' => '',
+                'img' => socIllus('saison ' . $nom), 'gamme' => $nom, 'description' => (string) ($g['description'] ?? '')];
+        }
+        foreach ($fr as $p) {
+            $cat = (string) ($p['category_name'] ?? '');
+            if (empty($p['is_active']) || preg_match('/^B\.?2\.?B/i', $cat)) { continue; }
+            $prix = is_numeric($p['portion_price'] ?? null) ? (float) $p['portion_price'] : (is_numeric($p['suggested_sale_price'] ?? null) ? (float) $p['suggested_sale_price'] : null);
+            $items[] = ['id' => 'p' . $p['id'], 'apiId' => (int) $p['id'], 'kind' => 'produit', 'name' => (string) $p['name'],
+                'nameNl' => ($nl[(string) $p['id']] ?? '') ?: (string) $p['name'], 'price' => $prix !== null ? number_format($prix, 2, ',', '') : '',
+                'img' => socIllus($cat, (string) $p['name']), 'gamme' => $cat];
+        }
+        if (!$items) { throw new TfbError('catalogue vide'); }
+        socSettingPut('tfb_cache_catalogue', ['le' => time(), 'shop' => $shop, 'items' => $items]);
+        return $items;
+    } catch (Throwable $e) {
+        return is_array($cache['items'] ?? null) && $cache['items'] ? $cache['items'] : [];
+    }
+}
+
+/* --- ventes ------------------------------------------------------------------------------ */
+
+/**
+ * Les ventes des produits d'une campagne pour une boutique, lues dans l'API :
+ * GET /shops/{id}/statistics/sales/product-category-groups?date_from&date_to
+ * (une ligne par produit vendu : sold_qty, sales_value) — la période, puis les
+ * six semaines précédentes décalées de 7 jours (référence = moyenne).
+ * Tickets : GET /shops/{id}/statistics/sales/kpis (tickets de la boutique).
+ *
+ * @return array{0:?array,1:?string}
+ */
+function socVentesApi(string $shopId, array $produits, string $du, string $au): array
+{
+    if (!ctype_digit($shopId)) { return [null, 'boutique sans identifiant de caisse']; }
+    $noms = array_values(array_unique(array_filter(array_map(static fn ($n) => mb_strtolower(trim((string) $n)), $produits))));
+    if (!$noms) { return [null, 'Aucun produit rattaché à la campagne']; }
+    $somme = static function (string $de, string $a) use ($shopId, $noms): array {
+        $q = '?date_from=' . $de . '&date_to=' . $a;
+        $ca = 0.0; $qt = 0.0; $vu = false;
+        foreach (Tfb::liste(Tfb::get('/shops/' . $shopId . '/statistics/sales/product-category-groups' . $q)) as $l) {
+            $n = mb_strtolower(trim((string) ($l['product_name'] ?? '')));
+            $c = mb_strtolower(trim((string) ($l['category_name'] ?? '')));
+            if (in_array($n, $noms, true) || in_array($c, $noms, true)) { $ca += (float) ($l['sales_value'] ?? 0); $qt += (float) ($l['sold_qty'] ?? 0); $vu = true; }
+        }
+        $k = Tfb::get('/shops/' . $shopId . '/statistics/sales/kpis' . $q);
+        return [$ca, $qt, (int) ($k['tickets'] ?? 0), $vu];
+    };
+    try {
+        [$ca, $q, $tk, $vu] = $somme($du, $au);
+        $ref = [0.0, 0.0, 0]; $vuRef = false;
+        for ($k = 1; $k <= 6; $k++) {
+            [$a, $b, $c, $v] = $somme(date('Y-m-d', strtotime($du . ' -' . (7 * $k) . ' days')), date('Y-m-d', strtotime($au . ' -' . (7 * $k) . ' days')));
+            $ref[0] += $a; $ref[1] += $b; $ref[2] += $c; $vuRef = $vuRef || $v;
+        }
+    } catch (Throwable $e) {
+        return [null, 'API des ventes injoignable : ' . $e->getMessage()];
+    }
+    if (!$vu && !$vuRef) { return [null, 'Aucune vente de ces produits dans l’API sur la période (' . implode(', ', $produits) . ')']; }
+    return [['caCamp' => round($ca, 2), 'caRef' => round($ref[0] / 6, 2), 'tCamp' => $tk, 'tRef' => (int) round($ref[2] / 6),
+        'qCamp' => round($q, 1), 'qRef' => round($ref[1] / 6, 1), 'source' => 'API TFBuddy'], null];
+}

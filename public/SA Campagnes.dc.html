@@ -201,6 +201,7 @@
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;">
           <span style="font-size:12px;color:#666666;">Produits ou gammes</span>
+          <input value="{{ n.catQ }}" onChange="{{ n.setCatQ }}" placeholder="{{ n.catPh }}" style="font-family:var(--font-ui);font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 10px;width:100%;box-sizing:border-box;">
           <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ n.products }}" as="p" hint-placeholder-count="12"><button onClick="{{ p.toggle }}" style="border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid {{ p.border }};background:{{ p.bg }};color:{{ p.fg }};">{{ p.name }}</button></sc-for></div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -296,7 +297,9 @@ class Component extends DCLogic {
       typeHint: 'Levier : ' + SA.LEVERS[nt.lev].name + ' · KPI attendu : ' + nt.kpi,
       start: n.start, end: n.end, setStart: (e) => upd({ start: e.target.value }), setEnd: (e) => upd({ end: e.target.value }), hasEnd: !nt.continuous, continuous: !!nt.continuous,
       shops: SA.SHOPS.map(sh => Object.assign(chip(n.shops.includes(sh.id)), { name: sh.name, toggle: () => upd({ shops: n.shops.includes(sh.id) ? n.shops.filter(x => x !== sh.id) : n.shops.concat(sh.id) }) })),
-      products: SA.CATALOGUE.map(p => Object.assign(chip(n.products.includes(p.name)), { name: p.name, toggle: () => upd({ products: n.products.includes(p.name) ? n.products.filter(x => x !== p.name) : n.products.concat(p.name) }) })),
+      catQ: this.state.catQ || '', setCatQ: (e) => this.setState({ catQ: e.target.value }), catPh: 'Rechercher parmi ' + SA.CATALOGUE.length + ' produits et gammes…',
+      // Les produits choisis d'abord, puis 30 résultats de la recherche.
+      products: SA.CATALOGUE.filter(p => n.products.includes(p.name)).concat(SA.CATALOGUE.filter(p => !n.products.includes(p.name) && (!this.state.catQ || (p.name + ' ' + (p.gamme || '')).toLowerCase().includes(String(this.state.catQ).toLowerCase()))).slice(0, 30)).map(p => Object.assign(chip(n.products.includes(p.name)), { name: p.name, toggle: () => upd({ products: n.products.includes(p.name) ? n.products.filter(x => x !== p.name) : n.products.concat(p.name) }) })),
       metric: n.metric, setMetric: (e) => upd({ metric: e.target.value }), goal: n.goal, setGoal: (e) => upd({ goal: +e.target.value }), budget: n.budget, setBudget: (e) => upd({ budget: +e.target.value }),
       hasErr: !!s.err, err: s.err };
     return {

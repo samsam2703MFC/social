@@ -73,7 +73,7 @@
             <sc-for list="{{ keyFields }}" as="k" hint-placeholder-count="3">
               <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">
                 <span>{{ k.label }} <span style="font-size:11px;color:{{ k.stFg }};">· {{ k.state }}</span></span>
-                <input type="password" autocomplete="off" value="{{ k.value }}" onChange="{{ k.set }}" placeholder="{{ k.ph }}" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;">
+                <input type="{{ k.type }}" autocomplete="off" value="{{ k.value }}" onChange="{{ k.set }}" placeholder="{{ k.ph }}" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;">
               </label>
             </sc-for>
           </div>
@@ -277,7 +277,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { tab: 'conn', busy: {}, testing: false, logF: '', toast: '', tick: 0, keys: { systemToken: '', appSecret: '', verifyToken: '' }, publicUrl: null, tfb: {}, tfbTest: '', audit: null, auditing: false, auditF: 'ko', auditQ: '' };
+  state = { tab: 'conn', busy: {}, testing: false, logF: '', toast: '', tick: 0, keys: { appId: '', systemToken: '', appSecret: '', verifyToken: '' }, publicUrl: null, tfb: {}, tfbTest: '', audit: null, auditing: false, auditF: 'ko', auditQ: '' };
   componentDidMount() { const SA = window.SA; const t = SA && SA.param('tab'); if (t) this.setState({ tab: t }); this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h); }
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2800); }
@@ -365,15 +365,21 @@ class Component extends DCLogic {
           auditEmpty: rows.length === 0, auditEmptyText: (A.routes || []).length ? 'Aucune route pour ce filtre.' : 'Aucun audit encore.',
         };
       })(),
-      keyFields: (() => { const ms = SA.metaStatus || {}; return [['systemToken', 'Token du System User', 'tokenDefini', 'EAAG…'], ['appSecret', "Clé secrète de l'app", 'secretDefini', 'app secret'], ['verifyToken', 'Jeton du webhook', 'verifyDefini', 'chaîne libre']]
-        .map(([k, label, flag, ph]) => ({ label, ph, value: s.keys[k], state: ms[flag] ? 'enregistré' : 'absent', stFg: ms[flag] ? '#0F6B4A' : '#8D1D2C',
+      keyFields: (() => { const ms = SA.metaStatus || {}, J = ms.jeton || null;
+        // Le token : son état réel chez Meta (debug_token) quand l'App ID et la clé secrète sont connus.
+        const etatJeton = !ms.tokenDefini ? 'absent' : !J ? 'enregistré · non vérifié (App ID + clé secrète requis)' : J.valide && !J.erreur ? 'valide · expire : ' + J.expire : 'invalide : ' + (J.erreur || 'refusé par Meta');
+        return [['appId', "Identifiant de l'application (App ID)", 'appId', ms.appId || '1234567890', 'text'], ['systemToken', 'Token du System User', 'tokenDefini', 'EAAG…'], ['appSecret', "Clé secrète de l'app", 'secretDefini', 'app secret'], ['verifyToken', 'Jeton du webhook', 'verifyDefini', 'chaîne libre']]
+        .map(([k, label, flag, ph, type]) => ({ label, ph, type: type || 'password', value: s.keys[k],
+          state: k === 'systemToken' ? etatJeton : k === 'appId' ? (ms.appId ? ms.appId : 'absent') : (ms[flag] ? 'enregistré' : 'absent'),
+          stFg: (k === 'systemToken' ? (J && J.valide && !J.erreur) : ms[flag]) ? '#0F6B4A' : '#8D1D2C',
           set: (e) => this.setState({ keys: Object.assign({}, this.state.keys, { [k]: e.target.value }) }) })); })(),
-      saveKeys: () => { SA.api('POST', '/parametres/cles', s.keys).then(r => { SA.metaStatus = r.metaStatus; this.setState({ keys: { systemToken: '', appSecret: '', verifyToken: '' } }); this.toast(r.maj.length ? r.maj.length + ' clé(s) enregistrée(s) en base.' : 'Aucune clé saisie.'); SA.refresh(); }).catch(e => this.toast('Enregistrement impossible : ' + e.message)); },
+      saveKeys: () => { SA.api('POST', '/parametres/cles', s.keys).then(r => { SA.metaStatus = r.metaStatus; this.setState({ keys: { appId: '', systemToken: '', appSecret: '', verifyToken: '' } }); this.toast(r.maj.length ? r.maj.length + ' clé(s) enregistrée(s) en base.' : 'Aucune clé saisie.'); SA.refresh(); }).catch(e => this.toast('Enregistrement impossible : ' + e.message)); },
       publicUrl: s.publicUrl != null ? s.publicUrl : ((st.params || {}).url_publique || ''),
       setPublicUrl: (e) => { const v = e.target.value; this.setState({ publicUrl: v }); clearTimeout(this._pu); this._pu = setTimeout(() => SA.api('POST', '/parametres', { url_publique: v }).then(() => this.toast('URL publique enregistrée.')).catch(err => this.toast(err.message)), 700); },
       ...(() => { const M = SA.META, meta = st.meta || { version: M.version, dsa: M.dsa, ids: M.ids }, setMeta = (p) => SA.save({ meta: Object.assign({}, meta, p) });
         return { versions: M.versions.map(v => Object.assign(chip(meta.version === v), { id: v, pick: () => { setMeta({ version: v }); SA.log('Sarah Lambert (Franchiseur)', 'Connexion', 'Version API Meta : ' + v); } })), baseUrl: M.base + meta.version + '/',
-          perms: M.permissions.map(([id, level]) => ({ id, level, bg: level === 'Full access' ? '#E2F0E8' : '#FCE7C8', fg: level === 'Full access' ? '#0F6B4A' : '#6b3d0a' })),
+          // En réel : les permissions que le token a VRAIMENT (debug_token), pas la liste attendue.
+          perms: M.permissions.map(([id, level]) => { const J = (SA.metaStatus || {}).jeton; if (SA.live) { const ok = J && (J.scopes || []).includes(id); level = !J ? 'Non vérifiée' : ok ? 'Accordée' : 'Manquante'; return { id, level, bg: ok ? '#E2F0E8' : J ? '#F6DCDF' : '#F4EFE8', fg: ok ? '#0F6B4A' : J ? '#8D1D2C' : '#666666' }; } return { id, level, bg: level === 'Full access' ? '#E2F0E8' : '#FCE7C8', fg: level === 'Full access' ? '#0F6B4A' : '#6b3d0a' }; }),
           dsaB: meta.dsa.beneficiary, dsaP: meta.dsa.payor, setDsaB: (e) => setMeta({ dsa: Object.assign({}, meta.dsa, { beneficiary: e.target.value }) }), setDsaP: (e) => setMeta({ dsa: Object.assign({}, meta.dsa, { payor: e.target.value }) }),
           networkAccount: meta.networkAccount || M.networkAccount || 'non renseigné', setNetworkAccount: (e) => setMeta({ networkAccount: e.target.value.trim() }), live: !!SA.live,
           idHead: [['Boutique', 'inherit'], ['page_id', 'ui-monospace,monospace'], ['ad_account_id', 'ui-monospace,monospace'], ['instagram_user_id', 'ui-monospace,monospace'], ['pixel_id', 'ui-monospace,monospace']].map(([l, f]) => ({ l, f })),

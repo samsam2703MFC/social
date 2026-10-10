@@ -46,6 +46,7 @@ final class Meta
             'systemToken' => $s('meta_system_token'),
             'appSecret'   => $s('meta_app_secret'),
             'verifyToken' => $s('meta_verify_token'),
+            'appId'       => $s('meta_app_id'),
         ];
     }
 
@@ -56,7 +57,31 @@ final class Meta
     {
         $c = self::config();
         return ['version' => $c['version'], 'tokenDefini' => $c['systemToken'] !== '',
-            'secretDefini' => $c['appSecret'] !== '', 'verifyDefini' => $c['verifyToken'] !== '', 'configure' => self::configured()];
+            'secretDefini' => $c['appSecret'] !== '', 'verifyDefini' => $c['verifyToken'] !== '', 'configure' => self::configured(),
+            'appId' => $c['appId'], 'jeton' => socSetting('meta_jeton_info')];
+    }
+
+    /**
+     * Ce que Meta dit du token : valide ou non, date d'expiration, permissions
+     * réellement accordées, application. Exige l'identifiant de l'application
+     * et sa clé secrète (jeton d'application `app_id|app_secret`).
+     */
+    public static function verifierJeton(): ?array
+    {
+        $c = self::config();
+        if ($c['systemToken'] === '' || $c['appId'] === '' || $c['appSecret'] === '') { return null; }
+        try {
+            $r = self::call('GET', 'debug_token', ['input_token' => $c['systemToken']], $c['appId'] . '|' . $c['appSecret']);
+            $d = (array) ($r['data'] ?? []);
+            $info = ['valide' => !empty($d['is_valid']), 'expire' => !empty($d['expires_at']) ? date('Y-m-d', (int) $d['expires_at']) : 'jamais',
+                'scopes' => array_values((array) ($d['scopes'] ?? [])), 'app' => (string) ($d['application'] ?? ''), 'appId' => (string) ($d['app_id'] ?? ''),
+                'type' => (string) ($d['type'] ?? ''), 'erreur' => $d['error']['message'] ?? null, 'le' => date('Y-m-d H:i')];
+            if ($info['appId'] !== '' && $info['appId'] !== $c['appId']) { $info['erreur'] = 'le token appartient à une autre application (' . $info['appId'] . ')'; }
+        } catch (MetaError $e) {
+            $info = ['valide' => false, 'erreur' => $e->getMessage(), 'le' => date('Y-m-d H:i'), 'scopes' => []];
+        }
+        socSettingPut('meta_jeton_info', $info);
+        return $info;
     }
 
     public static function base(): string { return 'https://graph.facebook.com/' . self::config()['version'] . '/'; }
