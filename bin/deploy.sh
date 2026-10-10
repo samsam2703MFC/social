@@ -27,8 +27,11 @@ warn() { printf '\033[1;33m[social]\033[0m %s\n' "$*"; }
 
 # --- 1. Prérequis : ceux du BO (Apache, PHP, pdo_mysql, curl) ----------------
 command -v php >/dev/null || { warn "php absent — installez d'abord le BO consultant."; exit 1; }
-php -m | grep -qi '^pdo_mysql$' || { warn "pdo_mysql absent."; exit 1; }
-php -m | grep -qi '^curl$' || { warn "php-curl absent (appels Meta) — installation…"; apt-get -o DPkg::Lock::Timeout=600 install -y -qq php-curl >/dev/null; }
+# La liste des modules est lue une fois : `php -m | grep -q` échoue sous pipefail
+# (grep s'arrête au premier résultat, php reçoit SIGPIPE) — faux « absent ».
+PHP_MODS="$(php -m 2>/dev/null)"
+grep -qi '^pdo_mysql$' <<<"$PHP_MODS" || { warn "pdo_mysql absent."; exit 1; }
+grep -qi '^curl$' <<<"$PHP_MODS" || { warn "php-curl absent (appels Meta) — installation…"; apt-get -o DPkg::Lock::Timeout=600 install -y -qq php-curl >/dev/null; }
 a2enmod rewrite >/dev/null 2>&1 || true
 a2enmod headers >/dev/null 2>&1 || true
 [[ -f "$BO_DIR/config/config.php" ]] || warn "Config du BO introuvable ($BO_DIR/config/config.php) : l'API répondra 503 tant qu'il manque."
@@ -91,7 +94,7 @@ touch /var/log/social-cron.log; chown www-data:www-data /var/log/social-cron.log
 fail=0
 st=$(curl -fsS --max-time 20 "$LOCAL_BASE/api/v1/social/status" || echo '{}')
 echo "status : $st"
-echo "$st" | grep -q '"db":true' && log "OK  base joignable (identifiants du BO)" || { warn "base injoignable"; fail=1; }
+grep -q '"db":true' <<<"$st" && log "OK  base joignable (identifiants du BO)" || { warn "base injoignable"; fail=1; }
 code=$(curl -s -o /dev/null -w '%{http_code}' "$LOCAL_BASE/")
 [[ "$code" == "200" ]] && log "OK  $ALIAS_PATH/ → 200" || { warn "$ALIAS_PATH/ → HTTP $code"; fail=1; }
 code=$(curl -s -o /dev/null -w '%{http_code}' "$LOCAL_BASE/SA%20Calendrier.dc.html")
