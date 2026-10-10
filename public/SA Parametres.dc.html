@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button,textarea{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="set" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Business Manager · tokens d'utilisateur système</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">PARAMETRES ET CONNEXIONS</h1>
+      </div>
+    </header>
+
+    <div style="display:flex;gap:2px;border-bottom:0.5px solid rgba(34,34,34,0.15);flex-wrap:wrap;">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+        <button onClick="{{ t.pick }}" style="border:none;background:transparent;padding:10px 14px;font-size:13px;font-weight:500;cursor:pointer;color:{{ t.fg }};box-shadow:inset 0 -2px 0 {{ t.line }};display:flex;align-items:center;gap:6px;">{{ t.label }}<sc-if value="{{ t.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#8D1D2C;color:#FFFFFF;font-size:10px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ t.badge }}</span></sc-if></button>
+      </sc-for>
+    </div>
+
+    <!-- CONNEXIONS -->
+    <sc-if value="{{ isConn }}" hint-placeholder-val="{{ true }}">
+      <sc-if value="{{ hasAlerts }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#FCE7C8;border-radius:8px;padding:10px 14px;font-size:13px;color:#6b3d0a;">{{ alertText }}</div>
+      </sc-if>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:12px;color:#666666;">{{ connSummary }}</span>
+        <button onClick="{{ testAll }}" style="height:34px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">{{ testLabel }}</button>
+      </div>
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
+        <div style="display:grid;grid-template-columns:minmax(150px,1.1fr) repeat(3,minmax(200px,1fr));min-width:820px;">
+          <sc-for list="{{ connHead }}" as="h" hint-placeholder-count="4"><span style="padding:10px 14px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;background:#F4EFE8;">{{ h }}</span></sc-for>
+          <sc-for list="{{ connRows }}" as="r" hint-placeholder-count="6">
+            <span style="padding:12px 14px;border-top:0.5px solid rgba(34,34,34,0.08);display:flex;flex-direction:column;gap:2px;"><span style="font-size:14px;font-weight:500;">{{ r.name }}</span><span style="font-size:11px;color:#666666;">{{ r.address }}</span></span>
+            <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="3">
+              <span style="padding:10px 14px;border-top:0.5px solid rgba(34,34,34,0.08);display:flex;align-items:center;justify-content:space-between;gap:8px;background:{{ c.bg }};">
+                <span style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+                  <span style="align-self:flex-start;font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ c.stBg }};color:{{ c.stFg }};">{{ c.label }}</span>
+                  <span style="font-size:11px;color:#666666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.detail }}</span>
+                </span>
+                <sc-if value="{{ c.needsAction }}" hint-placeholder-val="{{ false }}"><button onClick="{{ c.fix }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;">{{ c.action }}</button></sc-if>
+                <sc-if value="{{ c.busy }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Connexion…</span></sc-if>
+              </span>
+            </sc-for>
+          </sc-for>
+        </div>
+      </section>
+      <span style="font-size:11px;color:#666666;line-height:1.5;">Publication via Graph API (Pages API, permission pages_manage_posts) avec un Page access token par boutique. Publicités via Marketing API. Les tokens sont stockés côté serveur ; le navigateur n'y a jamais accès.</span>
+    </sc-if>
+
+    <!-- API META -->
+    <sc-if value="{{ isApi }}" hint-placeholder-val="{{ false }}">
+      <sc-if value="{{ live }}" hint-placeholder-val="{{ false }}">
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Clés d'accès Meta</span><span style="font-size:11px;color:#666666;">Stockées en base (table social_parametre) · jamais réaffichées · un champ vide ne change rien</span></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">
+            <sc-for list="{{ keyFields }}" as="k" hint-placeholder-count="3">
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">
+                <span>{{ k.label }} <span style="font-size:11px;color:{{ k.stFg }};">· {{ k.state }}</span></span>
+                <input type="password" autocomplete="off" value="{{ k.value }}" onChange="{{ k.set }}" placeholder="{{ k.ph }}" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;">
+              </label>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button onClick="{{ saveKeys }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Enregistrer les clés</button>
+            <label style="font-size:12px;color:#444444;display:flex;gap:6px;align-items:center;">URL publique du module (Meta y télécharge les visuels) <input value="{{ publicUrl }}" onChange="{{ setPublicUrl }}" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 8px;width:260px;"></label></div>
+        </section>
+      </sc-if>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;">
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+          <span style="font-size:13px;font-weight:500;">Version de l'API <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;">{VERSION}</span></span>
+          <div style="display:flex;gap:6px;"><sc-for list="{{ versions }}" as="v" hint-placeholder-count="2"><button onClick="{{ v.pick }}" style="border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;border:0.5px solid {{ v.border }};background:{{ v.bg }};color:{{ v.fg }};font-family:ui-monospace,monospace;">{{ v.id }}</button></sc-for></div>
+          <span style="font-family:ui-monospace,monospace;font-size:12px;background:#F4EFE8;border-radius:6px;padding:8px 10px;">{{ baseUrl }}</span>
+          <span style="font-size:11px;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:7px 9px;line-height:1.45;">La doc Meta affiche v25.0 ; une v26.0 est signalée depuis le 29/07/2026. Vérifiez le changelog Marketing API avant de figer la version.</span>
+          <span style="font-size:11px;color:#666666;line-height:1.5;">Backend Franchise Buddy : <span style="font-family:ui-monospace,monospace;">{API_BASE_URL}/api/v1/social/{domaine}/{ressource}</span> · session du cockpit (même connexion que le BO consultant). Le navigateur n'appelle jamais Meta directement.</span>
+        </section>
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+          <span style="font-size:13px;font-weight:500;">Permissions et niveaux d'accès</span>
+          <sc-for list="{{ perms }}" as="p" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-top:0.5px solid rgba(34,34,34,0.06);">
+              <span style="font-family:ui-monospace,monospace;font-size:12px;">{{ p.id }}</span>
+              <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ p.bg }};color:{{ p.fg }};">{{ p.level }}</span>
+            </div>
+          </sc-for>
+          <span style="font-size:11px;color:#666666;line-height:1.45;">Depuis mai 2026, « Standard » s'appelle « Limited access » et « Advanced » s'appelle « Full access » dans le dashboard Meta. leads_retrieval doit passer en Full access pour lire les leads de toutes les Pages.</span>
+        </section>
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+          <span style="font-size:13px;font-weight:500;">Transparence UE (DSA) · obligatoire pour cibler la Belgique</span>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Bénéficiaire <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;">dsa_beneficiary</span><input type="text" value="{{ dsaB }}" onChange="{{ setDsaB }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Payeur <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;">dsa_payor</span><input type="text" value="{{ dsaP }}" onChange="{{ setDsaP }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+          <span style="font-size:11px;color:#666666;">Pré-rempli dans chaque ad set créé par l'assistant Publicités.</span>
+        </section>
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+          <span style="font-size:13px;font-weight:500;">Conventions</span>
+          <span style="font-size:12px;line-height:1.5;">Montants en <strong style="font-weight:500;">centimes</strong> : 20 € → <span style="font-family:ui-monospace,monospace;">2000</span>.</span>
+          <span style="font-size:12px;line-height:1.5;">Dates en ISO 8601 (<span style="font-family:ui-monospace,monospace;">2026-10-18T08:00:00+0200</span>) ou timestamp Unix.</span>
+          <span style="font-size:12px;line-height:1.5;">Posts programmés : <span style="font-family:ui-monospace,monospace;">published=false</span> + <span style="font-family:ui-monospace,monospace;">scheduled_publish_time</span>, entre 10 minutes et 30 jours.</span>
+          <span style="font-size:12px;line-height:1.5;">Tokens : System User (Business Manager) pour les pubs, Page token par boutique pour les posts.</span>
+        </section>
+      </div>
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
+        <div style="padding:12px 16px;border-bottom:0.5px solid rgba(34,34,34,0.10);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Identifiants Meta par boutique</span><span style="font-size:11px;color:#666666;">Compte réseau : <sc-if value="{{ live }}" hint-placeholder-val="{{ false }}"><input value="{{ networkAccount }}" onChange="{{ setNetworkAccount }}" placeholder="act_…" style="font-family:ui-monospace,monospace;font-size:11px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:3px 6px;width:150px;"></sc-if><sc-if value="{{ !live }}" hint-placeholder-val="{{ true }}"><span style="font-family:ui-monospace,monospace;">{{ networkAccount }}</span></sc-if></span></div>
+        <div style="display:grid;grid-template-columns:120px repeat(4,minmax(150px,1fr));gap:0;min-width:760px;">
+          <sc-for list="{{ idHead }}" as="h" hint-placeholder-count="5"><span style="padding:9px 12px;font-size:11px;font-weight:500;color:#666666;background:#F4EFE8;font-family:{{ h.f }};">{{ h.l }}</span></sc-for>
+          <sc-for list="{{ idRows }}" as="r" hint-placeholder-count="6">
+            <span style="padding:8px 12px;border-top:0.5px solid rgba(34,34,34,0.08);font-size:13px;font-weight:500;display:flex;align-items:center;">{{ r.name }}</span>
+            <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="4"><span style="padding:6px 10px;border-top:0.5px solid rgba(34,34,34,0.08);background:{{ c.bg }};"><input type="text" value="{{ c.v }}" onChange="{{ c.set }}" placeholder="{{ c.ph }}" style="font-size:12px;font-family:ui-monospace,monospace;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;width:100%;box-sizing:border-box;"></span></sc-for>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- MODÈLES -->
+    <sc-if value="{{ isTpl }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;justify-content:flex-end;"><button onClick="{{ addTpl }}" style="height:34px;padding:0 14px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">Nouveau modèle</button></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;">
+        <sc-for list="{{ templates }}" as="t" hint-placeholder-count="4">
+          <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:8px;">
+              <input type="text" value="{{ t.name }}" onChange="{{ t.setName }}" style="flex:1;min-width:0;font-size:14px;font-weight:500;border:0.5px solid rgba(34,34,34,0.12);border-radius:6px;padding:7px 10px;">
+              <select value="{{ t.type }}" onChange="{{ t.setType }}" style="font-size:12px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:6px 8px;"><sc-for list="{{ postTypes }}" as="o" hint-placeholder-count="0"><option value="{{ o }}">{{ o }}</option></sc-for></select>
+            </div>
+            <span style="font-size:11px;font-weight:500;color:#666666;">FR</span>
+            <textarea value="{{ t.text }}" onChange="{{ t.setText }}" rows="3" style="font-size:13px;line-height:1.5;border:0.5px solid rgba(34,34,34,0.12);border-radius:6px;padding:8px 10px;resize:vertical;"></textarea>
+            <span style="font-size:11px;font-weight:500;color:#666666;">NL</span>
+            <textarea value="{{ t.textNl }}" onChange="{{ t.setTextNl }}" rows="3" placeholder="Nederlandse versie" style="font-size:13px;line-height:1.5;border:0.5px solid rgba(34,34,34,0.12);border-radius:6px;padding:8px 10px;resize:vertical;"></textarea>
+            <span style="font-size:11px;color:#666666;line-height:1.45;">Aperçu Wavre : {{ t.preview }}</span>
+            <span style="font-size:11px;color:#666666;line-height:1.45;">Aperçu Halle : {{ t.previewNl }}</span>
+            <div style="display:flex;justify-content:space-between;align-items:center;"><a href="{{ t.useHref }}" style="font-size:12px;font-weight:500;">Créer un post avec ce modèle →</a><button onClick="{{ t.remove }}" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;cursor:pointer;">Supprimer</button></div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- GROUPES -->
+    <sc-if value="{{ isGrp }}" hint-placeholder-val="{{ false }}">
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Langue de publication par boutique</span><span style="font-size:11px;color:#666666;">Bilingue : la légende contient les deux langues, le visuel suit la première.</span></div>
+        <sc-for list="{{ langRows }}" as="lr" hint-placeholder-count="6">
+          <div style="display:grid;grid-template-columns:120px auto minmax(0,1fr);gap:12px;align-items:center;padding:6px 0;border-top:0.5px solid rgba(34,34,34,0.06);">
+            <span style="font-size:13px;font-weight:500;">{{ lr.name }}</span>
+            <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;"><sc-for list="{{ lr.opts }}" as="o" hint-placeholder-count="4"><button onClick="{{ o.pick }}" style="border:none;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;background:{{ o.bg }};color:{{ o.fg }};">{{ o.label }}</button></sc-for></div>
+            <span style="font-size:11px;color:#666666;">{{ lr.note }}</span>
+          </div>
+        </sc-for>
+      </section>
+      <div style="display:flex;justify-content:flex-end;"><button onClick="{{ addGroup }}" style="height:34px;padding:0 14px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">Nouveau groupe</button></div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+          <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:12px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <input type="text" value="{{ g.name }}" onChange="{{ g.setName }}" style="flex:0 1 220px;font-size:14px;font-weight:500;border:0.5px solid rgba(34,34,34,0.12);border-radius:6px;padding:7px 10px;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1;">
+              <sc-for list="{{ g.shops }}" as="s" hint-placeholder-count="6"><button onClick="{{ s.toggle }}" style="border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ s.border }};background:{{ s.bg }};color:{{ s.fg }};">{{ s.name }}</button></sc-for>
+            </div>
+            <select value="{{ g.lang }}" onChange="{{ g.setLang }}" title="Langue du groupe" style="font-size:12px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:6px 8px;"><option value="">Langue : par boutique</option><option value="fr">Groupe en FR</option><option value="nl">Groupe en NL</option><option value="nl,fr">Groupe NL + FR</option><option value="fr,nl">Groupe FR + NL</option></select>
+            <span style="font-size:12px;color:#666666;">{{ g.count }}</span>
+            <button onClick="{{ g.remove }}" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;cursor:pointer;">Supprimer</button>
+          </div>
+        </sc-for>
+      </div>
+      <span style="font-size:11px;color:#666666;">Les groupes servent au ciblage d'un post ou d'une publicité. Prévu pour 30 boutiques et plus : une boutique peut appartenir à plusieurs groupes.</span>
+    </sc-if>
+
+    <!-- DROITS -->
+    <sc-if value="{{ isRights }}" hint-placeholder-val="{{ false }}">
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
+        <div style="display:grid;grid-template-columns:minmax(200px,1.4fr) repeat(3,minmax(170px,1fr));min-width:760px;">
+          <span style="padding:10px 14px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;background:#F4EFE8;">Droit</span>
+          <sc-for list="{{ roles }}" as="r" hint-placeholder-count="3"><span style="padding:10px 14px;font-size:12px;font-weight:500;background:#F4EFE8;">{{ r }}</span></sc-for>
+          <sc-for list="{{ rights }}" as="rw" hint-placeholder-count="6">
+            <span style="padding:10px 14px;border-top:0.5px solid rgba(34,34,34,0.08);font-size:13px;">{{ rw.label }}</span>
+            <sc-for list="{{ rw.vals }}" as="v" hint-placeholder-count="3"><span style="padding:10px 14px;border-top:0.5px solid rgba(34,34,34,0.08);font-size:12px;color:{{ v.fg }};font-weight:{{ v.w }};">{{ v.t }}</span></sc-for>
+          </sc-for>
+        </div>
+      </section>
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+        <span style="font-size:13px;font-weight:500;">Utilisateurs</span>
+        <sc-for list="{{ users }}" as="u" hint-placeholder-count="8">
+          <div style="display:grid;grid-template-columns:30px minmax(160px,1fr) minmax(200px,1.2fr) minmax(120px,1fr);gap:10px;align-items:center;padding:6px 0;border-top:0.5px solid rgba(34,34,34,0.06);">
+            <span style="width:28px;height:28px;border-radius:50%;background:{{ u.c }};color:#FFFFFF;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;">{{ u.ini }}</span>
+            <span style="font-size:13px;font-weight:500;">{{ u.name }}</span>
+            <span style="font-size:12px;color:#444444;">{{ u.role }}</span>
+            <span style="font-size:12px;color:#666666;">{{ u.scope }}</span>
+          </div>
+        </sc-for>
+      </section>
+    </sc-if>
+
+    <!-- JOURNAL -->
+    <sc-if value="{{ isLog }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <sc-for list="{{ logFilters }}" as="f" hint-placeholder-count="6"><button onClick="{{ f.pick }}" style="border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};">{{ f.label }}</button></sc-for>
+      </div>
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;">
+        <sc-for list="{{ logRows }}" as="l" hint-placeholder-count="8">
+          <div style="display:grid;grid-template-columns:130px 200px 120px minmax(0,1fr);gap:12px;padding:10px 14px;border-bottom:0.5px solid rgba(34,34,34,0.06);align-items:center;">
+            <span style="font-size:12px;color:#666666;">{{ l.at }}</span>
+            <span style="font-size:12px;font-weight:500;">{{ l.who }}</span>
+            <span style="justify-self:start;font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ l.bg }};color:{{ l.fg }};">{{ l.what }}</span>
+            <span style="font-size:12px;color:#444444;line-height:1.45;">{{ l.detail }}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ logEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:28px;text-align:center;font-size:13px;color:#666666;">Aucune entrée pour ce filtre.</div></sc-if>
+      </section>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'conn', busy: {}, testing: false, logF: '', toast: '', tick: 0, keys: { systemToken: '', appSecret: '', verifyToken: '' }, publicUrl: null };
+  componentDidMount() { const SA = window.SA; const t = SA && SA.param('tab'); if (t) this.setState({ tab: t }); this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h); }
+  componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); }
+  toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2800); }
+  renderVals() {
+    const SA = window.SA, s = this.state;
+    if (!SA) return { tabs: [] };
+    const st = SA.state(), alerts = SA.alerts();
+    const groups = st.groups || SA.GROUPS, templates = st.templates || SA.TEMPLATES;
+    const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
+    const tabsDef = [['conn', 'Connexions', alerts.length], ['api', 'API Meta', 0], ['tpl', 'Modèles de posts', 0], ['grp', 'Groupes de boutiques', 0], ['rights', 'Droits', 0], ['log', "Journal d'activité", 0]];
+    const fixConn = (shopId, key, label) => {
+      const k = shopId + key; this.setState({ busy: Object.assign({}, this.state.busy, { [k]: true }) });
+      if (SA.live) {
+        // En réel : on ne « reconnecte » pas depuis l'écran — l'accès se donne dans le
+        // Business Manager (System User → ressources). L'écran revérifie chez Meta.
+        SA.testConnexions(shopId).then(res => {
+          const r = (res || [])[0] || {}, b = Object.assign({}, this.state.busy); delete b[k]; this.setState({ busy: b });
+          this.toast(r[key] === 'connected' ? label + ' ' + SA.byId(SA.SHOPS, shopId).name + ' : connecté.' : label + ' : ' + ((r.detail || {})[key] || 'toujours en défaut') + '.');
+        }).catch(e => { const b = Object.assign({}, this.state.busy); delete b[k]; this.setState({ busy: b }); this.toast('Test impossible : ' + e.message); });
+        return;
+      }
+      setTimeout(() => {
+        SA.save({ shops: SA.state().shops.map(x => x.id === shopId ? Object.assign({}, x, { [key]: 'connected' }) : x) });
+        SA.log('Sarah Lambert (Franchiseur)', 'Connexion', label + ' de ' + SA.byId(SA.SHOPS, shopId).name + ' reconnecté(e)');
+        const b = Object.assign({}, this.state.busy); delete b[k]; this.setState({ busy: b }); this.toast(label + ' ' + SA.byId(SA.SHOPS, shopId).name + ' : connecté.');
+      }, 1200);
+    };
+    const DETAIL = { fb: (sh) => sh.page, igs: (sh) => sh.ig, ads: (sh) => 'act_' + (1000 + sh.name.length * 137) + '…' };
+    const EXP = { halle: 48, corbais: 51, gosselies: 0, sombreffe: 39, gembloux: 55, wavre: 60 };
+    const connRows = st.shops.map(sh => ({ name: sh.name, address: sh.address, cells: [['fb', 'Page Facebook'], ['igs', 'Instagram'], ['ads', 'Compte publicitaire']].map(([key, label]) => {
+      const v = sh[key], c = SA.CONN[v], busy = !!s.busy[sh.id + key];
+      return { label: c.label, stBg: c.bg, stFg: c.fg, bg: v === 'connected' ? '#FFFFFF' : '#FFFBF5',
+        detail: SA.live ? ((sh.connDetail || {})[key] || (sh.checkedAt ? '—' : 'Jamais vérifié — « Tester toutes les connexions »')) : v === 'connected' ? DETAIL[key](sh) + (key !== 'ads' ? ' · token valide ' + (EXP[sh.id] || 45) + ' j' : '') : v === 'expired' ? 'Expiré le 06/10 · publications Instagram bloquées' : 'Aucun compte lié · publicités impossibles',
+        needsAction: v !== 'connected' && !busy, busy, action: SA.live ? 'Revérifier' : v === 'expired' ? 'Reconnecter' : 'Connecter', fix: () => fixConn(sh.id, key, label) }; }) }));
+    const nOk = st.shops.reduce((a, sh) => a + ['fb', 'igs', 'ads'].filter(k => sh[k] === 'connected').length, 0);
+    const upTpl = (id, patch) => SA.save({ templates: templates.map(t => t.id === id ? Object.assign({}, t, patch) : t) });
+    const upGrp = (id, patch) => SA.save({ groups: groups.map(g => g.id === id ? Object.assign({}, g, patch) : g) });
+    const yes = { t: 'Oui', fg: '#0F6B4A', w: 500 }, no = { t: 'Non', fg: '#8A847C', w: 400 }, val = (t) => ({ t, fg: '#222222', w: 400 });
+    const rights = [
+      ['Créer et planifier des posts', SA.ROLES.map(r => val(r.rights.create))],
+      ['Valider les propositions des boutiques', SA.ROLES.map(r => r.rights.validate ? yes : no)],
+      ['Créer et piloter les publicités', SA.ROLES.map(r => r.rights.ads ? yes : no)],
+      ['Voir le reporting', SA.ROLES.map(r => val(r.rights.reporting))],
+      ['Voir les données de vente', SA.ROLES.map(r => r.rights.sales ? (r.id === 'franchise' ? val('Sa boutique uniquement') : yes) : no)],
+      ['Paramètres et connexions', SA.ROLES.map(r => r.rights.settings ? yes : no)],
+    ].map(([label, vals]) => ({ label, vals }));
+    const users = SA.live ? [[SA.user.name, 'Franchiseur (admin réseau)', 'Réseau · ' + SA.SHOPS.length + ' boutiques', '#8D1D2C']].concat(SA.SHOPS.filter(sh => sh.franchisee).map(sh => [sh.franchisee, 'Franchisé / manager boutique', sh.name, '#D97B29'])).map(([name, role, scope, c]) => ({ name, role, scope, c, ini: name.split(' ').map(x => x[0]).join('').slice(0, 2) })) : [['Sarah Lambert', 'Franchiseur (admin réseau)', 'Réseau · 6 boutiques', '#8D1D2C'], ['Agence Pâte Brisée', 'Agence partenaire', 'Création + planification', '#5C3A6E']].concat(SA.SHOPS.map((sh, i) => [['Lucas Peeters', 'Camille Dubois', 'Nadia Benali', 'Thomas Lejeune', 'Julie Marchal', 'Antoine Collard'][i], 'Franchisé / manager boutique', sh.name, '#D97B29']))
+      .map(([name, role, scope, c]) => ({ name, role, scope, c, ini: name.split(' ').map(x => x[0]).join('').slice(0, 2) }));
+    const LOGC = { 'Publication': ['#E2F0E8', '#0F6B4A'], 'Échec': ['#8D1D2C', '#FFFFFF'], 'Échec partiel': ['#F6DCDF', '#8D1D2C'], 'Connexion': ['#FCE7C8', '#6b3d0a'], 'Validation': ['#F2C9A0', '#6b4420'], 'Publicité': ['#EDE9F5', '#3B3468'] };
+    const cats = ['', 'Publication', 'Échec', 'Validation', 'Publicité', 'Connexion'];
+    const logRows = st.activity.filter(l => !s.logF || (s.logF === 'Échec' ? l.what.indexOf('Échec') === 0 : l.what === s.logF)).map(l => { const c = LOGC[l.what] || ['#F4EFE8', '#444444']; return Object.assign({ bg: c[0], fg: c[1] }, l, { at: l.at.slice(8, 10) + '/' + l.at.slice(5, 7) + ' ' + l.at.slice(11) }); });
+    return {
+      tabs: tabsDef.map(([k, label, badge]) => ({ label, badge, hasBadge: badge > 0, fg: s.tab === k ? '#8D1D2C' : '#444444', line: s.tab === k ? '#8D1D2C' : 'transparent', pick: () => this.setState({ tab: k }) })),
+      isConn: s.tab === 'conn', isApi: s.tab === 'api', live: !!SA.live,
+      keyFields: (() => { const ms = SA.metaStatus || {}; return [['systemToken', 'Token du System User', 'tokenDefini', 'EAAG…'], ['appSecret', "Clé secrète de l'app", 'secretDefini', 'app secret'], ['verifyToken', 'Jeton du webhook', 'verifyDefini', 'chaîne libre']]
+        .map(([k, label, flag, ph]) => ({ label, ph, value: s.keys[k], state: ms[flag] ? 'enregistré' : 'absent', stFg: ms[flag] ? '#0F6B4A' : '#8D1D2C',
+          set: (e) => this.setState({ keys: Object.assign({}, this.state.keys, { [k]: e.target.value }) }) })); })(),
+      saveKeys: () => { SA.api('POST', '/parametres/cles', s.keys).then(r => { SA.metaStatus = r.metaStatus; this.setState({ keys: { systemToken: '', appSecret: '', verifyToken: '' } }); this.toast(r.maj.length ? r.maj.length + ' clé(s) enregistrée(s) en base.' : 'Aucune clé saisie.'); SA.refresh(); }).catch(e => this.toast('Enregistrement impossible : ' + e.message)); },
+      publicUrl: s.publicUrl != null ? s.publicUrl : ((st.params || {}).url_publique || ''),
+      setPublicUrl: (e) => { const v = e.target.value; this.setState({ publicUrl: v }); clearTimeout(this._pu); this._pu = setTimeout(() => SA.api('POST', '/parametres', { url_publique: v }).then(() => this.toast('URL publique enregistrée.')).catch(err => this.toast(err.message)), 700); },
+      ...(() => { const M = SA.META, meta = st.meta || { version: M.version, dsa: M.dsa, ids: M.ids }, setMeta = (p) => SA.save({ meta: Object.assign({}, meta, p) });
+        return { versions: M.versions.map(v => Object.assign(chip(meta.version === v), { id: v, pick: () => { setMeta({ version: v }); SA.log('Sarah Lambert (Franchiseur)', 'Connexion', 'Version API Meta : ' + v); } })), baseUrl: M.base + meta.version + '/',
+          perms: M.permissions.map(([id, level]) => ({ id, level, bg: level === 'Full access' ? '#E2F0E8' : '#FCE7C8', fg: level === 'Full access' ? '#0F6B4A' : '#6b3d0a' })),
+          dsaB: meta.dsa.beneficiary, dsaP: meta.dsa.payor, setDsaB: (e) => setMeta({ dsa: Object.assign({}, meta.dsa, { beneficiary: e.target.value }) }), setDsaP: (e) => setMeta({ dsa: Object.assign({}, meta.dsa, { payor: e.target.value }) }),
+          networkAccount: meta.networkAccount || M.networkAccount || 'non renseigné', setNetworkAccount: (e) => setMeta({ networkAccount: e.target.value.trim() }), live: !!SA.live,
+          idHead: [['Boutique', 'inherit'], ['page_id', 'ui-monospace,monospace'], ['ad_account_id', 'ui-monospace,monospace'], ['instagram_user_id', 'ui-monospace,monospace'], ['pixel_id', 'ui-monospace,monospace']].map(([l, f]) => ({ l, f })),
+          idRows: SA.SHOPS.map(sh => ({ name: sh.name, cells: ['page_id', 'ad_account_id', 'instagram_user_id', 'pixel_id'].map(k => { const v = (meta.ids[sh.id] || {})[k] || ''; return { v, ph: k === 'ad_account_id' ? 'act_… (non connecté)' : '—', bg: v ? '#FFFFFF' : '#FFFBF5',
+            set: (e) => setMeta({ ids: Object.assign({}, meta.ids, { [sh.id]: Object.assign({}, meta.ids[sh.id], { [k]: e.target.value.trim() }) }) }) }; }) })) }; })(), isTpl: s.tab === 'tpl', isGrp: s.tab === 'grp', isRights: s.tab === 'rights', isLog: s.tab === 'log',
+      hasAlerts: alerts.length > 0, alertText: alerts.length + ' connexion(s) en défaut : ' + alerts.map(a => a.shop + ' · ' + a.what + ' (' + SA.CONN[a.st].label + ')').join(' — ') + '. Les publications concernées échoueront tant qu\u2019elles ne sont pas rétablies.',
+      connSummary: nOk + ' connexions actives sur ' + st.shops.length * 3 + (SA.live ? ((st.meta || {}).lastCheck ? ' · dernier contrôle ' + String(st.meta.lastCheck).slice(8, 10) + '/' + String(st.meta.lastCheck).slice(5, 7) + ' à ' + String(st.meta.lastCheck).slice(11, 16) : ' · jamais contrôlées') : ' · dernier contrôle aujourd\u2019hui à 07:00'),
+      testLabel: s.testing ? 'Test en cours…' : 'Tester toutes les connexions',
+      testAll: () => { this.setState({ testing: true }); if (SA.live) { SA.testConnexions().then(res => { this.setState({ testing: false }); const ko = (res || []).reduce((a, r) => a + ['fb', 'igs', 'ads'].filter(k => r[k] !== 'connected').length, 0); this.toast(ko ? ko + ' connexion(s) toujours en défaut.' : 'Toutes les connexions répondent.'); }).catch(e => { this.setState({ testing: false }); this.toast('Test impossible : ' + e.message); }); return; } setTimeout(() => { this.setState({ testing: false }); this.toast(alerts.length ? alerts.length + ' connexion(s) toujours en défaut.' : 'Toutes les connexions répondent.'); }, 1200); },
+      connHead: ['Boutique', 'Page Facebook', 'Instagram', 'Compte publicitaire'], connRows,
+      postTypes: SA.POST_TYPES,
+      templates: templates.map(t => ({ name: t.name, type: t.type, text: t.text, textNl: t.textNl || '', setTextNl: (e) => upTpl(t.id, { textNl: e.target.value }), previewNl: t.textNl ? SA.fill(t.textNl, (SA.SHOPS.find(x => (x.langs || []).includes('nl')) || SA.SHOPS[0] || {}).id, SA.CATALOGUE[0], 'nl') : 'à traduire', preview: SA.fill(t.text, (SA.SHOPS[0] || {}).id, SA.CATALOGUE[0]), useHref: SA.href('post'),
+        setName: (e) => upTpl(t.id, { name: e.target.value }), setType: (e) => upTpl(t.id, { type: e.target.value }), setText: (e) => upTpl(t.id, { text: e.target.value }),
+        remove: () => SA.save({ templates: templates.filter(x => x.id !== t.id) }) })),
+      addTpl: () => SA.save({ templates: templates.concat({ id: 't' + Date.now(), name: 'Nouveau modèle', type: 'Libre', text: 'Chez L\u2019Atelier By {ville} : ' }) }),
+      langRows: st.shops.map(sh => { const cur = (sh.langs || ['fr']).join(','), grp = groups.find(g => g.lang && g.shops.includes(sh.id));
+        return { name: sh.name, note: (grp ? 'Défini par le groupe « ' + grp.name + ' » · ' : '') + (sh.langs || ['fr']).map(L => SA.LANGS[L]).join(' puis '),
+          opts: [['fr', 'FR'], ['nl', 'NL'], ['nl,fr', 'NL + FR'], ['fr,nl', 'FR + NL']].map(([k, label]) => ({ label, bg: cur === k ? '#8D1D2C' : 'transparent', fg: cur === k ? '#FFFFFF' : '#444444',
+            pick: () => { SA.save({ shops: SA.state().shops.map(x => x.id === sh.id ? Object.assign({}, x, { langs: k.split(',') }) : x) }); SA.log('Sarah Lambert (Franchiseur)', 'Langue', sh.name + ' : ' + label); } })) }; }),
+      groups: groups.map(g => ({ name: g.name, lang: g.lang || '',
+        setLang: (e) => { const v = e.target.value; SA.save({ groups: groups.map(x => x.id === g.id ? Object.assign({}, x, { lang: v }) : x), shops: v ? SA.state().shops.map(x => g.shops.includes(x.id) ? Object.assign({}, x, { langs: v.split(',') }) : x) : SA.state().shops }); if (v) { SA.log('Sarah Lambert (Franchiseur)', 'Langue', 'Groupe ' + g.name + ' : ' + v.toUpperCase().replace(',', ' + ')); this.toast('Langue appliquée aux ' + g.shops.length + ' boutiques du groupe.'); } }, count: g.shops.length + (g.shops.length > 1 ? ' boutiques' : ' boutique'), setName: (e) => upGrp(g.id, { name: e.target.value }), remove: () => SA.save({ groups: groups.filter(x => x.id !== g.id) }),
+        shops: SA.SHOPS.map(sh => Object.assign(chip(g.shops.includes(sh.id)), { name: sh.name, toggle: () => upGrp(g.id, { shops: g.shops.includes(sh.id) ? g.shops.filter(x => x !== sh.id) : g.shops.concat(sh.id) }) })) })),
+      addGroup: () => SA.save({ groups: groups.concat({ id: 'g' + Date.now(), name: 'Nouveau groupe', shops: [] }) }),
+      roles: SA.ROLES.map(r => r.name), rights, users,
+      logFilters: cats.map(c => Object.assign(chip(s.logF === c), { label: c || 'Tout', pick: () => this.setState({ logF: c }) })), logRows, logEmpty: logRows.length === 0,
+      hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Recette du module, sur une VRAIE base MySQL/MariaDB et un Graph Meta SIMULÉ.
+ *
+ *   SOCIAL_TEST_DSN='mysql:host=127.0.0.1;dbname=social_test' SOCIAL_TEST_USER=… SOCIAL_TEST_PASS=… php bin/tests.php
+ *
+ * La base de test est VIDÉE puis remplie de tables BO factices (ceo_shop,
+ * brand_guard_pages, caisse…). Ne jamais la pointer sur la base de production.
+ */
+
+$dsn = getenv('SOCIAL_TEST_DSN') ?: '';
+if ($dsn === '' || !str_contains($dsn, 'test')) {
+    fwrite(STDERR, "SOCIAL_TEST_DSN requis, et le nom de la base doit contenir « test » (elle est vidée).\n");
+    exit(2);
+}
+$tmp = sys_get_temp_dir() . '/social-tests-' . getmypid();
+@mkdir($tmp . '/bo/config', 0777, true);
+@mkdir($tmp . '/uploads', 0777, true);
+file_put_contents($tmp . '/bo/config/config.php', "<?php return ['auth' => false, 'meta' => ['systemToken' => 'TOK-BO', 'appSecret' => 'SECRET', 'verifyToken' => 'VERIF']];\n");
+putenv('SOCIAL_BO_DIR=' . $tmp . '/bo');
+putenv('SOCIAL_UPLOADS_DIR=' . $tmp . '/uploads');
+putenv('SOCIAL_NO_GEOCODE=1');
+
+require __DIR__ . '/../src/api.php';
+
+$pdo = new PDO($dsn, getenv('SOCIAL_TEST_USER') ?: 'root', getenv('SOCIAL_TEST_PASS') ?: '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false]);  // comme en production
+Db::use($pdo);
+
+$ok = 0; $ko = 0;
+function check(string $nom, bool $cond, string $detail = ''): void
+{
+    global $ok, $ko;
+    if ($cond) { $ok++; echo "  ok   $nom\n"; } else { $ko++; echo "  ÉCHEC $nom" . ($detail !== '' ? " — $detail" : '') . "\n"; }
+}
+
+/* --- base de test : tables BO factices -------------------------------------------------- */
+foreach ($pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $t) { $pdo->exec("DROP TABLE `$t`"); }
+$pdo->exec("CREATE TABLE ceo_shop (id VARCHAR(8) PRIMARY KEY, code VARCHAR(16), name VARCHAR(120), franchisee VARCHAR(120), zone VARCHAR(60), status VARCHAR(20), pwa_shop_id BIGINT NULL)");
+$pdo->exec("INSERT INTO ceo_shop VALUES ('hal','HAL','Halle','Nathan Charlot','Flandre','Ouvert',4),('wav','WAV','Wavre','Julie M.','Brabant wallon','Ouvert',5),('old','OLD','Ancienne','X','Brabant wallon','Fermé',NULL)");
+$pdo->exec("CREATE TABLE brand_guard_pages (id INT AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(8) NULL, boutique VARCHAR(80), franchise VARCHAR(120), page_url VARCHAR(300), page_id VARCHAR(40) NULL, page_nom VARCHAR(160) NULL, actif TINYINT DEFAULT 1)");
+$pdo->exec("INSERT INTO brand_guard_pages (shop_id, boutique, franchise, page_url, page_id, page_nom) VALUES ('hal','Halle','N','https://facebook.com/h','111','L''Atelier By Halle'),('wav','Wavre','J','https://facebook.com/w','222','L''Atelier By Wavre'),('old','Ancienne','X','u','333','x')");
+$pdo->exec("CREATE TABLE ceo_app_setting (`key` VARCHAR(64) PRIMARY KEY, value LONGTEXT)");
+$pdo->exec("CREATE TABLE ceo_journal_entry (id INT AUTO_INCREMENT PRIMARY KEY, happened_at DATETIME, actor VARCHAR(120), kind VARCHAR(60), project VARCHAR(120), message TEXT)");
+$pdo->exec("CREATE TABLE shops (id INT PRIMARY KEY, name VARCHAR(80), active TINYINT, address VARCHAR(200), zip VARCHAR(10), city VARCHAR(80), latitude DECIMAL(9,6), longitude DECIMAL(9,6))");
+$pdo->exec("INSERT INTO shops VALUES (4,'Halle',1,'Basiliekstraat 12','1500','Halle',50.7339,4.2345),(5,'Wavre',1,'Place Bosch 3','1300','Wavre',50.7173,4.6117)");
+$pdo->exec("CREATE TABLE product (id INT PRIMARY KEY, name VARCHAR(120))");
+$pdo->exec("INSERT INTO product VALUES (1,'Brioche croustillante'),(2,'Pain au levain')");
+$pdo->exec("CREATE TABLE `transaction` (id INT AUTO_INCREMENT PRIMARY KEY, id_shop INT, insert_timestamp DATETIME, total_gross_amount_after_discount DECIMAL(10,2), ticket_key VARCHAR(40))");
+$pdo->exec("CREATE TABLE transaction_product (id INT AUTO_INCREMENT PRIMARY KEY, id_transaction INT, id_product INT, quantity DECIMAL(10,2), total_gross_value_after_discount DECIMAL(10,2))");
+// Ventes de brioche à Halle : 10 €/jour sur les 6 semaines de référence, 25 €/jour pendant la campagne.
+$debutCamp = date('Y-m-d', strtotime('-6 days'));
+for ($d = -48; $d <= 0; $d++) {
+    $jour = date('Y-m-d', strtotime("$d days"));
+    $montant = $jour >= $debutCamp ? 25 : 10;
+    $pdo->exec("INSERT INTO `transaction` (id_shop, insert_timestamp, total_gross_amount_after_discount, ticket_key) VALUES (4, '$jour 10:00:00', $montant, 't$d')");
+    $tid = (int) $pdo->lastInsertId();
+    $pdo->exec("INSERT INTO transaction_product (id_transaction, id_product, quantity, total_gross_value_after_discount) VALUES ($tid, 1, " . ($montant / 5) . ", $montant)");
+}
+
+/* --- Graph simulé ------------------------------------------------------------------------- */
+$appels = [];
+$restreinte = ['222' => true];   // la Page de Wavre refuse (code 368) au premier passage
+$n = 100;
+Meta::$sleep = static function (int $s): void {};
+Meta::$transport = static function (string $m, string $url, array $p) use (&$appels, &$restreinte, &$n): array {
+    $path = preg_replace('#^https://graph\.facebook\.com/v[\d.]+/#', '', $url);
+    $appels[] = [$m, $path, $p];
+    $id = static function () use (&$n) { return (string) (++$n); };
+    if (($p['access_token'] ?? '') === '') { return [400, ['error' => ['code' => 190, 'message' => 'no token']]]; }
+    if ($m === 'GET' && $path === 'me/accounts') {
+        return [200, ['data' => [['id' => '111', 'name' => 'L\'Atelier By Halle', 'access_token' => 'PT111', 'instagram_business_account' => ['id' => '17841']],
+                                 ['id' => '222', 'name' => 'L\'Atelier By Wavre', 'access_token' => 'PT222']]]];
+    }
+    if (preg_match('#^(111|222)/(photos|feed|videos)$#', $path, $mm)) {
+        if (isset($restreinte[$mm[1]])) { return [400, ['error' => ['code' => 368, 'message' => 'Page restreinte']]]; }
+        return [200, $mm[2] === 'photos' ? ['id' => $id(), 'post_id' => $mm[1] . '_' . $id()] : ['id' => $mm[1] . '_' . $id()]];
+    }
+    if ($m === 'GET' && $path === '17841') { return [200, ['id' => '17841', 'username' => 'latelierby.halle']]; }
+    if ($path === '17841/media') { return [200, ['id' => 'c' . $id()]]; }
+    if ($path === '17841/media_publish') { return [200, ['id' => 'ig' . $id()]]; }
+    if ($m === 'GET' && preg_match('#^act_\d+$#', $path)) { return [200, ['name' => 'Compte ' . $path, 'account_status' => 1]]; }
+    if ($m === 'GET' && $path === 'search') { return [200, ['data' => ($p['type'] ?? '') === 'adlocale' ? [['key' => 9, 'name' => 'French (All)'], ['key' => 14, 'name' => 'Dutch']] : [['id' => '6003107902', 'name' => $p['q']]]]]; }
+    if (preg_match('#^act_\d+/(campaigns|adsets|adcreatives|ads)$#', $path)) { return [200, ['id' => $id()]]; }
+    if (preg_match('#^act_\d+/adimages$#', $path)) { return [200, ['images' => ['x' => ['hash' => 'HASH1']]]]; }
+    if (preg_match('#^(111|222)/leadgen_forms$#', $path)) { return [200, ['id' => 'F' . $id()]]; }
+    if ($m === 'GET' && preg_match('#^F\d+/leads$#', $path)) {
+        return [200, ['data' => [['id' => 'L1', 'created_time' => date('c'), 'form_id' => 'F', 'ad_name' => 'Pub B2B',
+            'field_data' => [['name' => 'full_name', 'values' => ['Marie Claes']], ['name' => 'email', 'values' => ['m@ex.be']], ['name' => 'nb_personnes', 'values' => ['16 à 30']]]]]]];
+    }
+    if ($m === 'GET' && preg_match('#^\d+/insights$#', $path)) {
+        return [200, ['data' => [['spend' => '40.50', 'reach' => '1200', 'impressions' => '3000', 'clicks' => '60',
+            'actions' => [['action_type' => 'post_engagement', 'value' => '90'], ['action_type' => 'video_view', 'value' => '15']]]]]];
+    }
+    if ($m === 'GET' && preg_match('#^\d+$#', $path)) { return [200, ['effective_status' => 'ACTIVE']]; }
+    if ($m === 'POST' && preg_match('#^\w+$#', $path)) { return [200, ['success' => true]]; }
+    return [404, ['error' => ['code' => 803, 'message' => 'route simulée inconnue : ' . $m . ' ' . $path]]];
+};
+$appelsVers = static function (string $re) use (&$appels): array { return array_values(array_filter($appels, static fn ($a) => preg_match($re, $a[1]))); };
+
+echo "Installation\n";
+socInstall();
+$tables = $pdo->query("SHOW TABLES LIKE 'social\\_%'")->fetchAll(PDO::FETCH_COLUMN);
+foreach (['social_parametre', 'social_content', 'social_campagne', 'social_publicite', 'social_formulaire', 'social_lead', 'social_groupe',
+          'social_modele', 'social_boutique', 'social_publication', 'social_meta_objet', 'social_resultat', 'social_activite'] as $t) {
+    check("table $t", in_array($t, $tables, true));
+}
+check('aucune table hors préfixe social_ créée par le module', !array_filter($pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN), static fn ($t) => str_starts_with($t, 'soc_')));
+check('token Meta repris du BO, stocké en base', socSetting('meta_system_token') === 'TOK-BO');
+check('token marqué secret', (int) Db::row("SELECT secret FROM social_parametre WHERE cle = 'meta_system_token'")['secret'] === 1);
+check('Meta lit le token dans social_parametre', Meta::config()['systemToken'] === 'TOK-BO');
+socSettingPut('meta_system_token', 'TOK-DB', true);
+check('changer la clé en base change la clé utilisée', Meta::config()['systemToken'] === 'TOK-DB');
+check('les clés secrètes ne partent pas au navigateur', !str_contains(json_encode(socParams()), 'TOK-DB'));
+
+echo "Boutiques (lues dans le BO)\n";
+$shops = socShops();
+check('deux boutiques ouvertes, la fermée exclue', count($shops) === 2, json_encode(array_column($shops, 'id')));
+$hal = socShop('hal');
+check('page_id repris de Brand Guard', ($hal['ids']['page_id'] ?? '') === '111');
+check('adresse lue dans la caisse', ($hal['address'] ?? '') === 'Basiliekstraat 12, 1500 Halle', (string) ($hal['address'] ?? ''));
+check('position lue dans la caisse', ($hal['geo'][0] ?? 0) == 50.7339);
+check('connexion non vérifiée = non connectée', $hal['fb'] === 'none');
+socTestConnexions();
+$hal = socShop('hal'); $wav = socShop('wav');
+check('test : Page Halle connectée', $hal['fb'] === 'connected');
+check('test : Instagram Halle trouvé par la Page', $hal['igs'] === 'connected' && $hal['ids']['instagram_user_id'] === '17841');
+check('test : Wavre sans Instagram', $wav['igs'] === 'none');
+check('connexions écrites en colonnes', Db::row("SELECT conn_facebook FROM social_boutique WHERE shop_id = 'hal'")['conn_facebook'] === 'connected');
+
+echo "Paramètres de l'écran\n";
+socStateSave(['shops' => [['id' => 'hal', 'langs' => ['nl', 'fr'], 'hours' => '7h00–18h30', 'hoursNl' => '7u00–18u30']],
+    'meta' => ['ids' => ['hal' => ['ad_account_id' => 'act_1001'], 'wav' => ['ad_account_id' => '1002']], 'networkAccount' => 'act_9000', 'version' => 'v26.0']]);
+$hal = socShop('hal');
+check('langues NL + FR enregistrées', $hal['langs'] === ['nl', 'fr']);
+check('ad_account_id enregistré', $hal['ids']['ad_account_id'] === 'act_1001');
+check('version API en base', socSetting('meta_version') === 'v26.0' && Meta::config()['version'] === 'v26.0');
+$st = socStateGet();
+check('état : groupes semés depuis les zones du cockpit', count($st['groups']) === 2);
+check('état : modèles de posts livrés', count($st['templates']) >= 4);
+
+echo "Posts : programmation, file, publication\n";
+$img = 'data:image/png;base64,' . base64_encode(str_repeat("\x89PNG", 80));
+$post = ['id' => 'p1', 'date' => date('Y-m-d', strtotime('+2 days')), 'time' => '08:00', 'type' => 'Produit', 'title' => 'Brioche',
+    'img' => $img, 'media' => [['src' => $img, 'kind' => 'img']], 'shops' => ['hal', 'wav'],
+    'ch' => ['hal' => ['fb' => true, 'ig' => true], 'wav' => ['fb' => true, 'ig' => false]], 'fb' => true, 'ig' => true,
+    'status' => 'Programmé', 'text' => 'Brioche à {ville}, {prix} €. {horaires}', 'textNl' => 'Brioche in {ville}, {prix} €. {horaires}',
+    'product' => 'brioche', 'spread' => 10];
+$r = socStateSave(['changes' => ['posts' => ['upsert' => [$post]]]]);
+$p1 = socItem('posts', 'p1');
+check('post enregistré dans social_content', Db::row("SELECT titre, statut, boutiques FROM social_content WHERE id = 'p1'") === ['titre' => 'Brioche', 'statut' => 'Programmé', 'boutiques' => 'hal,wav']);
+check('image data: écrite en fichier', str_starts_with((string) $p1['img'], 'uploads/'), (string) $p1['img']);
+$rows = Db::rows("SELECT * FROM social_publication WHERE content_id = 'p1' ORDER BY prevue_le, canal");
+check('3 publications en file (Halle fb+ig, Wavre fb)', count($rows) === 3);
+check('étalement de 10 min sur la 2e Page', $rows[2]['prevue_le'] === date('Y-m-d', strtotime('+2 days')) . ' 08:10:00', $rows[2]['prevue_le'] ?? '');
+check('rien ne part avant l’heure', socRunQueue() === []);
+Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'p1'");
+$appels = [];
+socRunQueue();
+$p1 = socItem('posts', 'p1');
+check('Wavre refusé (368) → post partiel', $p1['status'] === 'Publié' && count($p1['partial']['ko'] ?? []) === 1, json_encode($p1['partial'] ?? null));
+check('motif 368 lisible', str_contains($p1['partial']['ko'][0]['reason'] ?? '', 'code 368'));
+$cap = $appelsVers('#^111/photos$#')[0][2] ?? [];
+check('légende bilingue NL puis FR, variables résolues', str_starts_with((string) ($cap['caption'] ?? ''), "Brioche in Halle, 4,20 €. 7u00–18u30\n\nBrioche à Halle, 4,20 €. 7h00–18h30"), (string) ($cap['caption'] ?? ''));
+check('photo envoyée par URL publique', str_contains((string) ($cap['url'] ?? ''), '/social/uploads/'));
+check('token de Page utilisé (pas celui du System User)', ($cap['access_token'] ?? '') === 'PT111');
+check('Instagram : conteneur puis publication', count($appelsVers('#^17841/media_publish$#')) === 1);
+unset($restreinte['222']);
+$p1 = socRetry('p1');
+check('relance : Wavre publié, post entièrement publié', $p1['status'] === 'Publié' && empty($p1['partial']));
+$p1['status'] = 'Échec';
+socStateSave(['changes' => ['posts' => ['upsert' => [$p1]]]]);
+check('l’écran ne peut pas réécrire le statut d’un post publié', socItem('posts', 'p1')['status'] === 'Publié');
+$p2 = ['id' => 'p2', 'date' => date('Y-m-d'), 'time' => '09:00', 'title' => 'Texte seul', 'shops' => ['wav'], 'fb' => true, 'ig' => false, 'status' => 'Publié', 'text' => 'Bonjour {ville}'];
+socStateSave(['changes' => ['posts' => ['upsert' => [$p2]]]]);
+check('« Publier maintenant » publie dans la requête', socItem('posts', 'p2')['status'] === 'Publié');
+check('texte seul → /feed', ($appelsVers('#^222/feed$#')[0][2]['message'] ?? '') === 'Bonjour Wavre');
+$p3 = ['id' => 'p3', 'date' => date('Y-m-d', strtotime('+3 days')), 'time' => '09:00', 'title' => 'Brouillon', 'shops' => ['wav'], 'fb' => true, 'status' => 'Programmé', 'text' => 'x'];
+socStateSave(['changes' => ['posts' => ['upsert' => [$p3]]]]);
+$p3['status'] = 'Brouillon';
+socStateSave(['changes' => ['posts' => ['upsert' => [$p3]]]]);
+check('repassé en brouillon → retiré de la file', (int) Db::row("SELECT COUNT(*) n FROM social_publication WHERE content_id = 'p3'")['n'] === 0);
+socStateSave(['changes' => ['posts' => ['delete' => ['p3']]]]);
+check('suppression', socItem('posts', 'p3') === null);
+
+echo "Campagnes, publicités\n";
+$camp = ['id' => 'c1', 'name' => 'Automne', 'type' => 'saison', 'start' => $debutCamp, 'end' => date('Y-m-d', strtotime('+20 days')), 'status' => 'en cours',
+    'shops' => ['hal', 'wav'], 'products' => ['Brioche croustillante'], 'goal' => ['metric' => 'CA additionnel', 'value' => 1000], 'budget' => 400, 'split' => ['hal' => 200, 'wav' => 200]];
+socStateSave(['changes' => ['campaigns' => ['upsert' => [$camp]]]]);
+check('campagne dans social_campagne', Db::row("SELECT nom, budget FROM social_campagne WHERE id = 'c1'") == ['nom' => 'Automne', 'budget' => '400.00']);
+$spec = ['name' => 'Automne trafic', 'objective' => 'OUTCOME_TRAFFIC', 'status' => 'ACTIVE', 'special' => [], 'bid' => 'LOWEST_COST_WITHOUT_CAP', 'spendCap' => 300,
+    'budgetLevel' => 'adset', 'budgetType' => 'daily', 'amount' => 10, 'account' => 'boutique', 'shops' => ['hal', 'wav'], 'radius' => ['hal' => 8, 'wav' => 10],
+    'goal' => 'LINK_CLICKS', 'dest' => 'WEBSITE', 'start' => date('Y-m-d'), 'end' => date('Y-m-d', strtotime('+20 days')), 'ageMin' => 18, 'ageMax' => 65, 'gender' => 'all',
+    'interests' => ['Boulangerie'], 'platforms' => ['facebook', 'instagram'], 'advantage' => false, 'dsaB' => "L'Atelier By SRL", 'dsaP' => "L'Atelier By SRL",
+    'crea' => 'existing', 'post' => 'p1', 'cta' => 'LEARN_MORE', 'link' => 'https://www.latelierby.be', 'adName' => 'Automne', 'adStatus' => 'ACTIVE', 'pixel' => false, 'urlTags' => 'utm_source=meta'];
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a1', 'name' => 'Automne trafic', 'campaign' => 'c1', 'objective' => 'Trafic', 'shops' => ['hal', 'wav'],
+    'scope' => 'boutique', 'budgetType' => 'quotidien', 'budget' => 20, 'cap' => 300, 'spent' => 0, 'start' => $spec['start'], 'end' => $spec['end'], 'status' => 'En revue', 'radius' => 9, 'post' => 'p1', 'spec' => $spec]]]]]);
+$a1 = socItem('ads', 'a1');
+check('pub créée chez Meta → En revue', $a1['status'] === 'En revue', (string) ($a1['reason'] ?? ''));
+check('un jeu par compte boutique (2 campagnes)', count($appelsVers('#^act_\d+/campaigns$#')) === 2);
+check('Halle bilingue : 2 ad sets (NL, FR) avec locales', count(array_filter($appelsVers('#^act_1001/adsets$#'), static fn ($a) => str_contains($a[2]['targeting'], '"locales"'))) === 2);
+check('montants en centimes (10 € → 1000 par jour)', str_contains(json_encode($appelsVers('#^act_1002/adsets$#')[0][2] ?? []), '"daily_budget":1000'));
+check('rayon en km sur la position de la boutique', str_contains($appelsVers('#^act_1002/adsets$#')[0][2]['targeting'] ?? '', '"radius":10'));
+check('post sponsorisé : object_story_id du post publié', preg_match('/^111_\d+$/', (string) ($appelsVers('#^act_1001/adcreatives$#')[0][2]['object_story_id'] ?? '')) === 1);
+check('intérêt résolu par Targeting Search', str_contains($appelsVers('#^act_1002/adsets$#')[0][2]['targeting'] ?? '', '6003107902'));
+check('objets Meta notés', (int) Db::row("SELECT COUNT(*) n FROM social_meta_objet WHERE kind = 'ad' AND local_id = 'a1' AND ad_id IS NOT NULL")['n'] === 3);
+$appels = [];
+$a1['status'] = 'En pause';
+socStateSave(['changes' => ['ads' => ['upsert' => [$a1]]]]);
+check('pause → status=PAUSED sur chaque pub', count(array_filter($appels, static fn ($a) => ($a[2]['status'] ?? '') === 'PAUSED')) === 3);
+socAdsSync();
+check('synchro : statut Meta ACTIVE, dépense relue', socItem('ads', 'a1')['status'] === 'Active' && (float) socItem('ads', 'a1')['spent'] === 121.5);
+check('dépense en colonne', Db::row("SELECT depense FROM social_publicite WHERE id = 'a1'")['depense'] === '121.50');
+socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a2', 'name' => 'Sans spec', 'shops' => ['wav'], 'status' => 'En revue']]]]]);
+check('pub sans description d’assistant : refusée avec motif', socItem('ads', 'a2')['status'] === 'Refusée');
+
+echo "Formulaires de leads\n";
+$lf = ['id' => 'lf1', 'family' => 'b2b', 'version' => 1, 'status' => 'Actif', 'name' => 'Plateaux', 'locale' => 'fr_FR', 'created' => date('Y-m-d'), 'shops' => ['hal', 'wav'],
+    'questions' => [['type' => 'FULL_NAME'], ['type' => 'EMAIL'], ['type' => 'CUSTOM', 'key' => 'nb', 'label' => 'Combien ?', 'options' => [['key' => 'a', 'value' => '8 à 15']]]],
+    'privacy' => ['url' => 'https://www.latelierby.be/confidentialite', 'link_text' => 'Confidentialité'], 'context' => ['title' => 'Plateaux', 'style' => 'LIST_STYLE', 'content' => ['Livraison'], 'button_text' => 'Devis'],
+    'thanks' => ['title' => 'Merci', 'body' => 'À bientôt', 'button_type' => 'VIEW_WEBSITE', 'button_text' => 'Site', 'website_url' => 'https://www.latelierby.be'], 'quality' => true];
+socStateSave(['changes' => ['leadforms' => ['upsert' => [$lf]]]]);
+check('formulaire publié sur 2 Pages', count(socLeadformMetaIds('lf1')) === 2);
+check('formulaire dans social_formulaire', Db::row("SELECT nom, version FROM social_formulaire WHERE id = 'lf1'") == ['nom' => 'Plateaux', 'version' => 1]);
+socLeadsSync();
+$leads = socLeads();
+check('leads relus, champs normalisés', ($leads[0]['field_data']['FULL_NAME'] ?? '') === 'Marie Claes' && ($leads[0]['field_data']['nb_personnes'] ?? '') === '16 à 30');
+check('lead stocké une fois (idempotent)', count($leads) === 1);
+$appels = [];
+$lf['status'] = 'Archivé';
+socStateSave(['changes' => ['leadforms' => ['upsert' => [$lf]]]]);
+check('archivage → status=ARCHIVED chez Meta', count(array_filter($appels, static fn ($a) => ($a[2]['status'] ?? '') === 'ARCHIVED')) === 2);
+
+echo "Retour sur campagne\n";
+socResultsSync();
+$res = socResults();
+$h = $res['c1']['hal'] ?? [];
+check('dépense Meta par boutique', (float) ($h['spend'] ?? 0) === 81.0, json_encode($h));
+check('CA campagne lu dans la caisse (7 jours × 25 €)', (float) ($h['caCamp'] ?? 0) === 175.0, (string) ($h['caCamp'] ?? 'null'));
+check('référence = moyenne des 6 semaines précédentes (7 × 10 €)', (float) ($h['caRef'] ?? 0) === 70.0, (string) ($h['caRef'] ?? 'null'));
+check('Wavre sans vente : motif affiché', isset($res['c1']['wav']['noSales']));
+check('résultat en colonnes', Db::row("SELECT ca_campagne FROM social_resultat WHERE campagne_id = 'c1' AND shop_id = 'hal'")['ca_campagne'] === '175.00');
+
+echo "API HTTP (routeur)\n";
+[$code, $b] = socRoute('GET', '/state');
+check('GET /state', $code === 200 && $b['mode'] === 'live' && count($b['shops']) === 2);
+check('GET /state ne contient aucune clé', !str_contains(json_encode($b), 'TOK-DB') && !str_contains(json_encode($b), 'SECRET'));
+check('journal : activité tracée, miroir dans le journal du cockpit', count($b['activity']) > 3 && (int) Db::row("SELECT COUNT(*) n FROM ceo_journal_entry WHERE kind = 'Social & Ads'")['n'] > 3);
+[$code, $b] = (static function () { try { return socRoute('GET', '/inconnue'); } catch (HttpError $e) { return [$e->status, null]; } })();
+check('route inconnue → 404', $code === 404);
+
+echo "Authentification partagée avec le cockpit\n";
+Db::exec("INSERT INTO ceo_app_setting VALUES ('authSecret', ?), ('authPasswordHash', ?)", [json_encode('S3CR3T'), json_encode(password_hash('x', PASSWORD_DEFAULT))]);
+$exp = (string) (time() + 3600);
+$_COOKIE['cockpit_s'] = $exp . '.' . hash_hmac('sha256', $exp, 'S3CR3T');
+check('cookie du cockpit valide accepté', socAuthCheck(true));
+$_COOKIE['cockpit_s'] = $exp . '.faux';
+check('cookie falsifié refusé', !socAuthCheck(true));
+unset($_COOKIE['cockpit_s']);
+check('sans cookie : refusé', !socAuthCheck(true));
+
+echo "\n$ok ok, $ko échec(s)\n";
+exec('rm -rf ' . escapeshellarg($tmp));
+exit($ko === 0 ? 0 : 1);

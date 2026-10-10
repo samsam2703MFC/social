@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="camp" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Posts organiques + publicités autour d'un objectif</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">CAMPAGNES</h1>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onClick="{{ toggleRef }}" style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">Référentiel des types</button>
+        <button onClick="{{ openNew }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Nouvelle campagne</button>
+      </div>
+    </header>
+
+    <!-- Référentiel -->
+    <sc-if value="{{ refOpen }}" hint-placeholder-val="{{ false }}">
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;">
+        <div style="display:grid;grid-template-columns:44px minmax(180px,1.4fr) minmax(140px,1fr) minmax(160px,1.2fr) 90px;">
+          <sc-for list="{{ refHead }}" as="h" hint-placeholder-count="5"><span style="padding:9px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;background:#F4EFE8;">{{ h }}</span></sc-for>
+          <sc-for list="{{ ctypes }}" as="t" hint-placeholder-count="0">
+            <span style="padding:6px 8px;border-top:0.5px solid rgba(34,34,34,0.08);display:flex;align-items:center;"><span style="width:28px;height:28px;border-radius:7px;background:{{ t.tint }};display:flex;align-items:center;justify-content:center;"><img src="{{ t.icon }}" alt="" style="width:20px;height:20px;object-fit:contain;"></span></span>
+            <span style="padding:10px 12px;border-top:0.5px solid rgba(34,34,34,0.08);font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:3px;background:{{ t.color }};"></span>{{ t.name }}</span>
+            <span style="padding:8px 12px;border-top:0.5px solid rgba(34,34,34,0.08);display:flex;align-items:center;"><span class="levier-badge" data-lev="{{ t.lev }}"><span class="levier-dot"></span>{{ t.levName }}</span></span>
+            <span style="padding:10px 12px;border-top:0.5px solid rgba(34,34,34,0.08);font-size:12px;color:#444444;display:flex;align-items:center;">{{ t.kpi }}</span>
+            <span style="padding:10px 12px;border-top:0.5px solid rgba(34,34,34,0.08);font-size:11px;color:#666666;display:flex;align-items:center;">{{ t.dur }}</span>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+
+      <!-- Liste -->
+      <aside style="flex:0 1 330px;min-width:280px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:inline-flex;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:3px;gap:2px;align-self:flex-start;">
+          <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="3">
+            <button onClick="{{ tb.pick }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ tb.bg }};color:{{ tb.fg }};">{{ tb.label }} · {{ tb.n }}</button>
+          </sc-for>
+        </div>
+        <sc-for list="{{ list }}" as="c" hint-placeholder-count="0">
+          <button onClick="{{ c.pick }}" style="text-align:left;background:#FFFFFF;border:{{ c.border }};border-radius:10px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:8px;">
+            <span style="display:flex;align-items:center;gap:10px;">
+              <span style="width:34px;height:34px;border-radius:8px;background:{{ c.tint }};display:flex;align-items:center;justify-content:center;flex:0 0 auto;"><img src="{{ c.icon }}" alt="" style="width:24px;height:24px;object-fit:contain;"></span>
+              <span style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;">
+                <span style="font-size:14px;font-weight:500;color:#222222;">{{ c.name }}</span>
+                <span style="font-size:11px;color:#666666;">{{ c.typeName }} · {{ c.dates }}</span>
+              </span>
+              <span style="font-size:10px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ c.stBg }};color:{{ c.stFg }};white-space:nowrap;">{{ c.stLabel }}</span>
+            </span>
+            <span style="display:flex;flex-direction:column;gap:4px;">
+              <span style="display:flex;justify-content:space-between;font-size:11px;color:#666666;"><span>Budget dépensé</span><span>{{ c.spentLabel }}</span></span>
+              <span style="height:5px;border-radius:999px;background:#EAE4DC;overflow:hidden;"><span style="display:block;height:100%;width:{{ c.spentPct }};background:#8D1D2C;"></span></span>
+            </span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:{{ c.ragFg }};"><span style="width:8px;height:8px;border-radius:50%;background:{{ c.ragBar }};"></span>{{ c.ragLabel }}</span>
+          </button>
+        </sc-for>
+      </aside>
+
+      <!-- Fiche -->
+      <section style="flex:1 1 600px;min-width:0;display:flex;flex-direction:column;gap:14px;">
+        <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:18px 20px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+            <div style="display:flex;gap:14px;align-items:center;">
+              <span style="width:52px;height:52px;border-radius:12px;background:{{ f.tint }};display:flex;align-items:center;justify-content:center;flex:0 0 auto;"><img src="{{ f.icon }}" alt="" style="width:38px;height:38px;object-fit:contain;"></span>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <span style="font-size:20px;font-weight:500;line-height:1.2;">{{ f.name }}</span>
+                <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 9px;background:{{ f.color }};color:#FFFFFF;">{{ f.typeName }}</span>
+                  <span class="levier-badge" data-lev="{{ f.lev }}"><span class="levier-dot"></span>{{ f.levName }}</span>
+                  <span style="font-size:12px;color:#666666;">KPI attendu : {{ f.kpi }}</span>
+                </span>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <a href="{{ f.postHref }}" style="height:34px;display:inline-flex;align-items:center;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;color:#222222;text-decoration:none;">+ Post</a>
+              <a href="{{ f.adHref }}" style="height:34px;display:inline-flex;align-items:center;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;color:#222222;text-decoration:none;">+ Publicité</a>
+              <a href="{{ f.roiHref }}" style="height:34px;display:inline-flex;align-items:center;padding:0 14px;border-radius:8px;background:#8D1D2C;font-size:13px;font-weight:500;color:#FFFFFF;text-decoration:none;">Retour sur campagne →</a>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+            <sc-for list="{{ f.facts }}" as="k" hint-placeholder-count="5">
+              <div style="background:#F4EFE8;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;">
+                <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ k.label }}</span>
+                <span style="font-size:18px;font-weight:300;color:{{ k.color }};">{{ k.value }}</span>
+                <span style="font-size:11px;color:#666666;">{{ k.sub }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;">
+            <div style="flex:1 1 260px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Boutiques concernées · {{ f.shopCount }}</span>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;"><sc-for list="{{ f.shops }}" as="s" hint-placeholder-count="6"><span style="font-size:12px;background:#F4EFE8;border-radius:999px;padding:4px 10px;">{{ s }}</span></sc-for></div>
+            </div>
+            <div style="flex:1 1 260px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Produits et gammes</span>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;"><sc-for list="{{ f.products }}" as="p" hint-placeholder-count="3"><span style="font-size:12px;background:#FBF3F4;color:#8D1D2C;border-radius:999px;padding:4px 10px;">{{ p }}</span></sc-for></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Budget par boutique -->
+        <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px 20px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:13px;font-weight:500;">Répartition du budget par boutique</span>
+            <span style="font-size:12px;color:{{ f.splitColor }};">{{ f.splitLabel }}</span>
+          </div>
+          <sc-for list="{{ f.split }}" as="b" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:96px minmax(0,1fr) 92px 92px;align-items:center;gap:12px;">
+              <span style="font-size:13px;">{{ b.name }}</span>
+              <span style="height:18px;border-radius:4px;background:#F4EFE8;position:relative;overflow:hidden;">
+                <span style="position:absolute;left:0;top:0;bottom:0;width:{{ b.pct }};background:#F2C9A0;"></span>
+                <span style="position:absolute;left:0;top:0;bottom:0;width:{{ b.spentPct }};background:#8D1D2C;"></span>
+              </span>
+              <span style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" step="10" value="{{ b.value }}" onChange="{{ b.set }}" disabled="{{ f.locked }}" style="width:64px;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 6px;text-align:right;">€</span>
+              <span style="font-size:11px;color:#666666;text-align:right;">{{ b.spentLabel }}</span>
+            </div>
+          </sc-for>
+          <span style="display:flex;gap:14px;font-size:11px;color:#666666;"><span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:2px;background:#8D1D2C;"></span>Dépensé</span><span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:2px;background:#F2C9A0;"></span>Alloué</span></span>
+        </div>
+
+        <!-- Frise -->
+        <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:13px;font-weight:500;">Vue chronologique</span>
+            <span style="font-size:12px;color:#666666;">{{ f.postN }} posts · {{ f.adN }} publicités</span>
+          </div>
+          <div style="position:relative;padding-left:110px;">
+            <div style="position:relative;height:22px;border-bottom:0.5px solid rgba(34,34,34,0.12);">
+              <sc-for list="{{ f.ticks }}" as="tk" hint-placeholder-count="5"><span style="position:absolute;left:{{ tk.x }};top:0;transform:translateX(-50%);font-size:10px;color:#666666;white-space:nowrap;">{{ tk.label }}</span></sc-for>
+            </div>
+            <div style="position:relative;">
+              <sc-if value="{{ f.showToday }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:{{ f.todayX }};top:0;bottom:0;width:1.5px;background:#8D1D2C;z-index:2;"><span style="position:absolute;top:-2px;left:4px;font-size:10px;color:#8D1D2C;font-weight:500;white-space:nowrap;">Aujourd'hui</span></span></sc-if>
+              <div style="position:relative;height:64px;border-bottom:0.5px solid rgba(34,34,34,0.08);">
+                <span style="position:absolute;left:-110px;top:22px;font-size:11px;font-weight:500;color:#444444;">Posts organiques</span>
+                <sc-for list="{{ f.postMarks }}" as="pm" hint-placeholder-count="0">
+                  <a href="{{ pm.href }}" title="{{ pm.tip }}" style="position:absolute;left:{{ pm.x }};top:{{ pm.y }};transform:translateX(-50%);width:30px;height:30px;border-radius:7px;background:#F4EFE8;border:1.5px solid {{ pm.ring }};display:flex;align-items:center;justify-content:center;box-sizing:border-box;"><img src="{{ pm.img }}" alt="" style="width:22px;height:22px;object-fit:contain;"></a>
+                </sc-for>
+              </div>
+              <div style="position:relative;min-height:{{ f.adH }};padding:8px 0;">
+                <span style="position:absolute;left:-110px;top:12px;font-size:11px;font-weight:500;color:#444444;">Publicités</span>
+                <sc-for list="{{ f.adBars }}" as="ab" hint-placeholder-count="0">
+                  <a href="{{ ab.href }}" title="{{ ab.tip }}" style="position:absolute;left:{{ ab.x }};width:{{ ab.w }};top:{{ ab.y }};height:22px;border-radius:5px;background:{{ ab.bg }};color:{{ ab.fg }};font-size:10px;font-weight:500;display:flex;align-items:center;padding:0 8px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;">{{ ab.name }}</a>
+                </sc-for>
+                <sc-if value="{{ f.noAds }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Aucune publicité rattachée.</span></sc-if>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Nouvelle campagne -->
+  <sc-if value="{{ newOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(35,34,32,0.5);z-index:40;display:flex;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#FFFFFF;border-radius:12px;width:100%;max-width:640px;max-height:92vh;overflow:auto;padding:20px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 80px rgba(35,34,32,0.3);">
+        <span style="font-size:16px;font-weight:500;">Nouvelle campagne</span>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Nom
+          <input type="text" value="{{ n.name }}" onChange="{{ n.setName }}" placeholder="ex. Fêtes de fin d'année 2026" style="font-size:14px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+        </label>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <span style="font-size:12px;color:#666666;">Type</span>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;">
+            <sc-for list="{{ n.types }}" as="t" hint-placeholder-count="0">
+              <button onClick="{{ t.pick }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;border:1.5px solid {{ t.ring }};background:#FFFFFF;cursor:pointer;text-align:left;">
+                <span style="width:22px;height:22px;border-radius:6px;background:{{ t.tint }};display:flex;align-items:center;justify-content:center;flex:0 0 auto;"><img src="{{ t.icon }}" alt="" style="width:16px;height:16px;object-fit:contain;"></span>
+                <span style="font-size:12px;font-weight:500;color:#222222;">{{ t.name }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <span style="font-size:11px;color:#666666;">{{ n.typeHint }}</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Début<input type="date" value="{{ n.start }}" onChange="{{ n.setStart }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;"></label>
+          <sc-if value="{{ n.hasEnd }}" hint-placeholder-val="{{ true }}"><label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Fin<input type="date" value="{{ n.end }}" onChange="{{ n.setEnd }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;"></label></sc-if>
+          <sc-if value="{{ n.continuous }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;padding-bottom:9px;">Campagne continue, sans date de fin</span></sc-if>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <span style="font-size:12px;color:#666666;">Boutiques</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ n.shops }}" as="s" hint-placeholder-count="6"><button onClick="{{ s.toggle }}" style="border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ s.border }};background:{{ s.bg }};color:{{ s.fg }};">{{ s.name }}</button></sc-for></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <span style="font-size:12px;color:#666666;">Produits ou gammes</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ n.products }}" as="p" hint-placeholder-count="12"><button onClick="{{ p.toggle }}" style="border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid {{ p.border }};background:{{ p.bg }};color:{{ p.fg }};">{{ p.name }}</button></sc-for></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <label style="flex:1 1 160px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Objectif
+            <select value="{{ n.metric }}" onChange="{{ n.setMetric }}" style="font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:9px 10px;">
+              <option value="CA additionnel">CA additionnel (€)</option><option value="Tickets additionnels">Tickets additionnels</option><option value="Trafic">Trafic (visites)</option>
+            </select>
+          </label>
+          <label style="flex:1 1 120px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Valeur cible<input type="number" value="{{ n.goal }}" onChange="{{ n.setGoal }}" style="font-size:14px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+          <label style="flex:1 1 120px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Budget total (€)<input type="number" value="{{ n.budget }}" onChange="{{ n.setBudget }}" style="font-size:14px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+        </div>
+        <span style="font-size:11px;color:#666666;">Le budget est réparti à parts égales entre les boutiques ; ajustez-le ensuite dans la fiche.</span>
+        <sc-if value="{{ n.hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8D1D2C;">{{ n.err }}</span></sc-if>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button onClick="{{ closeNew }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Annuler</button>
+          <button onClick="{{ createCamp }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Créer la campagne</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { selId: null, tab: 'all', refOpen: false, newOpen: false, n: null, err: '', tick: 0 };
+  componentDidMount() {
+    const SA = window.SA; const c = SA && SA.param('c'); if (c) this.setState({ selId: c });
+    this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
+  }
+  componentWillUnmount() { window.removeEventListener('sa-change', this._h); }
+  blank() { const SA = window.SA; return { name: '', type: 'fetes', start: SA.addDays(SA.TODAY, 30), end: SA.addDays(SA.TODAY, 60), shops: SA.SHOPS.map(s => s.id), products: [], metric: 'CA additionnel', goal: 8000, budget: 1800 }; }
+  renderVals() {
+    const SA = window.SA, s = this.state;
+    if (!SA) return { f: {}, n: {}, list: [] };
+    const st = SA.state(), camps = st.campaigns;
+    const tint = (hex) => hex + '22';
+    const T = (id) => SA.CTYPES.find(t => t.id === id) || SA.CTYPES[0];
+    const spentOf = (cid) => st.ads.filter(a => a.campaign === cid).reduce((a, x) => a + (x.spent || 0), 0);
+    const statusLabel = (c) => c.status === 'en cours' ? ['En cours', '#E2F0E8', '#0F6B4A'] : c.status === 'terminée' ? ['Terminée', '#EAE4DC', '#555555'] : ['À venir', '#F2C9A0', '#6b4420'];
+    const tabsDef = [['all', 'Toutes', camps], ['live', 'En cours', camps.filter(c => c.status !== 'terminée')], ['done', 'Terminées', camps.filter(c => c.status === 'terminée')]];
+    const shown = (tabsDef.find(t => t[0] === s.tab) || tabsDef[0])[2];
+    const selId = camps.some(c => c.id === s.selId) ? s.selId : (camps[0] || {}).id;
+    const list = shown.map(c => {
+      const t = T(c.type), [stL, stB, stF] = statusLabel(c), sp = spentOf(c.id), r = SA.RESULTS[c.id] ? SA.roi(c.id) : null;
+      const rag = r ? SA.RAG[r.total.rag] : { label: 'Pas encore de résultats', fg: '#666666', bar: '#B8B2A8' };
+      return { name: c.name, typeName: t.name, icon: t.icon, tint: tint(t.color), dates: SA.dShort(c.start) + (c.end ? ' → ' + SA.dShort(c.end) : ' → sans fin'),
+        stLabel: stL, stBg: stB, stFg: stF, spentLabel: SA.eur(sp) + ' / ' + SA.eur(c.budget), spentPct: Math.min(100, c.budget ? sp / c.budget * 100 : 0) + '%',
+        ragLabel: r ? rag.label + ' · ' + SA.pct(r.total.att) + (c.status === 'en cours' ? ' (au prorata)' : '') : rag.label, ragFg: rag.fg || rag.bar, ragBar: rag.bar,
+        border: c.id === selId ? '1.5px solid #8D1D2C' : '0.5px solid rgba(34,34,34,0.10)', pick: () => this.setState({ selId: c.id }) };
+    });
+    // fiche
+    const c = camps.find(x => x.id === selId);
+    let f = {};
+    if (c) {
+      const t = T(c.type), sp = spentOf(c.id), r = SA.RESULTS[c.id] ? SA.roi(c.id) : null, lev = SA.LEVERS[t.lev];
+      const split = c.shops.map(id => {
+        const v = c.split[id] || 0, spent = r ? (r.perShop.find(x => x.sid === id) || {}).spend || 0 : 0;
+        return { name: SA.byId(SA.SHOPS, id).name, value: v, pct: Math.min(100, c.budget ? v / Math.max(...c.shops.map(k => c.split[k] || 0), 1) * 100 : 0) + '%', spentPct: Math.min(100, spent / Math.max(...c.shops.map(k => c.split[k] || 0), 1) * 100) + '%',
+          spentLabel: SA.eur(spent) + ' dépensés',
+          set: (e) => { const val = Math.max(0, +e.target.value || 0); const cs = st.campaigns.map(x => x.id === c.id ? Object.assign({}, x, { split: Object.assign({}, x.split, { [id]: val }) }) : x); SA.save({ campaigns: cs }); } };
+      });
+      const allocated = c.shops.reduce((a, id) => a + (c.split[id] || 0), 0), left = c.budget - allocated;
+      // frise
+      const start = c.start, end = c.end || SA.addDays(SA.TODAY, 30), span = Math.max(1, SA.daysBetween(start, end));
+      const X = (d) => Math.max(0, Math.min(100, SA.daysBetween(start, d) / span * 100)) + '%';
+      const ticks = []; const step = Math.max(1, Math.round(span / 5)); for (let i = 0; i <= span; i += step) ticks.push({ x: X(SA.addDays(start, i)), label: SA.dShort(SA.addDays(start, i)) });
+      const posts = st.posts.filter(p => p.campaign === c.id).sort((a, b) => a.date.localeCompare(b.date));
+      const postMarks = posts.map((p, i) => ({ x: X(p.date), y: (i % 2 ? 30 : 4) + 'px', img: p.img, href: SA.href('post', 'id=' + p.id), tip: SA.dShort(p.date) + ' · ' + p.title + ' · ' + p.status, ring: p.status === 'Publié' ? '#1F8A60' : p.status === 'Programmé' ? '#D97B29' : p.status === 'Échec' ? '#8D1D2C' : '#B8B2A8' }));
+      const ads = st.ads.filter(a => a.campaign === c.id);
+      const adBars = ads.map((a, i) => { const sc = SA.AD_STATUS[a.status] || SA.AD_STATUS['Active']; const x0 = SA.daysBetween(start, a.start) / span * 100, x1 = SA.daysBetween(start, a.end) / span * 100;
+        return { name: a.name + ' · ' + a.status, x: Math.max(0, x0) + '%', w: Math.max(4, Math.min(100, x1) - Math.max(0, x0)) + '%', y: (8 + i * 28) + 'px', bg: a.status === 'Active' ? '#8D1D2C' : sc.bg, fg: a.status === 'Active' ? '#FFFFFF' : sc.fg, href: SA.href('ads', 'ad=' + a.id), tip: a.name + ' — ' + SA.eur(a.spent) + ' dépensés' }; });
+      const goalNow = r ? r.total : null;
+      f = { name: c.name, typeName: t.name, color: t.color, icon: t.icon, tint: tint(t.color), lev: t.lev, levName: lev.name, kpi: t.kpi, locked: c.status === 'terminée',
+        postHref: SA.href('post'), adHref: SA.href('ads', 'new=1&c=' + c.id), roiHref: SA.href('roi', 'c=' + c.id),
+        facts: [
+          { label: 'Période', value: SA.dShort(c.start) + (c.end ? ' → ' + SA.dShort(c.end) : ''), sub: c.end ? SA.daysBetween(c.start, c.end) + 1 + ' jours' : 'Continue', color: '#222222' },
+          { label: 'Objectif', value: c.goal.metric === 'CA additionnel' ? SA.eur(c.goal.value) : SA.fmt(c.goal.value), sub: c.goal.metric, color: '#222222' },
+          { label: 'Réalisé (estimé)', value: goalNow ? SA.eur(goalNow.caAdd) : '—', sub: goalNow ? SA.pct(goalNow.att) + ' de l\u2019objectif' + (c.status === 'en cours' ? ' au prorata' : '') : 'Pas encore de données', color: goalNow ? SA.RAG[goalNow.rag].fg : '#666666' },
+          { label: 'Budget total', value: SA.eur(c.budget), sub: SA.eur(sp) + ' dépensés · ' + SA.pct(c.budget ? sp / c.budget : 0), color: '#222222' },
+          { label: 'ROAS', value: goalNow && goalNow.roas != null ? SA.fmt(goalNow.roas, 1) + ' ×' : '—', sub: 'CA additionnel / dépense', color: goalNow ? (goalNow.roas >= 3 ? '#0F6B4A' : goalNow.roas >= 1.6 ? '#8A4B00' : '#8D1D2C') : '#666666' },
+        ],
+        shopCount: c.shops.length, shops: c.shops.map(id => SA.byId(SA.SHOPS, id).name), products: c.products,
+        split, splitLabel: left === 0 ? 'Budget entièrement réparti · ' + SA.eur(allocated) : left > 0 ? SA.eur(left) + ' restant à répartir' : 'Dépassement de ' + SA.eur(-left) + ' sur le budget total', splitColor: left === 0 ? '#0F6B4A' : left > 0 ? '#8A4B00' : '#8D1D2C',
+        ticks, postMarks, adBars, adH: Math.max(44, ads.length * 28 + 16) + 'px', noAds: ads.length === 0, postN: posts.length, adN: ads.length,
+        showToday: SA.TODAY >= start && SA.TODAY <= end, todayX: X(SA.TODAY) };
+    }
+    // nouvelle campagne
+    const n = s.n || this.blank(), nt = T(n.type);
+    const upd = (patch) => this.setState({ n: Object.assign({}, n, patch), err: '' });
+    const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
+    const nv = { name: n.name, setName: (e) => upd({ name: e.target.value }),
+      types: SA.CTYPES.map(t => ({ name: t.name, icon: t.icon, tint: tint(t.color), ring: n.type === t.id ? t.color : 'rgba(34,34,34,0.10)', pick: () => upd({ type: t.id }) })),
+      typeHint: 'Levier : ' + SA.LEVERS[nt.lev].name + ' · KPI attendu : ' + nt.kpi,
+      start: n.start, end: n.end, setStart: (e) => upd({ start: e.target.value }), setEnd: (e) => upd({ end: e.target.value }), hasEnd: !nt.continuous, continuous: !!nt.continuous,
+      shops: SA.SHOPS.map(sh => Object.assign(chip(n.shops.includes(sh.id)), { name: sh.name, toggle: () => upd({ shops: n.shops.includes(sh.id) ? n.shops.filter(x => x !== sh.id) : n.shops.concat(sh.id) }) })),
+      products: SA.CATALOGUE.map(p => Object.assign(chip(n.products.includes(p.name)), { name: p.name, toggle: () => upd({ products: n.products.includes(p.name) ? n.products.filter(x => x !== p.name) : n.products.concat(p.name) }) })),
+      metric: n.metric, setMetric: (e) => upd({ metric: e.target.value }), goal: n.goal, setGoal: (e) => upd({ goal: +e.target.value }), budget: n.budget, setBudget: (e) => upd({ budget: +e.target.value }),
+      hasErr: !!s.err, err: s.err };
+    return {
+      toggleRef: () => this.setState({ refOpen: !s.refOpen }), refOpen: s.refOpen,
+      refHead: ['', 'Type', 'Levier', 'KPI attendu', 'Durée'],
+      ctypes: SA.CTYPES.map(t => ({ name: t.name, color: t.color, tint: tint(t.color), icon: t.icon, lev: t.lev, levName: SA.LEVERS[t.lev].name, kpi: t.kpi, dur: t.continuous ? 'Continue' : 'Datée' })),
+      tabs: tabsDef.map(([k, label, arr]) => ({ label, n: arr.length, bg: s.tab === k ? '#8D1D2C' : 'transparent', fg: s.tab === k ? '#FFFFFF' : '#444444', pick: () => this.setState({ tab: k }) })),
+      list, f, n: nv, newOpen: s.newOpen,
+      openNew: () => this.setState({ newOpen: true, n: this.blank(), err: '' }), closeNew: () => this.setState({ newOpen: false }),
+      createCamp: () => {
+        if (!n.name.trim()) { this.setState({ err: 'Donnez un nom à la campagne.' }); return; }
+        if (!n.shops.length) { this.setState({ err: 'Choisissez au moins une boutique.' }); return; }
+        if (!nt.continuous && n.end < n.start) { this.setState({ err: 'La date de fin précède la date de début.' }); return; }
+        const per = Math.floor(n.budget / n.shops.length / 10) * 10, split = {}; n.shops.forEach(id => { split[id] = per; }); split[n.shops[0]] += n.budget - per * n.shops.length;
+        const camp = { id: 'c' + Date.now(), name: n.name.trim(), type: n.type, start: n.start, end: nt.continuous ? null : n.end, status: n.start <= SA.TODAY ? 'en cours' : 'à venir', shops: n.shops, products: n.products, goal: { metric: n.metric, value: n.goal }, budget: n.budget, split };
+        SA.save({ campaigns: st.campaigns.concat(camp) }); SA.log('Sarah Lambert (Franchiseur)', 'Campagne', 'Création de « ' + camp.name + ' »');
+        this.setState({ newOpen: false, selId: camp.id, tab: 'all' });
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

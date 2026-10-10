@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button{font-family:var(--font-ui);}
+    @media print { nav{display:none !important;} body{background:#FFFFFF;} }
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="roi" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Données Meta + ventes caisse (API Franchise Buddy)</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">RETOUR SUR CAMPAGNE</h1>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <select value="{{ focus }}" onChange="{{ setFocus }}" style="height:36px;font-size:13px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:0 10px;">
+          <option value="">Réseau · {{ nShopsLabel }}</option>
+          <sc-for list="{{ shopOptions }}" as="o" hint-placeholder-count="6"><option value="{{ o.id }}">{{ o.name }}</option></sc-for>
+        </select>
+        <button onClick="{{ exportXls }}" style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">Exporter Excel</button>
+        <button onClick="{{ exportPdf }}" style="height:36px;padding:0 14px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">Exporter PDF</button>
+      </div>
+    </header>
+
+    <!-- Sélecteur campagne -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">
+      <sc-for list="{{ campTabs }}" as="c" hint-placeholder-count="0">
+        <button onClick="{{ c.pick }}" style="text-align:left;background:#FFFFFF;border:{{ c.border }};border-radius:10px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;">
+          <span style="width:36px;height:36px;border-radius:8px;background:{{ c.tint }};display:flex;align-items:center;justify-content:center;flex:0 0 auto;"><img src="{{ c.icon }}" alt="" style="width:26px;height:26px;object-fit:contain;"></span>
+          <span style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;">
+            <span style="font-size:14px;font-weight:500;">{{ c.name }}</span>
+            <span style="font-size:11px;color:#666666;">{{ c.meta }}</span>
+          </span>
+          <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ c.ragBg }};color:{{ c.ragFg }};white-space:nowrap;">{{ c.ragLabel }}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <!-- Avertissement estimation -->
+    <div style="display:flex;gap:12px;align-items:flex-start;background:#FFFFFF;border:0.5px solid #E3B155;border-radius:10px;padding:12px 14px;">
+      <span style="width:22px;height:22px;border-radius:50%;background:#FAC775;color:#6b3d0a;font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">≈</span>
+      <span style="font-size:12px;line-height:1.55;color:#444444;"><strong style="font-weight:500;color:#222222;">Le CA additionnel est une estimation, pas une attribution exacte.</strong> Il compare le CA des produits de la campagne pendant la période ({{ periodLabel }}) à la moyenne des mêmes jours sur les 6 semaines précédentes. D'autres facteurs (météo, vacances, travaux) peuvent l'influencer. Taux de marge appliqué : {{ marginLabel }}.</span>
+    </div>
+
+    <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+        <sc-for list="{{ skeleton }}" as="sk" hint-placeholder-count="0"><div style="height:96px;border-radius:10px;background:#F4EFE8;"></div></sc-for>
+      </div>
+      <div style="height:320px;border-radius:10px;background:#F4EFE8;"></div>
+    </sc-if>
+
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+      <!-- Indisponible -->
+      <sc-if value="{{ noSales }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:28px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;">
+          <span style="font-size:15px;font-weight:500;">Pas de données de vente pour {{ focusName }}</span>
+          <span style="font-size:13px;color:#666666;max-width:520px;line-height:1.5;">{{ noSalesReason }}. Les indicateurs Meta restent disponibles ci-dessous ; le CA additionnel, la marge, le ROAS et le ROI ne peuvent pas être calculés.</span>
+        </div>
+      </sc-if>
+
+      <!-- Indicateurs clés -->
+      <section style="display:grid;grid-template-columns:minmax(260px,1.3fr) repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+        <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:8px;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">CA additionnel estimé</span>
+          <span style="font-size:34px;font-weight:300;line-height:1;color:{{ hero.color }};">≈ {{ hero.caAdd }}</span>
+          <span style="font-size:12px;color:#666666;">{{ hero.caDetail }}</span>
+          <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#666666;"><span>{{ hero.goalLabel }}</span><span style="font-weight:500;color:{{ hero.color }};">{{ hero.att }}</span></div>
+            <div style="position:relative;height:8px;border-radius:999px;background:#EAE4DC;overflow:hidden;"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ hero.attPct }};background:{{ hero.bar }};border-radius:999px;"></span></div>
+            <span style="align-self:flex-start;font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ hero.ragBg }};color:{{ hero.ragFg }};margin-top:4px;">{{ hero.ragLabel }}</span>
+          </div>
+        </div>
+        <sc-for list="{{ heroKpis }}" as="k" hint-placeholder-count="5">
+          <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:4px;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ k.label }}</span>
+            <span style="font-size:24px;font-weight:300;line-height:1.1;color:{{ k.color }};">{{ k.value }}</span>
+            <span style="font-size:11px;color:#666666;line-height:1.4;">{{ k.sub }}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:stretch;">
+        <!-- Meta -->
+        <section style="flex:1 1 360px;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:13px;font-weight:500;">Données Meta</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">GET /{campaign_id}/insights · level={{ insightLevel }} · time_range={{ timeRange }} · time_increment=1</span></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;">
+            <sc-for list="{{ meta }}" as="m" hint-placeholder-count="7">
+              <div style="background:#F4EFE8;border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:2px;"><span style="font-size:11px;color:#666666;">{{ m.label }}</span><span style="font-size:16px;font-weight:500;">{{ m.value }}</span><span style="font-family:ui-monospace,monospace;font-size:9px;color:#8A847C;">{{ m.tech }}</span></div>
+            </sc-for>
+          </div>
+        </section>
+        <!-- Ventes -->
+        <section style="flex:1 1 360px;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Ventes des produits de la campagne</span><span style="font-size:11px;color:#666666;">{{ productsLabel }}</span></div>
+          <sc-for list="{{ sales }}" as="v" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              <span style="display:flex;justify-content:space-between;font-size:12px;"><span>{{ v.label }}</span><span style="color:{{ v.deltaColor }};font-weight:500;">{{ v.delta }}</span></span>
+              <span style="display:grid;grid-template-columns:78px minmax(0,1fr) 80px;gap:8px;align-items:center;font-size:11px;color:#666666;"><span>Référence</span><span style="height:10px;border-radius:3px;background:#EAE4DC;overflow:hidden;"><span style="display:block;height:100%;width:{{ v.refPct }};background:#B8B2A8;"></span></span><span style="text-align:right;">{{ v.ref }}</span></span>
+              <span style="display:grid;grid-template-columns:78px minmax(0,1fr) 80px;gap:8px;align-items:center;font-size:11px;color:#666666;"><span>Campagne</span><span style="height:10px;border-radius:3px;background:#EAE4DC;overflow:hidden;"><span style="display:block;height:100%;width:{{ v.campPct }};background:#8D1D2C;"></span></span><span style="text-align:right;color:#222222;font-weight:500;">{{ v.camp }}</span></span>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+
+      <!-- Comparaison boutiques -->
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:13px;font-weight:500;">Comparaison entre boutiques</span>
+          <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+            <sc-for list="{{ metricTabs }}" as="mt" hint-placeholder-count="4"><button onClick="{{ mt.pick }}" style="border:none;border-radius:6px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ mt.bg }};color:{{ mt.fg }};">{{ mt.label }}</button></sc-for>
+          </div>
+        </div>
+        <sc-for list="{{ compare }}" as="b" hint-placeholder-count="6">
+          <div style="display:grid;grid-template-columns:96px minmax(0,1fr) 110px;gap:12px;align-items:center;">
+            <span style="font-size:13px;font-weight:{{ b.w }};">{{ b.rank }}. {{ b.name }}</span>
+            <span style="position:relative;height:22px;border-radius:4px;background:#F4EFE8;overflow:hidden;">
+              <span style="position:absolute;left:0;top:0;bottom:0;width:{{ b.pct }};background:{{ b.bar }};border-radius:4px;"></span>
+              <sc-if value="{{ b.hasGoal }}" hint-placeholder-val="{{ false }}"><span title="Objectif" style="position:absolute;left:{{ b.goalX }};top:-2px;bottom:-2px;width:2px;background:#232220;"></span></sc-if>
+              <sc-if value="{{ b.na }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:8px;top:4px;font-size:11px;color:#666666;">Données de vente indisponibles</span></sc-if>
+            </span>
+            <span style="font-size:13px;font-weight:500;text-align:right;color:{{ b.fg }};">{{ b.value }}</span>
+          </div>
+        </sc-for>
+        <span style="font-size:11px;color:#666666;">{{ compareNote }}</span>
+      </section>
+
+      <!-- Tableau détaillé -->
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
+        <div style="display:grid;grid-template-columns:110px repeat(10,minmax(78px,1fr)) 130px;min-width:1160px;">
+          <sc-for list="{{ tHead }}" as="h" hint-placeholder-count="12"><span style="padding:10px;font-size:10px;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);text-align:{{ h.al }};">{{ h.l }}</span></sc-for>
+          <sc-for list="{{ tRows }}" as="r" hint-placeholder-count="7">
+            <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="12">
+              <span style="padding:9px 10px;font-size:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};text-align:{{ c.al }};font-weight:{{ c.w }};color:{{ c.fg }};white-space:nowrap;">{{ c.v }}</span>
+            </sc-for>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- Classement des campagnes -->
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:10px;">
+        <span style="font-size:13px;font-weight:500;">Classement des campagnes · par ROI</span>
+        <sc-for list="{{ ranking }}" as="k" hint-placeholder-count="3">
+          <button onClick="{{ k.pick }}" style="display:grid;grid-template-columns:28px minmax(160px,1.6fr) repeat(4,minmax(90px,1fr)) 130px;gap:10px;align-items:center;border:none;background:{{ k.bg }};border-radius:8px;padding:10px 12px;cursor:pointer;text-align:left;">
+            <span style="font-size:18px;font-weight:300;color:#8D1D2C;">{{ k.rank }}</span>
+            <span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:13px;font-weight:500;">{{ k.name }}</span><span style="font-size:11px;color:#666666;">{{ k.meta }}</span></span>
+            <span style="display:flex;flex-direction:column;"><span style="font-size:10px;color:#666666;">Dépense</span><span style="font-size:13px;">{{ k.spend }}</span></span>
+            <span style="display:flex;flex-direction:column;"><span style="font-size:10px;color:#666666;">CA add.</span><span style="font-size:13px;">{{ k.caAdd }}</span></span>
+            <span style="display:flex;flex-direction:column;"><span style="font-size:10px;color:#666666;">ROAS</span><span style="font-size:13px;">{{ k.roas }}</span></span>
+            <span style="display:flex;flex-direction:column;"><span style="font-size:10px;color:#666666;">ROI</span><span style="font-size:13px;font-weight:500;color:{{ k.roiColor }};">{{ k.roi }}</span></span>
+            <span style="justify-self:end;font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ k.ragBg }};color:{{ k.ragFg }};">{{ k.ragLabel }}</span>
+          </button>
+        </sc-for>
+      </section>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { cid: 'c-automne', focus: '', metric: 'caAdd', loading: true, toast: '' };
+  componentDidMount() { const SA = window.SA; const c = SA && SA.param('c'); if (c && SA.RESULTS[c]) this.setState({ cid: c }); this.load(); }
+  componentWillUnmount() { clearTimeout(this._t); clearTimeout(this._tt); }
+  load() { clearTimeout(this._t); this.setState({ loading: true }); this._t = setTimeout(() => this.setState({ loading: false }), 420); }
+  toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2600); }
+  renderVals() {
+    const SA = window.SA, s = this.state;
+    if (!SA) return { loading: true, skeleton: [], hero: {} };
+    const nShopsLabel = SA.SHOPS.length + (SA.SHOPS.length > 1 ? ' boutiques' : ' boutique');
+    const ids = Object.keys(SA.RESULTS);
+    const all = ids.map(id => SA.roi(id)).filter(Boolean);
+    const R = all.find(x => x.c.id === s.cid) || all[0];
+    const c = R.c, T = SA.CTYPES.find(t => t.id === c.type);
+    const row = s.focus ? R.perShop.find(x => x.sid === s.focus) : null;
+    const X = row || R.total, has = row ? row.caRef != null : true;
+    const rag = SA.RAG[has ? (row ? row.rag : R.total.rag) : 'grey'];
+    const live = c.status === 'en cours';
+    const roiColor = (v) => v == null ? '#666666' : v >= 1 ? '#0F6B4A' : v >= 0 ? '#8A4B00' : '#8D1D2C';
+    const hero = { caAdd: has ? SA.eur(X.caAdd) : '—', color: has ? rag.fg : '#666666', bar: rag.bar,
+      caDetail: has ? SA.eur(X.caCamp) + ' pendant la campagne vs ' + SA.eur(X.caRef) + ' en référence' : 'Ventes non remontées',
+      goalLabel: 'Objectif ' + SA.eur(X.goal) + (live ? ' (prorata ' + SA.pct(R.total.elapsed) + ' de la période)' : ''),
+      att: has ? SA.pct(X.att) : '—', attPct: has ? Math.min(100, X.att * 100) + '%' : '0%', ragLabel: rag.label, ragBg: rag.bg, ragFg: rag.fg };
+    const heroKpis = [
+      { label: 'Marge additionnelle', value: has ? SA.eur(X.mAdd) : '—', sub: 'CA additionnel × ' + SA.pct(SA.MARGIN), color: '#222222' },
+      { label: 'Dépense publicitaire', value: SA.eur(X.spend), sub: live ? 'à date, sur ' + SA.eur(row ? c.split[row.sid] : c.budget) + ' prévus' : 'sur ' + SA.eur(row ? c.split[row.sid] : c.budget) + ' prévus', color: '#222222' },
+      { label: 'ROAS', value: has && X.roas != null ? SA.fmt(X.roas, 1) + ' ×' : '—', sub: 'CA additionnel / dépense pub', color: has ? (X.roas >= 3 ? '#0F6B4A' : X.roas >= 1.6 ? '#8A4B00' : '#8D1D2C') : '#666666' },
+      { label: 'ROI', value: has && X.roi != null ? (X.roi >= 0 ? '+' : '') + SA.pct(X.roi) : '—', sub: '(marge add. − dépense) / dépense', color: has ? roiColor(X.roi) : '#666666' },
+      { label: 'Coût / ticket add.', value: has && X.cpt != null ? SA.eur(X.cpt, 2) : '—', sub: has ? '+' + SA.fmt(X.tAdd) + ' tickets avec produits campagne' : '', color: '#222222' },
+    ];
+    const meta = [['Dépense', SA.eur(X.spend), 'spend'], ['Portée', SA.fmt(X.reach), 'reach'], ['Impressions', SA.fmt(X.impr), 'impressions'], ['Fréquence', SA.fmt(X.freq, 2), 'frequency'], ['Clics', SA.fmt(X.clicks), 'clicks'], ['CTR', SA.pct(X.ctr, 2), 'ctr'], ['Coût par clic', SA.eur(X.cpc, 2), 'cpc'], ['CPM', SA.eur(X.cpm, 2), 'cpm'], ['Engagement', SA.fmt(X.eng), 'actions · post_engagement'], ['Vues vidéo', SA.fmt(X.vv), 'actions · video_view']].map(([label, value, tech]) => ({ label, value, tech }));
+    const salesRow = (label, ref, camp, fmtFn) => { const mx = Math.max(ref || 0, camp || 0, 1); const d = ref ? (camp - ref) / ref : null;
+      return { label, ref: ref == null ? '—' : fmtFn(ref), camp: camp == null ? '—' : fmtFn(camp), refPct: (ref || 0) / mx * 100 + '%', campPct: (camp || 0) / mx * 100 + '%', delta: d == null ? 'n.d.' : (d >= 0 ? '+' : '') + SA.pct(d, 1), deltaColor: d == null ? '#666666' : d >= 0 ? '#0F6B4A' : '#8D1D2C' }; };
+    const sumK = (k) => R.perShop.filter(x => x.caRef != null).reduce((a, x) => a + x[k], 0);
+    const src = row ? row : { caRef: sumK('caRef'), caCamp: sumK('caCamp'), qRef: sumK('qRef'), qCamp: sumK('qCamp'), tRef: sumK('tRef'), tCamp: sumK('tCamp') };
+    const sales = has ? [salesRow("Chiffre d'affaires", src.caRef, src.caCamp, (v) => SA.eur(v)), salesRow('Quantités vendues', src.qRef, src.qCamp, (v) => SA.fmt(v)), salesRow('Tickets concernés', src.tRef, src.tCamp, (v) => SA.fmt(v))] : [];
+    // comparaison
+    const M = { caAdd: ['CA additionnel', (v) => SA.eur(v)], roas: ['ROAS', (v) => SA.fmt(v, 1) + ' ×'], roi: ['ROI', (v) => (v >= 0 ? '+' : '') + SA.pct(v)], att: ['Atteinte objectif', (v) => SA.pct(v)] };
+    const mk = s.metric, vals = R.perShop.filter(x => x[mk] != null).map(x => x[mk]);
+    const max = Math.max(...vals.map(Math.abs), mk === 'att' ? 1.1 : 0.0001);
+    const ranked = R.perShop.slice().sort((a, b) => (b[mk] == null ? -1e9 : b[mk]) - (a[mk] == null ? -1e9 : a[mk]));
+    const compare = ranked.map((x, i) => { const na = x[mk] == null, r = SA.RAG[x.rag];
+      return { rank: na ? '–' : i + 1, name: x.name, w: x.sid === s.focus ? 600 : 500, na, pct: na ? '0%' : Math.max(2, Math.abs(x[mk]) / max * 100) + '%', bar: na ? '#EAE4DC' : (mk === 'roi' && x[mk] < 0 ? '#8D1D2C' : r.bar), value: na ? '—' : M[mk][1](x[mk]), fg: na ? '#666666' : r.fg,
+        hasGoal: !na && (mk === 'caAdd' || mk === 'att'), goalX: (mk === 'caAdd' ? x.goal / max : 1 / max) * 100 + '%' }; });
+    // tableau
+    const tHead = [['Boutique', 'left'], ['Dépense', 'right'], ['Portée', 'right'], ['Clics', 'right'], ['CPC', 'right'], ['CA réf.', 'right'], ['CA camp.', 'right'], ['CA add.', 'right'], ['Marge add.', 'right'], ['ROAS', 'right'], ['ROI', 'right'], ['Objectif', 'left']].map(([l, al]) => ({ l, al }));
+    const cellsOf = (x, isTotal) => { const na = x.caRef == null, r = SA.RAG[na ? 'grey' : x.rag], cl = (v, al, extra) => Object.assign({ v, al: al || 'right', w: isTotal ? 600 : 400, fg: '#222222' }, extra || {});
+      return [cl(isTotal ? 'Réseau' : x.name, 'left', { w: isTotal ? 600 : 500 }), cl(SA.eur(x.spend)), cl(SA.fmt(x.reach)), cl(SA.fmt(x.clicks)), cl(SA.eur(x.cpc, 2)),
+        cl(na ? '—' : SA.eur(x.caRef)), cl(na ? '—' : SA.eur(x.caCamp)), cl(na ? 'n.d.' : SA.eur(x.caAdd), 'right', { fg: na ? '#666666' : x.caAdd >= 0 ? '#0F6B4A' : '#8D1D2C' }), cl(na ? '—' : SA.eur(x.mAdd)),
+        cl(na || x.roas == null ? '—' : SA.fmt(x.roas, 1) + ' ×'), cl(na || x.roi == null ? '—' : (x.roi >= 0 ? '+' : '') + SA.pct(x.roi), 'right', { fg: roiColor(na ? null : x.roi) }),
+        cl(na ? 'Ventes indisponibles' : SA.pct(x.att) + ' · ' + r.label.split(' ')[0] + (r.label.split(' ')[1] ? ' ' + r.label.split(' ')[1] : ''), 'left', { fg: r.fg, w: 500 })]; };
+    const tRows = R.perShop.map(x => ({ bg: x.sid === s.focus ? '#FBF3F4' : x.caRef == null ? '#FCFAF7' : '#FFFFFF', cells: cellsOf(x) })).concat([{ bg: '#F4EFE8', cells: cellsOf(R.total, true) }]);
+    // classement
+    const ranking = all.slice().sort((a, b) => b.total.roi - a.total.roi).map((x, i) => { const r = SA.RAG[x.total.rag];
+      return { rank: i + 1, name: x.c.name, meta: (SA.CTYPES.find(t => t.id === x.c.type) || {}).name + ' · ' + SA.dShort(x.c.start) + ' → ' + SA.dShort(x.c.end) + (x.c.status === 'en cours' ? ' · en cours' : ''),
+        spend: SA.eur(x.total.spend), caAdd: SA.eur(x.total.caAdd), roas: SA.fmt(x.total.roas, 1) + ' ×', roi: (x.total.roi >= 0 ? '+' : '') + SA.pct(x.total.roi), roiColor: roiColor(x.total.roi),
+        ragLabel: r.label, ragBg: r.bg, ragFg: r.fg, bg: x.c.id === c.id ? '#FBF3F4' : '#F4EFE8', pick: () => { this.setState({ cid: x.c.id, focus: '' }); this.load(); } }; });
+    const focusRow = row;
+    return { nShopsLabel,
+      shopOptions: R.perShop.map(x => ({ id: x.sid, name: x.name })), focus: s.focus, setFocus: (e) => this.setState({ focus: e.target.value }),
+      campTabs: all.map(x => { const t = SA.CTYPES.find(y => y.id === x.c.type), r = SA.RAG[x.total.rag];
+        return { name: x.c.name, icon: t.icon, tint: t.color + '22', meta: t.name + ' · ' + SA.dShort(x.c.start) + ' → ' + SA.dShort(x.c.end) + (x.c.status === 'en cours' ? ' · en cours' : ' · terminée'),
+          ragLabel: r.label, ragBg: r.bg, ragFg: r.fg, border: x.c.id === c.id ? '1.5px solid #8D1D2C' : '0.5px solid rgba(34,34,34,0.10)', pick: () => { this.setState({ cid: x.c.id, focus: '' }); this.load(); } }; }),
+      periodLabel: SA.dShort(c.start) + ' → ' + (live ? SA.dShort(SA.TODAY) + ', à date' : SA.dShort(c.end)), marginLabel: SA.pct(SA.MARGIN),
+      loading: s.loading, ready: !s.loading, skeleton: new Array(6).fill(0),
+      noSales: !has, focusName: focusRow ? focusRow.name : '', noSalesReason: focusRow && focusRow.noSales ? focusRow.noSales : 'Aucune vente remontée par la caisse',
+      hero, heroKpis, meta, sales, productsLabel: c.products.join(' · '),
+      metricTabs: Object.keys(M).map(k => ({ label: M[k][0], bg: s.metric === k ? '#8D1D2C' : 'transparent', fg: s.metric === k ? '#FFFFFF' : '#444444', pick: () => this.setState({ metric: k }) })),
+      compare, compareNote: (mk === 'caAdd' || mk === 'att' ? 'Trait noir = objectif de la boutique (au prorata du budget alloué). ' : '') + (R.total.missing.length ? 'Sans données de vente : ' + R.total.missing.join(', ') + ' (exclue des totaux de vente).' : ''),
+      tHead, tRows, ranking, insightLevel: s.focus ? 'adset' : 'campaign', timeRange: '{since: ' + c.start + ', until: ' + (live ? SA.TODAY : c.end) + '}',
+      exportPdf: () => { this.toast('Préparation du PDF…'); setTimeout(() => window.print(), 300); },
+      exportXls: () => {
+        const h = ['Boutique', 'Dépense', 'Portée', 'Impressions', 'Clics', 'CPC', 'Engagement', 'Vues vidéo', 'CA référence', 'CA campagne', 'CA additionnel (estimé)', 'Marge additionnelle', 'ROAS', 'ROI', 'Coût par ticket add.', 'Objectif', 'Atteinte'];
+        const n2 = (v, d) => v == null || !isFinite(v) ? '' : String(Math.round(v * Math.pow(10, d || 0)) / Math.pow(10, d || 0)).replace('.', ',');
+        const line = (x, name) => [name, n2(x.spend), n2(x.reach), n2(x.impr), n2(x.clicks), n2(x.cpc, 2), n2(x.eng), n2(x.vv), n2(x.caRef), n2(x.caCamp), n2(x.caAdd), n2(x.mAdd), n2(x.roas, 2), n2(x.roi, 3), n2(x.cpt, 2), n2(x.goal), n2(x.att, 3)];
+        const rows = [['Campagne', c.name], ['Période', c.start + ' → ' + c.end], ['Note', 'CA additionnel estimé par comparaison à la moyenne des mêmes jours des 6 semaines précédentes'], [], h].concat(R.perShop.map(x => line(x, x.name))).concat([line(R.total, 'Réseau')]);
+        const csv = '\ufeff' + rows.map(r => r.map(v => /[;"\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v).join(';')).join('\n');
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'retour-' + c.id + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+        this.toast('Export Excel (CSV) téléchargé.');
+      },
+      hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

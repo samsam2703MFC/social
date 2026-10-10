@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button,textarea{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="leads" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Formulaires instantanés · <span style="font-family:ui-monospace,monospace;text-transform:none;letter-spacing:0;">POST /{page_id}/leadgen_forms</span></span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">FORMULAIRES DE LEADS</h1>
+      </div>
+      <button onClick="{{ newForm }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;">Nouveau formulaire</button>
+    </header>
+
+    <div style="display:flex;gap:12px;align-items:flex-start;background:#FFFFFF;border:0.5px solid #E3B155;border-radius:10px;padding:11px 14px;">
+      <span style="width:22px;height:22px;border-radius:50%;background:#FAC775;color:#6b3d0a;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">v</span>
+      <span style="font-size:12px;line-height:1.55;color:#444444;"><strong style="font-weight:500;color:#222222;">Un formulaire Meta ne se modifie pas après sa création.</strong> « Nouvelle version » duplique le formulaire ; à la publication, la nouvelle version remplace l'ancienne dans les publicités et l'ancienne est archivée. Ses leads restent consultables.</span>
+    </div>
+
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+      <!-- Liste -->
+      <aside style="flex:0 1 270px;min-width:240px;display:flex;flex-direction:column;gap:10px;">
+        <sc-for list="{{ families }}" as="f" hint-placeholder-count="2">
+          <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;">
+            <div style="padding:10px 12px 6px;font-size:13px;font-weight:500;">{{ f.name }}</div>
+            <sc-for list="{{ f.versions }}" as="v" hint-placeholder-count="0">
+              <button onClick="{{ v.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:none;border-top:0.5px solid rgba(34,34,34,0.06);background:{{ v.bg }};padding:9px 12px;cursor:pointer;text-align:left;">
+                <span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:12px;font-weight:500;color:{{ v.fg }};">Version {{ v.n }}</span><span style="font-size:11px;color:#666666;">{{ v.meta }}</span></span>
+                <span style="font-size:10px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ v.stBg }};color:{{ v.stFg }};">{{ v.status }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-for>
+      </aside>
+
+      <!-- Éditeur -->
+      <section style="flex:1 1 440px;min-width:0;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px 18px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <span style="display:flex;align-items:center;gap:8px;"><span style="font-size:15px;font-weight:500;">{{ f.title }}</span><span style="font-size:10px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ f.stBg }};color:{{ f.stFg }};">{{ f.status }}</span></span>
+          <div style="display:flex;gap:8px;">
+            <sc-if value="{{ f.canVersion }}" hint-placeholder-val="{{ false }}"><button onClick="{{ newVersion }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Nouvelle version (v{{ f.nextN }})</button></sc-if>
+            <sc-if value="{{ f.isDraft }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ cancelDraft }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Abandonner</button>
+              <button onClick="{{ publishDraft }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Publier sur Meta</button>
+            </sc-if>
+          </div>
+        </div>
+        <sc-if value="{{ f.readOnly }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:#666666;">Lecture seule : créez une nouvelle version pour modifier ce formulaire.</span></sc-if>
+        <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8D1D2C;background:#F6DCDF;border-radius:6px;padding:7px 10px;">{{ err }}</span></sc-if>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <label style="flex:2 1 240px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Nom interne <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">name *</span><input type="text" value="{{ d.name }}" onChange="{{ setName }}" disabled="{{ f.readOnly }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+          <label style="flex:1 1 140px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Langue <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">locale</span><select value="{{ d.locale }}" onChange="{{ setLocale }}" disabled="{{ f.readOnly }}" style="font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="fr_FR">fr_FR · Français</option><option value="nl_BE">nl_BE · Nederlands</option><option value="en_GB">en_GB · English</option></select></label>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <span style="font-size:12px;color:#444444;">Questions standard <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">questions [{type}] *</span></span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ stdQ }}" as="q" hint-placeholder-count="9"><button onClick="{{ q.toggle }}" style="border-radius:999px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ q.border }};background:{{ q.bg }};color:{{ q.fg }};">{{ q.label }} <span style="font-family:ui-monospace,monospace;font-size:9px;opacity:0.75;">{{ q.type }}</span></button></sc-for></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <span style="font-size:12px;color:#444444;">Questions personnalisées <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">{type: "CUSTOM", key, label, options: [{key, value}]}</span></span>
+          <sc-for list="{{ customQ }}" as="cq" hint-placeholder-count="0">
+            <div style="background:#F4EFE8;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <input type="text" value="{{ cq.label }}" onChange="{{ cq.setLabel }}" disabled="{{ f.readOnly }}" placeholder="Intitulé" style="flex:2 1 200px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 9px;">
+                <input type="text" value="{{ cq.key }}" onChange="{{ cq.setKey }}" disabled="{{ f.readOnly }}" placeholder="clé" style="flex:1 1 120px;font-size:12px;font-family:ui-monospace,monospace;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 9px;">
+                <sc-if value="{{ f.editable }}" hint-placeholder-val="{{ false }}"><button onClick="{{ cq.remove }}" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;cursor:pointer;">Supprimer</button></sc-if>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <sc-for list="{{ cq.options }}" as="op" hint-placeholder-count="0"><span style="display:inline-flex;align-items:center;gap:6px;background:#FFFFFF;border-radius:999px;padding:4px 6px 4px 10px;font-size:12px;">{{ op.value }}<sc-if value="{{ f.editable }}" hint-placeholder-val="{{ false }}"><button onClick="{{ op.remove }}" style="width:16px;height:16px;border-radius:50%;border:none;background:#232220;color:#FFFFFF;font-size:9px;cursor:pointer;padding:0;">×</button></sc-if></span></sc-for>
+                <sc-if value="{{ f.editable }}" hint-placeholder-val="{{ false }}"><input type="text" placeholder="+ option (Entrée)" onKeyDown="{{ cq.addOpt }}" style="font-size:12px;border:0.5px dashed rgba(34,34,34,0.3);border-radius:999px;padding:4px 10px;width:130px;"></sc-if>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ f.editable }}" hint-placeholder-val="{{ false }}"><button onClick="{{ addCustom }}" style="align-self:flex-start;border:0.5px dashed rgba(34,34,34,0.3);background:#FFFFFF;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;">+ Question personnalisée</button></sc-if>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:12px;">
+          <span style="font-size:13px;font-weight:500;">Écran d'introduction <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;">context_card</span></span>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <input type="text" value="{{ d.context.title }}" onChange="{{ setCtxTitle }}" disabled="{{ f.readOnly }}" placeholder="title" style="flex:2 1 200px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;">
+            <select value="{{ d.context.style }}" onChange="{{ setCtxStyle }}" disabled="{{ f.readOnly }}" style="flex:1 1 150px;font-size:12px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px;"><option value="LIST_STYLE">Liste · LIST_STYLE</option><option value="PARAGRAPH_STYLE">Paragraphe · PARAGRAPH_STYLE</option></select>
+            <input type="text" value="{{ d.context.button_text }}" onChange="{{ setCtxBtn }}" disabled="{{ f.readOnly }}" placeholder="button_text" style="flex:1 1 150px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;">
+          </div>
+          <textarea value="{{ ctxContent }}" onChange="{{ setCtxContent }}" disabled="{{ f.readOnly }}" rows="3" placeholder="content (une ligne par point)" style="font-size:13px;line-height:1.5;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;resize:vertical;"></textarea>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:12px;">
+          <span style="font-size:13px;font-weight:500;">Écran de remerciement <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;">thank_you_page</span></span>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <input type="text" value="{{ d.thanks.title }}" onChange="{{ setTyTitle }}" disabled="{{ f.readOnly }}" placeholder="title" style="flex:1 1 180px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;">
+            <input type="text" value="{{ d.thanks.body }}" onChange="{{ setTyBody }}" disabled="{{ f.readOnly }}" placeholder="body" style="flex:2 1 260px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;">
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <select value="{{ d.thanks.button_type }}" onChange="{{ setTyType }}" disabled="{{ f.readOnly }}" style="flex:1 1 170px;font-size:12px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px;"><option value="VIEW_WEBSITE">Voir le site · VIEW_WEBSITE</option><option value="CALL_BUSINESS">Appeler · CALL_BUSINESS</option><option value="DOWNLOAD">Télécharger · DOWNLOAD</option></select>
+            <input type="text" value="{{ d.thanks.button_text }}" onChange="{{ setTyBtn }}" disabled="{{ f.readOnly }}" placeholder="button_text" style="flex:1 1 150px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;">
+            <input type="url" value="{{ d.thanks.website_url }}" onChange="{{ setTyUrl }}" disabled="{{ f.readOnly }}" placeholder="website_url" style="flex:2 1 220px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;">
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:12px;">
+          <label style="flex:2 1 240px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Politique de confidentialité <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">privacy_policy.url *</span><input type="url" value="{{ d.privacy.url }}" onChange="{{ setPrivUrl }}" disabled="{{ f.readOnly }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+          <label style="flex:1 1 180px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Texte du lien <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">privacy_policy.link_text</span><input type="text" value="{{ d.privacy.link_text }}" onChange="{{ setPrivText }}" disabled="{{ f.readOnly }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+          <label style="flex:2 1 240px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Lien après envoi <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">follow_up_action_url</span><input type="url" value="{{ d.followUp }}" onChange="{{ setFollow }}" disabled="{{ f.readOnly }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" checked="{{ d.quality }}" onChange="{{ toggleQuality }}" disabled="{{ f.readOnly }}" style="accent-color:#8D1D2C;margin:0;">Écran de confirmation avant envoi (moins de leads, meilleure qualité) <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">is_optimized_for_quality</span></label>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <span style="font-size:12px;color:#444444;">Pages Facebook qui utilisent ce formulaire</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ shopChips }}" as="s" hint-placeholder-count="6"><button onClick="{{ s.toggle }}" style="border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ s.border }};background:{{ s.bg }};color:{{ s.fg }};">{{ s.name }}</button></sc-for></div>
+        </div>
+      </section>
+
+      <!-- Aperçu mobile -->
+      <aside style="flex:0 1 300px;min-width:270px;position:sticky;top:16px;display:flex;flex-direction:column;gap:10px;align-items:center;">
+        <div style="display:inline-flex;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:3px;gap:2px;">
+          <sc-for list="{{ pvTabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.pick }}" style="border:none;border-radius:6px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ t.bg }};color:{{ t.fg }};">{{ t.label }}</button></sc-for>
+        </div>
+        <div style="width:270px;height:540px;border-radius:32px;background:#232220;padding:10px;box-sizing:border-box;">
+          <div style="width:100%;height:100%;border-radius:24px;background:#FFFFFF;overflow:auto;display:flex;flex-direction:column;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 14px 10px;border-bottom:1px solid #eeeeee;">
+              <span style="width:28px;height:28px;border-radius:50%;background:#8D1D2C;display:flex;align-items:center;justify-content:center;"><img src="img/logo-white.png" alt="" style="width:20px;height:auto;"></span>
+              <span style="font-size:12px;font-weight:600;color:#1c1e21;">{{ pvPage }}</span>
+            </div>
+            <sc-if value="{{ pvIntro }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:16px 14px;display:flex;flex-direction:column;gap:10px;flex:1;">
+                <span style="font-size:17px;font-weight:700;color:#1c1e21;line-height:1.25;">{{ d.context.title }}</span>
+                <sc-for list="{{ ctxLines }}" as="l" hint-placeholder-count="0"><span style="font-size:13px;color:#444444;line-height:1.45;display:flex;gap:6px;"><span style="color:#8D1D2C;">{{ l.bullet }}</span>{{ l.text }}</span></sc-for>
+              </div>
+              <div style="padding:12px 14px 16px;"><span style="display:block;text-align:center;background:#1877f2;color:#FFFFFF;border-radius:6px;padding:10px;font-size:13px;font-weight:600;">{{ d.context.button_text }}</span></div>
+            </sc-if>
+            <sc-if value="{{ pvForm }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:14px;display:flex;flex-direction:column;gap:10px;flex:1;">
+                <span style="font-size:13px;font-weight:600;color:#1c1e21;">Vos coordonnées</span>
+                <sc-for list="{{ pvFields }}" as="q" hint-placeholder-count="0">
+                  <span style="display:flex;flex-direction:column;gap:3px;"><span style="font-size:11px;color:#65676b;">{{ q.label }}</span><span style="border:1px solid #dddfe2;border-radius:6px;padding:7px 9px;font-size:12px;color:#8e8e8e;">{{ q.ph }}</span></span>
+                </sc-for>
+                <span style="font-size:10px;color:#65676b;line-height:1.4;">En envoyant, vous acceptez la <span style="color:#1877f2;">{{ d.privacy.link_text }}</span> de L'Atelier By.</span>
+              </div>
+              <div style="padding:12px 14px 16px;"><span style="display:block;text-align:center;background:#1877f2;color:#FFFFFF;border-radius:6px;padding:10px;font-size:13px;font-weight:600;">{{ pvSubmit }}</span></div>
+            </sc-if>
+            <sc-if value="{{ pvThanks }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:28px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;flex:1;justify-content:center;">
+                <span style="width:44px;height:44px;border-radius:50%;background:#E2F0E8;color:#0F6B4A;display:flex;align-items:center;justify-content:center;font-size:20px;">✓</span>
+                <span style="font-size:16px;font-weight:700;color:#1c1e21;">{{ d.thanks.title }}</span>
+                <span style="font-size:13px;color:#444444;line-height:1.45;">{{ d.thanks.body }}</span>
+              </div>
+              <div style="padding:12px 14px 16px;"><span style="display:block;text-align:center;background:#1877f2;color:#FFFFFF;border-radius:6px;padding:10px;font-size:13px;font-weight:600;">{{ d.thanks.button_text }}</span></div>
+            </sc-if>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Leads reçus -->
+    <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;flex-wrap:wrap;border-bottom:0.5px solid rgba(34,34,34,0.10);">
+        <span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:13px;font-weight:500;">Leads reçus · {{ leadCount }}</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">GET /{form_id}/leads · webhook leadgen · id, created_time, field_data, ad_id, form_id</span></span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select value="{{ leadScope }}" onChange="{{ setLeadScope }}" style="font-size:12px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:7px 8px;"><option value="version">Cette version</option><option value="family">Toutes les versions</option></select>
+          <button onClick="{{ exportLeads }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;">Exporter CSV</button>
+        </div>
+      </div>
+      <div style="overflow:auto;">
+        <div style="display:grid;grid-template-columns:{{ leadCols }};min-width:860px;">
+          <sc-for list="{{ leadHead }}" as="h" hint-placeholder-count="0"><span style="padding:9px 12px;font-size:10px;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;color:#666666;background:#F4EFE8;">{{ h }}</span></sc-for>
+          <sc-for list="{{ leadRows }}" as="r" hint-placeholder-count="0">
+            <sc-for list="{{ r }}" as="c" hint-placeholder-count="0"><span style="padding:9px 12px;font-size:12px;border-top:0.5px solid rgba(34,34,34,0.06);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c }}</span></sc-for>
+          </sc-for>
+        </div>
+        <sc-if value="{{ noLeads }}" hint-placeholder-val="{{ false }}"><div style="padding:24px;text-align:center;font-size:13px;color:#666666;">Aucun lead pour l'instant.</div></sc-if>
+      </div>
+    </section>
+  </main>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { selId: 'lf-b2b-2', draft: null, pv: 'intro', leadScope: 'version', err: '', toast: '', tick: 0 };
+  componentDidMount() { this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h); }
+  componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); }
+  toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2800); }
+  D(patch) { this.setState({ draft: Object.assign({}, this.state.draft, patch), err: '' }); }
+  renderVals() {
+    const SA = window.SA, s = this.state;
+    if (!SA) return { families: [], d: { context: {}, thanks: {}, privacy: {} }, f: {} };
+    const forms = SA.state().leadforms || SA.LEADFORMS;
+    const fam = {}; forms.forEach(x => { (fam[x.family] = fam[x.family] || []).push(x); });
+    const sel = forms.find(x => x.id === s.selId) || forms[0];
+    const d = s.draft || sel, editable = !!s.draft;
+    const stc = (st) => st === 'Actif' ? ['#E2F0E8', '#0F6B4A'] : st === 'Brouillon' ? ['#FAC775', '#6b3d0a'] : ['#EAE4DC', '#555555'];
+    const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
+    const leadsOf = (ids) => SA.LEADS.filter(l => ids.includes(l.form));
+    const families = Object.keys(fam).map(k => ({ name: fam[k][fam[k].length - 1].name, versions: fam[k].slice().sort((a, b) => b.version - a.version).map(x => { const [b, f] = stc(x.status); const on = !s.draft && x.id === sel.id;
+      return { n: x.version, status: x.status, stBg: b, stFg: f, meta: 'Créé le ' + SA.dShort(x.created) + ' · ' + leadsOf([x.id]).length + ' leads', bg: on ? '#FBF3F4' : '#FFFFFF', fg: on ? '#8D1D2C' : '#222222', pick: () => this.setState({ selId: x.id, draft: null, err: '' }) }; }) }));
+    if (s.draft && s.draft.isNew) families.unshift({ name: s.draft.name || 'Nouveau formulaire', versions: [{ n: 1, status: 'Brouillon', stBg: '#FAC775', stFg: '#6b3d0a', meta: 'Non publié', bg: '#FBF3F4', fg: '#8D1D2C', pick: () => {} }] });
+    const [stB, stF] = stc(editable ? 'Brouillon' : d.status);
+    const famVersions = fam[d.family] || [];
+    const nextN = Math.max(0, ...famVersions.map(x => x.version)) + 1;
+    const qTypes = d.questions.map(q => q.type);
+    const custom = d.questions.map((q, i) => ({ q, i })).filter(x => x.q.type === 'CUSTOM');
+    const setQ = (i, patch) => { const qs = d.questions.slice(); qs[i] = Object.assign({}, qs[i], patch); this.D({ questions: qs }); };
+    const ctx = d.context || {}, ty = d.thanks || {};
+    const famIds = famVersions.map(x => x.id);
+    const rowsSrc = leadsOf(s.leadScope === 'family' ? famIds : [d.id]);
+    const keys = []; d.questions.forEach(q => keys.push(q.type === 'CUSTOM' ? q.key : q.type));
+    const leadHead = ['created_time', 'Boutique', 'Version'].concat(d.questions.map(q => q.type === 'CUSTOM' ? q.label : SA.LF_Q[q.type])).concat(['Publicité']);
+    const leadRows = rowsSrc.map(l => [l.created_time.slice(8, 10) + '/' + l.created_time.slice(5, 7) + ' ' + l.created_time.slice(11), SA.byId(SA.SHOPS, l.shop).name, 'v' + ((forms.find(x => x.id === l.form) || {}).version || '?')].concat(keys.map(k => l.field_data[k] || '—')).concat([l.ad]));
+    const placeholder = { FULL_NAME: 'Marie Dupont', FIRST_NAME: 'Marie', LAST_NAME: 'Dupont', EMAIL: 'marie@exemple.be', PHONE: '+32 470 00 00 00', CITY: 'Wavre', ZIP: '1300', COMPANY_NAME: 'Votre société', JOB_TITLE: 'Votre fonction' };
+    return {
+      families,
+      f: { title: editable ? (d.isNew ? 'Nouveau formulaire · brouillon' : d.name + ' · v' + nextN + ' (brouillon)') : d.name + ' · v' + d.version, status: editable ? 'Brouillon' : d.status, stBg: stB, stFg: stF,
+        canVersion: !editable && d.status !== 'Archivé', isDraft: editable, readOnly: !editable, editable, nextN },
+      d: Object.assign({}, d, { context: ctx, thanks: ty, privacy: d.privacy || {} }),
+      hasErr: !!s.err, err: s.err,
+      newVersion: () => this.setState({ draft: JSON.parse(JSON.stringify(Object.assign({}, sel, { status: 'Brouillon' }))), err: '' }),
+      newForm: () => this.setState({ draft: { isNew: true, id: 'new', family: 'f' + Date.now(), version: 1, status: 'Brouillon', name: '', locale: 'fr_FR', created: SA.TODAY, shops: [(SA.SHOPS[0] || {}).id].filter(Boolean), questions: [{ type: 'FULL_NAME' }, { type: 'EMAIL' }],
+        privacy: { url: 'https://www.latelierby.be/confidentialite', link_text: 'Politique de confidentialité' }, context: { title: '', style: 'LIST_STYLE', content: [], button_text: 'Continuer' }, thanks: { title: 'Merci !', body: '', button_type: 'VIEW_WEBSITE', button_text: 'Voir le site', website_url: 'https://www.latelierby.be' }, quality: true, followUp: 'https://www.latelierby.be' }, err: '' }),
+      cancelDraft: () => this.setState({ draft: null, err: '' }),
+      publishDraft: () => {
+        const dr = s.draft;
+        if (!dr.name.trim()) { this.setState({ err: 'Le nom est obligatoire (name).' }); return; }
+        if (!dr.questions.length) { this.setState({ err: 'Ajoutez au moins une question (questions).' }); return; }
+        if (!dr.privacy.url) { this.setState({ err: 'La politique de confidentialité est obligatoire (privacy_policy.url).' }); return; }
+        if (dr.questions.some(q => q.type === 'CUSTOM' && (!q.label || !q.key))) { this.setState({ err: 'Chaque question personnalisée doit avoir un intitulé et une clé.' }); return; }
+        const id = 'lf-' + Date.now(), nf = Object.assign({}, dr, { id, version: dr.isNew ? 1 : nextN, status: 'Actif', created: SA.TODAY }); delete nf.isNew;
+        const list = forms.map(x => x.family === nf.family && x.status === 'Actif' ? Object.assign({}, x, { status: 'Archivé' }) : x).concat(nf);
+        const ads = SA.state().ads.map(a => a.leadForm && famIds.includes(a.leadForm) ? Object.assign({}, a, { leadForm: id }) : a);
+        SA.save({ leadforms: list, ads }); SA.log('Sarah Lambert (Franchiseur)', 'Formulaire', '« ' + nf.name + ' » v' + nf.version + ' publié' + (nf.version > 1 ? ', v' + (nf.version - 1) + ' archivée' : ''));
+        this.setState({ draft: null, selId: id }); this.toast('Version ' + nf.version + ' publiée sur Meta' + (nf.version > 1 ? ' · la précédente est archivée.' : '.'));
+      },
+      setName: (e) => this.D({ name: e.target.value }), setLocale: (e) => this.D({ locale: e.target.value }),
+      stdQ: Object.keys(SA.LF_Q).map(t => Object.assign(chip(qTypes.includes(t)), { label: SA.LF_Q[t], type: t, toggle: () => { if (!editable) return; this.D({ questions: qTypes.includes(t) ? d.questions.filter(q => q.type !== t) : d.questions.filter(q => q.type !== 'CUSTOM').concat({ type: t }).concat(d.questions.filter(q => q.type === 'CUSTOM')) }); } })),
+      customQ: custom.map(({ q, i }) => ({ label: q.label, key: q.key, setLabel: (e) => setQ(i, { label: e.target.value }), setKey: (e) => setQ(i, { key: e.target.value.replace(/[^a-z0-9_]/gi, '_').toLowerCase() }),
+        remove: () => this.D({ questions: d.questions.filter((_, j) => j !== i) }),
+        options: (q.options || []).map((op, k) => ({ value: op.value, remove: () => setQ(i, { options: q.options.filter((_, j) => j !== k) }) })),
+        addOpt: (e) => { if (e.key !== 'Enter') return; const v = e.target.value.trim(); if (!v) return; e.target.value = ''; setQ(i, { options: (q.options || []).concat({ key: v.toLowerCase().replace(/[^a-z0-9]+/g, '_'), value: v }) }); } })),
+      addCustom: () => this.D({ questions: d.questions.concat({ type: 'CUSTOM', key: 'question_' + (custom.length + 1), label: '', options: [] }) }),
+      setCtxTitle: (e) => this.D({ context: Object.assign({}, ctx, { title: e.target.value }) }), setCtxStyle: (e) => this.D({ context: Object.assign({}, ctx, { style: e.target.value }) }),
+      setCtxBtn: (e) => this.D({ context: Object.assign({}, ctx, { button_text: e.target.value }) }), ctxContent: (ctx.content || []).join('\n'),
+      setCtxContent: (e) => this.D({ context: Object.assign({}, ctx, { content: e.target.value.split('\n') }) }),
+      setTyTitle: (e) => this.D({ thanks: Object.assign({}, ty, { title: e.target.value }) }), setTyBody: (e) => this.D({ thanks: Object.assign({}, ty, { body: e.target.value }) }),
+      setTyType: (e) => this.D({ thanks: Object.assign({}, ty, { button_type: e.target.value }) }), setTyBtn: (e) => this.D({ thanks: Object.assign({}, ty, { button_text: e.target.value }) }), setTyUrl: (e) => this.D({ thanks: Object.assign({}, ty, { website_url: e.target.value }) }),
+      setPrivUrl: (e) => this.D({ privacy: Object.assign({}, d.privacy, { url: e.target.value }) }), setPrivText: (e) => this.D({ privacy: Object.assign({}, d.privacy, { link_text: e.target.value }) }),
+      setFollow: (e) => this.D({ followUp: e.target.value }), toggleQuality: () => this.D({ quality: !d.quality }),
+      shopChips: SA.SHOPS.map(sh => Object.assign(chip(d.shops.includes(sh.id)), { name: sh.name, toggle: () => editable && this.D({ shops: d.shops.includes(sh.id) ? d.shops.filter(x => x !== sh.id) : d.shops.concat(sh.id) }) })),
+      pvTabs: [['intro', 'Intro'], ['form', 'Questions'], ['thanks', 'Merci']].map(([k, label]) => ({ label, bg: s.pv === k ? '#8D1D2C' : 'transparent', fg: s.pv === k ? '#FFFFFF' : '#444444', pick: () => this.setState({ pv: k }) })),
+      pvIntro: s.pv === 'intro', pvForm: s.pv === 'form', pvThanks: s.pv === 'thanks', pvPage: "L'Atelier By " + ((SA.byId(SA.SHOPS, d.shops[0]) || {}).name || ''),
+      ctxLines: (ctx.content || []).filter(x => x.trim()).map(t => ({ text: t, bullet: ctx.style === 'LIST_STYLE' ? '•' : '' })),
+      pvFields: d.questions.map(q => q.type === 'CUSTOM' ? { label: q.label || 'Question', ph: (q.options || []).map(o => o.value).join(' / ') || 'Réponse' } : { label: SA.LF_Q[q.type], ph: placeholder[q.type] }),
+      pvSubmit: d.quality ? 'Vérifier' : 'Envoyer',
+      leadCount: rowsSrc.length, leadScope: s.leadScope, setLeadScope: (e) => this.setState({ leadScope: e.target.value }),
+      leadHead, leadRows, noLeads: rowsSrc.length === 0, leadCols: '110px 100px 64px ' + d.questions.map(() => 'minmax(110px,1fr)').join(' ') + ' minmax(140px,1fr)',
+      exportLeads: () => { const csv = '\ufeff' + [leadHead].concat(leadRows).map(r => r.map(v => /[;"\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v).join(';')).join('\n');
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'leads-' + d.family + '.csv'; document.body.appendChild(a); a.click(); a.remove(); this.toast('Leads exportés (CSV).'); },
+      hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

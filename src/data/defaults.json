@@ -1,0 +1,39 @@
+{
+ "templates": [
+  {
+   "id": "t1",
+   "name": "Produit du jour",
+   "type": "Produit",
+   "text": "Ce matin à {ville} : {produit_du_jour}, {prix} €. Ouvert {horaires}.",
+   "textNl": "Vanochtend in {ville}: {produit_du_jour}, {prix} €. Open {horaires}."
+  },
+  {
+   "id": "t2",
+   "name": "Panier anti-gaspi",
+   "type": "Anti-gaspi",
+   "text": "Dès 17h, nos invendus en panier surprise à 5 € chez L’Atelier By {ville}, {adresse}.",
+   "textNl": "Vanaf 17u: onze overschotten in een verrassingsmand voor 5 € bij L’Atelier By {ville}, {adresse}."
+  },
+  {
+   "id": "t3",
+   "name": "Recrutement",
+   "type": "Recrutement",
+   "text": "L’Atelier By {ville} recrute ! Envoyez votre CV ou passez nous voir au {adresse}.",
+   "textNl": "L’Atelier By {ville} zoekt versterking! Stuur je cv of kom langs op {adresse}."
+  },
+  {
+   "id": "t4",
+   "name": "Nouvelle gamme",
+   "type": "Gamme saisonnière",
+   "text": "La nouvelle gamme est arrivée à {ville}. À découvrir {horaires}.",
+   "textNl": "Het nieuwe gamma is er in {ville}. Ontdek het {horaires}."
+  }
+ ],
+ "groups": [],
+ "margin": 0.62,
+ "dsa": {
+  "beneficiary": "L'Atelier By SRL",
+  "payor": "L'Atelier By SRL"
+ },
+ "version": "v25.0"
+}

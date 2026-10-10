@@ -1,0 +1,107 @@
+[
+ {
+  "id": "brioche",
+  "kind": "produit",
+  "name": "Brioche croustillante",
+  "nameNl": "Krokante brioche",
+  "price": "4,20",
+  "img": "img/products/brioche-croustillante.png",
+  "gamme": "Gamme Automne"
+ },
+ {
+  "id": "tarte-pomme",
+  "kind": "produit",
+  "name": "Tarte aux pommes",
+  "nameNl": "Appeltaart",
+  "price": "18,50",
+  "img": "img/products/sweet-tart-big.png",
+  "gamme": "Gamme Automne"
+ },
+ {
+  "id": "tartelette",
+  "kind": "produit",
+  "name": "Tartelette poire-amande",
+  "nameNl": "Peer-amandeltaartje",
+  "price": "3,60",
+  "img": "img/products/sweet-tart-small.png",
+  "gamme": "Gamme Automne"
+ },
+ {
+  "id": "croissant",
+  "kind": "produit",
+  "name": "Croissant pur beurre",
+  "nameNl": "Botercroissant",
+  "price": "1,30",
+  "img": "img/products/croissant.png",
+  "gamme": "Viennoiseries"
+ },
+ {
+  "id": "levain",
+  "kind": "produit",
+  "name": "Pain au levain",
+  "nameNl": "Zuurdesembrood",
+  "price": "4,10",
+  "img": "img/products/bread-1.png",
+  "gamme": "Pains"
+ },
+ {
+  "id": "cookies",
+  "kind": "produit",
+  "name": "Cookies du goûter",
+  "nameNl": "Vieruurtjescookies",
+  "price": "2,20",
+  "img": "img/products/cookies.png",
+  "gamme": "Goûter malin"
+ },
+ {
+  "id": "cupcake",
+  "kind": "produit",
+  "name": "Cupcake vanille",
+  "nameNl": "Vanillecupcake",
+  "price": "3,40",
+  "img": "img/products/cupcake.png",
+  "gamme": "Goûter malin"
+ },
+ {
+  "id": "limonade",
+  "kind": "produit",
+  "name": "Limonade maison",
+  "nameNl": "Huisgemaakte limonade",
+  "price": "3,20",
+  "img": "img/products/lemonade-soda.png",
+  "gamme": "Boissons"
+ },
+ {
+  "id": "quiche",
+  "kind": "produit",
+  "name": "Quiche du jour",
+  "nameNl": "Quiche van de dag",
+  "price": "5,90",
+  "img": "img/products/savoury-tart.png",
+  "gamme": "Salé"
+ },
+ {
+  "id": "g-automne",
+  "kind": "gamme",
+  "name": "Gamme Automne",
+  "nameNl": "Herfstgamma",
+  "price": "dès 3,60",
+  "img": "img/illus/seasonal/autumn-range.png"
+ },
+ {
+  "id": "g-gouter",
+  "kind": "gamme",
+  "name": "Goûter malin",
+  "nameNl": "Slim vieruurtje",
+  "price": "dès 2,20",
+  "img": "img/illus/products/cookies.png"
+ },
+ {
+  "id": "g-noel",
+  "kind": "gamme",
+  "name": "Noël & Nouvel An",
+  "nameNl": "Kerst & Nieuwjaar",
+  "price": "dès 4,50",
+  "img": "img/illus/seasonal/christmas-new-year-range.png"
+ }
+]

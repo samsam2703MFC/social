@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="ads" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Meta Ads · comptes publicitaires des boutiques</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">PUBLICITES</h1>
+      </div>
+      <button onClick="{{ openWiz }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Nouvelle publicité</button>
+    </header>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="5">
+        <div style="background:#FFFFFF;border:0.5px solid {{ k.border }};border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ k.label }}</span>
+          <span style="font-size:24px;font-weight:300;line-height:1.1;color:{{ k.color }};">{{ k.value }}</span>
+          <span style="font-size:11px;color:#666666;">{{ k.sub }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+      <!-- Tableau -->
+      <section style="flex:1 1 640px;min-width:0;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
+        <div style="display:grid;grid-template-columns:minmax(200px,2fr) minmax(130px,1.2fr) 120px 150px minmax(160px,1.3fr) 130px;min-width:900px;">
+          <sc-for list="{{ head }}" as="h" hint-placeholder-count="6"><span style="padding:10px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">{{ h }}</span></sc-for>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="0">
+            <div onClick="{{ r.pick }}" style="display:contents;cursor:pointer;">
+              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;align-items:center;gap:10px;min-width:0;">
+                <img src="{{ r.img }}" alt="" style="width:32px;height:32px;object-fit:contain;border-radius:6px;background:#F4EFE8;flex:0 0 auto;">
+                <span style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</span><span style="font-size:11px;color:#666666;">{{ r.objective }}</span></span>
+              </span>
+              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:12px;color:#444444;display:flex;flex-direction:column;justify-content:center;gap:2px;"><span>{{ r.campName }}</span><span style="font-size:11px;color:#666666;">{{ r.shops }}</span></span>
+              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:12px;display:flex;flex-direction:column;justify-content:center;gap:2px;"><span>{{ r.budget }}</span><span style="font-size:11px;color:#666666;">{{ r.scope }}</span></span>
+              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;justify-content:center;gap:4px;">
+                <span style="font-size:11px;color:#444444;">{{ r.spentLabel }}</span>
+                <span style="height:5px;border-radius:999px;background:#EAE4DC;overflow:hidden;"><span style="display:block;height:100%;width:{{ r.spentPct }};background:{{ r.barColor }};"></span></span>
+              </span>
+              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;justify-content:center;gap:3px;">
+                <span style="align-self:flex-start;font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ r.stBg }};color:{{ r.stFg }};">{{ r.status }}</span>
+                <sc-if value="{{ r.hasReason }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.35;color:#8D1D2C;">{{ r.reason }}</span></sc-if>
+              </span>
+              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:11px;color:#666666;display:flex;align-items:center;">{{ r.period }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- Suivi -->
+      <aside style="flex:0 1 330px;min-width:290px;display:flex;flex-direction:column;gap:14px;">
+        <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+              <div style="display:flex;flex-direction:column;gap:4px;min-width:0;">
+                <span style="font-size:15px;font-weight:500;">{{ d.name }}</span>
+                <span style="font-size:12px;color:#666666;">{{ d.objective }} · rayon {{ d.radius }} km</span>
+              </div>
+              <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ d.stBg }};color:{{ d.stFg }};white-space:nowrap;">{{ d.status }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div style="background:#F4EFE8;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:2px;"><span style="font-size:11px;color:#666666;">Dépensé</span><span style="font-size:18px;font-weight:300;">{{ d.spent }}</span></div>
+              <div style="background:#F4EFE8;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:2px;"><span style="font-size:11px;color:#666666;">Restant</span><span style="font-size:18px;font-weight:300;">{{ d.left }}</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:#666666;"><span>Dépense quotidienne</span><span>Plafond {{ d.cap }}</span></div>
+              <div style="height:56px;display:flex;align-items:flex-end;gap:2px;"><sc-for list="{{ d.bars }}" as="b" hint-placeholder-count="0"><span title="{{ b.tip }}" style="flex:1;height:{{ b.h }};background:{{ b.c }};border-radius:2px 2px 0 0;"></span></sc-for></div>
+            </div>
+            <sc-if value="{{ d.capAlert }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#FCE7C8;color:#6b3d0a;border-radius:8px;padding:8px 10px;">{{ d.capText }}</span></sc-if>
+            <sc-if value="{{ d.exhausted }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#F6DCDF;color:#8D1D2C;border-radius:8px;padding:8px 10px;">Budget épuisé : la diffusion est suspendue par Meta. Augmentez le budget ou arrêtez la publicité.</span></sc-if>
+            <sc-if value="{{ d.refused }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#F6DCDF;color:#8D1D2C;border-radius:8px;padding:8px 10px;"><strong style="font-weight:500;">Refusée par Meta.</strong> {{ d.reason }}</span></sc-if>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <sc-if value="{{ d.canPause }}" hint-placeholder-val="{{ false }}"><button onClick="{{ pause }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Mettre en pause</button></sc-if>
+              <sc-if value="{{ d.canResume }}" hint-placeholder-val="{{ false }}"><button onClick="{{ resume }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Reprendre</button></sc-if>
+              <sc-if value="{{ d.canTopUp }}" hint-placeholder-val="{{ false }}"><button onClick="{{ topUp }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">+ 100 € de budget</button></sc-if>
+              <sc-if value="{{ d.refused }}" hint-placeholder-val="{{ false }}"><button onClick="{{ fixAd }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Corriger et resoumettre</button></sc-if>
+              <sc-if value="{{ d.canStop }}" hint-placeholder-val="{{ false }}"><button onClick="{{ stop }}" style="border:none;background:transparent;color:#8D1D2C;padding:8px 4px;font-size:13px;font-weight:500;cursor:pointer;">Arrêter</button></sc-if>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noSel }}" hint-placeholder-val="{{ true }}">
+          <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:24px 18px;font-size:13px;color:#666666;line-height:1.5;text-align:center;">Sélectionnez une publicité pour suivre sa diffusion : dépensé, restant, pause, reprise ou arrêt.</div>
+        </sc-if>
+      </aside>
+    </div>
+  </main>
+
+  <!-- ===== Assistant ===== -->
+  <sc-if value="{{ wizOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(35,34,32,0.55);z-index:40;display:flex;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#FFFFFF;border-radius:12px;width:100%;max-width:920px;height:min(780px,94vh);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(35,34,32,0.3);">
+        <div style="padding:16px 22px;border-bottom:0.5px solid rgba(34,34,34,0.10);display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:16px;font-weight:500;">Nouvelle publicité Meta</span><span style="font-size:11px;color:#666666;">Marketing API {{ apiVersion }} · campagne → ad set → créa → pub</span></span>
+            <button onClick="{{ closeWiz }}" style="width:30px;height:30px;border-radius:50%;border:none;background:#F4EFE8;cursor:pointer;font-size:14px;">×</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;">
+            <sc-for list="{{ steps }}" as="st" hint-placeholder-count="5">
+              <button onClick="{{ st.go }}" style="border:none;background:transparent;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:4px;text-align:left;">
+                <span style="height:4px;border-radius:999px;background:{{ st.bar }};"></span>
+                <span style="font-size:11px;font-weight:500;color:{{ st.fg }};">{{ st.n }} · {{ st.label }}</span>
+                <span style="font-family:ui-monospace,monospace;font-size:9px;color:#8A847C;">{{ st.tech }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex:1 1 auto;min-height:0;overflow:auto;padding:18px 22px;display:flex;flex-direction:column;gap:16px;">
+
+          <!-- 1 CAMPAGNE -->
+          <sc-if value="{{ s1 }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <label style="flex:2 1 260px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Nom de la campagne Meta <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">name *</span><input type="text" value="{{ w.name }}" onChange="{{ setName }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
+              <label style="flex:1 1 200px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Campagne Franchise Buddy<select value="{{ w.campaign }}" onChange="{{ setCampaign }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="">Hors campagne</option><sc-for list="{{ campOptions }}" as="c" hint-placeholder-count="0"><option value="{{ c.id }}">{{ c.name }}</option></sc-for></select></label>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:8px;border-bottom:0.5px solid rgba(34,34,34,0.08);padding-bottom:6px;"><span style="font-size:13px;font-weight:500;">Objectif</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">objective *</span></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;">
+              <sc-for list="{{ objectives }}" as="o" hint-placeholder-count="0">
+                <button onClick="{{ o.pick }}" style="text-align:left;border:1.5px solid {{ o.ring }};background:{{ o.bg }};border-radius:10px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:5px;">
+                  <img src="{{ o.icon }}" alt="" style="width:30px;height:30px;object-fit:contain;">
+                  <span style="font-size:13px;font-weight:500;">{{ o.label }}</span>
+                  <span style="font-size:11px;color:#666666;line-height:1.4;">{{ o.desc }}</span>
+                  <span style="font-family:ui-monospace,monospace;font-size:9px;color:#8A847C;">{{ o.id }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Catégorie spéciale <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">special_ad_categories * · [] par défaut</span></span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ specialCats }}" as="sc" hint-placeholder-count="0"><button onClick="{{ sc.toggle }}" style="border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ sc.border }};background:{{ sc.bg }};color:{{ sc.fg }};">{{ sc.name }}</button></sc-for></div>
+              <sc-if value="{{ hasSpecial }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:6px 9px;">Catégorie spéciale : Meta impose un rayon d'au moins 15 km, tous âges et tous genres.</span></sc-if>
+            </div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;">
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Compte publicitaire <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">act_{ad_account_id}</span><div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;"><button onClick="{{ accShop }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ asBg }};color:{{ asFg }};">Un par boutique</button><button onClick="{{ accNet }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ anBg }};color:{{ anFg }};">Compte réseau</button></div><span style="font-size:11px;color:#666666;">{{ accountNote }}</span></div>
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Niveau du budget <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">is_adset_budget_sharing_enabled</span><div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;"><button onClick="{{ blAdset }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ baBg }};color:{{ baFg }};">Ad set (ABO)</button><button onClick="{{ blCamp }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ bcBg }};color:{{ bcFg }};">Campagne (CBO)</button></div></div>
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Statut à la création <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">status *</span><div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;"><button onClick="{{ stPaused }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ spBg }};color:{{ spFg }};">En pause</button><button onClick="{{ stActive }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ saBg }};color:{{ saFg }};">Active</button></div></div>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <label style="flex:1 1 220px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Stratégie d'enchère <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">bid_strategy</span><select value="{{ w.bid }}" onChange="{{ setBid }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><sc-for list="{{ bidOptions }}" as="b" hint-placeholder-count="0"><option value="{{ b.id }}">{{ b.label }}</option></sc-for></select></label>
+              <label style="flex:0 1 150px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Plafond de dépense (€) <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">spend_cap · {{ capCents }}</span><input type="number" value="{{ w.spendCap }}" onChange="{{ setSpendCap }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
+              <span style="flex:0 1 150px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Type d'achat <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">buying_type</span><span style="font-size:13px;padding:8px 0;">Enchères · AUCTION</span></span>
+            </div>
+          </sc-if>
+
+          <!-- 2 AD SET -->
+          <sc-if value="{{ s2 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:baseline;gap:8px;border-bottom:0.5px solid rgba(34,34,34,0.08);padding-bottom:6px;"><span style="font-size:13px;font-weight:500;">Optimisation et diffusion</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">optimization_goal · destination_type · billing_event</span></div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <label style="flex:1 1 200px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Optimiser pour <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">optimization_goal *</span><select value="{{ w.goal }}" onChange="{{ setGoal }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><sc-for list="{{ goalOptions }}" as="g" hint-placeholder-count="0"><option value="{{ g }}">{{ g }}</option></sc-for></select></label>
+              <sc-if value="{{ hasDest }}" hint-placeholder-val="{{ true }}"><label style="flex:1 1 200px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Destination <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">destination_type</span><select value="{{ w.dest }}" onChange="{{ setDest }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><sc-for list="{{ destOptions }}" as="g" hint-placeholder-count="0"><option value="{{ g }}">{{ g }}</option></sc-for></select></label></sc-if>
+              <span style="flex:1 1 160px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Facturation <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">billing_event *</span><span style="font-size:13px;padding:8px 0;">IMPRESSIONS</span></span>
+              <span style="flex:1 1 220px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Objet promu <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">promoted_object</span><span style="font-size:12px;padding:8px 0;font-family:ui-monospace,monospace;">{{ promotedObject }}</span></span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:8px;border-bottom:0.5px solid rgba(34,34,34,0.08);padding-bottom:6px;"><span style="font-size:13px;font-weight:500;">Budget et calendrier</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">daily_budget / lifetime_budget · start_time · end_time</span></div>
+            <sc-if value="{{ budgetAtCampaign }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Budget fixé au niveau campagne (CBO) : il est saisi ici mais envoyé sur l'objet campagne.</span></sc-if>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+              <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;"><button onClick="{{ btDaily }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ bdBg }};color:{{ bdFg }};">Quotidien</button><button onClick="{{ btTotal }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ btBg }};color:{{ btFg }};">Total (lifetime)</button></div>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">{{ amountLabel }} <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">{{ amountTech }}</span><input type="number" min="1" value="{{ w.amount }}" onChange="{{ setAmount }}" style="width:110px;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Début <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">start_time</span><input type="date" value="{{ w.start }}" onChange="{{ setStart }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Fin <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">{{ endTech }}</span><input type="date" value="{{ w.end }}" onChange="{{ setEnd }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
+              <sc-if value="{{ needsBidAmount }}" hint-placeholder-val="{{ false }}"><label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Enchère max (€) <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">bid_amount · {{ bidCents }}</span><input type="number" step="0.05" value="{{ w.bidAmount }}" onChange="{{ setBidAmount }}" style="width:100px;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label></sc-if>
+            </div>
+            <div style="background:#F4EFE8;border-radius:8px;padding:10px 12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+              <sc-for list="{{ budgetFacts }}" as="b" hint-placeholder-count="3"><span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:11px;color:#666666;">{{ b.label }}</span><span style="font-size:15px;font-weight:500;color:{{ b.color }};">{{ b.value }}</span></span></sc-for>
+            </div>
+            <sc-if value="{{ overCap }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#F6DCDF;color:#8D1D2C;border-radius:8px;padding:9px 12px;">{{ overCapText }}</span></sc-if>
+            <sc-if value="{{ overCamp }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#FCE7C8;color:#6b3d0a;border-radius:8px;padding:9px 12px;">{{ overCampText }}</span></sc-if>
+
+            <div style="display:flex;align-items:baseline;gap:8px;border-bottom:0.5px solid rgba(34,34,34,0.08);padding-bottom:6px;"><span style="font-size:13px;font-weight:500;">Audience</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">targeting *</span></div>
+            <span style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Rayon autour de chaque boutique <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">geo_locations.custom_locations [{latitude, longitude, radius, distance_unit: "kilometer"}]</span></span>
+            <div style="border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;overflow:hidden;">
+              <sc-for list="{{ audShops }}" as="a" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:140px minmax(0,1fr) 56px 170px;align-items:center;gap:10px;padding:8px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ a.bg }};">
+                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer;"><input type="checkbox" checked="{{ a.on }}" onChange="{{ a.toggle }}" disabled="{{ a.dis }}" style="accent-color:#8D1D2C;margin:0;">{{ a.name }}</label>
+                  <input type="range" min="{{ a.min }}" max="40" value="{{ a.radius }}" onChange="{{ a.setRadius }}" disabled="{{ a.rDis }}" style="accent-color:#8D1D2C;width:100%;">
+                  <span style="font-size:12px;">{{ a.radius }} km</span>
+                  <span style="font-size:10px;color:{{ a.noteFg }};font-family:{{ a.noteFont }};">{{ a.note }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;">
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Âge <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">age_min · age_max</span><span style="display:flex;align-items:center;gap:6px;"><input type="number" min="18" max="65" value="{{ w.ageMin }}" onChange="{{ setAgeMin }}" disabled="{{ hasSpecial }}" style="width:58px;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;">à<input type="number" min="18" max="65" value="{{ w.ageMax }}" onChange="{{ setAgeMax }}" disabled="{{ hasSpecial }}" style="width:58px;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;">ans</span></label>
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Genre <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">genders</span><div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;"><button onClick="{{ gAll }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ g0Bg }};color:{{ g0Fg }};">Tous</button><button onClick="{{ gMen }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ g1Bg }};color:{{ g1Fg }};">Hommes</button><button onClick="{{ gWomen }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ g2Bg }};color:{{ g2Fg }};">Femmes</button></div></div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#444444;cursor:pointer;padding-bottom:8px;"><input type="checkbox" checked="{{ w.advantage }}" onChange="{{ toggleAdvantage }}" style="accent-color:#8D1D2C;margin:0;">Audience Advantage+ <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">targeting_automation.advantage_audience</span></label>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Centres d'intérêt <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">flexible_spec [{interests:[{id, name}]}]</span><div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ interests }}" as="i" hint-placeholder-count="0"><button onClick="{{ i.toggle }}" style="border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ i.border }};background:{{ i.bg }};color:{{ i.fg }};">{{ i.name }}</button></sc-for></div></div>
+            <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Plateformes <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">publisher_platforms</span><div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ platforms }}" as="p" hint-placeholder-count="0"><button onClick="{{ p.toggle }}" style="border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ p.border }};background:{{ p.bg }};color:{{ p.fg }};">{{ p.name }}</button></sc-for></div></div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <label style="flex:1 1 220px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Bénéficiaire (UE) <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">dsa_beneficiary *</span><input type="text" value="{{ w.dsaB }}" onChange="{{ setDsaB }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
+              <label style="flex:1 1 220px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Payeur (UE) <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">dsa_payor *</span><input type="text" value="{{ w.dsaP }}" onChange="{{ setDsaP }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
+            </div>
+            <span style="font-size:13px;background:#F4EFE8;border-radius:8px;padding:10px 12px;">Audience estimée : <strong style="font-weight:500;">{{ audSize }}</strong> personnes</span>
+          </sc-if>
+
+          <!-- 3 CRÉA -->
+          <sc-if value="{{ s3 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+              <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;"><button onClick="{{ csExisting }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ ceBg }};color:{{ ceFg }};">Sponsoriser un post existant</button><button onClick="{{ csNew }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ cnBg }};color:{{ cnFg }};">Nouvelle créa</button></div>
+              <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">{{ creaTech }}</span>
+            </div>
+            <span style="font-size:12px;color:#666666;">{{ creaHint }}</span>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));grid-auto-rows:max-content;gap:10px;">
+              <sc-for list="{{ creatives }}" as="c" hint-placeholder-count="0">
+                <button onClick="{{ c.pick }}" style="display:block;padding:0;border-radius:10px;border:2px solid {{ c.ring }};background:#FFFFFF;cursor:pointer;overflow:clip;text-align:left;">
+                  <span style="display:block;position:relative;height:0;padding-bottom:70%;background:#F4EFE8;"><img src="{{ c.img }}" alt="" style="position:absolute;left:10px;top:8px;width:calc(100% - 20px);height:calc(100% - 16px);object-fit:contain;"></span>
+                  <span style="display:block;padding:7px 9px 9px;"><span style="display:block;font-size:12px;font-weight:500;color:#222222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.title }}</span><span style="display:block;font-size:10px;color:#666666;">{{ c.meta }}</span></span>
+                </button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ isNewCrea }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:baseline;gap:8px;border-bottom:0.5px solid rgba(34,34,34,0.08);padding-bottom:6px;"><span style="font-size:13px;font-weight:500;">Contenu de la créa</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">object_story_spec.link_data</span></div>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Texte principal <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">message</span><textarea value="{{ w.message }}" onChange="{{ setMessage }}" rows="3" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;resize:vertical;line-height:1.5;"></textarea></label>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                <label style="flex:1 1 220px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Titre <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">name</span><input type="text" value="{{ w.headline }}" onChange="{{ setHeadline }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
+                <label style="flex:1 1 220px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Description <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">description</span><input type="text" value="{{ w.description }}" onChange="{{ setDescription }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
+              </div>
+              <sc-if value="{{ needsNl }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#F4EFE8;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+                  <span style="font-size:12px;font-weight:500;">Version néerlandaise · {{ nlShopsLabel }} <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;">une créa par langue · targeting.locales</span></span>
+                  <textarea value="{{ w.messageNl }}" onChange="{{ setMessageNl }}" rows="2" placeholder="Hoofdtekst (NL)" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;resize:vertical;line-height:1.5;"></textarea>
+                  <input type="text" value="{{ w.headlineNl }}" onChange="{{ setHeadlineNl }}" placeholder="Titel (NL)" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;">
+                </div>
+              </sc-if>
+            </sc-if>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <label style="flex:2 1 260px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Lien de destination <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">link *</span><input type="url" value="{{ w.link }}" onChange="{{ setLink }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
+              <label style="flex:1 1 180px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Bouton <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">call_to_action.type</span><select value="{{ w.cta }}" onChange="{{ setCta }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><sc-for list="{{ ctaOptions }}" as="c" hint-placeholder-count="0"><option value="{{ c.id }}">{{ c.label }}</option></sc-for></select></label>
+            </div>
+            <sc-if value="{{ isLeads }}" hint-placeholder-val="{{ false }}">
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Formulaire de leads <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">call_to_action.value.lead_gen_form_id *</span><select value="{{ w.leadForm }}" onChange="{{ setLeadForm }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="">Choisir un formulaire actif…</option><sc-for list="{{ leadOptions }}" as="l" hint-placeholder-count="0"><option value="{{ l.id }}">{{ l.name }}</option></sc-for></select></label>
+              <a href="{{ leadsHref }}" style="font-size:12px;font-weight:500;">Gérer les formulaires de leads →</a>
+            </sc-if>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Paramètres de suivi <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">url_tags</span><input type="text" value="{{ w.urlTags }}" onChange="{{ setUrlTags }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;font-family:ui-monospace,monospace;font-size:12px;"></label>
+            <span style="font-size:11px;color:#666666;">Identité Instagram : compte de chaque boutique <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">object_story_spec.instagram_user_id</span></span>
+          </sc-if>
+
+          <!-- 4 PUB -->
+          <sc-if value="{{ s4 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <label style="flex:2 1 260px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Nom de la pub <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">name *</span><input type="text" value="{{ w.adName }}" onChange="{{ setAdName }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Statut <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">status *</span><div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;"><button onClick="{{ adPaused }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ apBg }};color:{{ apFg }};">En pause</button><button onClick="{{ adActive }}" style="border:none;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ aaBg }};color:{{ aaFg }};">Active</button></div></div>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" checked="{{ w.pixel }}" onChange="{{ togglePixel }}" style="accent-color:#8D1D2C;margin:0;">Suivre les conversions du webshop avec le pixel {{ pixelId }} <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">tracking_specs · conversion_domain: latelierby.be</span></label>
+            <span style="font-size:12px;color:#666666;line-height:1.5;">{{ createNote }}</span>
+          </sc-if>
+
+          <!-- 5 RÉCAP -->
+          <sc-if value="{{ s5 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:16px;flex-wrap:wrap;">
+              <div style="flex:0 0 160px;height:160px;border-radius:10px;background:#F4EFE8;display:flex;align-items:center;justify-content:center;"><img src="{{ recapImg }}" alt="" style="max-width:130px;max-height:130px;object-fit:contain;"></div>
+              <div style="flex:1 1 300px;display:grid;grid-template-columns:130px 1fr;gap:7px 12px;font-size:13px;align-content:start;">
+                <sc-for list="{{ recap }}" as="r" hint-placeholder-count="8"><span style="color:#666666;">{{ r.k }}</span><span>{{ r.v }}</span></sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="font-size:13px;font-weight:500;">Appels API envoyés par Franchise Buddy · {{ callsNote }}</span>
+              <sc-for list="{{ calls }}" as="c" hint-placeholder-count="4">
+                <div style="border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;overflow:hidden;">
+                  <div style="background:#232220;color:#F2C9A0;font-family:ui-monospace,monospace;font-size:11px;padding:7px 10px;">{{ c.title }}</div>
+                  <pre style="margin:0;padding:10px;font-family:ui-monospace,monospace;font-size:11px;line-height:1.45;background:#FAF7F2;color:#222222;white-space:pre-wrap;word-break:break-word;max-height:220px;overflow:auto;">{{ c.body }}</pre>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="padding:12px 22px;border-top:0.5px solid rgba(34,34,34,0.10);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <span style="font-size:12px;color:#8D1D2C;">{{ stepErr }}</span>
+          <div style="display:flex;gap:8px;">
+            <sc-if value="{{ canBack }}" hint-placeholder-val="{{ false }}"><button onClick="{{ back }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Retour</button></sc-if>
+            <button onClick="{{ fwd }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;">{{ fwdLabel }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;box-shadow:0 12px 30px rgba(35,34,32,0.3);">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { selId: null, wizOpen: false, step: 1, w: null, err: '', toast: '', tick: 0 };
+  componentDidMount() {
+    const SA = window.SA;
+    if (SA) { const ad = SA.param('ad'); if (ad) this.setState({ selId: ad }); if (SA.param('new')) this.openWiz(SA.param('c') || ''); }
+    this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
+  }
+  componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); clearTimeout(this._rv); }
+  toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 3200); }
+  openWiz(c) {
+    const SA = window.SA, st = SA.state(), radius = {}; SA.SHOPS.forEach(s => { radius[s.id] = 8; });
+    const shops = st.shops.filter(s => s.ads === 'connected').map(s => s.id), camp = c ? SA.byId(st.campaigns, c) : null, meta = st.meta || {};
+    this.setState({ wizOpen: true, step: 1, err: '', w: { name: (camp ? camp.name : 'Campagne') + ' · trafic', campaign: c || '', account: 'boutique', objective: 'OUTCOME_TRAFFIC', special: [], budgetLevel: 'adset', bid: 'LOWEST_COST_WITHOUT_CAP', bidAmount: 0.6, spendCap: 400, status: 'PAUSED',
+      goal: 'LINK_CLICKS', dest: 'WEBSITE', budgetType: 'daily', amount: 10, start: SA.addDays(SA.TODAY, 1), end: SA.addDays(SA.TODAY, 15), shops, radius, ageMin: 25, ageMax: 60, gender: 'all', interests: ['Boulangerie', 'Brunch'], platforms: ['facebook', 'instagram'], advantage: false,
+      dsaB: (meta.dsa || SA.META.dsa).beneficiary, dsaP: (meta.dsa || SA.META.dsa).payor, crea: 'existing', post: null, message: '', headline: '', messageNl: '', headlineNl: '', description: '', link: 'https://www.latelierby.be', cta: 'GET_DIRECTIONS',
+      urlTags: 'utm_source=facebook&utm_medium=paid&utm_campaign=' + (c || 'hors-campagne'), leadForm: '', adName: '', adStatus: 'PAUSED', pixel: true } });
+  }
+  upd(id, patch, logMsg) { const SA = window.SA; SA.save({ ads: SA.state().ads.map(a => a.id === id ? Object.assign({}, a, patch) : a) }); if (logMsg) SA.log('Sarah Lambert (Franchiseur)', 'Publicité', logMsg); }
+  renderVals() {
+    const SA = window.SA, s = this.state;
+    if (!SA) return { rows: [], kpis: [], d: {} };
+    const st = SA.state(), ads = st.ads, camps = st.campaigns;
+    const postOf = (id) => st.posts.find(p => p.id === id);
+    const totalOf = (a) => a.budgetType === 'quotidien' ? a.budget * (SA.daysBetween(a.start, a.end) + 1) : a.budget;
+    const order = { 'Refusée': 0, 'Budget épuisé': 1, 'En revue': 2, 'Active': 3, 'En pause': 4, 'Arrêtée': 5, 'Terminée': 6 };
+    const sorted = ads.slice().sort((a, b) => (order[a.status] - order[b.status]) || b.start.localeCompare(a.start));
+    const rows = sorted.map(a => {
+      const sc = SA.AD_STATUS[a.status] || SA.AD_STATUS['Active'], tot = Math.min(totalOf(a), a.cap || Infinity), p = postOf(a.post);
+      const ratio = tot ? a.spent / tot : 0;
+      return { name: a.name, objective: a.objective, img: p ? p.img : 'img/illus/decorative/bubble.png', campName: a.campaign ? (SA.byId(camps, a.campaign) || {}).name : 'Hors campagne', shops: SA.shopLabel(a.shops),
+        budget: a.budgetType === 'quotidien' ? SA.eur(a.budget) + ' / jour' : SA.eur(a.budget) + ' total', scope: a.scope === 'reseau' ? 'Mutualisé réseau' : 'Par boutique',
+        spentLabel: SA.eur(a.spent) + ' / ' + SA.eur(tot) + ' · reste ' + SA.eur(Math.max(0, tot - a.spent)), spentPct: Math.min(100, ratio * 100) + '%', barColor: ratio >= 0.9 && a.status === 'Active' ? '#D97B29' : a.status === 'Budget épuisé' ? '#8D1D2C' : '#8D1D2C',
+        status: a.status, stBg: sc.bg, stFg: sc.fg, hasReason: !!a.reason && a.status === 'Refusée', reason: a.reason || '', period: SA.dShort(a.start) + ' → ' + SA.dShort(a.end),
+        bg: a.id === s.selId ? '#F4EFE8' : '#FFFFFF', pick: () => this.setState({ selId: a.id }) };
+    });
+    const active = ads.filter(a => a.status === 'Active');
+    const monthSpent = ads.filter(a => a.end >= SA.TODAY.slice(0, 8) + '01').reduce((x, a) => x + a.spent, 0);
+    const kpis = [
+      { label: 'Actives', value: active.length, sub: SA.eur(active.reduce((x, a) => x + a.spent, 0)) + ' dépensés', color: '#0F6B4A', border: 'rgba(34,34,34,0.10)' },
+      { label: 'Dépensé en ' + SA.MONTHS[+SA.TODAY.slice(5, 7) - 1], value: SA.eur(monthSpent), sub: 'tous comptes confondus', color: '#222222', border: 'rgba(34,34,34,0.10)' },
+      { label: 'En revue Meta', value: ads.filter(a => a.status === 'En revue').length, sub: 'validation en cours', color: '#8A4B00', border: 'rgba(34,34,34,0.10)' },
+      { label: 'Refusées', value: ads.filter(a => a.status === 'Refusée').length, sub: 'à corriger', color: '#8D1D2C', border: ads.some(a => a.status === 'Refusée') ? '#8D1D2C' : 'rgba(34,34,34,0.10)' },
+      { label: 'Budget épuisé', value: ads.filter(a => a.status === 'Budget épuisé').length, sub: 'diffusion suspendue', color: '#8D1D2C', border: ads.some(a => a.status === 'Budget épuisé') ? '#F2C9A0' : 'rgba(34,34,34,0.10)' },
+    ];
+    // détail
+    const a = ads.find(x => x.id === s.selId);
+    let d = {};
+    if (a) {
+      const sc = SA.AD_STATUS[a.status] || SA.AD_STATUS['Active'], tot = Math.min(totalOf(a), a.cap || Infinity);
+      const days = Math.max(1, Math.min(SA.daysBetween(a.start, a.end) + 1, SA.daysBetween(a.start, SA.TODAY) + 1));
+      const bars = []; const n = Math.max(1, Math.min(28, days)); let acc = 0;
+      for (let i = 0; i < n; i++) { const v = a.spent / n * (0.7 + 0.6 * Math.abs(Math.sin(i * 1.7 + a.id.length))); acc += v; bars.push(v); }
+      const max = Math.max(...bars, 1), dailyCap = a.budgetType === 'quotidien' ? a.budget : tot / Math.max(1, SA.daysBetween(a.start, a.end) + 1);
+      d = { name: a.name, objective: a.objective, radius: a.radius, status: a.status, stBg: sc.bg, stFg: sc.fg, spent: SA.eur(a.spent), left: SA.eur(Math.max(0, tot - a.spent)), cap: SA.eur(a.cap),
+        bars: a.spent ? bars.map((v, i) => ({ h: Math.round(v / max * 100) + '%', c: v > dailyCap * 1.15 ? '#D97B29' : '#8D1D2C', tip: 'J' + (i + 1) + ' · ' + SA.eur(v * (a.spent / acc)) })) : [],
+        capAlert: a.status === 'Active' && a.spent / tot >= 0.85, capText: 'Alerte dépassement : ' + SA.pct(a.spent / tot) + ' du plafond consommé. La diffusion s\u2019arrêtera automatiquement à ' + SA.eur(a.cap) + '.',
+        exhausted: a.status === 'Budget épuisé', refused: a.status === 'Refusée', reason: a.reason || '',
+        canPause: a.status === 'Active', canResume: a.status === 'En pause', canTopUp: a.status === 'Budget épuisé', canStop: ['Active', 'En pause', 'Budget épuisé', 'En revue'].includes(a.status) };
+    }
+    // assistant
+    const w = s.w, M = SA.META;
+    const seg = (on) => on ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
+    const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
+    const W = (patch) => this.setState({ w: Object.assign({}, this.state.w, patch), err: '' });
+    const sg = (pairs) => { const o = {}; pairs.forEach(([k, on]) => { const [bg, fg] = seg(on); o[k + 'Bg'] = bg; o[k + 'Fg'] = fg; }); return o; };
+    let wiz = {};
+    if (w) {
+      const meta = st.meta || { ids: M.ids, version: M.version };
+      const obj = M.objectives.find(o => o.id === w.objective) || M.objectives[1];
+      const special = w.special.length > 0, minR = special ? 15 : 1;
+      const days = Math.max(1, SA.daysBetween(w.start, w.end) + 1);
+      const perUnit = w.account === 'boutique' ? w.shops.length : 1;
+      const est = w.budgetType === 'daily' ? w.amount * days * perUnit : w.amount * perUnit;
+      const camp = w.campaign ? SA.byId(camps, w.campaign) : null;
+      const campLeft = camp ? camp.budget - ads.filter(x => x.campaign === camp.id).reduce((x, y) => x + Math.min(totalOf(y), y.cap || Infinity), 0) : null;
+      const aud = w.shops.reduce((x, id) => x + Math.round(Math.PI * w.radius[id] * w.radius[id] * 210), 0) * ((w.ageMax - w.ageMin) / 47) * (w.gender === 'all' ? 1 : 0.5) * (w.advantage ? 1.35 : 1) * (1 - 0.06 * Math.max(0, w.interests.length - 1));
+      const post = w.post ? postOf(w.post) : null;
+      const isLeads = w.objective === 'OUTCOME_LEADS';
+      const leadForms = (st.leadforms || SA.LEADFORMS).filter(f => f.status === 'Actif');
+      const ids = (sid) => (meta.ids || M.ids)[sid] || {};
+      const accFor = (sid) => w.account === 'reseau' ? M.networkAccount : ids(sid).ad_account_id;
+      const promoted = isLeads || w.objective === 'OUTCOME_ENGAGEMENT' ? '{ page_id }' : w.objective === 'OUTCOME_SALES' ? '{ pixel_id: ' + ids(w.shops[0] || (SA.SHOPS[0] || {}).id).pixel_id + ', custom_event_type: PURCHASE }' : '—';
+      const errFor = (step) => step === 1 && !w.name.trim() ? 'Nommez la campagne.' : step === 2 && !w.shops.length ? 'Choisissez au moins une boutique.' : step === 2 && (w.end < w.start || w.amount <= 0) ? 'Vérifiez les dates et le montant.' : step === 2 && (!w.dsaB.trim() || !w.dsaP.trim()) ? 'Bénéficiaire et payeur sont obligatoires pour cibler l\u2019UE.' : step === 3 && !w.post ? 'Choisissez un post ou un visuel.' : step === 3 && isLeads && !w.leadForm ? 'Choisissez un formulaire de leads.' : step === 4 && !w.adName.trim() ? 'Nommez la pub.' : '';
+      const sid0 = w.shops[0] || (SA.SHOPS[0] || {}).id, geoOf = (sid) => ({ latitude: M.geo[sid][0], longitude: M.geo[sid][1], radius: w.radius[sid], distance_unit: 'kilometer' });
+      const budgetKey = w.budgetType === 'daily' ? 'daily_budget' : 'lifetime_budget';
+      const campBody = Object.assign({ name: w.name, objective: w.objective, status: w.status, special_ad_categories: w.special, buying_type: 'AUCTION', bid_strategy: w.bid, spend_cap: SA.cents(w.spendCap) },
+        w.budgetLevel === 'campaign' ? { [budgetKey]: SA.cents(w.amount) } : { is_adset_budget_sharing_enabled: false });
+      const targeting = { geo_locations: { custom_locations: w.account === 'boutique' ? [geoOf(sid0)] : w.shops.map(geoOf) }, age_min: w.ageMin, age_max: w.ageMax, publisher_platforms: w.platforms,
+        flexible_spec: w.interests.length ? [{ interests: w.interests.map((n, i) => ({ id: '6003' + (107902 + i * 37), name: n })) }] : undefined, targeting_automation: { advantage_audience: w.advantage ? 1 : 0 } };
+      if (w.gender !== 'all') targeting.genders = [w.gender === 'men' ? 1 : 2];
+      const adsetBody = Object.assign({ name: w.name + ' · ' + (w.account === 'boutique' ? SA.byId(SA.SHOPS, sid0).name : 'réseau'), campaign_id: '{campaign_id}', status: w.status, billing_event: 'IMPRESSIONS', optimization_goal: w.goal },
+        obj.dest[0] ? { destination_type: w.dest } : {}, w.budgetLevel === 'adset' ? { [budgetKey]: SA.cents(w.amount) } : {},
+        { start_time: w.start + 'T07:00:00+0200', end_time: w.end + 'T22:00:00+0200' }, /CAP|ROAS/.test(w.bid) ? { bid_amount: SA.cents(w.bidAmount) } : {},
+        promoted !== '—' ? { promoted_object: isLeads || w.objective === 'OUTCOME_ENGAGEMENT' ? { page_id: ids(sid0).page_id } : { pixel_id: ids(sid0).pixel_id, custom_event_type: 'PURCHASE' } } : {},
+        { dsa_beneficiary: w.dsaB, dsa_payor: w.dsaP, targeting });
+      const cta = { type: w.cta, value: isLeads ? { lead_gen_form_id: w.leadForm || '{lead_gen_form_id}' } : { link: w.link } };
+      const creaBody = w.crea === 'existing' ? { name: 'Créa · ' + (post ? post.title : ''), object_story_id: ids(sid0).page_id + '_{post_id}', url_tags: w.urlTags }
+        : { name: 'Créa · ' + (w.headline || (post ? post.title : '')), object_story_spec: { page_id: ids(sid0).page_id, instagram_user_id: ids(sid0).instagram_user_id, link_data: { link: w.link, message: w.message, name: w.headline, description: w.description, image_hash: '{image_hash}', call_to_action: cta } }, url_tags: w.urlTags };
+      const adBody = Object.assign({ name: w.adName, adset_id: '{adset_id}', creative: { creative_id: '{creative_id}' }, status: w.adStatus }, w.pixel ? { tracking_specs: [{ 'action.type': ['offsite_conversion'], fb_pixel: [ids(sid0).pixel_id] }], conversion_domain: 'latelierby.be' } : {});
+      const base = M.base + (meta.version || M.version) + '/';
+      const J = (o) => JSON.stringify(o, null, 2);
+      wiz = Object.assign({
+        s1: s.step === 1, s2: s.step === 2, s3: s.step === 3, s4: s.step === 4, s5: s.step === 5, w, apiVersion: meta.version || M.version,
+        steps: [['Campagne', 'campaigns'], ['Ad set', 'adsets'], ['Créa', 'adcreatives'], ['Pub', 'ads'], ['Récapitulatif', 'POST ×4']].map(([label, tech], i) => ({ n: i + 1, label, tech, bar: i + 1 <= s.step ? '#8D1D2C' : '#EAE4DC', fg: i + 1 === s.step ? '#8D1D2C' : i + 1 < s.step ? '#222222' : '#8A847C', go: () => { if (i + 1 < s.step) this.setState({ step: i + 1, err: '' }); } })),
+        setName: (e) => W({ name: e.target.value }), campOptions: camps.filter(c => c.status !== 'terminée').map(c => ({ id: c.id, name: c.name })), setCampaign: (e) => W({ campaign: e.target.value, urlTags: w.urlTags.replace(/utm_campaign=[^&]*/, 'utm_campaign=' + (e.target.value || 'hors-campagne')) }),
+        objectives: M.objectives.map(o => ({ id: o.id, label: o.label, desc: o.desc, icon: o.icon, ring: w.objective === o.id ? '#8D1D2C' : 'rgba(34,34,34,0.12)', bg: w.objective === o.id ? '#FBF3F4' : '#FFFFFF',
+          pick: () => W({ objective: o.id, goal: o.goals[0], dest: o.dest[0], cta: o.id === 'OUTCOME_LEADS' ? 'SIGN_UP' : o.id === 'OUTCOME_SALES' ? 'ORDER_NOW' : o.id === 'OUTCOME_ENGAGEMENT' ? 'MESSAGE_PAGE' : 'GET_DIRECTIONS' }) })),
+        specialCats: M.specialCats.map(([id, label]) => Object.assign(chip(w.special.includes(id)), { name: label + ' · ' + id, toggle: () => { const on = w.special.includes(id), sp = on ? w.special.filter(x => x !== id) : w.special.concat(id); const r = Object.assign({}, w.radius); if (sp.length) Object.keys(r).forEach(k => { r[k] = Math.max(15, r[k]); }); W({ special: sp, radius: r, ageMin: sp.length ? 18 : w.ageMin, ageMax: sp.length ? 65 : w.ageMax, gender: sp.length ? 'all' : w.gender }); } })),
+        hasSpecial: special,
+        accShop: () => W({ account: 'boutique' }), accNet: () => W({ account: 'reseau' }), accountNote: w.account === 'boutique' ? w.shops.length + ' comptes : ' + w.shops.map(id => ids(id).ad_account_id).filter(Boolean).join(', ') : 'Compte réseau ' + M.networkAccount + ' · budget mutualisé',
+        blAdset: () => W({ budgetLevel: 'adset' }), blCamp: () => W({ budgetLevel: 'campaign' }), stPaused: () => W({ status: 'PAUSED' }), stActive: () => W({ status: 'ACTIVE' }),
+        bidOptions: M.bidStrategies.map(([id, label]) => ({ id, label: label + ' · ' + id })), setBid: (e) => W({ bid: e.target.value }), setSpendCap: (e) => W({ spendCap: +e.target.value }), capCents: SA.cents(w.spendCap),
+        goalOptions: obj.goals, setGoal: (e) => W({ goal: e.target.value }), hasDest: !!obj.dest[0], destOptions: obj.dest, setDest: (e) => W({ dest: e.target.value }), promotedObject: promoted,
+        budgetAtCampaign: w.budgetLevel === 'campaign', btDaily: () => W({ budgetType: 'daily', amount: 10 }), btTotal: () => W({ budgetType: 'lifetime', amount: 300 }),
+        amountLabel: (w.budgetType === 'daily' ? 'Montant / jour' : 'Montant total') + (w.account === 'boutique' ? ' par boutique (€)' : ' (€)'), amountTech: budgetKey + ' = ' + SA.cents(w.amount), endTech: w.budgetType === 'lifetime' ? 'end_time *' : 'end_time',
+        setAmount: (e) => W({ amount: +e.target.value }), setStart: (e) => W({ start: e.target.value }), setEnd: (e) => W({ end: e.target.value }),
+        needsBidAmount: /CAP|ROAS/.test(w.bid), setBidAmount: (e) => W({ bidAmount: +e.target.value }), bidCents: SA.cents(w.bidAmount),
+        budgetFacts: [{ label: 'Durée', value: days + ' jours', color: '#222222' }, { label: 'Dépense estimée', value: SA.eur(est), color: est > w.spendCap ? '#8D1D2C' : '#222222' }, { label: 'Plafond (spend_cap)', value: SA.eur(w.spendCap), color: '#222222' }].concat(camp ? [{ label: 'Reste sur la campagne', value: SA.eur(campLeft), color: campLeft < est ? '#8A4B00' : '#0F6B4A' }] : []),
+        overCap: est > w.spendCap, overCapText: 'La dépense estimée (' + SA.eur(est) + ') dépasse le plafond de ' + SA.eur(w.spendCap) + ' : la diffusion s\u2019arrêtera au plafond, soit environ ' + Math.floor(days * w.spendCap / est) + ' jours sur ' + days + '.',
+        overCamp: !!camp && campLeft < est, overCampText: camp ? 'Il reste ' + SA.eur(campLeft) + ' sur le budget de « ' + camp.name + ' ».' : '',
+        audShops: st.shops.map(sh => { const ok = (w.account === 'reseau' || sh.ads === 'connected'), on = w.shops.includes(sh.id); return { name: sh.name, on, dis: !ok, rDis: !on, radius: w.radius[sh.id], min: minR, bg: ok ? '#FFFFFF' : '#FCFAF7',
+          note: ok ? M.geo[sh.id][0].toFixed(4) + ', ' + M.geo[sh.id][1].toFixed(4) : 'Compte pub non connecté', noteFg: ok ? '#8A847C' : '#8D1D2C', noteFont: ok ? 'ui-monospace,monospace' : 'inherit',
+          toggle: () => W({ shops: on ? w.shops.filter(x => x !== sh.id) : w.shops.concat(sh.id) }), setRadius: (e) => W({ radius: Object.assign({}, w.radius, { [sh.id]: Math.max(minR, +e.target.value) }) }) }; }),
+        setAgeMin: (e) => W({ ageMin: Math.min(+e.target.value, w.ageMax) }), setAgeMax: (e) => W({ ageMax: Math.max(+e.target.value, w.ageMin) }),
+        gAll: () => W({ gender: 'all' }), gMen: () => !special && W({ gender: 'men' }), gWomen: () => !special && W({ gender: 'women' }), toggleAdvantage: () => W({ advantage: !w.advantage }),
+        interests: ['Boulangerie', 'Pâtisserie', 'Brunch', 'Cuisine maison', 'Famille', 'Bio et local', 'Café', 'Anti-gaspillage'].map(n => Object.assign(chip(w.interests.includes(n)), { name: n, toggle: () => W({ interests: w.interests.includes(n) ? w.interests.filter(x => x !== n) : w.interests.concat(n) }) })),
+        platforms: M.platforms.map(p => Object.assign(chip(w.platforms.includes(p)), { name: p, toggle: () => W({ platforms: w.platforms.includes(p) ? w.platforms.filter(x => x !== p) : w.platforms.concat(p) }) })),
+        setDsaB: (e) => W({ dsaB: e.target.value }), setDsaP: (e) => W({ dsaP: e.target.value }), audSize: SA.fmt(Math.round(aud / 100) * 100),
+        csExisting: () => W({ crea: 'existing' }), csNew: () => W({ crea: 'new' }), isNewCrea: w.crea === 'new',
+        creaTech: w.crea === 'existing' ? 'object_story_id = {page_id}_{post_id}' : 'POST /act_{id}/adimages → image_hash, puis object_story_spec',
+        creaHint: w.crea === 'existing' ? 'Choisissez un post déjà publié ou programmé : il est sponsorisé tel quel, avec ses réactions.' : 'Choisissez le visuel (envoyé à Meta via adimages), puis rédigez le texte de la pub.',
+        creatives: st.posts.filter(p => w.crea === 'existing' ? ['Publié', 'Programmé'].includes(p.status) : p.status !== 'Échec').sort((x, y) => y.date.localeCompare(x.date)).slice(0, 18).map(p => ({ img: p.img, title: p.title, meta: SA.dShort(p.date) + ' · ' + p.status, ring: w.post === p.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)',
+          pick: () => W({ post: p.id, message: w.message || SA.fill(p.text || '', sid0, null, 'fr'), messageNl: w.messageNl || SA.fill(p.textNl || '', (SA.SHOPS[0] || {}).id, null, 'nl'), headline: w.headline || p.title, adName: w.adName || p.title + ' · ' + obj.label.toLowerCase() }) })),
+        needsNl: w.shops.some(id => SA.langsOf(id).includes('nl')), nlShopsLabel: w.shops.filter(id => SA.langsOf(id).includes('nl')).map(id => SA.byId(SA.SHOPS, id).name).join(', '),
+        setMessageNl: (e) => W({ messageNl: e.target.value }), setHeadlineNl: (e) => W({ headlineNl: e.target.value }),
+        setMessage: (e) => W({ message: e.target.value }), setHeadline: (e) => W({ headline: e.target.value }), setDescription: (e) => W({ description: e.target.value }), setLink: (e) => W({ link: e.target.value }),
+        ctaOptions: M.ctas.map(id => ({ id, label: M.ctaLabels[id] + ' · ' + id })), setCta: (e) => W({ cta: e.target.value }),
+        isLeads, leadOptions: leadForms.map(f => ({ id: f.id, name: f.name + ' · v' + f.version })), setLeadForm: (e) => W({ leadForm: e.target.value }), leadsHref: SA.href('leads'), setUrlTags: (e) => W({ urlTags: e.target.value }),
+        setAdName: (e) => W({ adName: e.target.value }), adPaused: () => W({ adStatus: 'PAUSED' }), adActive: () => W({ adStatus: 'ACTIVE' }), togglePixel: () => W({ pixel: !w.pixel }), pixelId: ids(sid0).pixel_id,
+        createNote: w.account === 'boutique' ? 'Franchise Buddy crée ' + w.shops.length + ' jeux campagne / ad set / créa / pub, un par compte publicitaire de boutique, avec le rayon de chaque boutique.' : 'Franchise Buddy crée un seul jeu sur le compte réseau ' + M.networkAccount + ', avec ' + w.shops.length + ' zones de diffusion.',
+        recapImg: post ? post.img : 'img/illus/decorative/bubble.png',
+        recap: [['Objectif', obj.label + ' · ' + w.objective], ['Campagne', camp ? camp.name : 'Hors campagne'], ['Comptes', w.account === 'boutique' ? w.shops.length + ' comptes boutique' : 'Compte réseau'], ['Optimisation', w.goal + (obj.dest[0] ? ' → ' + w.dest : '')], ['Audience', w.ageMin + '–' + w.ageMax + ' ans · ' + w.shops.map(id => SA.byId(SA.SHOPS, id).name + ' ' + w.radius[id] + ' km').join(', ')], ['Créa', (w.crea === 'existing' ? 'Post sponsorisé · ' : 'Nouvelle créa · ') + (post ? post.title : '—') + ' · ' + M.ctaLabels[w.cta]], ['Budget', (w.budgetType === 'daily' ? SA.eur(w.amount) + ' / jour' : SA.eur(w.amount) + ' total') + ' · plafond ' + SA.eur(w.spendCap) + ' · ' + (w.budgetLevel === 'campaign' ? 'CBO' : 'ABO')], ['Diffusion', SA.dLabel(w.start) + ' → ' + SA.dLabel(w.end) + ' · statut ' + w.status]].map(([k, v]) => ({ k, v })),
+        callsNote: (w.shops.some(id => SA.langsOf(id).length > 1) ? 'boutique bilingue : un ad set par langue (targeting.locales nl / fr) · ' : '') + (w.account === 'boutique' ? 'exemple pour ' + SA.byId(SA.SHOPS, sid0).name + ', répété pour chaque boutique' : 'compte réseau'),
+        calls: [['POST ' + base + accFor(sid0) + '/campaigns', campBody], ['POST ' + base + accFor(sid0) + '/adsets', adsetBody], ['POST ' + base + accFor(sid0) + '/adcreatives', creaBody], ['POST ' + base + accFor(sid0) + '/ads', adBody]].map(([title, body]) => ({ title, body: J(body) })),
+        canBack: s.step > 1, back: () => this.setState({ step: s.step - 1, err: '' }), stepErr: s.err, fwdLabel: s.step === 5 ? 'Envoyer à Meta' : 'Continuer',
+        fwd: () => {
+          const e = errFor(s.step); if (e) { this.setState({ err: e }); return; }
+          if (s.step < 5) { this.setState({ step: s.step + 1 }); return; }
+          const ad = { id: 'a' + Date.now(), name: w.adName, campaign: w.campaign || null, objective: obj.label, metaObjective: w.objective, shops: w.shops, scope: w.account === 'reseau' ? 'reseau' : 'boutique', budgetType: w.budgetType === 'daily' ? 'quotidien' : 'total',
+            budget: w.account === 'boutique' ? w.amount * w.shops.length : w.amount, cap: w.spendCap, spent: 0, start: w.start, end: w.end, status: w.status === 'PAUSED' && w.adStatus === 'PAUSED' ? 'En pause' : 'En revue', radius: Math.round(w.shops.reduce((x, id) => x + w.radius[id], 0) / w.shops.length), post: w.post, leadForm: w.leadForm || null, spec: SA.live ? w : undefined };
+          SA.save({ ads: st.ads.concat(ad) }); SA.log('Sarah Lambert (Franchiseur)', 'Publicité', '« ' + ad.name + ' » créée (' + w.objective + ')');
+          this.setState({ wizOpen: false, selId: ad.id }); this.toast(ad.status === 'En pause' ? 'Publicité créée en pause : activez-la quand vous êtes prêt.' : 'Publicité envoyée : en revue chez Meta.');
+          if (ad.status === 'En revue' && !SA.live) this._rv = setTimeout(() => { this.upd(ad.id, { status: 'Active' }, '« ' + ad.name + ' » validée par Meta'); this.toast('Meta a validé « ' + ad.name + ' ».'); }, 4500);
+        },
+      }, sg([['as', w.account === 'boutique'], ['an', w.account === 'reseau'], ['ba', w.budgetLevel === 'adset'], ['bc', w.budgetLevel === 'campaign'], ['sp', w.status === 'PAUSED'], ['sa', w.status === 'ACTIVE'], ['bd', w.budgetType === 'daily'], ['bt', w.budgetType === 'lifetime'],
+        ['g0', w.gender === 'all'], ['g1', w.gender === 'men'], ['g2', w.gender === 'women'], ['ce', w.crea === 'existing'], ['cn', w.crea === 'new'], ['ap', w.adStatus === 'PAUSED'], ['aa', w.adStatus === 'ACTIVE']]));
+    }
+    return Object.assign({
+      openWiz: () => this.openWiz(''), closeWiz: () => this.setState({ wizOpen: false }), wizOpen: s.wizOpen && !!w,
+      kpis, head: ['Publicité', 'Campagne · boutiques', 'Budget', 'Dépensé / restant', 'Statut Meta', 'Période'], rows,
+      hasSel: !!a, noSel: !a, d,
+      pause: () => this.upd(a.id, { status: 'En pause' }, '« ' + a.name + ' » mise en pause'),
+      resume: () => this.upd(a.id, { status: 'Active' }, '« ' + a.name + ' » reprise'),
+      stop: () => this.upd(a.id, { status: 'Arrêtée' }, '« ' + a.name + ' » arrêtée'),
+      topUp: () => this.upd(a.id, { budget: a.budget + 100, cap: (a.cap || a.budget) + 100, status: 'Active' }, '« ' + a.name + ' » : +100 € de budget'),
+      fixAd: () => { this.upd(a.id, { status: 'En revue', reason: null }, '« ' + a.name + ' » corrigée et resoumise'); this.toast('Publicité resoumise à Meta.'); },
+      hasToast: !!s.toast, toast: s.toast,
+    }, wiz);
+  }
+}
+</script>
+</body>
+</html>

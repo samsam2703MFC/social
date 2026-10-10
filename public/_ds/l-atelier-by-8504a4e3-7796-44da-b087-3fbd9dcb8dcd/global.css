@@ -1,0 +1,1490 @@
+/* ==========================================================================
+   L'Atelier By — Webshop
+   global.css — Design System & CSS Reference
+   Source: LAtelier_Design_System.docx (09/04/2026)
+   ==========================================================================
+
+   ⚠ ABSOLUTE RULES
+   - Zero hardcoded colors, fonts, or spacing anywhere in component code.
+   - Every value must reference a CSS variable. No exceptions.
+   - Theme is fetched once on app init and applied to :root via JS:
+       const theme = await GET /api/v1/theme?shop_type=webshop
+       Object.entries(theme).forEach(([k, v]) =>
+         document.documentElement.style.setProperty(k, v))
+   - The variables below are the defaults / fallbacks. Runtime theme
+     values override them on :root.
+   ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+   Brand fonts — Gotham (UI) + Vank (display) + Playwrite DEVA (accent)
+   Self-hosted from /fonts.
+   -------------------------------------------------------------------------- */
+
+/* --- Gotham (UI) — mapped across the 100–900 weight ladder ---
+   Note: the Gotham family shipped here is a partial set. Weights without a
+   dedicated file are mapped to the closest available cut so `font-weight`
+   still resolves predictably. Italics fall back to the nearest italic. */
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Thin.otf') format('opentype');
+  font-weight: 100; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Thin_Italic.otf') format('opentype');
+  font-weight: 100; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Extra_Light.otf') format('opentype');
+  font-weight: 200; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Extra_Light_Italic.otf') format('opentype');
+  font-weight: 200; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Light.otf') format('opentype');
+  font-weight: 300; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Extra_Light_Italic.otf') format('opentype');
+  font-weight: 300; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Regular_New.otf') format('opentype');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Italic.otf') format('opentype');
+  font-weight: 400; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Medium.otf') format('opentype');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Italic.otf') format('opentype');
+  font-weight: 500; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Regular.otf') format('opentype');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_ItalicBold.otf') format('opentype');
+  font-weight: 600; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  /* No dedicated Gotham Bold file shipped — mapping 700 to Black (closest cut). */
+  src: url('fonts/Gotham_Black.otf') format('opentype');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_ItalicBold.otf') format('opentype');
+  font-weight: 700; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Black.otf') format('opentype');
+  font-weight: 800; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_ItalicBold.otf') format('opentype');
+  font-weight: 800; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_Ultra.otf') format('opentype');
+  font-weight: 900; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('fonts/Gotham_ItalicBold.otf') format('opentype');
+  font-weight: 900; font-style: italic; font-display: swap;
+}
+
+/* --- Vank (display) — stylized glyphs limited to base ASCII;
+       Latin-1 accented characters intentionally fall through to Gotham
+       so words like "Châtelain" render with a clean accent. --- */
+@font-face {
+  font-family: 'Vank';
+  src: url('fonts/GC_Vank.ttf') format('truetype');
+  font-weight: 400; font-style: normal; font-display: swap;
+  unicode-range: U+0020-007E;
+}
+
+/* --- Playwrite DEVA (accent) — hand-script, four weights --- */
+@font-face {
+  font-family: 'Playwrite DEVA';
+  src: url('fonts/PlaywriteDEVA-Thin.ttf') format('truetype');
+  font-weight: 100; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Playwrite DEVA';
+  src: url('fonts/PlaywriteDEVA-ExtraLight.ttf') format('truetype');
+  font-weight: 200; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Playwrite DEVA';
+  src: url('fonts/PlaywriteDEVA-Light.ttf') format('truetype');
+  font-weight: 300; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Playwrite DEVA';
+  src: url('fonts/PlaywriteDEVA-Regular.ttf') format('truetype');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+
+
+/* ==========================================================================
+   1. TOKENS — :root
+   ========================================================================== */
+:root {
+  /* --- Brand palette ----------------------------------------------------- */
+  --color-primary:            #8D1D2C;   /* Ruby Red — primary actions, badges, borders */
+  --color-secondary:          #F2C9A0;   /* Abricot — linked state, delivery mode ON */
+  --color-bg:                 #EAE4DC;   /* Beige — page background */
+  --color-surface:            #FFFFFF;   /* Blanc — cards, panels */
+  --color-text:               #222222;   /* Noir — body text */
+  --color-text-muted:         #666666;   /* Muted grey — secondary text, placeholders */
+
+  /* Semantic aliases used by components */
+  --color-text-primary:       var(--color-text);
+  --color-text-secondary:     var(--color-text-muted);
+  --color-background-secondary: #F4EFE8;         /* faint beige — input / secondary surfaces */
+  --color-border-secondary:   rgba(34, 34, 34, 0.18);
+  --color-border-tertiary:    rgba(34, 34, 34, 0.10);
+
+  /* State + accent colors */
+  --color-linked:             #F2C9A0;   /* Office client linked (Abricot) */
+  --color-collect:            #8D1D2C;   /* Not linked / collect mode */
+  --color-on-abricot:         #6b4420;   /* Dark amber — text on Abricot backgrounds */
+  --color-collection-border:  #c17a2a;   /* Deep amber */
+  --color-collection-fill:    #FAC775;   /* Collection badge background */
+  --color-collection-icon:    #6b3d0a;   /* Collection badge icon/label */
+
+  /* Website / marketing accents */
+  --color-popup:              #78554B;   /* Third color — Pop-Up markers & badges */
+  --color-ink:                #222222;   /* Illustration stroke ink */
+
+  /* --- Typography -------------------------------------------------------- */
+  /* Brand typography — strict. No system fallback allowed.
+     Vank ships full Latin so accents render natively; Gotham is the
+     last-resort fallback for any remaining missing glyph (e.g. € in
+     Regular/Italic, which falls through to Book/Medium). */
+  --font-display:             'Vank', 'Gotham';          /* informational / display */
+  --font-ui:                   'Gotham';                  /* body / UI */
+  --font-accent:               'Playwrite DEVA', 'Gotham'; /* script informational accent */
+
+  /* Type scale (px) */
+  --font-size-page-title:     32px;   /* Page title / brand name (display) */
+  --font-size-section-title:  20px;   /* Section title (display) */
+  --font-size-navbar-brand:   15px;   /* Brand name in navbar */
+  --font-size-body:           16px;   /* Body text */
+  --font-size-label:          13px;   /* Labels / secondary */
+  --font-size-small:          11px;   /* Small label / uppercase nav */
+  --font-size-button:         14px;   /* Button text */
+  --font-size-price:          14px;   /* Price (range 12–16px) */
+  --font-size-admin-label:    11px;   /* Section label (admin) */
+
+  /* Line heights */
+  --line-height-display:      1.2;
+  --line-height-section:      1.3;
+  --line-height-body:         1.6;
+
+  /* Letter spacing */
+  --tracking-nav:             0.06em;
+  --tracking-admin:           0.08em;
+
+  /* Font weights */
+  --weight-regular:           400;
+  --weight-medium:            500;
+
+  /* --- Grid -------------------------------------------------------------- */
+  --grid-cols-desktop:        6;   /* @kind other */
+  --grid-cols-tablet:         3;   /* @kind other */
+  --grid-cols-mobile:         2;   /* @kind other */
+  --grid-gap:                 12px;
+
+  /* --- Border radius ---------------------------------------------------- */
+  --radius-sm:                6px;
+  --radius-md:                8px;
+  --radius-lg:                12px;
+  --radius-pill:              999px;
+
+  /* --- Spacing ---------------------------------------------------------- */
+  --spacing-xs:               4px;
+  --spacing-sm:               8px;
+  --spacing-md:               16px;
+  --spacing-lg:               24px;
+  --spacing-xl:               32px;
+
+  /* --- PACKAGING — accents de variété (confitures & miels) ---------------
+     ⚠ PORTÉE LIMITÉE : ces couleurs s'appliquent UNIQUEMENT au packaging
+     (étiquettes 65×45 mm et pastille couvercle Ø52 mm). Elles ne remplacent
+     PAS la palette de marque (--color-primary, --color-secondary, etc.).
+     Usage : pastille couleur / accent de variété — jamais en fond pleine
+     surface. Fond d'étiquette : toujours blanc (--color-surface). @kind color
+     -------------------------------------------------------------------- */
+  /* Confitures — fruits rouges */
+  --pkg-fraise:               #8D1D2C;   /* Ruby Red maison */
+  --pkg-framboise:            #A61E4D;   /* Rosé magenta profond */
+  --pkg-groseille:            #C41E3A;   /* Rouge vif éclatant */
+  --pkg-cerise:               #7B1424;   /* Rouge griotte profond */
+  --pkg-mure:                 #4A1E3C;   /* Pourpre foncé */
+  --pkg-myrtille:             #3B3468;   /* Bleu-violet */
+  --pkg-cassis:               #2E1A47;   /* Violet nuit */
+
+  /* Confitures — fruits jaunes / orangés */
+  --pkg-abricot:              #E8964B;   /* Abricot saturé (dérivé Abricot Pastel) */
+  --pkg-peche:                #F4A97F;   /* Pêche douce */
+  --pkg-mirabelle:            #E8B84B;   /* Jaune doré */
+  --pkg-orange-amere:         #D97B29;   /* Orange brûlé */
+  --pkg-coing:                #D9A441;   /* Ambre rosé */
+
+  /* Confitures — autres */
+  --pkg-rhubarbe:             #C96A6E;   /* Rose-vert (dominante rosée) */
+  --pkg-figue:                #6E3B5C;   /* Violet chaud */
+  --pkg-prune:                #5C3A6E;   /* Violet prune (prune / quetsche) */
+  --pkg-poire:                #C8C87A;   /* Vert-jaune doux */
+  --pkg-pomme:                #A8C47A;   /* Vert tendre */
+
+  /* Miels — dégradé d'ambres (clair → foncé = intensité du goût) */
+  --pkg-miel-acacia:          #F5DFA8;   /* Ambre très clair */
+  --pkg-miel-colza:           #EFD9A0;   /* Crème clair */
+  --pkg-miel-toutes-fleurs:   #E3B155;   /* Ambre classique */
+  --pkg-miel-tilleul:         #DCC26B;   /* Jaune-vert clair */
+  --pkg-miel-lavande:         #E8C97F;   /* Ambre doré */
+  --pkg-miel-lavande-accent:  #9A8FBF;   /* Accent secondaire lavande (autorisé) */
+  --pkg-miel-chataignier:     #9C6B2F;   /* Ambre foncé */
+  --pkg-miel-foret:           #6B4A26;   /* Brun foncé (miellat / forêt) */
+  --pkg-miel-sarrasin:        #5C3D22;   /* Brun très foncé */
+
+  /* --- LEVIERS (of_tag) — axes de performance du réseau de franchises -------
+     Système de gestion par levier. TOUT objet opérationnel (checklist, tâche,
+     KPI, formation, compétence) est rattaché à UN levier via of_tag.levid.
+     Ces couleurs SONT la source de vérité of_tag.color — l'UI ne code jamais
+     une couleur de levier en dur, elle lit ces variables (mappées depuis
+     of_tag.color au runtime : var(--lev-<tag-slug-en-minuscules>)).
+     ⚠ Labour Cost & Overhead Cost partagent #8b5cf6 → différencier par le nom.
+     Ordre d'affichage/regroupement : Trafic → Récurrence → Expérience Client
+     → Food Cost → Labour Cost → Overhead Cost. @kind color
+     -------------------------------------------------------------------- */
+  --lev-trafic:               #6366f1;   /* id 4 · TRAFIC */
+  --lev-recurrence:           #ec4899;   /* id 3 · RECURRENCE */
+  --lev-xp:                   #f59e0b;   /* id 2 · XP — Expérience Client */
+  --lev-food-cost:            #10b981;   /* id 5 · FOOD_COST */
+  --lev-labour-cost:          #8b5cf6;   /* id 6 · LABOUR_COST */
+  --lev-overhead-cost:        #8b5cf6;   /* id 7 · OVERHEAD_COST */
+}
+
+
+/* ==========================================================================
+   2. BASE
+   ========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-regular);
+  line-height: var(--line-height-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Strict typography — native form controls inherit the brand font.
+   Browsers default <input>, <textarea>, <select>, <button> to a system UA
+   font; force them onto Gotham so there is zero visual drift. */
+input,
+textarea,
+select,
+button,
+optgroup,
+option {
+  font-family: var(--font-ui);
+}
+
+
+/* ==========================================================================
+   3. TYPOGRAPHY
+   ========================================================================== */
+.t-page-title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-page-title);
+  font-weight: var(--weight-regular);
+  line-height: var(--line-height-display);
+  color: var(--color-text-primary);
+}
+
+.t-section-title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-section-title);
+  font-weight: var(--weight-regular);
+  line-height: var(--line-height-section);
+  color: var(--color-text-primary);
+}
+
+.t-navbar-brand {
+  font-family: var(--font-display);
+  font-size: var(--font-size-navbar-brand);
+  font-weight: var(--weight-regular);
+  color: var(--color-primary);
+}
+
+.t-body {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-regular);
+  line-height: var(--line-height-body);
+  color: var(--color-text-primary);
+}
+
+.t-label {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-label);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-secondary);
+}
+
+.t-small {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-small);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-nav);
+}
+
+.t-button {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-button);
+  font-weight: var(--weight-medium);
+}
+
+.t-price {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-price);
+  font-weight: var(--weight-medium);
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.t-admin-label {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-admin-label);
+  font-weight: var(--weight-regular);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-admin);
+  color: var(--color-text-secondary);
+}
+
+
+/* ==========================================================================
+   4. NAVBAR
+   ⚠ No logo anywhere in the navbar. Single row. No stacking. No wrapping.
+   ========================================================================== */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: var(--color-surface);
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  width: 100%;
+  flex-wrap: nowrap;
+}
+
+.navbar__left,
+.navbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.navbar__brand {
+  font-family: var(--font-display);
+  font-size: var(--font-size-navbar-brand);
+  font-weight: var(--weight-regular);
+  color: var(--color-primary);
+}
+
+.navbar__date {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-label);
+  color: var(--color-text-primary);
+  border: none;
+  background: transparent;
+  text-decoration: none;
+}
+
+/* Mode badges (pill) */
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-small);
+  font-weight: var(--weight-medium);
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.mode-badge--collect {   /* Collecte en magasin */
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.mode-badge--delivery { /* Livraison au bureau */
+  background: var(--color-secondary);
+  color: var(--color-on-abricot);
+}
+
+/* Navbar right group */
+.shop-select {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  padding: 4px 8px;
+  color: var(--color-text-primary);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.icon-btn__svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--color-text-secondary);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.cart-icon {
+  position: relative;
+}
+
+.cart-icon__badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font-size: 9px;
+  font-weight: var(--weight-medium);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* Office Client icon — circular, state-dependent */
+.office-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+
+.office-icon--linked {
+  background: var(--color-linked);
+  color: var(--color-on-abricot);
+}
+
+.office-icon--not-linked {
+  background: var(--color-collect);
+  color: var(--color-surface);
+}
+
+.office-icon--neutral {      /* not logged in */
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+}
+
+/* Mobile navbar — stacked (4 rows) */
+@media (max-width: 599px) {
+  .navbar--mobile {
+    display: grid;
+    grid-template-rows: auto auto auto auto;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+  .navbar--mobile .navbar__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+  }
+  .navbar--mobile .navbar__brand {
+    font-size: 14px;
+  }
+  .mode-badge--mobile-tile {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-small);
+    height: 44px;
+  }
+  .navbar__date--mobile {
+    width: 100%;
+    background: var(--color-background-secondary);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    padding: 8px 10px;
+    border: 0.5px solid var(--color-border-tertiary);
+  }
+}
+
+/* Date picker must never be hidden behind the navbar */
+.date-picker-popover {
+  z-index: 1000;
+}
+
+
+/* ==========================================================================
+   5. CATEGORY & COLLECTION BADGES
+   ========================================================================== */
+.badge-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;    /* momentum on mobile */
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.badge-row::-webkit-scrollbar {
+  height: 0;
+}
+
+.category-badge,
+.collection-badge {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.category-badge__tile {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-tertiary);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.category-badge__tile svg {
+  width: 28px;
+  height: 28px;
+  stroke: var(--color-text-secondary);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.category-badge__label {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-small);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* Active state */
+.category-badge--active .category-badge__tile {
+  background: var(--color-bg);
+  border: 2px solid var(--color-primary);
+}
+
+.category-badge--active .category-badge__tile svg {
+  stroke: var(--color-primary);
+}
+
+.category-badge--active .category-badge__label {
+  color: var(--color-primary);
+  font-weight: var(--weight-medium);
+}
+
+/* Illustration placeholder (admin upload — dashed outline if unset) */
+.category-badge__tile--empty {
+  border: 1.5px dashed var(--color-border-secondary);
+  background: transparent;
+}
+
+/* Collection badge — distinct visual */
+.collection-badge__tile {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-md);
+  background: var(--color-collection-fill);
+  border: 2px solid var(--color-collection-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collection-badge__tile svg {
+  width: 28px;
+  height: 28px;
+  stroke: var(--color-collection-icon);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.collection-badge__label {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-small);
+  font-weight: var(--weight-medium);
+  color: var(--color-collection-border);
+  text-align: center;
+}
+
+
+/* ==========================================================================
+   6. PRODUCT CARD
+   ========================================================================== */
+.product-card {
+  border-radius: var(--radius-lg);
+  border: 0.5px solid var(--color-border-tertiary);
+  background: var(--color-surface);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.product-card__photo {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  background: var(--color-bg);   /* placeholder when no image */
+  overflow: hidden;
+}
+
+.product-card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Optional corner badge on photo */
+.product-card__corner-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: var(--weight-medium);
+  border-radius: 10px;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
+.product-card__body {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Line 1 — Portions row */
+.portions {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.portion {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--color-border-secondary);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.portion svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--color-text-secondary);
+}
+
+.portion--active {
+  border-color: var(--color-primary);
+}
+
+.portion--active svg {
+  fill: var(--color-primary);
+}
+
+/* Line 2 — Name + price */
+.product-card__name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.product-card__name {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: var(--weight-medium);
+  color: var(--color-text-primary);
+  line-height: 1.3;
+  /* No truncation — show full name */
+}
+
+.product-card__price {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: var(--weight-medium);
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+/* Line 3 — Allergens + icons + (+) */
+.product-card__meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.allergen-list {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.allergen {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  opacity: 0.15;
+}
+
+.product-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Small circular icon buttons: O (options), ℹ (info) */
+.icon-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 0.5px solid var(--color-border-secondary);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+/* (+) add to cart */
+.add-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-surface);
+  border: none;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: var(--weight-medium);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+
+/* ==========================================================================
+   7. PRODUCT GRID
+   ========================================================================== */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-cols-desktop), minmax(0, 1fr));
+  gap: var(--grid-gap);
+  padding: var(--spacing-md);
+}
+
+@media (max-width: 1024px) {
+  .product-grid {
+    grid-template-columns: repeat(var(--grid-cols-tablet), minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 599px) {
+  .product-grid {
+    grid-template-columns: repeat(var(--grid-cols-mobile), minmax(0, 1fr));
+  }
+}
+
+
+/* ==========================================================================
+   8. BASKET
+   ========================================================================== */
+.basket {
+  border-radius: var(--radius-lg);
+  border: 0.5px solid var(--color-border-tertiary);
+  background: var(--color-surface);
+  padding: var(--spacing-md);
+  max-width: 360px;
+}
+
+.basket__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.basket__title {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: var(--weight-medium);
+  color: var(--color-text-primary);
+}
+
+.basket__back {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* Mode section dot */
+.mode-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin: var(--spacing-sm) 0;
+}
+
+.mode-dot__bullet {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.mode-dot--collect .mode-dot__bullet {
+  background: var(--color-primary);
+}
+
+.mode-dot--delivery .mode-dot__bullet {
+  background: var(--color-secondary);
+  border: 1px solid var(--color-collection-border);
+}
+
+.mode-dot__label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-nav);
+}
+
+/* Line items */
+.basket__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+
+.basket__item:last-of-type {
+  border-bottom: none;
+}
+
+.basket__item-name {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.basket__item-options {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.basket__item-price {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+/* Total bar */
+.basket__total {
+  border-top: 0.5px solid var(--color-border-tertiary);
+  padding-top: 12px;
+  margin-top: var(--spacing-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.basket__total-label {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: var(--weight-medium);
+  color: var(--color-text-primary);
+}
+
+.basket__total-amount {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: var(--weight-medium);
+  color: var(--color-primary);
+}
+
+
+/* ==========================================================================
+   9. CHECKOUT
+   ========================================================================== */
+.checkout {
+  border-radius: var(--radius-lg);
+  border: 0.5px solid var(--color-border-tertiary);
+  background: var(--color-surface);
+  padding: var(--spacing-md);
+  max-width: 360px;
+}
+
+/* Step number circles */
+.step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+}
+
+.step-num--active {
+  background: var(--color-secondary);
+  color: var(--color-on-abricot);
+}
+
+.step-num--inactive {
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+}
+
+/* Info rows (key / value) */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: 6px 0;
+}
+
+.info-row__key {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.info-row__value {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--color-text-primary);
+}
+
+/* Invoice checkbox */
+.invoice-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.invoice-checkbox input[type="checkbox"] {
+  accent-color: var(--color-primary);
+}
+
+/* VIES validation states */
+.vies-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 11px;
+}
+
+.vies-state--valid  { color: #2d7a3e; }
+.vies-state--invalid{ color: var(--color-primary); }
+
+
+/* ==========================================================================
+   10. FOOTER
+   ========================================================================== */
+.footer-collapsed {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.footer-collapsed svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--color-text-secondary);
+  fill: none;
+}
+
+.footer-expanded {
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--radius-md);
+  padding: 14px 20px;
+  width: 280px;
+}
+
+.footer-expanded__brand {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--color-text-primary);
+}
+
+.footer-expanded__tagline {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-bottom: 10px;
+}
+
+.footer-expanded__sep {
+  border-top: 0.5px solid var(--color-border-tertiary);
+  padding-top: 10px;
+}
+
+.footer-expanded__cols {
+  display: flex;
+  gap: var(--spacing-lg);
+}
+
+.footer-col__title {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.footer-col__link {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.footer-expanded__hours {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  margin-top: 10px;
+}
+
+@media (max-width: 599px) {
+  .footer-expanded__cols {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+}
+
+
+/* ==========================================================================
+   11. BUTTONS & INTERACTIVE ELEMENTS
+   ========================================================================== */
+
+/* Primary CTA — full-width in basket/checkout contexts */
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 11px 16px;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-button);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.btn-primary--block {
+  width: 100%;
+  padding: 11px;
+  margin-top: 12px;
+}
+
+/* Secondary */
+.btn-secondary {
+  background: transparent;
+  border: 0.5px solid var(--color-border-secondary);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-md);
+  padding: 11px 16px;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-button);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+
+/* ==========================================================================
+   12. ABSOLUTE RULES — enforced via CSS where possible
+   ==========================================================================
+   Many rules are behavioral (JS-level) and cannot be enforced in CSS alone:
+     - Mode toggle = instant clear (basket + date picker) → JS
+     - Price absent when no shop → render nothing, not '€0.00' → JS/template
+     - Clicking product photo/name: nothing → do not wrap in <a>
+     - No 'Default variant' label → template
+     - Single cart / delivery_mode source / forced e-payment → app logic
+     - Active badge in view → scrollIntoView on selection → JS
+
+   CSS-level guarantees below:
+   -------------------------------------------------------------------------- */
+
+/* No wrap / no stacking in the navbar (except the explicit mobile variant) */
+.navbar:not(.navbar--mobile) {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+/* Date picker always above the navbar */
+.navbar { position: relative; z-index: 10; }
+.date-picker-popover { z-index: 1000; }
+
+/* End of file */
+
+
+/* ==========================================================================
+   13. LEVIERS (of_tag) — badge · filtre · regroupement · code couleur
+   --------------------------------------------------------------------------
+   Système de gestion par levier. Chaque objet opérationnel porte 1 levier.
+   La couleur de chaque élément est TOUJOURS pilotée par --levc, une variable
+   locale posée par l'app depuis of_tag.color :
+       el.style.setProperty('--levc', theme[of_tag.tag] || 'var(--lev-trafic)')
+   ou, en statique, via une classe utilitaire lev--<slug> ci-dessous.
+   ⚠ Ne jamais coder une couleur de levier en dur dans un composant.
+   ========================================================================== */
+
+/* Résolution du levier → --levc via un scope d'attribut [data-lev]
+   (au runtime, préférer poser --levc directement depuis of_tag.color) */
+[data-lev="trafic"]        { --levc: var(--lev-trafic); }
+[data-lev="recurrence"]    { --levc: var(--lev-recurrence); }
+[data-lev="xp"]            { --levc: var(--lev-xp); }
+[data-lev="food-cost"]     { --levc: var(--lev-food-cost); }
+[data-lev="labour-cost"]   { --levc: var(--lev-labour-cost); }
+[data-lev="overhead-cost"] { --levc: var(--lev-overhead-cost); }
+
+/* --- Badge levier — pastille + libellé (of_tag.name) ---------------------- */
+.levier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-pill);
+  padding: 3px 10px 3px 8px;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-small);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--levc);
+  background: color-mix(in srgb, var(--levc) 12%, transparent);
+  border: 0.5px solid color-mix(in srgb, var(--levc) 35%, transparent);
+}
+
+/* Variante pleine (fond couleur du levier, texte blanc) */
+.levier-badge--solid {
+  color: var(--color-surface);
+  background: var(--levc);
+  border-color: transparent;
+}
+
+/* Pastille de couleur (le point coloré) */
+.levier-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--levc);
+}
+.levier-badge .levier-dot { width: 7px; height: 7px; }
+
+/* --- Filtre global par levier — puces sélectionnables --------------------- */
+.levier-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
+}
+
+.levier-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-small);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 0.5px solid var(--color-border-secondary);
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.levier-chip .levier-dot { background: var(--levc); }
+
+/* Puce sélectionnée — prend la couleur du levier */
+.levier-chip--active,
+.levier-chip[aria-pressed="true"] {
+  color: var(--levc);
+  background: color-mix(in srgb, var(--levc) 12%, transparent);
+  border-color: var(--levc);
+}
+
+/* --- Regroupement par levier — en-tête de section coloré ------------------ */
+.levier-group {
+  border-left: 3px solid var(--levc);
+  padding-left: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.levier-group__head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.levier-group__title {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-label);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-admin);
+  color: var(--levc);
+}
+
+.levier-group__count {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+}
+
+/* Objet rattaché à un levier — liseré gauche coloré (checklist / tâche / KPI) */
+.levier-item {
+  border-left: 3px solid var(--levc);
+  padding-left: var(--spacing-md);
+}
+
+/* --- Dashboard par levier — carte d'agrégat ------------------------------- */
+.levier-card {
+  border-radius: var(--radius-lg);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-top: 3px solid var(--levc);
+  background: var(--color-surface);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.levier-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+/* Barre d'avancement (checklists) — remplissage couleur du levier */
+.levier-progress {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-background-secondary);
+  overflow: hidden;
+}
+.levier-progress__fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--levc);
+}
+
+/* KPI vs cible — seuils rouge / vert (indépendants de la couleur du levier) */
+.levier-kpi { display: flex; align-items: baseline; gap: 6px; }
+.levier-kpi__value {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-section-title);
+  font-weight: var(--weight-medium);
+}
+.levier-kpi--under .levier-kpi__value { color: var(--color-primary); }  /* sous le seuil → rouge marque */
+.levier-kpi--over  .levier-kpi__value { color: #2d7a3e; }               /* au-dessus → vert */
+.levier-kpi__target {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+}
+
+
+/* ==========================================================================
+   GLOBAL — Section breathing room (design-system rule)
+   Every section gets symmetric top + bottom padding so nothing touches edges
+   ========================================================================== */
+
+/* Universal section padding — applies to ALL <section> elements unless
+   explicitly overridden. 48px = --space-lg equivalent at desktop. */
+section {
+  padding-top: 48px;
+  padding-bottom: 48px;
+}
+
+/* Sections that need a stronger rhythm (block-level features) */
+.section,
+section.fx-block,
+section[class*="section"],
+.page-cta,
+.shops-page__section {
+  padding-top: max(var(--spacing-xl), 48px);
+  padding-bottom: max(var(--spacing-xl), 48px);
+}
+
+/* For tighter sections that already define their own bottom padding via
+   utility classes, this is overridden by their explicit value. */
+
+/* Common grid containers: ensure they don't bleed into the section edge */
+.fx-tiers,
+.fx-pillars,
+.fx-formation,
+.fx-timeline,
+.fx-pnl__table,
+.expressions-grid,
+.collabs-grid,
+.shops-list,
+.shops-list--grouped,
+.shops-list__group,
+.products-grid,
+.locations-grid {
+  margin-bottom: 0;
+}
+
+/* Last child of a grid container should never sit flush against the section */
+.section > *:last-child,
+section.fx-block > .container > *:last-child,
+section[class*="section"] > .container > *:last-child {
+  margin-bottom: 0;
+}
+
+/* For grids that ARE the last child of a section, ensure a gap below */
+section > .container > .fx-tiers:last-child,
+section > .container > .fx-pillars:last-child,
+section > .container > .fx-formation:last-child,
+section > .container > .fx-timeline:last-child,
+section > .container > .expressions-grid:last-child,
+section > .container > .collabs-grid:last-child,
+section > .container > .shops-list:last-child,
+section > .container > .shops-list--grouped:last-child,
+section > .container > .products-grid:last-child,
+section > .container > .locations-grid:last-child {
+  padding-bottom: var(--spacing-lg);
+}

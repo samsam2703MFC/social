@@ -1,0 +1,99 @@
+name: Deploy — Social & Ads
+
+# Recette (tests sur MySQL, Meta simulé) puis déploiement du module sur le
+# serveur du BO consultant, à l'adresse /social (dossier /var/www/social).
+#
+# Secret REQUIS : DEPLOY_SSH_PASSWORD (mot de passe SSH root du serveur — le
+# même que pour le BO consultant).
+#
+# Déclenchement : pousser un changement du fichier `deploy.trigger`, ou
+# « Run workflow ».
+
+on:
+  push:
+    branches: [main, claude/wizardly-ritchie-irymdu]
+    paths: ['deploy.trigger']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-social
+  cancel-in-progress: true
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  SRC_DIR: "/opt/social_src"
+  APP_BASE: "http://185.180.206.46/social"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: social_test
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -proot" --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntaxe PHP et JS
+        run: |
+          fail=0
+          for f in $(find src public bin config -name '*.php'); do php -l "$f" >/dev/null || { echo "::error file=$f::syntaxe PHP"; fail=1; }; done
+          node --check public/social-data.js || fail=1
+          bash -n bin/deploy.sh || fail=1
+          exit $fail
+      - name: Recette (MySQL, Graph Meta simulé)
+        env:
+          SOCIAL_TEST_DSN: "mysql:host=127.0.0.1;port=3306;dbname=social_test;charset=utf8mb4"
+          SOCIAL_TEST_USER: root
+          SOCIAL_TEST_PASS: root
+        run: php bin/tests.php
+
+  deploy:
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+      - name: Vérifier le secret SSH
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          if [ -z "${SSHPASS}" ]; then
+            echo "::error title=Secret manquant::Ajoutez DEPLOY_SSH_PASSWORD (Settings → Secrets and variables → Actions) au dépôt social."
+            exit 1
+          fi
+      - name: Transférer et déployer
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          tar -czf - --exclude='.git' . | sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "rm -rf ${SRC_DIR} && mkdir -p ${SRC_DIR} && tar -xzf - -C ${SRC_DIR}"
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "cd ${SRC_DIR} && bash bin/deploy.sh"
+      - name: Recette publique
+        run: |
+          fail=0
+          st=$(curl -fsS "${APP_BASE}/api/v1/social/status" || echo '{}'); echo "$st"
+          echo "$st" | grep -q '"db":true' || { echo "::error::/social/api/v1/social/status : base injoignable"; fail=1; }
+          curl -fsS "${APP_BASE}/SA%20Calendrier.dc.html" | grep -q 'SANav' || { echo "::error::le calendrier n'est pas servi"; fail=1; }
+          # La lecture de l'état exige la session du cockpit quand son écran de connexion est actif (401 attendu alors).
+          code=$(curl -s -o /dev/null -w '%{http_code}' "${APP_BASE}/api/v1/social/state")
+          [ "$code" = "200" ] || [ "$code" = "401" ] || { echo "::error::/state répond HTTP $code"; fail=1; }
+          curl -fsS "${APP_BASE}/api/v1/social/status" | grep -q 'TOK\|EAA' && { echo "::error::une clé fuit dans /status"; fail=1; }
+          [ "$fail" = "0" ] && echo "Social & Ads en ligne : ${APP_BASE}/"
+          exit $fail

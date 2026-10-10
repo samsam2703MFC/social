@@ -1,0 +1,3 @@
+config/config.php
+public/uploads/
+.deployenv

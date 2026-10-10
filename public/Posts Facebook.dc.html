@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <script src="vendor/html-to-image.js"></script>
+  <script src="ds-catalogue.js"></script>
+  <style>
+    @font-face{font-family:'Gotham';src:url('fonts/Gotham_Light.otf') format('opentype');font-weight:300;font-style:normal;font-display:swap;}
+    @font-face{font-family:'Gotham';src:url('fonts/Gotham_Regular_New.otf') format('opentype');font-weight:400;font-style:normal;font-display:swap;}
+    @font-face{font-family:'Gotham';src:url('fonts/Gotham_Medium.otf') format('opentype');font-weight:500;font-style:normal;font-display:swap;}
+    @font-face{font-family:'Vank';src:url('fonts/GC_Vank.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap;unicode-range:U+0020-007E;}
+    @font-face{font-family:'Playwrite DEVA';src:url('fonts/PlaywriteDEVA-Light.ttf') format('truetype');font-weight:300;font-style:normal;font-display:swap;}
+    @font-face{font-family:'Playwrite DEVA';src:url('fonts/PlaywriteDEVA-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap;}
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    input::placeholder{color:#9A948C;}
+    select{font-family:'Gotham';}
+  </style>
+</helmet>
+
+<div lang="fr" style="min-height:{{ rootMinH }};font-family:'Gotham';color:#222222;display:flex;flex-direction:column;">
+
+  <sc-if value="{{ notArtOnly }}" hint-placeholder-val="{{ true }}"><header style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;background:#FFFFFF;border-bottom:0.5px solid rgba(34,34,34,0.10);flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:16px;">
+      <sc-if value="{{ notEmbedded }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="L'Atelier By" style="height:22px;width:auto;display:block;"></sc-if>
+      <span style="font-size:13px;color:#666666;">{{ headerLabel }}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <sc-if value="{{ exportError }}" hint-placeholder-val="{{ false }}">
+        <span style="font-size:12px;color:#8D1D2C;">Export impossible — réessayez dans un instant.</span>
+      </sc-if>
+      <button onClick="{{ openLib }}" style="background:transparent;border:0.5px solid rgba(34,34,34,0.18);color:#222222;border-radius:8px;padding:10px 16px;font-family:'Gotham';font-size:14px;font-weight:500;cursor:pointer;line-height:1.2;" style-hover="border-color:#222222;">Médiathèque · {{ libCount }}</button>
+      <sc-if value="{{ hasOnUse }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ useInPost }}" style="background:#232220;color:#FFFFFF;border:none;border-radius:8px;padding:11px 18px;font-family:'Gotham';font-size:14px;font-weight:500;cursor:pointer;line-height:1.2;" style-hover="background:#000000;">{{ useLabel }}</button>
+      </sc-if>
+      <button onClick="{{ exportPng }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:11px 18px;font-family:'Gotham';font-size:14px;font-weight:500;cursor:pointer;line-height:1.2;" style-hover="background:#7A1826;">
+        <sc-if value="{{ notExporting }}" hint-placeholder-val="{{ true }}">Exporter le PNG</sc-if>
+        <sc-if value="{{ exporting }}" hint-placeholder-val="{{ false }}">Export en cours…</sc-if>
+      </button>
+    </div>
+  </header></sc-if>
+
+  <main style="display:flex;flex-wrap:wrap;gap:24px;padding:{{ mainPad }};align-items:flex-start;">
+
+    <!-- ================= CONTRÔLES ================= -->
+    <sc-if value="{{ notArtOnly }}" hint-placeholder-val="{{ true }}"><aside style="flex:1 1 300px;max-width:400px;display:flex;flex-direction:column;gap:16px;min-width:0;">
+
+      <!-- Photos du post -->
+      <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+        <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;margin:0;">Photos du post · {{ selCount }}</p>
+        <div onDragOver="{{ onDragOver }}" onDrop="{{ onDrop }}" style="display:flex;flex-wrap:wrap;gap:8px;">
+          <sc-for list="{{ selThumbs }}" as="t" hint-placeholder-count="0">
+            <div draggable="{{ true }}" onDragStart="{{ t.dragStart }}" onDragOver="{{ t.dragOver }}" onDrop="{{ t.dropOn }}" onClick="{{ t.makeMain }}" title="{{ t.name }} — glisser pour réordonner · cliquer pour mettre en premier" style="position:relative;width:60px;height:60px;border-radius:8px;background:#F4EFE8;border:2px solid {{ t.ring }};box-sizing:border-box;cursor:grab;overflow:hidden;">
+              <sc-if value="{{ t.src }}" hint-placeholder-val="{{ false }}"><img src="{{ t.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;"></sc-if>
+              <span style="position:absolute;bottom:2px;left:2px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ t.n }}</span>
+              <button onClick="{{ t.remove }}" title="Retirer du post" style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;border:none;background:#232220;color:#FFFFFF;font-family:'Gotham';font-size:11px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;">×</button>
+            </div>
+          </sc-for>
+          <label title="Importer des photos" style="width:60px;height:60px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);box-sizing:border-box;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#F4EFE8;color:#8D1D2C;font-size:26px;font-weight:300;line-height:1;" style-hover="border-color:#8D1D2C;">
+            +
+            <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ onFile }}" style="display:none;">
+          </label>
+        </div>
+        <p style="font-size:12px;color:#666666;margin:0;line-height:1.5;">L'ordre décide des cases : la photo 1 va dans la case 1, la 2 dans la case 2… Glissez les vignettes pour réordonner. Les numéros sur l'aperçu n'apparaissent pas à l'export.</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+            <button onClick="{{ cutAuto }}" style="border:none;border-radius:6px;padding:7px 10px;font-family:'Gotham';font-size:12px;font-weight:500;cursor:pointer;background:{{ caBg }};color:{{ caFg }};">Auto</button>
+            <button onClick="{{ cutOn }}" style="border:none;border-radius:6px;padding:7px 10px;font-family:'Gotham';font-size:12px;font-weight:500;cursor:pointer;background:{{ ccBg }};color:{{ ccFg }};">Détourées</button>
+            <button onClick="{{ cutOff }}" style="border:none;border-radius:6px;padding:7px 10px;font-family:'Gotham';font-size:12px;font-weight:500;cursor:pointer;background:{{ cfBg }};color:{{ cfFg }};">Pleines</button>
+          </div>
+          <button onClick="{{ clearSel }}" style="background:transparent;border:0.5px solid rgba(34,34,34,0.18);color:#222222;border-radius:8px;padding:8px 12px;font-family:'Gotham';font-size:12px;font-weight:500;cursor:pointer;" style-hover="border-color:#222222;">Vider</button>
+        </div>
+      </div>
+
+      <!-- Recherche médiathèque -->
+      <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;margin:0;">Rechercher dans la médiathèque</p>
+          <button onClick="{{ openLib }}" style="background:transparent;border:none;color:#8D1D2C;font-family:'Gotham';font-size:12px;font-weight:500;cursor:pointer;padding:4px 0;">Gérer</button>
+        </div>
+        <input type="search" value="{{ query }}" onChange="{{ setQuery }}" placeholder="Nom, catégorie, saison…" style="width:100%;box-sizing:border-box;font-family:'Gotham';font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+        <div style="display:flex;gap:8px;">
+          <select value="{{ fCat }}" onChange="{{ setFCat }}" style="flex:1;min-width:0;font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;">
+            <option value="">Toutes catégories</option>
+            <option value="Viennoiseries">Viennoiseries</option>
+            <option value="Pains">Pains</option>
+            <option value="Pâtisseries">Pâtisseries</option>
+            <option value="Tartes">Tartes</option>
+            <option value="Sandwichs &amp; salés">Sandwichs &amp; salés</option>
+            <option value="Boissons">Boissons</option>
+            <option value="Ambiance &amp; boutique">Ambiance &amp; boutique</option>
+            <option value="Illustrations">Illustrations</option>
+          </select>
+          <select value="{{ fSeason }}" onChange="{{ setFSeason }}" style="flex:1;min-width:0;font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;">
+            <option value="">Toutes saisons</option>
+            <option value="Toute l'année">Toute l'année</option>
+            <option value="Printemps">Printemps</option>
+            <option value="Été">Été</option>
+            <option value="Automne">Automne</option>
+            <option value="Hiver">Hiver</option>
+            <option value="Noël &amp; Nouvel An">Noël &amp; Nouvel An</option>
+            <option value="Épiphanie">Épiphanie</option>
+            <option value="Saint-Valentin">Saint-Valentin</option>
+            <option value="Pâques">Pâques</option>
+            <option value="Fête des mères">Fête des mères</option>
+            <option value="Saint-Nicolas">Saint-Nicolas</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;max-height:212px;overflow:auto;">
+          <sc-for list="{{ results }}" as="r" hint-placeholder-count="0">
+            <button onClick="{{ r.toggle }}" title="{{ r.tip }}" style="position:relative;aspect-ratio:1/1;border-radius:8px;background:#F4EFE8;border:2px solid {{ r.ring }};box-sizing:border-box;cursor:pointer;overflow:hidden;padding:0;">
+              <img src="{{ r.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;">
+              <sc-if value="{{ r.inPost }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:#8D1D2C;color:#FFFFFF;font-size:10px;line-height:16px;text-align:center;display:block;">✓</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+        <p style="font-size:12px;color:#666666;margin:0;">{{ resultLabel }} · cliquez pour ajouter ou retirer du post</p>
+      </div>
+
+      <!-- Style -->
+      <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;">
+        <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;margin:0;">Style · photo unique</p>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">
+          <button onClick="{{ pickEpure }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selEpure }};background:#F5EFE4;padding:12px;display:flex;flex-direction:column;align-items:center;gap:5px;box-sizing:border-box;">
+              <div style="width:22px;height:3px;background:#8D1D2C;"></div>
+              <div style="width:46px;height:7px;background:#232220;"></div>
+              <div style="width:30px;height:30px;border-radius:50%;background:#8A847C;opacity:0.5;margin-top:2px;"></div>
+              <div style="width:20px;height:6px;background:#8D1D2C;margin-top:auto;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Épuré</span>
+          </button>
+          <button onClick="{{ pickAbricot }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selAbricot }};background:#F2C9A0;padding:12px;position:relative;box-sizing:border-box;overflow:hidden;">
+              <div style="width:50px;height:9px;background:#232220;"></div>
+              <div style="width:34px;height:9px;background:#232220;margin-top:3px;"></div>
+              <div style="position:absolute;right:8px;bottom:8px;width:40px;height:40px;border-radius:50%;background:#8A847C;opacity:0.6;"></div>
+              <div style="position:absolute;left:12px;bottom:12px;width:18px;height:7px;background:#8D1D2C;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Abricot</span>
+          </button>
+          <button onClick="{{ pickRuby }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selRuby }};background:#8D1D2C;padding:12px;display:flex;flex-direction:column;align-items:center;gap:5px;box-sizing:border-box;">
+              <div style="width:32px;height:32px;border-radius:50%;background:#F2C9A0;opacity:0.85;"></div>
+              <div style="width:46px;height:7px;background:#FFFFFF;margin-top:2px;"></div>
+              <div style="width:20px;height:6px;background:#FFFFFF;margin-top:auto;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Ruby</span>
+          </button>
+          <button onClick="{{ pickNoir }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selNoir }};background:#232220;padding:12px;display:flex;flex-direction:column;align-items:center;gap:5px;box-sizing:border-box;">
+              <div style="width:22px;height:3px;background:#F2C9A0;"></div>
+              <div style="width:46px;height:7px;background:#FFFFFF;"></div>
+              <div style="width:30px;height:30px;border-radius:50%;background:#8A847C;opacity:0.6;margin-top:2px;"></div>
+              <div style="width:20px;height:6px;background:#F2C9A0;margin-top:auto;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Noir</span>
+          </button>
+          <button onClick="{{ pickPlein }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPlein }};background:linear-gradient(180deg,#A39D94 0%,#8A847C 45%,#2E2C2A 100%);padding:12px;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;box-sizing:border-box;">
+              <div style="width:48px;height:8px;background:#FFFFFF;"></div>
+              <div style="width:20px;height:6px;background:#F2C9A0;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Plein cadre</span>
+          </button>
+          <button onClick="{{ pickDuo }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selDuo }};background:linear-gradient(90deg,#8A847C 0%,#8A847C 44%,#F5EFE4 44%,#F5EFE4 100%);padding:12px 10px 12px 0;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;box-sizing:border-box;">
+              <div style="width:34px;height:7px;background:#232220;"></div>
+              <div style="width:24px;height:7px;background:#232220;"></div>
+              <div style="width:16px;height:6px;background:#8D1D2C;margin-top:8px;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Duo</span>
+          </button>
+        </div>
+        <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;margin:6px 0 0;">Style · montage</p>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">
+          <button onClick="{{ pickMosaique }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selMosaique }};background:#F5EFE4;padding:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;box-sizing:border-box;overflow:hidden;">
+              <div style="display:flex;flex-direction:column;gap:4px;margin-top:-6px;"><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div><div style="height:28px;border-radius:4px;background:#D9D2C7;"></div><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div></div>
+              <div style="display:flex;flex-direction:column;gap:4px;margin-top:-16px;"><div style="height:28px;border-radius:4px;background:#D9D2C7;"></div><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div><div style="height:28px;border-radius:4px;background:#D9D2C7;"></div></div>
+              <div style="display:flex;flex-direction:column;gap:4px;margin-top:-10px;"><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div><div style="height:28px;border-radius:4px;background:#D9D2C7;"></div><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Mosaïque</span>
+          </button>
+          <button onClick="{{ pickGrille }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selGrille }};background:#F5EFE4;padding:10px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr auto;gap:4px;box-sizing:border-box;">
+              <div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+              <div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+              <div style="height:6px;width:70%;background:#232220;margin-top:3px;"></div><div style="height:6px;width:40%;background:#8D1D2C;margin-top:3px;justify-self:end;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Grille 2×2</span>
+          </button>
+          <button onClick="{{ pickTrio }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selTrio }};background:#F5EFE4;padding:10px;display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr auto;gap:4px;box-sizing:border-box;">
+              <div style="border-radius:4px;background:#D9D2C7;grid-row:1 / span 2;"></div><div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+              <div style="height:6px;width:70%;background:#232220;margin-top:3px;"></div><div style="height:6px;width:60%;background:#8D1D2C;margin-top:3px;justify-self:end;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Trio</span>
+          </button>
+          <button onClick="{{ pickCollage }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selCollage }};background:#F5EFE4;padding:6px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:4px;box-sizing:border-box;">
+              <div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+              <div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;"><div style="width:60%;height:4px;background:#232220;"></div><div style="width:35%;height:4px;background:#8D1D2C;"></div></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Collage</span>
+          </button>
+          <button onClick="{{ pickBandes }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selBandes }};background:#F5EFE4;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr auto;gap:2px;box-sizing:border-box;overflow:hidden;">
+              <div style="background:#D9D2C7;"></div><div style="background:#D9D2C7;"></div><div style="background:#D9D2C7;"></div>
+              <div style="grid-column:1 / span 3;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;"><div style="height:6px;width:40%;background:#232220;"></div><div style="height:6px;width:22%;background:#8D1D2C;"></div></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Bandes</span>
+          </button>
+          <button onClick="{{ pickGalerie }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selGalerie }};background:#F5EFE4;padding:10px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:3px;box-sizing:border-box;">
+              <div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div>
+              <div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div>
+              <div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Galerie 3×3</span>
+          </button>
+          <button onClick="{{ pickFrise }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selFrise }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:25%;top:14%;width:50%;height:8%;background:#232220;border-radius:1px;"></div><div style="position:absolute;left:6%;top:36%;width:19%;height:19%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:29%;top:36%;width:19%;height:19%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:52%;top:36%;width:19%;height:19%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:75%;top:36%;width:19%;height:19%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:38%;top:72%;width:24%;height:6%;background:#8D1D2C;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Frise</span></button>
+          <button onClick="{{ pickPuzzle }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPuzzle }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:6%;top:6%;width:56%;height:56%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:6%;width:28%;height:26%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:36%;width:28%;height:26%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:6%;top:66%;width:28%;height:28%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:37%;top:66%;width:28%;height:28%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:66%;width:28%;height:28%;background:#FFFFFF;border-radius:4px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Puzzle</span></button>
+          <button onClick="{{ pickPastilles }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPastilles }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:18%;top:14%;width:28%;height:28%;background:#D9D2C7;border-radius:999px;"></div><div style="position:absolute;left:54%;top:14%;width:28%;height:28%;background:#D9D2C7;border-radius:999px;"></div><div style="position:absolute;left:18%;top:48%;width:28%;height:28%;background:#D9D2C7;border-radius:999px;"></div><div style="position:absolute;left:54%;top:48%;width:28%;height:28%;background:#D9D2C7;border-radius:999px;"></div><div style="position:absolute;left:10%;top:84%;width:40%;height:6%;background:#232220;border-radius:1px;"></div><div style="position:absolute;left:66%;top:84%;width:24%;height:6%;background:#8D1D2C;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Pastilles</span></button>
+          <button onClick="{{ pickEpinglees }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selEpinglees }};background:#EAE4DC;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:10%;top:12%;width:40%;height:46%;background:#FFFFFF;border-radius:3px;transform:rotate(-6deg);"></div><div style="position:absolute;left:50%;top:8%;width:40%;height:48%;background:#FFFFFF;border-radius:3px;transform:rotate(4deg);"></div><div style="position:absolute;left:28%;top:46%;width:44%;height:40%;background:#FFFFFF;border-radius:3px;transform:rotate(-2deg);"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Épinglées</span></button>
+          <button onClick="{{ pickEtagere }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selEtagere }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:6%;top:44%;width:88%;height:3%;background:#8D1D2C;border-radius:0px;"></div><div style="position:absolute;left:6%;top:84%;width:88%;height:3%;background:#8D1D2C;border-radius:0px;"></div><div style="position:absolute;left:10%;top:22%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:38%;top:22%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:22%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:10%;top:62%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:38%;top:62%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:62%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Étagère</span></button>
+          <button onClick="{{ pickDiagonale }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selDiagonale }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:6%;top:12%;width:50%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:25%;top:40%;width:50%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:44%;top:68%;width:50%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:6%;top:74%;width:28%;height:6%;background:#232220;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Diagonale</span></button>
+          <button onClick="{{ pickVedette }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selVedette }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:6%;top:14%;width:88%;height:40%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:6%;top:60%;width:46%;height:6%;background:#232220;border-radius:1px;"></div><div style="position:absolute;left:70%;top:60%;width:24%;height:6%;background:#8D1D2C;border-radius:1px;"></div><div style="position:absolute;left:6%;top:74%;width:19%;height:18%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:29%;top:74%;width:19%;height:18%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:52%;top:74%;width:19%;height:18%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:75%;top:74%;width:19%;height:18%;background:#D9D2C7;border-radius:4px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Vedette</span></button>
+          <button onClick="{{ pickDamier }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selDamier }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:8%;top:8%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:29.5%;top:8%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:51%;top:8%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:72.5%;top:8%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:8%;top:25%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:29.5%;top:25%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:51%;top:25%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:72.5%;top:25%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:8%;top:42%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:29.5%;top:42%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:51%;top:42%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:72.5%;top:42%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:8%;top:59%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:29.5%;top:59%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:51%;top:59%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:72.5%;top:59%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:8%;top:80%;width:50%;height:6%;background:#232220;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Damier</span></button>
+          <button onClick="{{ pickEncadre }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selEncadre }};background:#8D1D2C;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:8%;top:16%;width:40%;height:32%;background:#F5EFE4;border-radius:4px;border:2px solid #FFFFFF;box-sizing:border-box;"></div><div style="position:absolute;left:52%;top:16%;width:40%;height:32%;background:#F5EFE4;border-radius:4px;border:2px solid #FFFFFF;box-sizing:border-box;"></div><div style="position:absolute;left:8%;top:52%;width:40%;height:32%;background:#F5EFE4;border-radius:4px;border:2px solid #FFFFFF;box-sizing:border-box;"></div><div style="position:absolute;left:52%;top:52%;width:40%;height:32%;background:#F5EFE4;border-radius:4px;border:2px solid #FFFFFF;box-sizing:border-box;"></div><div style="position:absolute;left:8%;top:88%;width:50%;height:5%;background:#FFFFFF;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Encadré</span></button>
+          <button onClick="{{ pickNuit }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;font-family:'Gotham';"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selNuit }};background:#232220;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:8%;top:16%;width:26%;height:50%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:37%;top:16%;width:26%;height:50%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:16%;width:26%;height:50%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:8%;top:76%;width:50%;height:8%;background:#FFFFFF;border-radius:1px;"></div><div style="position:absolute;left:66%;top:76%;width:26%;height:8%;background:#F2C9A0;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Nuit</span></button>
+        </div>
+      </div>
+
+      <!-- Textes -->
+      <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+        <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;margin:0 0 2px;">Textes · cochez pour afficher</p>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+          <input type="checkbox" checked="{{ showLogo }}" onChange="{{ toggleLogo }}" style="accent-color:#8D1D2C;width:16px;height:16px;margin:0;flex:0 0 auto;">
+          <span style="font-size:14px;color:#222222;padding:9px 0;">Logo L'Atelier By</span>
+        </label>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" checked="{{ showEyebrow }}" onChange="{{ toggleEyebrow }}" style="accent-color:#8D1D2C;width:16px;height:16px;margin:0;flex:0 0 auto;">
+          <input type="text" value="{{ eyebrow }}" onChange="{{ setEyebrow }}" placeholder="Mention saison · date" style="flex:1;min-width:0;font-family:'Gotham';font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" checked="{{ showTitle }}" onChange="{{ toggleTitle }}" style="accent-color:#8D1D2C;width:16px;height:16px;margin:0;flex:0 0 auto;">
+          <input type="text" value="{{ title }}" onChange="{{ setTitle }}" placeholder="Nom du produit" style="flex:1;min-width:0;font-family:'Gotham';font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" checked="{{ showPhrase }}" onChange="{{ togglePhrase }}" style="accent-color:#8D1D2C;width:16px;height:16px;margin:0;flex:0 0 auto;">
+          <input type="text" value="{{ phrase }}" onChange="{{ setPhrase }}" placeholder="Phrase d'accroche" style="flex:1;min-width:0;font-family:'Gotham';font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" checked="{{ showPrice }}" onChange="{{ togglePrice }}" style="accent-color:#8D1D2C;width:16px;height:16px;margin:0;flex:0 0 auto;">
+          <input type="text" value="{{ price }}" onChange="{{ setPrice }}" placeholder="4,20" style="width:84px;flex:0 0 auto;font-family:'Gotham';font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;box-sizing:border-box;" style-focus="border-color:#8D1D2C;">
+          <input type="text" value="{{ unit }}" onChange="{{ setUnit }}" placeholder="La pièce" style="flex:1;min-width:0;font-family:'Gotham';font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" checked="{{ showPromo }}" onChange="{{ togglePromo }}" style="accent-color:#8D1D2C;width:16px;height:16px;margin:0;flex:0 0 auto;">
+          <input type="text" value="{{ promo }}" onChange="{{ setPromo }}" placeholder="4+1" style="width:84px;flex:0 0 auto;font-family:'Gotham';font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;box-sizing:border-box;" style-focus="border-color:#8D1D2C;">
+          <input type="text" value="{{ promoSub }}" onChange="{{ setPromoSub }}" placeholder="la 5ᵉ offerte" style="flex:1;min-width:0;font-family:'Gotham';font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" checked="{{ showSite }}" onChange="{{ toggleSite }}" style="accent-color:#8D1D2C;width:16px;height:16px;margin:0;flex:0 0 auto;">
+          <input type="text" value="{{ site }}" onChange="{{ setSite }}" placeholder="Site web" style="flex:1;min-width:0;font-family:'Gotham';font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+        </div>
+      </div>
+
+      <!-- Phrase -->
+      <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;">
+        <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;margin:0;">Phrase d'accroche</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <span style="font-size:13px;color:#666666;">Typo</span>
+          <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+            <button onClick="{{ fontScript }}" style="border:none;border-radius:6px;padding:7px 12px;font-family:'Playwrite DEVA','Gotham';font-size:12px;cursor:pointer;background:{{ fsBg }};color:{{ fsFg }};">Script</button>
+            <button onClick="{{ fontDisplay }}" style="border:none;border-radius:6px;padding:7px 12px;font-family:'Vank','Gotham';font-size:13px;cursor:pointer;background:{{ fdBg }};color:{{ fdFg }};">DISPLAY</button>
+            <button onClick="{{ fontSans }}" style="border:none;border-radius:6px;padding:7px 12px;font-family:'Gotham';font-size:12px;font-weight:500;cursor:pointer;background:{{ fgBg }};color:{{ fgFg }};">Sans</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <span style="font-size:13px;color:#666666;">Couleur</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button onClick="{{ colorAuto }}" title="Automatique (selon le style)" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:#FFFFFF;border:2px solid {{ cAuto }};font-family:'Gotham';font-size:10px;font-weight:500;color:#666666;padding:0;">A</button>
+            <button onClick="{{ colorRuby }}" title="Ruby" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:#8D1D2C;border:2px solid {{ cRuby }};padding:0;"></button>
+            <button onClick="{{ colorNoir }}" title="Noir" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:#232220;border:2px solid {{ cNoir }};padding:0;"></button>
+            <button onClick="{{ colorAbricot }}" title="Abricot" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:#F2C9A0;border:2px solid {{ cAbricot }};padding:0;"></button>
+            <button onClick="{{ colorBlanc }}" title="Blanc" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:#FFFFFF;border:2px solid {{ cBlanc }};padding:0;box-shadow:inset 0 0 0 1px rgba(34,34,34,0.12);"></button>
+            <button onClick="{{ colorGris }}" title="Gris" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:#8A847C;border:2px solid {{ cGris }};padding:0;"></button>
+          </div>
+        </div>
+      </div>
+    </aside></sc-if>
+
+    <!-- ================= APERÇU ================= -->
+    <section style="flex:3 1 420px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0;">
+      <div ref="{{ previewRef }}" onDragOver="{{ onDragOver }}" onDrop="{{ onDrop }}" style="width:100%;max-width:{{ previewMax }};aspect-ratio:1/1;overflow:hidden;border-radius:4px;box-shadow:0 1px 2px rgba(34,34,34,0.12),0 12px 40px rgba(34,34,34,0.10);background:#F5EFE4;">
+        <div style="width:1080px;height:1080px;transform:scale(var(--s,0.5));transform-origin:0 0;">
+
+          <!-- ARTBOARD 1080 × 1080 -->
+          <div ref="{{ artRef }}" style="width:1080px;height:1080px;position:relative;overflow:hidden;font-family:'Gotham';color:#232220;background:#F5EFE4;">
+
+            <!-- ÉPURÉ -->
+            <sc-if value="{{ isEpure }}" hint-placeholder-val="{{ true }}">
+              <div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;padding:72px 80px 64px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;text-align:center;--p1:#8D1D2C;--p2:#232220;--pl:#8A847C;--pr:#8D1D2C;">
+                <sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:56px;width:auto;flex:0 0 auto;"></sc-if>
+                <sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;justify-content:center;gap:22px;margin-top:40px;flex:0 0 auto;">
+                    <span style="width:56px;height:1.5px;background:#8D1D2C;display:block;"></span>
+                    <span style="font-weight:500;font-size:18px;letter-spacing:0.36em;text-transform:uppercase;color:#8D1D2C;">{{ eyebrow }}</span>
+                    <span style="width:56px;height:1.5px;background:#8D1D2C;display:block;"></span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}">
+                  <h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:84px;line-height:0.98;text-transform:uppercase;margin:30px 0 0;color:#232220;max-width:14ch;text-wrap:balance;">{{ title }}</h1>
+                </sc-if>
+                <sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}">
+                  <p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:26px;line-height:1.5;color:var(--pc,#8A847C);margin:20px 0 0;max-width:32ch;text-wrap:pretty;">{{ phrase }}</p>
+                </sc-if>
+                <div style="flex:1 1 auto;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;margin:24px 0;">
+                  <sc-if value="{{ photoCut }}" hint-placeholder-val="{{ true }}"><img src="{{ photo }}" alt="" style="max-width:82%;max-height:100%;width:auto;height:auto;object-fit:contain;"></sc-if>
+                  <sc-if value="{{ photoFull }}" hint-placeholder-val="{{ false }}"><img src="{{ photo }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:24px;"></sc-if>
+                  <sc-if value="{{ noPhoto }}" hint-placeholder-val="{{ false }}"><div style="width:70%;height:100%;border:2px dashed rgba(34,34,34,0.25);border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#8A847C;">Ajoutez une photo au post</div></sc-if>
+                </div>
+                <sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;justify-content:center;flex:0 0 auto;">
+                    <div style="padding:0 40px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+                      <div style="font-weight:300;font-size:80px;line-height:1;letter-spacing:-0.01em;color:var(--p1);white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:6px;">€</span></div>
+                      <div style="font-weight:400;font-size:14px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ unit }}</div>
+                    </div>
+                    <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;align-items:center;">
+                        <span style="width:1.5px;height:84px;background:var(--pr);display:block;"></span>
+                        <div style="padding:0 40px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+                          <div style="font-weight:300;font-size:80px;line-height:1;color:var(--p2);white-space:nowrap;">{{ promo }}</div>
+                          <div style="font-weight:400;font-size:14px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ promoSub }}</div>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}">
+                  <p style="margin:28px 0 0;font-weight:500;font-size:20px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <!-- ABRICOT -->
+            <sc-if value="{{ isAbricot }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:#F2C9A0;color:#232220;--p1:#8D1D2C;--p2:#232220;--pl:#6B4420;--pr:#8D1D2C;">
+                <div style="position:absolute;top:72px;left:72px;right:72px;display:flex;align-items:center;justify-content:space-between;gap:24px;">
+                  <sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:52px;width:auto;"></sc-if>
+                  <sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:16px;letter-spacing:0.3em;text-transform:uppercase;color:#8D1D2C;text-align:right;margin-left:auto;">{{ eyebrow }}</span></sc-if>
+                </div>
+                <div style="position:absolute;top:196px;left:72px;width:680px;display:flex;flex-direction:column;align-items:flex-start;">
+                  <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:104px;line-height:0.92;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if>
+                  <sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:28px;line-height:1.45;color:var(--pc,#6B4420);margin:28px 0 0;max-width:400px;text-wrap:pretty;">{{ phrase }}</p></sc-if>
+                </div>
+                <div style="position:absolute;right:56px;bottom:56px;width:520px;height:520px;display:flex;align-items:flex-end;justify-content:flex-end;">
+                  <sc-if value="{{ photoCut }}" hint-placeholder-val="{{ true }}"><img src="{{ photo }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if>
+                  <sc-if value="{{ photoFull }}" hint-placeholder-val="{{ false }}"><img src="{{ photo }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"></sc-if>
+                  <sc-if value="{{ noPhoto }}" hint-placeholder-val="{{ false }}"><div style="width:100%;height:100%;border:2px dashed rgba(35,34,32,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:#6B4420;">Ajoutez une photo au post</div></sc-if>
+                </div>
+                <div style="position:absolute;left:72px;bottom:72px;display:flex;flex-direction:column;gap:22px;align-items:flex-start;">
+                  <sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;">
+                      <div style="padding:0 32px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:10px;">
+                        <div style="font-weight:300;font-size:72px;line-height:1;letter-spacing:-0.01em;color:var(--p1);white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:6px;">€</span></div>
+                        <div style="font-weight:400;font-size:14px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ unit }}</div>
+                      </div>
+                      <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:flex;align-items:center;">
+                          <span style="width:1.5px;height:76px;background:var(--pr);display:block;"></span>
+                          <div style="padding:0 0 0 32px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;">
+                            <div style="font-weight:300;font-size:72px;line-height:1;color:var(--p2);white-space:nowrap;">{{ promo }}</div>
+                            <div style="font-weight:400;font-size:14px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ promoSub }}</div>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:0;font-weight:500;font-size:20px;letter-spacing:0.14em;color:#6B4420;">{{ site }}</p></sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- RUBY -->
+            <sc-if value="{{ isRuby }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:#8D1D2C;color:#FFFFFF;padding:72px 80px 64px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;text-align:center;--p1:#FFFFFF;--p2:#F2C9A0;--pl:#F2C9A0;--pr:#F2C9A0;">
+                <sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo-white.png" alt="" style="height:56px;width:auto;flex:0 0 auto;"></sc-if>
+                <div style="flex:1 1 auto;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;margin:36px 0 32px;">
+                  <sc-if value="{{ photoCut }}" hint-placeholder-val="{{ true }}"><img src="{{ photo }}" alt="" style="max-width:78%;max-height:100%;width:auto;height:auto;object-fit:contain;"></sc-if>
+                  <sc-if value="{{ photoFull }}" hint-placeholder-val="{{ false }}"><img src="{{ photo }}" alt="" style="height:100%;aspect-ratio:1/1;width:auto;max-width:100%;object-fit:cover;border-radius:50%;"></sc-if>
+                  <sc-if value="{{ noPhoto }}" hint-placeholder-val="{{ false }}"><div style="height:100%;aspect-ratio:1/1;border:2px dashed rgba(255,255,255,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:#F2C9A0;">Ajoutez une photo au post</div></sc-if>
+                </div>
+                <sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:16px;letter-spacing:0.36em;text-transform:uppercase;color:#F2C9A0;">{{ eyebrow }}</span></sc-if>
+                <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:92px;line-height:0.96;text-transform:uppercase;margin:18px 0 0;color:#FFFFFF;max-width:14ch;text-wrap:balance;">{{ title }}</h1></sc-if>
+                <sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:26px;line-height:1.5;color:var(--pc,#F2C9A0);margin:16px 0 0;max-width:32ch;text-wrap:pretty;">{{ phrase }}</p></sc-if>
+                <sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:32px;">
+                    <div style="padding:0 40px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+                      <div style="font-weight:300;font-size:76px;line-height:1;letter-spacing:-0.01em;color:var(--p1);white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:6px;">€</span></div>
+                      <div style="font-weight:400;font-size:14px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ unit }}</div>
+                    </div>
+                    <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;align-items:center;">
+                        <span style="width:1.5px;height:80px;background:var(--pr);display:block;"></span>
+                        <div style="padding:0 40px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+                          <div style="font-weight:300;font-size:76px;line-height:1;color:var(--p2);white-space:nowrap;">{{ promo }}</div>
+                          <div style="font-weight:400;font-size:14px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ promoSub }}</div>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:28px 0 0;font-weight:500;font-size:20px;letter-spacing:0.14em;color:#F2C9A0;">{{ site }}</p></sc-if>
+              </div>
+            </sc-if>
+
+            <!-- NOIR -->
+            <sc-if value="{{ isNoir }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:#232220;color:#FFFFFF;padding:72px 80px 60px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;text-align:center;--p1:#FFFFFF;--p2:#F2C9A0;--pl:#B8B2A8;--pr:#F2C9A0;">
+                <sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;justify-content:center;gap:22px;flex:0 0 auto;">
+                    <span style="width:56px;height:1.5px;background:#F2C9A0;display:block;"></span>
+                    <span style="font-weight:500;font-size:16px;letter-spacing:0.36em;text-transform:uppercase;color:#F2C9A0;">{{ eyebrow }}</span>
+                    <span style="width:56px;height:1.5px;background:#F2C9A0;display:block;"></span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:96px;line-height:0.96;text-transform:uppercase;margin:28px 0 0;color:#FFFFFF;max-width:14ch;text-wrap:balance;">{{ title }}</h1></sc-if>
+                <div style="flex:1 1 auto;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;margin:28px 0;">
+                  <sc-if value="{{ photoCut }}" hint-placeholder-val="{{ true }}"><img src="{{ photo }}" alt="" style="max-width:82%;max-height:100%;width:auto;height:auto;object-fit:contain;"></sc-if>
+                  <sc-if value="{{ photoFull }}" hint-placeholder-val="{{ false }}"><img src="{{ photo }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:24px;"></sc-if>
+                  <sc-if value="{{ noPhoto }}" hint-placeholder-val="{{ false }}"><div style="width:70%;height:100%;border:2px dashed rgba(255,255,255,0.3);border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#B8B2A8;">Ajoutez une photo au post</div></sc-if>
+                </div>
+                <sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:32px;line-height:1.4;color:var(--pc,#F2C9A0);margin:0;max-width:28ch;text-wrap:pretty;">{{ phrase }}</p></sc-if>
+                <sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:28px;">
+                    <div style="padding:0 40px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+                      <div style="font-weight:300;font-size:76px;line-height:1;letter-spacing:-0.01em;color:var(--p1);white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:6px;">€</span></div>
+                      <div style="font-weight:400;font-size:14px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ unit }}</div>
+                    </div>
+                    <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;align-items:center;">
+                        <span style="width:1.5px;height:80px;background:var(--pr);display:block;"></span>
+                        <div style="padding:0 40px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+                          <div style="font-weight:300;font-size:76px;line-height:1;color:var(--p2);white-space:nowrap;">{{ promo }}</div>
+                          <div style="font-weight:400;font-size:14px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ promoSub }}</div>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:16px;margin-top:36px;flex:0 0 auto;">
+                  <sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo-white.png" alt="" style="height:40px;width:auto;"></sc-if>
+                  <sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:0;font-weight:500;font-size:20px;letter-spacing:0.14em;color:#B8B2A8;">{{ site }}</p></sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- PLEIN CADRE -->
+            <sc-if value="{{ isPlein }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:#232220;color:#FFFFFF;--p1:#FFFFFF;--p2:#F2C9A0;--pl:#F2C9A0;--pr:#F2C9A0;">
+                <sc-if value="{{ photoFull }}" hint-placeholder-val="{{ false }}"><img src="{{ photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                <sc-if value="{{ photoCut }}" hint-placeholder-val="{{ true }}"><img src="{{ photo }}" alt="" style="position:absolute;left:11%;top:8%;width:78%;height:62%;object-fit:contain;"></sc-if>
+                <sc-if value="{{ noPhoto }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:15%;top:10%;width:70%;height:50%;border:2px dashed rgba(255,255,255,0.3);border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#B8B2A8;">Ajoutez une photo au post</div></sc-if>
+                <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(35,34,32,0.45) 0%,rgba(35,34,32,0) 22%,rgba(35,34,32,0) 42%,rgba(35,34,32,0.45) 62%,rgba(35,34,32,0.88) 100%);"></div>
+                <sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo-white.png" alt="" style="position:absolute;top:64px;left:64px;height:52px;width:auto;"></sc-if>
+                <sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:80px;right:64px;font-weight:500;font-size:15px;letter-spacing:0.3em;text-transform:uppercase;color:#FFFFFF;text-align:right;max-width:46%;">{{ eyebrow }}</span></sc-if>
+                <div style="position:absolute;left:64px;right:64px;bottom:64px;display:flex;flex-direction:column;align-items:flex-start;gap:14px;">
+                  <sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:28px;line-height:1.4;color:var(--pc,#F2C9A0);margin:0;max-width:30ch;text-wrap:pretty;">{{ phrase }}</p></sc-if>
+                  <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:96px;line-height:0.95;text-transform:uppercase;margin:0;color:#FFFFFF;max-width:12ch;text-wrap:balance;">{{ title }}</h1></sc-if>
+                  <sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;margin-top:10px;">
+                      <div style="padding:0 32px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:10px;">
+                        <div style="font-weight:300;font-size:68px;line-height:1;letter-spacing:-0.01em;color:var(--p1);white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:6px;">€</span></div>
+                        <div style="font-weight:400;font-size:14px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ unit }}</div>
+                      </div>
+                      <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:flex;align-items:center;">
+                          <span style="width:1.5px;height:72px;background:var(--pr);display:block;"></span>
+                          <div style="padding:0 0 0 32px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;">
+                            <div style="font-weight:300;font-size:68px;line-height:1;color:var(--p2);white-space:nowrap;">{{ promo }}</div>
+                            <div style="font-weight:400;font-size:14px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ promoSub }}</div>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:10px 0 0;font-weight:500;font-size:20px;letter-spacing:0.14em;color:#FFFFFF;">{{ site }}</p></sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- DUO -->
+            <sc-if value="{{ isDuo }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;--p1:#8D1D2C;--p2:#232220;--pl:#8A847C;--pr:#8D1D2C;">
+                <div style="position:absolute;left:0;top:0;width:540px;height:1080px;background:#F2C9A0;display:flex;align-items:center;justify-content:center;padding:48px;box-sizing:border-box;overflow:hidden;">
+                  <sc-if value="{{ photoFull }}" hint-placeholder-val="{{ false }}"><img src="{{ photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                  <sc-if value="{{ photoCut }}" hint-placeholder-val="{{ true }}"><img src="{{ photo }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if>
+                  <sc-if value="{{ noPhoto }}" hint-placeholder-val="{{ false }}"><div style="width:100%;height:60%;border:2px dashed rgba(35,34,32,0.3);border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#6B4420;text-align:center;">Ajoutez une photo au post</div></sc-if>
+                </div>
+                <div style="position:absolute;left:540px;top:0;width:540px;height:1080px;padding:64px 56px 56px;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;">
+                  <sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:44px;width:auto;flex:0 0 auto;"></sc-if>
+                  <div style="flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:20px;">
+                    <sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:14px;letter-spacing:0.3em;text-transform:uppercase;color:#8D1D2C;">{{ eyebrow }}</span></sc-if>
+                    <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:76px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if>
+                    <sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:24px;line-height:1.5;color:var(--pc,#8A847C);margin:0;text-wrap:pretty;">{{ phrase }}</p></sc-if>
+                  </div>
+                  <sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;flex:0 0 auto;">
+                      <div style="padding:0 28px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:10px;">
+                        <div style="font-weight:300;font-size:60px;line-height:1;letter-spacing:-0.01em;color:var(--p1);white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:6px;">€</span></div>
+                        <div style="font-weight:400;font-size:13px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ unit }}</div>
+                      </div>
+                      <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:flex;align-items:center;">
+                          <span style="width:1.5px;height:64px;background:var(--pr);display:block;"></span>
+                          <div style="padding:0 0 0 28px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;">
+                            <div style="font-weight:300;font-size:60px;line-height:1;color:var(--p2);white-space:nowrap;">{{ promo }}</div>
+                            <div style="font-weight:400;font-size:13px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ promoSub }}</div>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:24px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- MOSAÏQUE -->
+            <sc-if value="{{ isMosaique }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;overflow:hidden;--p1:#8D1D2C;--p2:#232220;--pl:#8A847C;--pr:#8D1D2C;">
+                <div style="position:absolute;left:24px;top:0;width:1032px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:start;">
+                  <div style="display:flex;flex-direction:column;gap:24px;transform:translateY(-70px);">
+                    <sc-for list="{{ mosA }}" as="p" hint-placeholder-count="4">
+                      <div style="height:{{ p.h }}px;background:#EAE4DC;border-radius:24px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:26px;box-sizing:border-box;">
+                        <sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if>
+                        <sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:24px;transform:translateY(-190px);">
+                    <sc-for list="{{ mosB }}" as="p" hint-placeholder-count="4">
+                      <div style="height:{{ p.h }}px;background:#EAE4DC;border-radius:24px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:26px;box-sizing:border-box;">
+                        <sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if>
+                        <sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:24px;transform:translateY(-120px);">
+                    <sc-for list="{{ mosC }}" as="p" hint-placeholder-count="4">
+                      <div style="height:{{ p.h }}px;background:#EAE4DC;border-radius:24px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:26px;box-sizing:border-box;">
+                        <sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if>
+                        <sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <sc-if value="{{ anyText }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#F5EFE4;border-radius:24px;padding:52px 60px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px;width:600px;box-sizing:border-box;box-shadow:0 24px 60px rgba(35,34,32,0.18);">
+                    <sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:44px;width:auto;"></sc-if>
+                    <sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:14px;letter-spacing:0.32em;text-transform:uppercase;color:#8D1D2C;">{{ eyebrow }}</span></sc-if>
+                    <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:60px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if>
+                    <sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:22px;line-height:1.5;color:var(--pc,#8A847C);margin:0;text-wrap:pretty;">{{ phrase }}</p></sc-if>
+                    <sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;align-items:center;justify-content:center;margin-top:6px;">
+                        <div style="padding:0 28px;display:flex;flex-direction:column;align-items:center;gap:8px;">
+                          <div style="font-weight:300;font-size:56px;line-height:1;letter-spacing:-0.01em;color:var(--p1);white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div>
+                          <div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ unit }}</div>
+                        </div>
+                        <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+                          <div style="display:flex;align-items:center;">
+                            <span style="width:1.5px;height:60px;background:var(--pr);display:block;"></span>
+                            <div style="padding:0 28px;display:flex;flex-direction:column;align-items:center;gap:8px;">
+                              <div style="font-weight:300;font-size:56px;line-height:1;color:var(--p2);white-space:nowrap;">{{ promo }}</div>
+                              <div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ promoSub }}</div>
+                            </div>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <!-- GRILLE 2×2 -->
+            <sc-if value="{{ isGrille }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;padding:56px 64px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;--p1:#8D1D2C;--p2:#232220;--pl:#8A847C;--pr:#8D1D2C;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:48px;flex:0 0 auto;">
+                  <sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:48px;width:auto;"></sc-if>
+                  <sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:15px;letter-spacing:0.3em;text-transform:uppercase;color:#8D1D2C;text-align:right;margin-left:auto;">{{ eyebrow }}</span></sc-if>
+                </div>
+                <div style="flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:24px;">
+                  <sc-for list="{{ grid4 }}" as="p" hint-placeholder-count="4">
+                    <div style="min-height:0;background:#EAE4DC;border-radius:24px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:28px;box-sizing:border-box;">
+                      <sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if>
+                      <sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex:0 0 auto;">
+                  <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;min-width:0;flex:1 1 auto;">
+                    <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:56px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if>
+                    <sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:22px;line-height:1.45;color:var(--pc,#8A847C);margin:0;max-width:30ch;text-wrap:pretty;">{{ phrase }}</p></sc-if>
+                    <sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if>
+                  </div>
+                  <sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;flex:0 0 auto;">
+                      <div style="padding:0 24px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;">
+                        <div style="font-weight:300;font-size:56px;line-height:1;letter-spacing:-0.01em;color:var(--p1);white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div>
+                        <div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ unit }}</div>
+                      </div>
+                      <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:flex;align-items:center;">
+                          <span style="width:1.5px;height:60px;background:var(--pr);display:block;"></span>
+                          <div style="padding:0 0 0 24px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;">
+                            <div style="font-weight:300;font-size:56px;line-height:1;color:var(--p2);white-space:nowrap;">{{ promo }}</div>
+                            <div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ promoSub }}</div>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- TRIO -->
+            <sc-if value="{{ isTrio }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;padding:56px 64px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;--p1:#8D1D2C;--p2:#232220;--pl:#8A847C;--pr:#8D1D2C;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:48px;flex:0 0 auto;">
+                  <sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:48px;width:auto;"></sc-if>
+                  <sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:15px;letter-spacing:0.3em;text-transform:uppercase;color:#8D1D2C;text-align:right;margin-left:auto;">{{ eyebrow }}</span></sc-if>
+                </div>
+                <div style="flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:24px;">
+                  <div style="grid-row:1 / span 2;min-height:0;background:#EAE4DC;border-radius:24px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:40px;box-sizing:border-box;">
+                    <sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ trio0.n }}</span></sc-if><sc-if value="{{ trio0.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ trio0.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if>
+                    <sc-if value="{{ trio0.full }}" hint-placeholder-val="{{ false }}"><img src="{{ trio0.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                  </div>
+                  <sc-for list="{{ trio12 }}" as="p" hint-placeholder-count="2">
+                    <div style="min-height:0;background:#EAE4DC;border-radius:24px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;">
+                      <sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if>
+                      <sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex:0 0 auto;">
+                  <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;min-width:0;flex:1 1 auto;">
+                    <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:56px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if>
+                    <sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:22px;line-height:1.45;color:var(--pc,#8A847C);margin:0;max-width:30ch;text-wrap:pretty;">{{ phrase }}</p></sc-if>
+                    <sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if>
+                  </div>
+                  <sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;flex:0 0 auto;">
+                      <div style="padding:0 24px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;">
+                        <div style="font-weight:300;font-size:56px;line-height:1;letter-spacing:-0.01em;color:var(--p1);white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div>
+                        <div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ unit }}</div>
+                      </div>
+                      <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:flex;align-items:center;">
+                          <span style="width:1.5px;height:60px;background:var(--pr);display:block;"></span>
+                          <div style="padding:0 0 0 24px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;">
+                            <div style="font-weight:300;font-size:56px;line-height:1;color:var(--p2);white-space:nowrap;">{{ promo }}</div>
+                            <div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ promoSub }}</div>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- COLLAGE -->
+            <sc-if value="{{ isCollage }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;padding:24px;box-sizing:border-box;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:24px;--p1:#8D1D2C;--p2:#232220;--pl:#8A847C;--pr:#8D1D2C;">
+                <sc-for list="{{ colA }}" as="p" hint-placeholder-count="4">
+                  <div style="min-height:0;background:#EAE4DC;border-radius:24px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:28px;box-sizing:border-box;">
+                    <sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if>
+                    <sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                  </div>
+                </sc-for>
+                <div style="min-height:0;background:#FFFFFF;border-radius:24px;overflow:hidden;padding:36px 28px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;">
+                  <sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:36px;width:auto;"></sc-if>
+                  <sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#8D1D2C;">{{ eyebrow }}</span></sc-if>
+                  <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:40px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if>
+                  <sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:17px;line-height:1.45;color:var(--pc,#8A847C);margin:0;text-wrap:pretty;">{{ phrase }}</p></sc-if>
+                  <sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:4px;">
+                      <div style="font-weight:300;font-size:48px;line-height:1;letter-spacing:-0.01em;color:var(--p1);white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:4px;">€</span></div>
+                      <div style="font-weight:400;font-size:11px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ unit }}</div>
+                      <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+                        <span style="width:40px;height:1.5px;background:var(--pr);display:block;margin:8px 0;"></span>
+                        <div style="font-weight:300;font-size:48px;line-height:1;color:var(--p2);white-space:nowrap;">{{ promo }}</div>
+                        <div style="font-weight:400;font-size:11px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ promoSub }}</div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:14px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if>
+                </div>
+                <sc-for list="{{ colB }}" as="p" hint-placeholder-count="1">
+                  <div style="min-height:0;background:#EAE4DC;border-radius:24px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:28px;box-sizing:border-box;">
+                    <sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if>
+                    <sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <!-- BANDES -->
+            <sc-if value="{{ isBandes }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;display:flex;flex-direction:column;--p1:#8D1D2C;--p2:#232220;--pl:#8A847C;--pr:#8D1D2C;">
+                <div style="flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">
+                  <sc-for list="{{ strips }}" as="p" hint-placeholder-count="3">
+                    <div style="min-height:0;background:#EAE4DC;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:32px;box-sizing:border-box;">
+                      <sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if>
+                      <sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="flex:0 0 auto;padding:44px 64px 52px;display:flex;align-items:center;justify-content:space-between;gap:32px;">
+                  <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;min-width:0;flex:1 1 auto;">
+                    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+                      <sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:40px;width:auto;"></sc-if>
+                      <sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:14px;letter-spacing:0.3em;text-transform:uppercase;color:#8D1D2C;">{{ eyebrow }}</span></sc-if>
+                    </div>
+                    <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:56px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if>
+                    <sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:22px;line-height:1.45;color:var(--pc,#8A847C);margin:0;max-width:30ch;text-wrap:pretty;">{{ phrase }}</p></sc-if>
+                    <sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:2px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if>
+                  </div>
+                  <sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;flex:0 0 auto;">
+                      <div style="padding:0 24px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;">
+                        <div style="font-weight:300;font-size:56px;line-height:1;letter-spacing:-0.01em;color:var(--p1);white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div>
+                        <div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ unit }}</div>
+                      </div>
+                      <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:flex;align-items:center;">
+                          <span style="width:1.5px;height:60px;background:var(--pr);display:block;"></span>
+                          <div style="padding:0 0 0 24px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;">
+                            <div style="font-weight:300;font-size:56px;line-height:1;color:var(--p2);white-space:nowrap;">{{ promo }}</div>
+                            <div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ promoSub }}</div>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- GALERIE 3×3 -->
+            <sc-if value="{{ isGalerie }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;padding:48px 56px 44px;box-sizing:border-box;display:flex;flex-direction:column;gap:24px;--p1:#8D1D2C;--p2:#232220;--pl:#8A847C;--pr:#8D1D2C;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:44px;flex:0 0 auto;">
+                  <sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:44px;width:auto;"></sc-if>
+                  <sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:14px;letter-spacing:0.3em;text-transform:uppercase;color:#8D1D2C;text-align:right;margin-left:auto;">{{ eyebrow }}</span></sc-if>
+                </div>
+                <div style="flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:20px;">
+                  <sc-for list="{{ grid9 }}" as="p" hint-placeholder-count="9">
+                    <div style="min-height:0;background:#EAE4DC;border-radius:20px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;">
+                      <sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if>
+                      <sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex:0 0 auto;">
+                  <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;min-width:0;flex:1 1 auto;">
+                    <sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:44px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if>
+                    <sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:20px;line-height:1.45;color:var(--pc,#8A847C);margin:0;max-width:34ch;text-wrap:pretty;">{{ phrase }}</p></sc-if>
+                    <sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:2px 0 0;font-weight:500;font-size:16px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if>
+                  </div>
+                  <sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;flex:0 0 auto;">
+                      <div style="padding:0 20px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;">
+                        <div style="font-weight:300;font-size:48px;line-height:1;letter-spacing:-0.01em;color:var(--p1);white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div>
+                        <div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ unit }}</div>
+                      </div>
+                      <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:flex;align-items:center;">
+                          <span style="width:1.5px;height:52px;background:var(--pr);display:block;"></span>
+                          <div style="padding:0 0 0 20px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;">
+                            <div style="font-weight:300;font-size:48px;line-height:1;color:var(--p2);white-space:nowrap;">{{ promo }}</div>
+                            <div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:var(--pl);">{{ promoSub }}</div>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- FRISE -->
+            <sc-if value="{{ isFrise }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;padding:56px 64px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;"><div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:48px;flex:0 0 auto;"><sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:48px;width:auto;"></sc-if><sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:15px;letter-spacing:0.3em;text-transform:uppercase;color:#8D1D2C;text-align:right;margin-left:auto;">{{ eyebrow }}</span></sc-if></div><sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:84px;line-height:0.96;text-transform:uppercase;margin:0;color:#232220;text-align:center;text-wrap:balance;">{{ title }}</h1></sc-if><div style="flex:1 1 auto;min-height:0;display:flex;align-items:center;"><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;width:100%;"><sc-for list="{{ frise4 }}" as="p" hint-placeholder-count="4"><div style="min-height:0;position:relative;background:#EAE4DC;border-radius:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;aspect-ratio:1/1;"><sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div></sc-for></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:14px;flex:0 0 auto;"><sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:24px;line-height:1.45;color:var(--pc,#8A847C);margin:0;text-align:center;max-width:34ch;">{{ phrase }}</p></sc-if><sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;justify-content:center;flex:0 0 auto;"><div style="padding:0 30px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div style="font-weight:300;font-size:60px;line-height:1;letter-spacing:-0.01em;color:#8D1D2C;white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ unit }}</div></div><sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;"><span style="width:1.5px;height:64px;background:#8D1D2C;display:block;"></span><div style="padding:0 30px;display:flex;flex-direction:column;align-items:center;gap:8px;"><div style="font-weight:300;font-size:60px;line-height:1;color:#232220;white-space:nowrap;">{{ promo }}</div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ promoSub }}</div></div></div></sc-if></div></sc-if><sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if></div></div></sc-if>
+            <!-- PUZZLE -->
+            <sc-if value="{{ isPuzzle }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;padding:24px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;"><div style="flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:20px;"><div style="min-height:0;position:relative;background:#EAE4DC;border-radius:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:40px;box-sizing:border-box;grid-column:1 / span 2;grid-row:1 / span 2;"><sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ puz0.n }}</span></sc-if><sc-if value="{{ puz0.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ puz0.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ puz0.full }}" hint-placeholder-val="{{ false }}"><img src="{{ puz0.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div><sc-for list="{{ puz4 }}" as="p" hint-placeholder-count="4"><div style="min-height:0;position:relative;background:#EAE4DC;border-radius:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:22px;box-sizing:border-box;"><sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div></sc-for><div style="min-height:0;background:#FFFFFF;border-radius:24px;overflow:hidden;padding:24px 20px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;"><sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:30px;width:auto;"></sc-if><sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:10px;letter-spacing:0.26em;text-transform:uppercase;color:#8D1D2C;">{{ eyebrow }}</span></sc-if><sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:34px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if><sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}"><div style="font-weight:300;font-size:44px;line-height:1;color:#8D1D2C;white-space:nowrap;margin-top:4px;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:4px;">€</span></div><div style="font-weight:400;font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ unit }}</div></sc-if><sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}"><div style="font-weight:300;font-size:30px;line-height:1;color:#232220;white-space:nowrap;margin-top:4px;">{{ promo }}</div></sc-if><sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:12px;letter-spacing:0.12em;color:#8A847C;">{{ site }}</p></sc-if></div></div></div></sc-if>
+            <!-- PASTILLES -->
+            <sc-if value="{{ isPastilles }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;padding:56px 64px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;"><div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:48px;flex:0 0 auto;"><sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:48px;width:auto;"></sc-if><sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:15px;letter-spacing:0.3em;text-transform:uppercase;color:#8D1D2C;text-align:right;margin-left:auto;">{{ eyebrow }}</span></sc-if></div><div style="flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(2,300px);gap:24px 40px;justify-content:center;align-content:center;"><sc-for list="{{ past4 }}" as="p" hint-placeholder-count="4"><div style="min-height:0;position:relative;background:#EAE4DC;border-radius:150px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:30px;box-sizing:border-box;width:300px;height:300px;"><sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div></sc-for></div><div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex:0 0 auto;"><div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;min-width:0;flex:1 1 auto;"><sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:52px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if><sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:22px;line-height:1.45;color:var(--pc,#8A847C);margin:0;max-width:30ch;text-wrap:pretty;">{{ phrase }}</p></sc-if><sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if></div><sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;justify-content:flex-start;flex:0 0 auto;"><div style="padding:0 22px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:52px;line-height:1;letter-spacing:-0.01em;color:#8D1D2C;white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ unit }}</div></div><sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;"><span style="width:1.5px;height:56px;background:#8D1D2C;display:block;"></span><div style="padding:0 0 0 22px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:52px;line-height:1;color:#232220;white-space:nowrap;">{{ promo }}</div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ promoSub }}</div></div></div></sc-if></div></sc-if></div></div></sc-if>
+            <!-- EPINGLEES -->
+            <sc-if value="{{ isEpinglees }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#EAE4DC;color:#232220;padding:0;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;display:block;"><div style="position:absolute;left:64px;right:64px;top:56px;"><div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:48px;flex:0 0 auto;"><sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:48px;width:auto;"></sc-if><sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:15px;letter-spacing:0.3em;text-transform:uppercase;color:#8D1D2C;text-align:right;margin-left:auto;">{{ eyebrow }}</span></sc-if></div></div><sc-for list="{{ epi3 }}" as="p" hint-placeholder-count="3"><div style="position:absolute;left:{{ p.x }}px;top:{{ p.y }}px;width:{{ p.w }}px;height:{{ p.h }}px;transform:rotate({{ p.rot }}deg);background:#FFFFFF;border-radius:8px;padding:18px 18px 54px;box-sizing:border-box;box-shadow:0 18px 40px rgba(35,34,32,0.16);"><div style="position:relative;width:100%;height:100%;background:#F5EFE4;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;"><sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div></div></sc-for><div style="position:absolute;left:64px;right:64px;bottom:56px;"><div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex:0 0 auto;"><div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;min-width:0;flex:1 1 auto;"><sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:48px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if><sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:22px;line-height:1.45;color:var(--pc,#8A847C);margin:0;max-width:30ch;text-wrap:pretty;">{{ phrase }}</p></sc-if><sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if></div><sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;justify-content:flex-start;flex:0 0 auto;"><div style="padding:0 21px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:48px;line-height:1;letter-spacing:-0.01em;color:#8D1D2C;white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ unit }}</div></div><sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;"><span style="width:1.5px;height:51px;background:#8D1D2C;display:block;"></span><div style="padding:0 0 0 21px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:48px;line-height:1;color:#232220;white-space:nowrap;">{{ promo }}</div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ promoSub }}</div></div></div></sc-if></div></sc-if></div></div></div></sc-if>
+            <!-- ETAGERE -->
+            <sc-if value="{{ isEtagere }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;padding:56px 64px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;"><div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:48px;flex:0 0 auto;"><sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:48px;width:auto;"></sc-if><sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:15px;letter-spacing:0.3em;text-transform:uppercase;color:#8D1D2C;text-align:right;margin-left:auto;">{{ eyebrow }}</span></sc-if></div><div style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:36px;"><div style="flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;border-bottom:3px solid #8D1D2C;"><sc-for list="{{ etaA }}" as="p" hint-placeholder-count="3"><div style="min-height:0;position:relative;display:flex;align-items:flex-end;justify-content:center;padding:0 10px 10px;box-sizing:border-box;"><sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:92%;object-fit:cover;border-radius:16px 16px 0 0;"></sc-if></div></sc-for></div><div style="flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;border-bottom:3px solid #8D1D2C;"><sc-for list="{{ etaB }}" as="p" hint-placeholder-count="3"><div style="min-height:0;position:relative;display:flex;align-items:flex-end;justify-content:center;padding:0 10px 10px;box-sizing:border-box;"><sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:92%;object-fit:cover;border-radius:16px 16px 0 0;"></sc-if></div></sc-for></div></div><div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex:0 0 auto;"><div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;min-width:0;flex:1 1 auto;"><sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:52px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if><sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:22px;line-height:1.45;color:var(--pc,#8A847C);margin:0;max-width:30ch;text-wrap:pretty;">{{ phrase }}</p></sc-if><sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if></div><sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;justify-content:flex-start;flex:0 0 auto;"><div style="padding:0 22px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:52px;line-height:1;letter-spacing:-0.01em;color:#8D1D2C;white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ unit }}</div></div><sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;"><span style="width:1.5px;height:56px;background:#8D1D2C;display:block;"></span><div style="padding:0 0 0 22px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:52px;line-height:1;color:#232220;white-space:nowrap;">{{ promo }}</div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ promoSub }}</div></div></div></sc-if></div></sc-if></div></div></sc-if>
+            <!-- DIAGONALE -->
+            <sc-if value="{{ isDiagonale }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;padding:0;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;display:block;"><div style="position:absolute;left:64px;right:64px;top:56px;"><div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:48px;flex:0 0 auto;"><sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:48px;width:auto;"></sc-if><sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:15px;letter-spacing:0.3em;text-transform:uppercase;color:#8D1D2C;text-align:right;margin-left:auto;">{{ eyebrow }}</span></sc-if></div></div><sc-for list="{{ diag3 }}" as="p" hint-placeholder-count="3"><div style="position:absolute;left:{{ p.x }}px;top:{{ p.y }}px;width:560px;height:270px;background:#EAE4DC;border-radius:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;"><sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div></sc-for><div style="position:absolute;left:64px;bottom:64px;width:360px;display:flex;flex-direction:column;gap:14px;align-items:flex-start;"><sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:56px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if><sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:20px;line-height:1.45;color:var(--pc,#8A847C);margin:0;text-wrap:pretty;">{{ phrase }}</p></sc-if><sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;justify-content:flex-start;flex:0 0 auto;"><div style="padding:0 21px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:48px;line-height:1;letter-spacing:-0.01em;color:#8D1D2C;white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ unit }}</div></div><sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;"><span style="width:1.5px;height:51px;background:#8D1D2C;display:block;"></span><div style="padding:0 0 0 21px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:48px;line-height:1;color:#232220;white-space:nowrap;">{{ promo }}</div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ promoSub }}</div></div></div></sc-if></div></sc-if><sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:16px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if></div></div></sc-if>
+            <!-- VEDETTE -->
+            <sc-if value="{{ isVedette }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;padding:56px 64px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;"><div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:48px;flex:0 0 auto;"><sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo.png" alt="" style="height:48px;width:auto;"></sc-if><sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:15px;letter-spacing:0.3em;text-transform:uppercase;color:#8D1D2C;text-align:right;margin-left:auto;">{{ eyebrow }}</span></sc-if></div><div style="min-height:0;position:relative;background:#EAE4DC;border-radius:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:40px;box-sizing:border-box;flex:1 1 auto;"><sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ ved0.n }}</span></sc-if><sc-if value="{{ ved0.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ ved0.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ ved0.full }}" hint-placeholder-val="{{ false }}"><img src="{{ ved0.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div><div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex:0 0 auto;"><div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;min-width:0;flex:1 1 auto;"><sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:52px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if><sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:22px;line-height:1.45;color:var(--pc,#8A847C);margin:0;max-width:30ch;text-wrap:pretty;">{{ phrase }}</p></sc-if><sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if></div><sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;justify-content:flex-start;flex:0 0 auto;"><div style="padding:0 22px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:52px;line-height:1;letter-spacing:-0.01em;color:#8D1D2C;white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ unit }}</div></div><sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;"><span style="width:1.5px;height:56px;background:#8D1D2C;display:block;"></span><div style="padding:0 0 0 22px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:52px;line-height:1;color:#232220;white-space:nowrap;">{{ promo }}</div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ promoSub }}</div></div></div></sc-if></div></sc-if></div><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;height:170px;flex:0 0 auto;"><sc-for list="{{ ved4 }}" as="p" hint-placeholder-count="4"><div style="min-height:0;position:relative;background:#EAE4DC;border-radius:20px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box;"><sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div></sc-for></div></div></sc-if>
+            <!-- DAMIER -->
+            <sc-if value="{{ isDamier }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#F5EFE4;color:#232220;padding:40px 40px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;"><div style="flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:12px;"><sc-for list="{{ dam16 }}" as="p" hint-placeholder-count="16"><div style="min-height:0;position:relative;background:{{ p.bg }};border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;"><sc-if value="{{ p.badge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div></sc-for></div><div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex:0 0 auto;"><div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;min-width:0;flex:1 1 auto;"><sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:52px;line-height:0.98;text-transform:uppercase;margin:0;color:#232220;text-wrap:balance;">{{ title }}</h1></sc-if><sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:22px;line-height:1.45;color:var(--pc,#8A847C);margin:0;max-width:30ch;text-wrap:pretty;">{{ phrase }}</p></sc-if><sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#8A847C;">{{ site }}</p></sc-if></div><sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;justify-content:flex-start;flex:0 0 auto;"><div style="padding:0 22px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:52px;line-height:1;letter-spacing:-0.01em;color:#8D1D2C;white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ unit }}</div></div><sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;"><span style="width:1.5px;height:56px;background:#8D1D2C;display:block;"></span><div style="padding:0 0 0 22px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:52px;line-height:1;color:#232220;white-space:nowrap;">{{ promo }}</div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A847C;">{{ promoSub }}</div></div></div></sc-if></div></sc-if></div></div></sc-if>
+            <!-- ENCADRE -->
+            <sc-if value="{{ isEncadre }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#8D1D2C;color:#FFFFFF;padding:56px 64px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;"><div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:48px;flex:0 0 auto;"><sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo-white.png" alt="" style="height:48px;width:auto;"></sc-if><sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:15px;letter-spacing:0.3em;text-transform:uppercase;color:#F2C9A0;text-align:right;margin-left:auto;">{{ eyebrow }}</span></sc-if></div><div style="flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:24px;"><sc-for list="{{ enc4 }}" as="p" hint-placeholder-count="4"><div style="min-height:0;position:relative;background:#F5EFE4;border-radius:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;border:10px solid #FFFFFF;"><sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div></sc-for></div><div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex:0 0 auto;"><div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;min-width:0;flex:1 1 auto;"><sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:56px;line-height:0.98;text-transform:uppercase;margin:0;color:#FFFFFF;text-wrap:balance;">{{ title }}</h1></sc-if><sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:22px;line-height:1.45;color:var(--pc,#F2C9A0);margin:0;max-width:30ch;text-wrap:pretty;">{{ phrase }}</p></sc-if><sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#F2C9A0;">{{ site }}</p></sc-if></div><sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;justify-content:flex-start;flex:0 0 auto;"><div style="padding:0 24px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:56px;line-height:1;letter-spacing:-0.01em;color:#FFFFFF;white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#F2C9A0;">{{ unit }}</div></div><sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;"><span style="width:1.5px;height:60px;background:#F2C9A0;display:block;"></span><div style="padding:0 0 0 24px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:56px;line-height:1;color:#F2C9A0;white-space:nowrap;">{{ promo }}</div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#F2C9A0;">{{ promoSub }}</div></div></div></sc-if></div></sc-if></div></div></sc-if>
+            <!-- NUIT -->
+            <sc-if value="{{ isNuit }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#232220;color:#FFFFFF;padding:56px 64px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;"><div style="display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:48px;flex:0 0 auto;"><sc-if value="{{ showLogo }}" hint-placeholder-val="{{ true }}"><img src="img/logo-white.png" alt="" style="height:48px;width:auto;"></sc-if><sc-if value="{{ showEyebrow }}" hint-placeholder-val="{{ true }}"><span style="font-weight:500;font-size:15px;letter-spacing:0.3em;text-transform:uppercase;color:#F2C9A0;text-align:right;margin-left:auto;">{{ eyebrow }}</span></sc-if></div><div style="flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;"><sc-for list="{{ nuit3 }}" as="p" hint-placeholder-count="3"><div style="min-height:0;position:relative;background:#EAE4DC;border-radius:24px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;"><sc-if value="{{ showBadges }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;left:12px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-family:'Gotham';font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ p.n }}</span></sc-if><sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;"></sc-if><sc-if value="{{ p.full }}" hint-placeholder-val="{{ false }}"><img src="{{ p.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div></sc-for></div><div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex:0 0 auto;"><div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;min-width:0;flex:1 1 auto;"><sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="font-family:'Vank','Gotham';font-weight:400;font-size:72px;line-height:0.98;text-transform:uppercase;margin:0;color:#FFFFFF;text-wrap:balance;">{{ title }}</h1></sc-if><sc-if value="{{ showPhrase }}" hint-placeholder-val="{{ true }}"><p style="font-family:var(--pf,'Playwrite DEVA'),'Gotham';font-weight:300;font-size:22px;line-height:1.45;color:var(--pc,#F2C9A0);margin:0;max-width:30ch;text-wrap:pretty;">{{ phrase }}</p></sc-if><sc-if value="{{ showSite }}" hint-placeholder-val="{{ true }}"><p style="margin:4px 0 0;font-weight:500;font-size:18px;letter-spacing:0.14em;color:#B8B2A8;">{{ site }}</p></sc-if></div><sc-if value="{{ showPrice }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;justify-content:flex-start;flex:0 0 auto;"><div style="padding:0 31px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:72px;line-height:1;letter-spacing:-0.01em;color:#FFFFFF;white-space:nowrap;">{{ price }}<span style="font-size:0.5em;font-weight:500;vertical-align:0.6em;margin-left:5px;">€</span></div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#B8B2A8;">{{ unit }}</div></div><sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;"><span style="width:1.5px;height:77px;background:#F2C9A0;display:block;"></span><div style="padding:0 0 0 31px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;"><div style="font-weight:300;font-size:72px;line-height:1;color:#F2C9A0;white-space:nowrap;">{{ promo }}</div><div style="font-weight:400;font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#B8B2A8;">{{ promoSub }}</div></div></div></sc-if></div></sc-if></div></div></sc-if>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ notArtOnly }}" hint-placeholder-val="{{ true }}"><p style="font-size:12px;color:#666666;margin:0;text-align:center;">Aperçu à l'échelle · export 1080 × 1080 px · vous pouvez déposer des photos directement sur l'aperçu</p></sc-if>
+    </section>
+  </main>
+
+  <!-- ================= MÉDIATHÈQUE (modale) ================= -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(35,34,32,0.55);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;">
+      <div onDragOver="{{ onDragOver }}" onDrop="{{ onDropLib }}" style="background:#FFFFFF;border-radius:12px;width:100%;max-width:1240px;height:min(900px,94vh);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(35,34,32,0.3);">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;border-bottom:0.5px solid rgba(34,34,34,0.10);flex-wrap:wrap;">
+          <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+            <span style="font-family:'Vank','Gotham';font-size:20px;color:#232220;">MÉDIATHÈQUE</span>
+            <span style="font-size:13px;color:#666666;">{{ libCount }} visuels · {{ selCount }} dans le post</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <label style="background:transparent;border:0.5px solid rgba(34,34,34,0.18);color:#222222;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;" style-hover="border-color:#222222;">
+              Importer des photos
+              <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ onFileLib }}" style="display:none;">
+            </label>
+            <button onClick="{{ closeLib }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:10px 18px;font-family:'Gotham';font-size:13px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Terminer</button>
+          </div>
+        </div>
+
+        <div style="flex:1 1 auto;min-height:0;display:flex;">
+
+          <nav style="width:216px;flex:0 0 216px;border-right:0.5px solid rgba(34,34,34,0.10);padding:14px 10px;overflow:auto;display:flex;flex-direction:column;gap:2px;box-sizing:border-box;background:#FAF7F2;">
+            <button onClick="{{ navAll }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;border-radius:8px;padding:9px 10px;font-family:'Gotham';font-size:13px;cursor:pointer;box-sizing:border-box;background:{{ navAllBg }};color:{{ navAllFg }};font-weight:500;"><span>Tous les visuels</span><span style="font-size:11px;color:#8A847C;flex:0 0 auto;">{{ libCount }}</span></button>
+            <button onClick="{{ navInPost }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;border-radius:8px;padding:9px 10px;font-family:'Gotham';font-size:13px;cursor:pointer;box-sizing:border-box;background:{{ navPostBg }};color:{{ navPostFg }};font-weight:500;"><span>Dans le post</span><span style="font-size:11px;color:#8A847C;flex:0 0 auto;">{{ selCount }}</span></button>
+            <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#8A847C;margin:14px 10px 6px;">Catégories</p>
+            <sc-for list="{{ navCats }}" as="c" hint-placeholder-count="0">
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                <button onClick="{{ c.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;border-radius:8px;padding:9px 10px;font-family:'Gotham';font-size:13px;cursor:pointer;box-sizing:border-box;background:{{ c.bg }};color:{{ c.fg }};font-weight:{{ c.w }};"><span>{{ c.name }}</span><span style="font-size:11px;color:#8A847C;flex:0 0 auto;">{{ c.count }}</span></button>
+                <sc-if value="{{ c.open }}" hint-placeholder-val="{{ false }}">
+                  <sc-for list="{{ c.subs }}" as="sb" hint-placeholder-count="0">
+                    <button onClick="{{ sb.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;border-radius:8px;padding:9px 10px;font-family:'Gotham';font-size:13px;cursor:pointer;box-sizing:border-box;padding-left:24px;background:{{ sb.bg }};color:{{ sb.fg }};font-weight:{{ sb.w }};font-size:12px;"><span>{{ sb.name }}</span><span style="font-size:11px;color:#8A847C;flex:0 0 auto;">{{ sb.count }}</span></button>
+                  </sc-for>
+                </sc-if>
+              </div>
+            </sc-for>
+            <button onClick="{{ navUnclassified }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;border-radius:8px;padding:9px 10px;font-family:'Gotham';font-size:13px;cursor:pointer;box-sizing:border-box;margin-top:6px;background:{{ navUncBg }};color:{{ navUncFg }};"><span>Non classés</span><span style="font-size:11px;color:#8A847C;flex:0 0 auto;">{{ unclassifiedCount }}</span></button>
+            <div style="margin-top:auto;padding:12px 10px 0;">
+              <button onClick="{{ restoreDs }}" title="Ré-importe les illustrations du design system supprimées" style="background:transparent;border:none;color:#8D1D2C;font-family:'Gotham';font-size:12px;font-weight:500;cursor:pointer;padding:4px 0;text-align:left;">Restaurer les illustrations</button>
+            </div>
+          </nav>
+
+          <div style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;">
+            <div style="display:flex;gap:8px;align-items:center;padding:12px 16px;border-bottom:0.5px solid rgba(34,34,34,0.10);flex-wrap:wrap;">
+              <input type="search" value="{{ mQuery }}" onChange="{{ setMQuery }}" placeholder="Rechercher un visuel…" style="flex:1 1 220px;min-width:0;font-family:'Gotham';font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+              <select value="{{ mSeason }}" onChange="{{ setMSeason }}" style="flex:0 1 190px;min-width:0;font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;text-transform:none;letter-spacing:0;font-weight:400;">
+                <option value="">Toutes saisons</option><option value="Toute l'année">Toute l'année</option><option value="Printemps">Printemps</option><option value="Été">Été</option><option value="Automne">Automne</option><option value="Hiver">Hiver</option><option value="Noël &amp; Nouvel An">Noël &amp; Nouvel An</option><option value="Épiphanie">Épiphanie</option><option value="Saint-Valentin">Saint-Valentin</option><option value="Pâques">Pâques</option><option value="Fête des mères">Fête des mères</option><option value="Saint-Nicolas">Saint-Nicolas</option>
+              </select>
+              <sc-if value="{{ hasFilter }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ clearFilters }}" style="background:transparent;border:none;color:#8D1D2C;font-family:'Gotham';font-size:12px;font-weight:500;cursor:pointer;padding:8px 4px;">Effacer les filtres</button>
+              </sc-if>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px 4px;">
+              <span style="font-size:12px;color:#666666;">{{ mLabel }}</span>
+              <sc-if value="{{ mSelNotAll }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ addResultsToPost }}" style="background:transparent;border:0.5px solid rgba(34,34,34,0.18);color:#222222;border-radius:8px;padding:7px 12px;font-family:'Gotham';font-size:12px;font-weight:500;cursor:pointer;" style-hover="border-color:#222222;">Tout ajouter au post · {{ mCount }}</button>
+              </sc-if>
+            </div>
+            <div style="flex:1 1 auto;min-height:0;overflow:auto;padding:8px 16px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));grid-auto-rows:max-content;gap:14px;align-content:start;">
+              <sc-for list="{{ mResults }}" as="m" hint-placeholder-count="0">
+                <div onClick="{{ m.select }}" style="display:block;border:2px solid {{ m.ring }};border-radius:10px;background:#FFFFFF;cursor:pointer;overflow:clip;box-sizing:border-box;">
+                  <div style="position:relative;width:100%;height:0;padding-bottom:100%;background:#F4EFE8;">
+                    <img src="{{ m.src }}" alt="" style="position:absolute;left:10px;top:10px;width:calc(100% - 20px);height:calc(100% - 20px);object-fit:contain;display:block;">
+                    <sc-if value="{{ m.inPost }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:8px;left:8px;height:20px;padding:0 8px;border-radius:999px;background:#8D1D2C;color:#FFFFFF;font-size:11px;font-weight:500;line-height:20px;display:block;">Dans le post</span></sc-if>
+                    <button onClick="{{ m.toggle }}" style="position:absolute;bottom:8px;right:8px;border:none;border-radius:999px;padding:6px 10px;font-family:'Gotham';font-size:11px;font-weight:500;cursor:pointer;background:{{ m.btnBg }};color:{{ m.btnFg }};">{{ m.btn }}</button>
+                  </div>
+                  <div style="padding:8px 10px 10px;">
+                    <div style="font-size:12px;font-weight:500;color:#222222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.name }}</div>
+                    <div style="font-size:11px;color:#666666;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.tags }}</div>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ mEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="grid-column:1 / -1;padding:48px 24px;text-align:center;color:#666666;font-size:14px;line-height:1.6;display:flex;flex-direction:column;align-items:center;gap:10px;">
+                  <span>Aucun visuel ne correspond à ces filtres.</span>
+                  <button onClick="{{ clearFilters }}" style="background:transparent;border:0.5px solid rgba(34,34,34,0.18);color:#222222;border-radius:8px;padding:8px 14px;font-family:'Gotham';font-size:13px;font-weight:500;cursor:pointer;">Effacer les filtres</button>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+
+          <sc-if value="{{ hasEdit }}" hint-placeholder-val="{{ false }}">
+            <div style="width:292px;flex:0 0 292px;border-left:0.5px solid rgba(34,34,34,0.10);padding:18px;overflow:auto;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;">
+              <div style="position:relative;width:100%;height:0;padding-bottom:100%;background:#F4EFE8;border-radius:10px;overflow:hidden;">
+                <img src="{{ editSrc }}" alt="" style="position:absolute;left:14px;top:14px;width:calc(100% - 28px);height:calc(100% - 28px);object-fit:contain;display:block;">
+                <sc-if value="{{ editInPost }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:10px;left:10px;height:20px;padding:0 8px;border-radius:999px;background:#8D1D2C;color:#FFFFFF;font-size:11px;font-weight:500;line-height:20px;display:block;">Dans le post</span></sc-if>
+              </div>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Nom
+                <input type="text" value="{{ editName }}" onChange="{{ setEditName }}" style="font-family:'Gotham';font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;text-transform:none;letter-spacing:0;font-weight:400;" style-focus="border-color:#8D1D2C;">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Catégorie
+                <select value="{{ editCat }}" onChange="{{ setEditCat }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;text-transform:none;letter-spacing:0;font-weight:400;">
+                  <option value="">Non classée</option><option value="Viennoiseries">Viennoiseries</option><option value="Pains">Pains</option><option value="Pâtisseries">Pâtisseries</option><option value="Tartes">Tartes</option><option value="Sandwichs &amp; salés">Sandwichs &amp; salés</option><option value="Boissons">Boissons</option><option value="Ambiance &amp; boutique">Ambiance &amp; boutique</option><option value="Illustrations">Illustrations</option>
+                </select>
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Sous-catégorie
+                <select value="{{ editSub }}" onChange="{{ setEditSub }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;text-transform:none;letter-spacing:0;font-weight:400;">
+                  <option value="">—</option>
+                  <sc-for list="{{ editSubOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o }}">{{ o }}</option></sc-for>
+                </select>
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Saisonnalité
+                <select value="{{ editSeason }}" onChange="{{ setEditSeason }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;text-transform:none;letter-spacing:0;font-weight:400;"><option value="Toute l'année">Toute l'année</option><option value="Printemps">Printemps</option><option value="Été">Été</option><option value="Automne">Automne</option><option value="Hiver">Hiver</option><option value="Noël &amp; Nouvel An">Noël &amp; Nouvel An</option><option value="Épiphanie">Épiphanie</option><option value="Saint-Valentin">Saint-Valentin</option><option value="Pâques">Pâques</option><option value="Fête des mères">Fête des mères</option><option value="Saint-Nicolas">Saint-Nicolas</option></select>
+              </label>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Rendu</span>
+                <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;">
+                  <button onClick="{{ editCutOn }}" style="border:none;border-radius:6px;padding:7px 12px;font-family:'Gotham';font-size:12px;font-weight:500;cursor:pointer;background:{{ ecBg }};color:{{ ecFg }};">Détourée</button>
+                  <button onClick="{{ editCutOff }}" style="border:none;border-radius:6px;padding:7px 12px;font-family:'Gotham';font-size:12px;font-weight:500;cursor:pointer;background:{{ efBg }};color:{{ efFg }};">Pleine</button>
+                </div>
+              </div>
+              <button onClick="{{ editToggle }}" style="margin-top:6px;background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:11px 16px;font-family:'Gotham';font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">{{ editToggleLabel }}</button>
+              <button onClick="{{ editDelete }}" style="background:transparent;border:none;color:#8D1D2C;font-family:'Gotham';font-size:12px;font-weight:500;cursor:pointer;padding:8px 0;">Supprimer de la médiathèque</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ noEdit }}" hint-placeholder-val="{{ false }}">
+            <div style="width:292px;flex:0 0 292px;border-left:0.5px solid rgba(34,34,34,0.10);padding:24px;display:flex;align-items:center;justify-content:center;text-align:center;color:#666666;font-size:13px;line-height:1.6;box-sizing:border-box;">Cliquez un visuel pour le renommer, le classer et le mettre dans le post.</div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;exportSize&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;1080&quot;, &quot;options&quot;: [&quot;1080&quot;, &quot;2160&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Export&quot;, &quot;label&quot;: &quot;Taille du PNG exporté (px)&quot;},
+  &quot;filePrefix&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;post-facebook&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Export&quot;, &quot;label&quot;: &quot;Préfixe du nom de fichier&quot;}
+}">
+class Component extends DCLogic {
+  KEY = 'latelier.fbpost.state';
+  CATS = {
+    'Viennoiseries': ['Croissants', 'Pains au chocolat', 'Brioches', 'Chaussons'],
+    'Pains': ['Baguettes', 'Pains spéciaux', 'Pains de mie', 'Petits pains'],
+    'Pâtisseries': ['Gâteaux', 'Entremets', 'Cupcakes', 'Biscuits & cookies'],
+    'Tartes': ['Tartes sucrées', 'Tartes salées', 'Quiches'],
+    'Sandwichs & salés': ['Sandwichs', 'Salades', 'Plateaux'],
+    'Boissons': ['Chaudes', 'Froides', 'Limonades'],
+    'Ambiance & boutique': ['Vitrine', 'Équipe', 'Atelier'],
+    'Illustrations': ['Produits', 'Fruits', 'Légumes', 'Saisonnier', 'Pictos', 'Services', 'Décoratif'],
+  };
+  DEMO = [
+    { id: 'demo-1', src: 'img/demo-brioche.png', name: 'Brioche croustillante', cat: 'Viennoiseries', sub: 'Brioches', season: 'Automne', cut: true },
+    { id: 'demo-2', src: 'img/demo-tart.png', name: 'Tarte aux fruits', cat: 'Tartes', sub: 'Tartes sucrées', season: "Toute l'année", cut: true },
+    { id: 'demo-3', src: 'img/demo-cake.png', name: 'Gâteau', cat: 'Pâtisseries', sub: 'Gâteaux', season: "Toute l'année", cut: true },
+    { id: 'demo-4', src: 'img/demo-croissant.png', name: 'Croissant', cat: 'Viennoiseries', sub: 'Croissants', season: "Toute l'année", cut: true },
+    { id: 'demo-5', src: 'img/demo-cookies.png', name: 'Cookies', cat: 'Pâtisseries', sub: 'Biscuits & cookies', season: "Toute l'année", cut: true },
+    { id: 'demo-6', src: 'img/demo-cupcake.png', name: 'Cupcake', cat: 'Pâtisseries', sub: 'Cupcakes', season: 'Fête des mères', cut: true },
+    { id: 'demo-7', src: 'img/demo-savoury.png', name: 'Tarte salée', cat: 'Tartes', sub: 'Tartes salées', season: "Toute l'année", cut: true },
+  ];
+  state = this.initState();
+  initState() {
+    const base = {
+      style: 'epure', cutMode: 'auto', lib: [], sel: null, libReady: false,
+      query: '', fCat: '', fSeason: '', modalOpen: false, editId: null, mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false,
+      showLogo: true, showEyebrow: true, showTitle: true, showPhrase: true, showPrice: true, showPromo: true, showSite: true,
+      eyebrow: 'Édition saisonnière · Automne 2026', title: 'Brioche croustillante',
+      phrase: 'brioche filée, cœur de myrtille et crumble citronné',
+      price: '4,20', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be',
+      phraseFont: 'script', phraseColor: 'auto', exporting: false, exportError: false,
+    };
+    try {
+      const saved = JSON.parse(localStorage.getItem('latelier.fbpost.state') || 'null');
+      if (saved) { ['photos', 'photo', 'cutout', 'photoKind', 'lib', 'libReady', 'modalOpen', 'exporting', 'exportError'].forEach(k => delete saved[k]); Object.assign(base, saved); }
+    } catch (e) {}
+    return base;
+  }
+  save() {
+    try { const { lib, libReady, modalOpen, exporting, exportError, ...rest } = this.state; localStorage.setItem(this.KEY, JSON.stringify(rest)); } catch (e) {}
+  }
+  idb(mode, fn) {
+    return new Promise((res, rej) => {
+      if (!window.indexedDB) return rej(new Error('no idb'));
+      const r = indexedDB.open('latelier-fbpost', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onerror = () => rej(r.error);
+      r.onsuccess = () => {
+        const db = r.result, tx = db.transaction('kv', mode), q = fn(tx.objectStore('kv'));
+        tx.oncomplete = () => { res(q && q.result); db.close(); };
+        tx.onerror = () => { rej(tx.error); db.close(); };
+      };
+    });
+  }
+  saveLib(list) { this.idb('readwrite', st => st.put(list, 'library')).catch(() => {}); }
+  async componentDidMount() {
+    this.applyTheme();
+    if (typeof this.props.onApi === 'function') this.props.onApi({ toImage: (o) => this.renderImage(o) });
+    let lib = null;
+    try { lib = await this.idb('readonly', st => st.get('library')); } catch (e) {}
+    if (!Array.isArray(lib)) {
+      let legacy = null;
+      try { legacy = await this.idb('readonly', st => st.get('photos')); } catch (e) {}
+      if (Array.isArray(legacy) && legacy.length) lib = legacy.map((p, i) => ({ id: 'u' + Date.now() + '-' + i, src: p.src, name: 'Photo ' + (i + 1), cat: '', sub: '', season: "Toute l'année", cut: !!p.cut }));
+      else lib = this.DEMO;
+      this.saveLib(lib);
+    }
+    // Merge design-system catalogue (new entries only; user edits & deletions are respected)
+    let removed = [];
+    try { removed = JSON.parse(localStorage.getItem('latelier.fbpost.dsRemoved') || '[]'); } catch (e) {}
+    const have = new Set(lib.map(x => x.id)), rm = new Set(removed);
+    const fresh = (window.DS_ILLUS || []).filter(x => !have.has(x.id) && !rm.has(x.id));
+    if (fresh.length) { lib = lib.concat(fresh); this.saveLib(lib); }
+    const ids = new Set(lib.map(x => x.id));
+    const sel = Array.isArray(this.state.sel) ? this.state.sel.filter(id => ids.has(id)) : lib.slice(0, 7).map(x => x.id);
+    this.setState({ lib, sel, libReady: true }, () => this.applyPreset());
+  }
+  applyPreset() {
+    const p = this.props.preset;
+    if (!p || !p.key || p.key === this._presetKey || !this.state.libReady) return;
+    this._presetKey = p.key;
+    const patch = {};
+    if (p.title) Object.assign(patch, { title: p.title, showTitle: true });
+    if (p.price) Object.assign(patch, { price: p.price, showPrice: true });
+    if (p.img) {
+      let lib = this.state.lib, it = lib.find(x => x.src === p.img);
+      if (!it) { it = { id: 'pre-' + Date.now(), src: p.img, name: p.title || 'Produit', cat: '', sub: '', season: "Toute l'année", cut: true }; lib = lib.concat(it); patch.lib = lib; this.saveLib(lib); }
+      patch.sel = [it.id].concat((this.state.sel || []).filter(id => id !== it.id));
+    }
+    this.setState(patch);
+  }
+  restoreDs() {
+    try { localStorage.removeItem('latelier.fbpost.dsRemoved'); } catch (e) {}
+    const have = new Set(this.state.lib.map(x => x.id));
+    const fresh = (window.DS_ILLUS || []).filter(x => !have.has(x.id));
+    if (fresh.length) this.updateLib(l => l.concat(fresh));
+  }
+  componentDidUpdate() { this.applyTheme(); this.save(); if (this._fit) this._fit(); this.applyPreset(); }
+  componentWillUnmount() { if (this._ro) this._ro.disconnect(); if (this._fit) window.removeEventListener('resize', this._fit); }
+  applyTheme() {
+    const el = this._art; if (!el) return;
+    const fonts = { script: "'Playwrite DEVA'", display: "'Vank'", sans: "'Gotham'" };
+    const colors = { ruby: '#8D1D2C', noir: '#232220', abricot: '#F2C9A0', blanc: '#FFFFFF', gris: '#8A847C' };
+    const ms = this.merged();
+    el.style.setProperty('--pf', fonts[ms.phraseFont] || fonts.script);
+    const c = colors[ms.phraseColor];
+    if (c) el.style.setProperty('--pc', c); else el.style.removeProperty('--pc');
+  }
+  norm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+  matches(it, q, cat, sub, season) {
+    if (cat === '—') { if (it.cat) return false; } else if (cat && it.cat !== cat) return false;
+    if (sub && it.sub !== sub) return false;
+    if (season && it.season !== season) return false;
+    if (q) {
+      const hay = this.norm([it.name, it.cat, it.sub, it.season].join(' '));
+      for (const t of this.norm(q).split(/\s+/).filter(Boolean)) if (!hay.includes(t)) return false;
+    }
+    return true;
+  }
+  updateLib(fn) { const lib = fn(this.state.lib.slice()); this.setState({ lib }); this.saveLib(lib); }
+  editItem(patch) { const id = this.state.editId; this.updateLib(l => l.map(x => x.id === id ? Object.assign({}, x, patch) : x)); }
+  readOne(file) {
+    return new Promise((res) => {
+      if (!file || !/^image\//.test(file.type)) return res(null);
+      const reader = new FileReader();
+      reader.onerror = () => res(null);
+      reader.onload = () => {
+        const url = reader.result, img = new Image();
+        const name = (file.name || 'Photo').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+        const done = (cut) => res({ id: 'u' + Date.now() + '-' + Math.random().toString(36).slice(2, 7), src: url, name, cat: '', sub: '', season: "Toute l'année", cut });
+        img.onerror = () => done(false);
+        img.onload = () => {
+          let cut = false;
+          try {
+            const c = document.createElement('canvas'); c.width = 48; c.height = 48;
+            const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, 48, 48);
+            const d = ctx.getImageData(0, 0, 48, 48).data;
+            let clear = 0, total = 0;
+            for (let y = 0; y < 48; y++) for (let x = 0; x < 48; x++) {
+              if (x > 1 && x < 46 && y > 1 && y < 46) continue;
+              total++; if (d[(y * 48 + x) * 4 + 3] < 16) clear++;
+            }
+            cut = clear / total > 0.35;
+          } catch (e) {}
+          done(cut);
+        };
+        img.src = url;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  async addFiles(files, toPost) {
+    const arr = Array.from(files || []).slice(0, 30);
+    if (!arr.length) return;
+    const added = (await Promise.all(arr.map(f => this.readOne(f)))).filter(Boolean);
+    if (!added.length) return;
+    const lib = this.state.lib.concat(added);
+    const sel = toPost ? (this.state.sel || []).concat(added.map(x => x.id)) : this.state.sel;
+    this.setState({ lib, sel, editId: toPost ? this.state.editId : added[0].id });
+    this.saveLib(lib);
+  }
+  merged() { const c = this.props.control; return c ? Object.assign({}, this.state, c, { lib: this.state.lib, sel: this.state.sel, exporting: this.state.exporting }) : this.state; }
+  async renderImage(opts) {
+    const node = this._art, lib = window.htmlToImage, o = opts || {};
+    if (!node || !lib) throw new Error('export indisponible');
+    this.setState({ exporting: true });
+    await new Promise(r => setTimeout(r, 80));
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const base = { width: 1080, height: 1080, pixelRatio: o.pixelRatio || 1, backgroundColor: '#F5EFE4' };
+      return o.jpeg ? await lib.toJpeg(node, Object.assign(base, { quality: o.quality || 0.85 })) : await lib.toPng(node, base);
+    } finally { this.setState({ exporting: false }); }
+  }
+  async useInPost() {
+    const node = this._art, lib = window.htmlToImage;
+    if (!node || !lib || typeof this.props.onUse !== 'function') { this.setState({ exportError: true }); return; }
+    this.setState({ exporting: true, using: true, exportError: false });
+    await new Promise(r => setTimeout(r, 80));
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const dataUrl = await lib.toPng(node, { width: 1080, height: 1080, pixelRatio: 1, backgroundColor: '#F5EFE4' });
+      this.props.onUse(dataUrl, { style: this.state.style, title: this.state.title });
+    } catch (e) { console.error(e); this.setState({ exportError: true }); }
+    this.setState({ exporting: false, using: false });
+  }
+  async exportPng() {
+    const node = this._art, lib = window.htmlToImage;
+    if (!node || !lib) { this.setState({ exportError: true }); return; }
+    this.setState({ exporting: true, exportError: false });
+    await new Promise(r => setTimeout(r, 80));
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const size = parseInt(this.props.exportSize || '1080', 10) || 1080;
+      const dataUrl = await lib.toPng(node, { width: 1080, height: 1080, pixelRatio: size / 1080, backgroundColor: '#F5EFE4' });
+      const a = document.createElement('a');
+      a.download = (this.props.filePrefix || 'post-facebook') + '-' + this.state.style + '.png';
+      a.href = dataUrl; document.body.appendChild(a); a.click(); a.remove();
+    } catch (e) { console.error(e); this.setState({ exportError: true }); }
+    this.setState({ exporting: false });
+  }
+  renderVals() {
+    const s = this.merged(), libAll = s.lib, sel = s.sel || [];
+    const byId = {}; libAll.forEach(x => { byId[x.id] = x; });
+    const ctl = this.props.control && Array.isArray(this.props.control.photos) ? this.props.control.photos : null;
+    const selItems = ctl ? ctl.map((p, i) => ({ id: 'ctl' + i, src: p.src, cut: p.cut !== false, name: p.name || '' })) : sel.map(id => byId[id]).filter(Boolean);
+    const inSel = (id) => sel.includes(id);
+    const togglePost = (id) => this.setState({ sel: inSel(id) ? sel.filter(x => x !== id) : sel.concat(id) });
+    const eff = (p) => s.cutMode === 'auto' ? !!p.cut : s.cutMode === 'cut';
+    const slot = (p, i) => p ? { src: p.src, cut: eff(p), full: !eff(p), none: false, n: (i == null ? 0 : i % selItems.length) + 1 } : { src: '', cut: false, full: false, none: true, n: '' };
+    const slots = (idx) => idx.map(i => slot(selItems.length ? selItems[i % selItems.length] : null, i));
+    const NEW = ['frise', 'puzzle', 'pastilles', 'epinglees', 'etagere', 'diagonale', 'vedette', 'damier', 'encadre', 'nuit'];
+    const Cap = (k) => k.charAt(0).toUpperCase() + k.slice(1);
+    const isMontage = ['mosaique', 'grille', 'trio', 'collage', 'bandes', 'galerie'].concat(NEW).includes(s.style);
+    const newStyleVals = {};
+    NEW.forEach(k => { newStyleVals['is' + Cap(k)] = s.style === k; newStyleVals['sel' + Cap(k)] = s.style === k ? '#8D1D2C' : 'transparent'; newStyleVals['pick' + Cap(k)] = () => this.setState({ style: k }); });
+    const showBadgesV = isMontage && selItems.length > 0 && !s.exporting;
+    const withXY = (list, pos) => list.map((p, i) => Object.assign({}, p, pos[i % pos.length]));
+    const dam16 = []; let di = 0;
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+      if ((r + c) % 2 === 0) { const sl = slot(selItems.length ? selItems[di % selItems.length] : null, di); di++; dam16.push(Object.assign(sl, { bg: '#EAE4DC', badge: showBadgesV })); }
+      else dam16.push({ src: '', cut: false, full: false, none: true, n: '', bg: (r + c) % 4 === 1 ? '#F2C9A0' : '#FFFFFF', badge: false });
+    }
+    const reorder = (from, to) => { if (from === to || from == null) return; const l = sel.slice(); const [x] = l.splice(from, 1); l.splice(to, 0, x); this.setState({ sel: l, dragIdx: null }); };
+    const withH = (list, hs) => list.map((p, i) => Object.assign({ h: hs[i % hs.length] }, p));
+    const main = selItems[0] || null, hasPhoto = !!main, mainCut = main ? eff(main) : false;
+    const selStyle = (k) => s.style === k ? '#8D1D2C' : 'transparent';
+    const seg = (on) => on ? ['#FFFFFF', '#222222'] : ['transparent', '#666666'];
+    const [caBg, caFg] = seg(s.cutMode === 'auto'), [ccBg, ccFg] = seg(s.cutMode === 'cut'), [cfBg, cfFg] = seg(s.cutMode === 'full');
+    const [fsBg, fsFg] = seg(s.phraseFont === 'script'), [fdBg, fdFg] = seg(s.phraseFont === 'display'), [fgBg, fgFg] = seg(s.phraseFont === 'sans');
+    const col = (k) => s.phraseColor === k ? '#222222' : 'transparent';
+    const set = (k) => (e) => this.setState({ [k]: e.target.value });
+    const tog = (k) => () => this.setState({ [k]: !s[k] });
+    const pick = (k) => () => this.setState({ style: k });
+    const font = (k) => () => this.setState({ phraseFont: k });
+    const color = (k) => () => this.setState({ phraseColor: k });
+    const tags = (it) => [it.cat || 'Non classée', it.sub, it.season].filter(Boolean).join(' · ');
+    const selThumbs = selItems.map((p, i) => ({
+      src: p.src, name: p.name, n: i + 1, ring: i === 0 ? '#8D1D2C' : 'transparent',
+      makeMain: () => { const l = sel.slice(); const [x] = l.splice(i, 1); l.unshift(x); this.setState({ sel: l }); },
+      remove: (e) => { e.stopPropagation(); this.setState({ sel: sel.filter(id => id !== p.id) }); },
+      dragStart: (e) => { this._dragIdx = i; try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); } catch (err) {} },
+      dragOver: (e) => { e.preventDefault(); e.stopPropagation(); },
+      dropOn: (e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) { this.addFiles(e.dataTransfer.files, true); return; } reorder(this._dragIdx, i); this._dragIdx = null; },
+    }));
+    const found = libAll.filter(it => this.matches(it, s.query, s.fCat, '', s.fSeason));
+    const results = found.slice(0, 40).map(it => ({
+      src: it.src, inPost: inSel(it.id), ring: inSel(it.id) ? '#8D1D2C' : 'transparent', tip: it.name + ' · ' + tags(it),
+      toggle: () => togglePost(it.id),
+    }));
+    const mFound = libAll.filter(it => this.matches(it, s.mQuery, s.mCat, s.mSub, s.mSeason) && (!s.mOnlyPost || inSel(it.id)));
+    const navBg = (a) => a ? '#EAE4DC' : 'transparent', navFg = (a) => a ? '#8D1D2C' : '#222222', navW = (a) => a ? 500 : 400;
+    const navCats = Object.keys(this.CATS).map(cat => {
+      const items = libAll.filter(it => it.cat === cat), active = s.mCat === cat && !s.mOnlyPost;
+      return { name: cat, count: items.length, bg: navBg(active && !s.mSub), fg: navFg(active), w: navW(active), open: active,
+        pick: () => this.setState({ mCat: cat, mSub: '', mOnlyPost: false }),
+        subs: (this.CATS[cat] || []).map(sub => { const on = active && s.mSub === sub; return { name: sub, count: items.filter(it => it.sub === sub).length, bg: navBg(on), fg: navFg(on), w: navW(on), pick: (e) => { e.stopPropagation(); this.setState({ mCat: cat, mSub: sub, mOnlyPost: false }); } }; }).filter(x => x.count > 0) };
+    });
+    const unclassifiedCount = libAll.filter(it => !it.cat).length;
+    const allActive = !s.mCat && !s.mOnlyPost, postActive = !!s.mOnlyPost, uncActive = s.mCat === '—' && !s.mOnlyPost;
+    const ctx = s.mOnlyPost ? 'dans le post' : s.mCat === '—' ? 'non classés' : s.mSub ? s.mCat + ' › ' + s.mSub : s.mCat ? s.mCat : 'au total';
+    const mResults = mFound.slice(0, 160).map(it => ({
+      src: it.src, name: it.name, tags: tags(it), inPost: inSel(it.id),
+      ring: s.editId === it.id ? '#8D1D2C' : 'transparent',
+      btn: inSel(it.id) ? 'Retirer' : '+ Post', btnBg: inSel(it.id) ? '#232220' : '#8D1D2C', btnFg: '#FFFFFF',
+      select: () => this.setState({ editId: it.id }),
+      toggle: (e) => { e.stopPropagation(); togglePost(it.id); },
+    }));
+    const ed = byId[s.editId] || null;
+    const [ecBg, ecFg] = seg(!!(ed && ed.cut)), [efBg, efFg] = seg(!!(ed && !ed.cut));
+    return {
+      artRef: (el) => { this._art = el; this.applyTheme(); },
+      previewRef: (el) => {
+        if (!el || this._prev === el) return;
+        this._prev = el;
+        const fit = () => { const w = el.clientWidth; if (!w) return; el.style.setProperty('--s', (w / 1080).toFixed(4)); };
+        this._fit = fit; fit();
+        if (this._ro) this._ro.disconnect();
+        this._ro = new ResizeObserver(fit); this._ro.observe(el);
+        window.addEventListener('resize', fit);
+      },
+      isEpure: s.style === 'epure', isAbricot: s.style === 'abricot', isRuby: s.style === 'ruby', isNoir: s.style === 'noir', isPlein: s.style === 'plein', isDuo: s.style === 'duo',
+      isMosaique: s.style === 'mosaique', isGrille: s.style === 'grille', isTrio: s.style === 'trio', isCollage: s.style === 'collage', isBandes: s.style === 'bandes', isGalerie: s.style === 'galerie',
+      selEpure: selStyle('epure'), selAbricot: selStyle('abricot'), selRuby: selStyle('ruby'), selNoir: selStyle('noir'), selPlein: selStyle('plein'), selDuo: selStyle('duo'),
+      selMosaique: selStyle('mosaique'), selGrille: selStyle('grille'), selTrio: selStyle('trio'), selCollage: selStyle('collage'), selBandes: selStyle('bandes'), selGalerie: selStyle('galerie'),
+      pickEpure: pick('epure'), pickAbricot: pick('abricot'), pickRuby: pick('ruby'), pickNoir: pick('noir'), pickPlein: pick('plein'), pickDuo: pick('duo'),
+      pickMosaique: pick('mosaique'), pickGrille: pick('grille'), pickTrio: pick('trio'), pickCollage: pick('collage'), pickBandes: pick('bandes'), pickGalerie: pick('galerie'),
+      // photos du post
+      photo: main ? main.src : '', hasPhoto, noPhoto: !hasPhoto, photoCut: hasPhoto && mainCut, photoFull: hasPhoto && !mainCut,
+      selThumbs, selCount: selItems.length, libCount: libAll.length,
+      clearSel: () => this.setState({ sel: [] }),
+      caBg, caFg, ccBg, ccFg, cfBg, cfFg,
+      cutAuto: () => this.setState({ cutMode: 'auto' }), cutOn: () => this.setState({ cutMode: 'cut' }), cutOff: () => this.setState({ cutMode: 'full' }),
+      onFile: (e) => { this.addFiles(e.target.files, true); e.target.value = ''; },
+      onDrop: (e) => { e.preventDefault(); this.addFiles(e.dataTransfer.files, true); },
+      onDragOver: (e) => { e.preventDefault(); },
+      // recherche (panneau)
+      query: s.query, fCat: s.fCat, fSeason: s.fSeason, setQuery: set('query'), setFCat: set('fCat'), setFSeason: set('fSeason'),
+      results, resultLabel: found.length + (found.length > 1 ? ' photos' : ' photo'),
+      // médiathèque (modale)
+      modalOpen: s.modalOpen, openLib: () => this.setState({ modalOpen: true }), closeLib: () => this.setState({ modalOpen: false }),
+      mQuery: s.mQuery, mCat: s.mCat, mSub: s.mSub, mSeason: s.mSeason,
+      setMQuery: set('mQuery'), setMCat: (e) => this.setState({ mCat: e.target.value, mSub: '' }), setMSub: set('mSub'), setMSeason: set('mSeason'),
+      mSubOptions: this.CATS[s.mCat] || [], mResults, mCount: mFound.length,
+      navCats, unclassifiedCount, hasFilter: !!(s.mQuery || s.mCat || s.mSub || s.mSeason || s.mOnlyPost),
+      navAllBg: navBg(allActive), navAllFg: navFg(allActive), navPostBg: navBg(postActive), navPostFg: navFg(postActive), navUncBg: navBg(uncActive), navUncFg: navFg(uncActive),
+      navAll: () => this.setState({ mCat: '', mSub: '', mOnlyPost: false }),
+      navInPost: () => this.setState({ mOnlyPost: true, mCat: '', mSub: '' }),
+      navUnclassified: () => this.setState({ mCat: '—', mSub: '', mOnlyPost: false }),
+      clearFilters: () => this.setState({ mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false }),
+      mLabel: mFound.length + (mFound.length > 1 ? ' visuels ' : ' visuel ') + ctx, mEmpty: s.libReady && mFound.length === 0,
+      mSelNotAll: mFound.some(x => !inSel(x.id)), editInPost: !!(ed && inSel(ed.id)),
+      addResultsToPost: () => { const add = mFound.map(x => x.id).filter(id => !inSel(id)); this.setState({ sel: sel.concat(add) }); },
+      onFileLib: (e) => { this.addFiles(e.target.files, false); e.target.value = ''; },
+      onDropLib: (e) => { e.preventDefault(); e.stopPropagation(); this.addFiles(e.dataTransfer.files, false); },
+      hasEdit: !!ed, noEdit: !ed,
+      editSrc: ed ? ed.src : '', editName: ed ? ed.name : '', editCat: ed ? ed.cat : '', editSub: ed ? ed.sub : '', editSeason: ed ? ed.season : "Toute l'année",
+      editSubOptions: ed ? (this.CATS[ed.cat] || []) : [],
+      setEditName: (e) => this.editItem({ name: e.target.value }),
+      setEditCat: (e) => this.editItem({ cat: e.target.value, sub: '' }),
+      setEditSub: (e) => this.editItem({ sub: e.target.value }),
+      setEditSeason: (e) => this.editItem({ season: e.target.value }),
+      ecBg, ecFg, efBg, efFg, editCutOn: () => this.editItem({ cut: true }), editCutOff: () => this.editItem({ cut: false }),
+      editToggleLabel: ed && inSel(ed.id) ? 'Retirer du post' : 'Ajouter au post',
+      editToggle: () => { if (ed) togglePost(ed.id); },
+      editDelete: () => {
+        if (!ed) return; const id = ed.id;
+        if (ed.ds) { try { const r = JSON.parse(localStorage.getItem('latelier.fbpost.dsRemoved') || '[]'); if (!r.includes(id)) r.push(id); localStorage.setItem('latelier.fbpost.dsRemoved', JSON.stringify(r)); } catch (e) {} }
+        this.setState({ sel: sel.filter(x => x !== id), editId: null }); this.updateLib(l => l.filter(x => x.id !== id));
+      },
+      restoreDs: () => this.restoreDs(),
+      // montage slots
+      mosA: withH(slots([0, 3, 6, 9]), [344, 430, 344, 430]),
+      mosB: withH(slots([1, 4, 7, 10]), [430, 344, 430, 344]),
+      mosC: withH(slots([2, 5, 8, 11]), [344, 430, 344, 430]),
+      grid4: slots([0, 1, 2, 3]), grid9: slots([0, 1, 2, 3, 4, 5, 6, 7, 8]),
+      trio0: slot(main), trio12: slots([1, 2]),
+      colA: slots([0, 1, 2, 3]), colB: slots([4]), strips: slots([0, 1, 2]),
+      anyText: s.showLogo || s.showEyebrow || s.showTitle || s.showPhrase || s.showPrice || s.showSite,
+      showBadges: showBadgesV,
+      ...newStyleVals,
+      frise4: slots([0, 1, 2, 3]), puz0: slot(main, 0), puz4: slots([1, 2, 3, 4]), past4: slots([0, 1, 2, 3]),
+      epi3: withXY(slots([0, 1, 2]), [{ x: 80, y: 160, w: 420, h: 440, rot: -6 }, { x: 540, y: 130, w: 440, h: 460, rot: 4 }, { x: 300, y: 450, w: 460, h: 370, rot: -2 }]),
+      etaA: slots([0, 1, 2]), etaB: slots([3, 4, 5]),
+      diag3: withXY(slots([0, 1, 2]), [{ x: 64, y: 150 }, { x: 260, y: 405 }, { x: 456, y: 660 }]),
+      ved0: slot(main, 0), ved4: slots([1, 2, 3, 4]), dam16, enc4: slots([0, 1, 2, 3]), nuit3: slots([0, 1, 2]),
+      // textes
+      showLogo: s.showLogo, showEyebrow: s.showEyebrow, showTitle: s.showTitle, showPhrase: s.showPhrase, showPrice: s.showPrice, showPromo: s.showPromo, showSite: s.showSite,
+      toggleLogo: tog('showLogo'), toggleEyebrow: tog('showEyebrow'), toggleTitle: tog('showTitle'), togglePhrase: tog('showPhrase'), togglePrice: tog('showPrice'), togglePromo: tog('showPromo'), toggleSite: tog('showSite'),
+      eyebrow: s.eyebrow, title: s.title, phrase: s.phrase, price: s.price, unit: s.unit, promo: s.promo, promoSub: s.promoSub, site: s.site,
+      setEyebrow: set('eyebrow'), setTitle: set('title'), setPhrase: set('phrase'), setPrice: set('price'), setUnit: set('unit'), setPromo: set('promo'), setPromoSub: set('promoSub'), setSite: set('site'),
+      fsBg, fsFg, fdBg, fdFg, fgBg, fgFg,
+      fontScript: font('script'), fontDisplay: font('display'), fontSans: font('sans'),
+      cAuto: col('auto'), cRuby: col('ruby'), cNoir: col('noir'), cAbricot: col('abricot'), cBlanc: col('blanc'), cGris: col('gris'),
+      colorAuto: color('auto'), colorRuby: color('ruby'), colorNoir: color('noir'), colorAbricot: color('abricot'), colorBlanc: color('blanc'), colorGris: color('gris'),
+      exporting: s.exporting, notExporting: !s.exporting, exportError: s.exportError,
+      exportPng: () => this.exportPng(),
+      hasOnUse: typeof this.props.onUse === 'function', useInPost: () => this.useInPost(),
+      notEmbedded: !this.props.embedded, notArtOnly: !this.props.artOnly,
+      rootMinH: this.props.artOnly ? '0' : '100vh', mainPad: this.props.artOnly ? '0' : '24px', previewMax: this.props.artOnly ? '100%' : '760px', headerLabel: this.props.embedded ? 'Studio visuel · 1080 × 1080 · le visuel est ajouté aux médias du post' : 'Posts Facebook · 1080 × 1080',
+      useLabel: s.using ? 'Préparation…' : 'Utiliser dans le post',
+    };
+  }
+}
+</script>
+</body>
+</html>

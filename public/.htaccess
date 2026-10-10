@@ -1,0 +1,25 @@
+# Social & Ads — Apache (servi sous /social, alias vers ce dossier)
+DirectoryIndex index.html
+RewriteEngine On
+
+# Les écrans et leur couche de données sont revalidés à chaque visite :
+# après une livraison, le navigateur ne doit pas garder l'ancienne version.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# API → contrôleur frontal
+RewriteRule ^api/v1/social(/.*)?$ api/index.php [L,QSA]
+
+# Les visuels déposés ne s'exécutent jamais, et un visuel absent rend 404.
+RewriteRule ^uploads/.*\.(php|phtml|phar|phps|cgi|pl|py|sh|htaccess)$ - [F,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^uploads/ - [R=404,L]
+
+<IfModule mod_headers.c>
+  <FilesMatch "^uploads/">
+    Header set X-Content-Type-Options "nosniff"
+  </FilesMatch>
+</IfModule>

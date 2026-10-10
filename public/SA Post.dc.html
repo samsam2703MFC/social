@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <script src="ds-catalogue.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button,textarea{font-family:var(--font-ui);}
+    input::placeholder,textarea::placeholder{color:#9A948C;}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="post" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <a href="{{ calHref }}" style="font-size:12px;font-weight:500;text-decoration:none;">← Calendrier</a>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">{{ pageTitle }}</h1>
+      </div>
+      <sc-if value="{{ locked }}" hint-placeholder-val="{{ false }}">
+        <span style="font-size:12px;background:#E2F0E8;color:#0F6B4A;border-radius:999px;padding:6px 12px;font-weight:500;">Publié · lecture seule</span>
+      </sc-if>
+    </header>
+
+    <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+
+      <!-- ================= FORMULAIRE UNIQUE ================= -->
+      <div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:14px;">
+
+        <!-- 1 Type -->
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">1 · Type de post</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <sc-for list="{{ types }}" as="t" hint-placeholder-count="7">
+              <button onClick="{{ t.pick }}" style="border-radius:999px;padding:8px 13px;font-size:13px;font-weight:500;cursor:pointer;border:0.5px solid {{ t.border }};background:{{ t.bg }};color:{{ t.fg }};">{{ t.name }}</button>
+            </sc-for>
+          </div>
+        </section>
+
+        <!-- 2 Catalogue -->
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">2 · Produit ou gamme du catalogue</span>
+            <span style="font-size:12px;color:#666666;">Pré-remplit photo, nom, prix et texte</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;">
+            <sc-for list="{{ catalogue }}" as="c" hint-placeholder-count="0">
+              <button onClick="{{ c.pick }}" style="display:flex;flex-direction:column;align-items:stretch;padding:0;border-radius:8px;border:2px solid {{ c.ring }};background:#FFFFFF;cursor:pointer;overflow:hidden;text-align:left;">
+                <span style="display:block;height:58px;background:#F4EFE8;position:relative;"><img src="{{ c.img }}" alt="" style="position:absolute;left:8px;top:5px;width:calc(100% - 16px);height:48px;object-fit:contain;"></span>
+                <span style="padding:6px 8px 7px;display:flex;flex-direction:column;gap:1px;">
+                  <span style="font-size:11px;font-weight:500;line-height:1.25;color:#222222;">{{ c.name }}</span>
+                  <span style="font-size:10px;color:#666666;">{{ c.meta }}</span>
+                </span>
+              </button>
+            </sc-for>
+          </div>
+        </section>
+
+        <!-- 3 Visuel -->
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">3 · Visuel</span>
+            <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+              <button onClick="{{ modeStudio }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ msBg }};color:{{ msFg }};">Visuel composé</button>
+              <button onClick="{{ modeBrut }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ mbBg }};color:{{ mbFg }};">Photos telles quelles</button>
+            </div>
+          </div>
+
+          <!-- Photos -->
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <span style="font-size:12px;color:#666666;">{{ photosLabel }}</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <sc-for list="{{ photos }}" as="m" hint-placeholder-count="0">
+                <div onClick="{{ m.first }}" title="Cliquer pour la mettre en n°1" style="position:relative;width:68px;height:68px;border-radius:8px;background:#F4EFE8;border:2px solid {{ m.ring }};box-sizing:border-box;overflow:hidden;cursor:pointer;">
+                  <sc-if value="{{ m.src }}" hint-placeholder-val="{{ false }}"><img src="{{ m.src }}" alt="" style="position:absolute;left:4px;top:4px;width:calc(100% - 8px);height:calc(100% - 8px);object-fit:contain;"></sc-if>
+                  <span style="position:absolute;left:4px;bottom:4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ m.n }}</span>
+                  <sc-if value="{{ notLocked }}" hint-placeholder-val="{{ true }}"><button onClick="{{ m.remove }}" style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;border:none;background:#232220;color:#FFFFFF;font-size:10px;cursor:pointer;padding:0;">×</button></sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ hasVideo }}" hint-placeholder-val="{{ false }}">
+                <div style="position:relative;width:68px;height:68px;border-radius:8px;background:#232220;color:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;gap:2px;">▶<span>{{ videoName }}</span>
+                  <button onClick="{{ removeVideo }}" style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;border:none;background:#FFFFFF;color:#232220;font-size:10px;cursor:pointer;padding:0;">×</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ hasVideo }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+                    <button onClick="{{ vfVideo }}" style="border:none;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ vvBg }};color:{{ vvFg }};">Vidéo</button>
+                    <button onClick="{{ vfReel }}" style="border:none;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ vrBg }};color:{{ vrFg }};">Reel</button>
+                  </div>
+                  <span style="font-family:ui-monospace,monospace;font-size:9px;color:#8A847C;max-width:180px;line-height:1.4;">{{ videoTech }}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ notLocked }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ openLib }}" style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">Médiathèque<span style="font-size:10px;color:#666666;font-weight:400;">{{ libCount }} visuels</span></button>
+                <label style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Importer<span style="font-size:10px;color:#666666;font-weight:400;">photos</span>
+                  <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ onFiles }}" style="display:none;">
+                </label>
+                <sc-if value="{{ isBrut }}" hint-placeholder-val="{{ false }}">
+                  <label style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Vidéo<span style="font-size:10px;color:#666666;font-weight:400;">MP4 · 60 s</span>
+                    <input type="file" accept="video/*" onChange="{{ onVideo }}" style="display:none;">
+                  </label>
+                </sc-if>
+              </sc-if>
+            </div>
+          </div>
+
+          <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
+            <!-- Style -->
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;color:#666666;">Style · photo unique</span>
+                <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+                  <sc-for list="{{ cutModes }}" as="cm" hint-placeholder-count="3"><button onClick="{{ cm.pick }}" style="border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:500;cursor:pointer;background:{{ cm.bg }};color:{{ cm.fg }};">{{ cm.label }}</button></sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <sc-for list="{{ stylesSingle }}" as="st" hint-placeholder-count="6"><button onClick="{{ st.pick }}" style="border-radius:8px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ st.border }};background:{{ st.bg }};color:{{ st.fg }};display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:{{ st.sw }};box-shadow:inset 0 0 0 0.5px rgba(34,34,34,0.25);"></span>{{ st.name }}</button></sc-for>
+              </div>
+              <span style="font-size:12px;color:#666666;margin-top:4px;">Style · montage (photo 1 → case 1, photo 2 → case 2…)</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <sc-for list="{{ stylesMontage }}" as="st" hint-placeholder-count="16"><button onClick="{{ st.pick }}" style="border-radius:8px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ st.border }};background:{{ st.bg }};color:{{ st.fg }};">{{ st.name }} <span style="font-size:10px;opacity:0.7;">· {{ st.slots }}</span></button></sc-for>
+              </div>
+            </div>
+
+            <!-- Textes sur le visuel -->
+            <div style="display:flex;flex-direction:column;gap:8px;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span style="font-size:12px;color:#666666;">Textes sur le visuel · cochez pour afficher · {{ langNote }}</span><div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;"><sc-for list="{{ langTabs }}" as="lg" hint-placeholder-count="2"><button onClick="{{ lg.pick }}" style="border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ lg.bg }};color:{{ lg.fg }};display:flex;align-items:center;gap:6px;">{{ lg.label }}<span style="width:7px;height:7px;border-radius:50%;background:{{ lg.dot }};"></span></button></sc-for></div></div>
+              <sc-if value="{{ showCopyFr }}" hint-placeholder-val="{{ false }}"><button onClick="{{ copyVisualFr }}" style="align-self:flex-start;border:0.5px dashed rgba(34,34,34,0.3);background:#FFFFFF;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;">Partir des textes FR</button></sc-if>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px 14px;">
+                <sc-for list="{{ vFields }}" as="f" hint-placeholder-count="7">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" checked="{{ f.on }}" onChange="{{ f.toggle }}" disabled="{{ locked }}" style="accent-color:#8D1D2C;width:15px;height:15px;margin:0;flex:0 0 auto;">
+                    <sc-if value="{{ f.isLabel }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;padding:8px 0;">{{ f.label }}</span></sc-if>
+                    <sc-if value="{{ f.isInput }}" hint-placeholder-val="{{ true }}"><input type="text" value="{{ f.value }}" onChange="{{ f.set }}" disabled="{{ locked }}" placeholder="{{ f.label }}" style="flex:1 1 auto;min-width:0;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;" style-focus="border-color:#8D1D2C;"></sc-if>
+                    <sc-if value="{{ f.hasSecond }}" hint-placeholder-val="{{ false }}"><input type="text" value="{{ f.value2 }}" onChange="{{ f.set2 }}" disabled="{{ locked }}" placeholder="{{ f.label2 }}" style="flex:1 1 auto;min-width:0;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;" style-focus="border-color:#8D1D2C;"></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:4px;">
+                <span style="font-size:12px;color:#666666;">Phrase</span>
+                <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+                  <sc-for list="{{ fonts }}" as="ft" hint-placeholder-count="3"><button onClick="{{ ft.pick }}" style="border:none;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:{{ ft.family }};background:{{ ft.bg }};color:{{ ft.fg }};">{{ ft.label }}</button></sc-for>
+                </div>
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <sc-for list="{{ colors }}" as="co" hint-placeholder-count="6"><button onClick="{{ co.pick }}" title="{{ co.label }}" style="width:24px;height:24px;border-radius:50%;cursor:pointer;background:{{ co.c }};border:2px solid {{ co.ring }};padding:0;font-size:9px;font-weight:500;color:#666666;box-shadow:inset 0 0 0 1px rgba(34,34,34,0.12);">{{ co.txt }}</button></sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </section>
+
+        <!-- 4 Ciblage -->
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">4 · Ciblage et canaux</span>
+            <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+              <button onClick="{{ scopeAll }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ saBg }};color:{{ saFg }};">Tout le réseau</button>
+              <button onClick="{{ scopeGroup }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ sgBg }};color:{{ sgFg }};">Groupe</button>
+              <button onClick="{{ scopeShop }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ ssBg }};color:{{ ssFg }};">Boutique(s)</button>
+            </div>
+          </div>
+          <sc-if value="{{ isGroup }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4"><button onClick="{{ g.pick }}" style="border-radius:999px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ g.border }};background:{{ g.bg }};color:{{ g.fg }};">{{ g.name }} · {{ g.count }}</button></sc-for>
+            </div>
+          </sc-if>
+          <div style="border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;overflow:hidden;">
+            <div style="display:grid;grid-template-columns:minmax(130px,1.4fr) 84px 92px minmax(120px,1fr);background:#F4EFE8;">
+              <span style="padding:8px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Boutique</span>
+              <span style="padding:8px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Facebook</span>
+              <span style="padding:8px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Instagram</span>
+              <span style="padding:8px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">État</span>
+            </div>
+            <sc-for list="{{ shopRows }}" as="r" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:minmax(130px,1.4fr) 84px 92px minmax(120px,1fr);border-top:0.5px solid rgba(34,34,34,0.08);align-items:center;background:{{ r.bg }};">
+                <label style="padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer;"><input type="checkbox" checked="{{ r.on }}" onChange="{{ r.toggle }}" disabled="{{ r.lockShop }}" style="accent-color:#8D1D2C;margin:0;width:15px;height:15px;">{{ r.name }}</label>
+                <label style="padding:8px 12px;display:flex;align-items:center;gap:6px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ r.fb }}" onChange="{{ r.toggleFb }}" disabled="{{ r.fbDis }}" style="accent-color:#8D1D2C;margin:0;">Page</label>
+                <label style="padding:8px 12px;display:flex;align-items:center;gap:6px;font-size:12px;color:{{ r.igColor }};cursor:pointer;"><input type="checkbox" checked="{{ r.ig }}" onChange="{{ r.toggleIg }}" disabled="{{ r.igDis }}" style="accent-color:#8D1D2C;margin:0;">Compte</label>
+                <span style="padding:8px 12px;font-size:11px;color:{{ r.noteFg }};">{{ r.note }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <!-- 5 Texte du post -->
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">5 · Texte du post <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">message / caption</span></span>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;">
+              <sc-for list="{{ vars }}" as="v" hint-placeholder-count="5"><button onClick="{{ v.insert }}" title="{{ v.tip }}" style="border:0.5px solid rgba(141,29,44,0.35);background:#FBF3F4;color:#8D1D2C;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:500;cursor:pointer;font-family:ui-monospace,monospace;">{{ v.code }}</button></sc-for>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"><div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;"><sc-for list="{{ langTabs }}" as="lg" hint-placeholder-count="2"><button onClick="{{ lg.pick }}" style="border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ lg.bg }};color:{{ lg.fg }};display:flex;align-items:center;gap:6px;">{{ lg.label }}<span style="width:7px;height:7px;border-radius:50%;background:{{ lg.dot }};"></span></button></sc-for></div><span style="font-size:11px;color:#666666;">{{ langNeed }}</span></div>
+          <sc-if value="{{ showCopyFr }}" hint-placeholder-val="{{ false }}"><button onClick="{{ copyTextFr }}" style="align-self:flex-start;border:0.5px dashed rgba(34,34,34,0.3);background:#FFFFFF;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;">Partir du texte FR</button></sc-if>
+          <textarea ref="{{ taRef }}" value="{{ text }}" onChange="{{ setText }}" disabled="{{ locked }}" rows="4" placeholder="Légende du post. Les variables sont remplacées boutique par boutique." style="font-size:14px;line-height:1.55;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:10px 12px;outline:none;resize:vertical;" style-focus="border-color:#8D1D2C;"></textarea>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ templates }}" as="tp" hint-placeholder-count="4"><button onClick="{{ tp.use }}" style="border:none;background:#F4EFE8;color:#444444;border-radius:999px;padding:5px 10px;font-size:11px;cursor:pointer;">Modèle · {{ tp.name }}</button></sc-for></div>
+            <span style="font-size:11px;color:{{ lenColor }};">{{ lenLabel }}</span>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <label style="flex:2 1 240px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;"><span>Lien (optionnel) <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">link</span></span>
+              <input type="url" value="{{ link }}" onChange="{{ setLink }}" disabled="{{ locked }}" placeholder="https://www.latelierby.be/…" style="font-size:14px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+            </label>
+            <label style="flex:1 1 200px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Campagne liée
+              <select value="{{ campaign }}" onChange="{{ setCampaign }}" disabled="{{ locked }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:9px 10px;">
+                <option value="">Aucune</option>
+                <sc-for list="{{ campOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.name }}</option></sc-for>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <!-- 6 Publication -->
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">6 · Publication <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">published · scheduled_publish_time</span></span>
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+            <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+              <button onClick="{{ whenNow }}" style="border:none;border-radius:6px;padding:8px 13px;font-size:12px;font-weight:500;cursor:pointer;background:{{ wnBg }};color:{{ wnFg }};">Immédiate</button>
+              <button onClick="{{ whenLater }}" style="border:none;border-radius:6px;padding:8px 13px;font-size:12px;font-weight:500;cursor:pointer;background:{{ wlBg }};color:{{ wlFg }};">Programmée</button>
+            </div>
+            <sc-if value="{{ isLater }}" hint-placeholder-val="{{ true }}">
+              <input type="date" value="{{ date }}" onChange="{{ setDate }}" disabled="{{ locked }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;">
+              <input type="time" value="{{ time }}" onChange="{{ setTime }}" disabled="{{ locked }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;">
+            </sc-if>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:13px;min-width:170px;">Étaler sur <strong style="font-weight:500;">{{ spread }} min</strong></span>
+            <input type="range" min="0" max="60" step="5" value="{{ spread }}" onChange="{{ setSpread }}" disabled="{{ locked }}" style="flex:1 1 200px;accent-color:#8D1D2C;">
+          </div>
+          <span style="font-size:11px;color:{{ schedRuleColor }};">{{ schedRule }}</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;"><sc-for list="{{ schedule }}" as="sl" hint-placeholder-count="0"><span style="font-size:11px;background:#F4EFE8;border-radius:999px;padding:4px 9px;color:#444444;">{{ sl.name }} · {{ sl.t }}</span></sc-for></div>
+          <div style="border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;overflow:hidden;">
+            <div style="background:#232220;color:#F2C9A0;font-family:ui-monospace,monospace;font-size:11px;padding:7px 10px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span>{{ apiCall }}</span><span style="color:#B8B2A8;">× {{ pageCount }} Pages · Page token</span></div>
+            <div style="padding:8px 10px;background:#FAF7F2;display:flex;flex-direction:column;gap:3px;"><sc-for list="{{ apiParams }}" as="ap" hint-placeholder-count="0"><span style="font-family:ui-monospace,monospace;font-size:11px;color:#444444;"><span style="color:#8D1D2C;">{{ ap.k }}</span> = {{ ap.v }}</span></sc-for></div>
+            <sc-if value="{{ hasIgCall }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 10px;border-top:0.5px solid rgba(34,34,34,0.08);font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">Instagram : POST /{ig_user_id}/media → POST /{ig_user_id}/media_publish</div></sc-if>
+          </div>
+          <sc-if value="{{ hasErrors }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#F6DCDF;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;"><sc-for list="{{ errors }}" as="er" hint-placeholder-count="0"><span style="font-size:12px;color:#8D1D2C;">{{ er }}</span></sc-for></div>
+          </sc-if>
+          <sc-if value="{{ notLocked }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;border-top:0.5px solid rgba(34,34,34,0.10);padding-top:12px;">
+              <button onClick="{{ saveDraft }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:500;cursor:pointer;">Enregistrer le brouillon</button>
+              <button onClick="{{ publish }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">{{ publishLabel }}</button>
+            </div>
+          </sc-if>
+        </section>
+      </div>
+
+      <!-- ================= APERÇU ================= -->
+      <aside style="flex:0 1 380px;min-width:300px;position:sticky;top:16px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Aperçu en direct</span>
+          <div style="display:inline-flex;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:3px;gap:2px;">
+            <button onClick="{{ pvFb }}" style="border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ pfBg }};color:{{ pfFg }};">Facebook</button>
+            <button onClick="{{ pvIg }}" style="border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ piBg }};color:{{ piFg }};">Instagram</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;"><sc-for list="{{ pvShops }}" as="ps" hint-placeholder-count="0"><button onClick="{{ ps.pick }}" style="border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid {{ ps.border }};background:{{ ps.bg }};color:{{ ps.fg }};">{{ ps.name }}</button></sc-for></div>
+
+        <sc-if value="{{ pvBilingual }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><span style="font-size:11px;color:#666666;">Boutique bilingue · visuel en</span><sc-for list="{{ pvLangs }}" as="pl" hint-placeholder-count="0"><button onClick="{{ pl.pick }}" style="border-radius:999px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid {{ pl.border }};background:{{ pl.bg }};color:{{ pl.fg }};">{{ pl.label }}</button></sc-for><span style="font-size:11px;color:#666666;">· légende dans les deux langues</span></div></sc-if>
+        <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.12);overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+          <sc-if value="{{ isFb }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 14px 8px;">
+              <span style="width:38px;height:38px;border-radius:50%;background:#8D1D2C;display:flex;align-items:center;justify-content:center;flex:0 0 auto;"><img src="img/logo-white.png" alt="" style="width:28px;height:auto;"></span>
+              <span style="display:flex;flex-direction:column;gap:1px;min-width:0;"><span style="font-size:14px;font-weight:600;color:#1c1e21;">{{ pv.page }}</span><span style="font-size:12px;color:#65676b;">{{ pv.when }} · Public</span></span>
+            </div>
+            <p style="margin:0;padding:0 14px 10px;font-size:14px;line-height:1.45;color:#1c1e21;white-space:pre-wrap;">{{ pv.text }}</p>
+            <sc-if value="{{ pv.hasLink }}" hint-placeholder-val="{{ false }}"><p style="margin:-4px 0 0;padding:0 14px 10px;font-size:13px;color:#385898;word-break:break-all;">{{ pv.link }}</p></sc-if>
+          </sc-if>
+          <sc-if value="{{ isIg }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;">
+              <span style="width:32px;height:32px;border-radius:50%;background:#8D1D2C;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #FFFFFF,0 0 0 3.5px #D97B29;"><img src="img/logo-white.png" alt="" style="width:22px;height:auto;"></span>
+              <span style="display:flex;flex-direction:column;"><span style="font-size:13px;font-weight:600;color:#262626;">{{ pv.handle }}</span><span style="font-size:11px;color:#8e8e8e;">{{ pv.city }}</span></span>
+            </div>
+          </sc-if>
+
+          <!-- visuel : instance unique du studio -->
+          <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
+            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" hint-size="100%,420px"></dc-import>
+          </sc-if>
+          <sc-if value="{{ isBrut }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ pv.hasMedia }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:{{ pv.cols }};gap:2px;">
+                <sc-for list="{{ pv.media }}" as="m" hint-placeholder-count="0">
+                  <div style="position:relative;width:100%;height:0;padding-bottom:100%;background:#F5EFE4;overflow:hidden;">
+                    <sc-if value="{{ m.isImg }}" hint-placeholder-val="{{ false }}"><img src="{{ m.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:{{ m.fit }};"></sc-if>
+                    <sc-if value="{{ m.isVideo }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;background:#232220;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:30px;">▶</span></sc-if>
+                    <sc-if value="{{ m.more }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;background:rgba(0,0,0,0.45);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;">{{ m.moreLabel }}</span></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ pv.noMedia }}" hint-placeholder-val="{{ false }}"><div style="padding:40px 16px;text-align:center;font-size:12px;color:#8e8e8e;background:#F5EFE4;">Aucune photo</div></sc-if>
+          </sc-if>
+
+          <sc-if value="{{ isFb }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;justify-content:space-between;padding:8px 14px;font-size:12px;color:#65676b;border-bottom:1px solid #e4e6eb;"><span>J'aime · Commentaires</span><span>Partages</span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);padding:4px 8px 6px;">
+              <span style="text-align:center;font-size:13px;font-weight:600;color:#65676b;padding:6px;">J'aime</span>
+              <span style="text-align:center;font-size:13px;font-weight:600;color:#65676b;padding:6px;">Commenter</span>
+              <span style="text-align:center;font-size:13px;font-weight:600;color:#65676b;padding:6px;">Partager</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isIg }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;">
+              <p style="margin:0;font-size:13px;line-height:1.45;color:#262626;white-space:pre-wrap;"><strong style="font-weight:600;">{{ pv.handle }}</strong> {{ pv.text }}</p>
+              <sc-if value="{{ pv.hasLink }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8e8e8e;">Lien non cliquable dans une légende Instagram : « lien en bio ».</span></sc-if>
+              <span style="font-size:10px;color:#8e8e8e;text-transform:uppercase;letter-spacing:0.04em;">{{ pv.when }}</span>
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ igWarn }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A4B00;background:#FCE7C8;border-radius:8px;padding:8px 10px;">{{ igWarnText }}</span></sc-if>
+        <span style="font-size:11px;color:#666666;line-height:1.5;">Variables pour {{ pv.city }} : {{ pv.resolved }}</span>
+      </aside>
+    </div>
+  </main>
+
+  <!-- ===== Médiathèque ===== -->
+  <sc-if value="{{ libOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(35,34,32,0.55);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#FFFFFF;border-radius:12px;width:100%;max-width:1000px;height:min(780px,92vh);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(35,34,32,0.3);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:0.5px solid rgba(34,34,34,0.10);flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <span style="font-family:var(--font-display);font-size:20px;">MEDIATHEQUE</span>
+            <span style="font-size:12px;color:#666666;">Stockage Cloudflare R2 · {{ libCount }} visuels · recherche par produit et par gamme</span>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onClick="{{ closeLib }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Annuler</button>
+            <button onClick="{{ confirmLib }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Ajouter {{ libPickCount }} visuel(s)</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;padding:12px 18px;border-bottom:0.5px solid rgba(34,34,34,0.10);flex-wrap:wrap;">
+          <input type="search" value="{{ lq }}" onChange="{{ setLq }}" placeholder="Produit, gamme, saison…" style="flex:2 1 220px;font-size:14px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+          <select value="{{ lcat }}" onChange="{{ setLcat }}" style="flex:1 1 160px;font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;">
+            <option value="">Toutes catégories</option>
+            <sc-for list="{{ libCats }}" as="o" hint-placeholder-count="0"><option value="{{ o }}">{{ o }}</option></sc-for>
+          </select>
+        </div>
+        <div style="flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));grid-auto-rows:max-content;gap:12px;align-content:start;">
+          <sc-for list="{{ libItems }}" as="it" hint-placeholder-count="0">
+            <button onClick="{{ it.toggle }}" style="display:block;padding:0;border-radius:10px;border:2px solid {{ it.ring }};background:#FFFFFF;cursor:pointer;overflow:clip;text-align:left;">
+              <span style="display:block;position:relative;width:100%;height:0;padding-bottom:100%;background:#F4EFE8;">
+                <img src="{{ it.src }}" alt="" style="position:absolute;left:8px;top:8px;width:calc(100% - 16px);height:calc(100% - 16px);object-fit:contain;">
+                <sc-if value="{{ it.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:6px;right:6px;min-width:22px;height:22px;border-radius:999px;background:#8D1D2C;color:#FFFFFF;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;padding:0 6px;box-sizing:border-box;">{{ it.order }}</span></sc-if>
+              </span>
+              <span style="display:block;padding:6px 8px 8px;">
+                <span style="display:block;font-size:11px;font-weight:500;color:#222222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ it.name }}</span>
+                <span style="display:block;font-size:10px;color:#666666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ it.tags }}</span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;display:flex;gap:12px;align-items:center;box-shadow:0 12px 30px rgba(35,34,32,0.3);">{{ toast }}<a href="{{ calHref }}" style="color:#F2C9A0;font-weight:500;">Voir le calendrier</a></div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  STYLES1 = [['epure', 'Épuré', '#F5EFE4'], ['abricot', 'Abricot', '#F2C9A0'], ['ruby', 'Ruby', '#8D1D2C'], ['noir', 'Noir', '#232220'], ['plein', 'Plein cadre', '#8A847C'], ['duo', 'Duo', '#EAE4DC']];
+  STYLES2 = [['mosaique', 'Mosaïque', 12], ['grille', 'Grille 2×2', 4], ['trio', 'Trio', 3], ['collage', 'Collage', 5], ['bandes', 'Bandes', 3], ['galerie', 'Galerie 3×3', 9], ['frise', 'Frise', 4], ['puzzle', 'Puzzle', 5], ['pastilles', 'Pastilles', 4], ['epinglees', 'Épinglées', 3], ['etagere', 'Étagère', 6], ['diagonale', 'Diagonale', 3], ['vedette', 'Vedette', 5], ['damier', 'Damier', 8], ['encadre', 'Encadré', 4], ['nuit', 'Nuit', 3]];
+  state = this.initState();
+  initState() {
+    const SA = window.SA;
+    const v = { style: 'epure', cutMode: 'auto', showLogo: true, showEyebrow: true, showTitle: true, showPhrase: true, showPrice: true, showPromo: false, showSite: true,
+      nl: { eyebrow: 'Seizoenseditie · Herfst 2026', title: '', phrase: '', unit: 'Per stuk', promoSub: 'de 5de gratis' },
+      eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
+    const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', campaign: '',
+      mode: 'studio', photos: [], video: null, videoFormat: 'video', v, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
+      libOpen: false, lib: [], libPick: [], lq: '', lcat: '', toast: '', errors: [], saving: false };
+    if (!SA) return base;
+    SA.SHOPS.forEach(s => { base.ch[s.id] = { fb: s.fb === 'connected', ig: s.igs === 'connected' }; });
+    const id = SA.param('id'), p = id && SA.state().posts.find(x => x.id === id);
+    if (p) {
+      const shops = p.shops === 'all' ? SA.SHOPS.map(s => s.id) : p.shops.slice();
+      Object.assign(base, { id: p.id, type: p.type, text: p.text || '', textNl: p.textNl || '', link: p.link || '', campaign: p.campaign || '', date: p.date, time: p.time, sel: shops,
+        scope: shops.length === SA.SHOPS.length ? 'all' : 'shop', status: p.status, spread: p.spread || 10, product: p.product || null });
+      if (p.ch) base.ch = p.ch;
+      if (p.visual) { base.mode = 'studio'; base.v = Object.assign({}, v, p.visual.v, { nl: Object.assign({}, v.nl, (p.visual.v || {}).nl) }); base.photos = p.visual.photos || []; }
+      else { base.mode = 'brut'; base.photos = (p.media || [{ src: p.img, kind: 'img', cut: true }]).filter(m => m.kind !== 'video').map(m => ({ src: m.src, cut: m.cut !== false, name: m.name || '' })); base.v.title = p.title; }
+    }
+    const shop = SA.param('shop'); if (shop && !p) { base.scope = 'shop'; base.sel = [shop]; }
+    const date = SA.param('date'); if (date && !p) base.date = date;
+    return base;
+  }
+  async componentDidMount() {
+    let lib = null;
+    try {
+      lib = await new Promise((res, rej) => {
+        const r = indexedDB.open('latelier-fbpost', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('kv');
+        r.onerror = () => rej(r.error);
+        r.onsuccess = () => { const db = r.result, tx = db.transaction('kv', 'readonly'), q = tx.objectStore('kv').get('library'); tx.oncomplete = () => { res(q.result); db.close(); }; tx.onerror = () => { rej(tx.error); db.close(); }; };
+      });
+    } catch (e) {}
+    if (!Array.isArray(lib) || !lib.length) lib = window.DS_ILLUS || [];
+    this.setState({ lib });
+  }
+  componentWillUnmount() { clearTimeout(this._tt); }
+  toast(msg) { clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: '' }), 4000); }
+  V(patch) { this.setState({ v: Object.assign({}, this.state.v, patch) }); }
+  targets() { const SA = window.SA; return this.state.sel.filter(id => SA.byId(SA.SHOPS, id)); }
+  readFile(file) {
+    return new Promise((res) => {
+      if (!file || !/^image\//.test(file.type)) return res(null);
+      const rd = new FileReader();
+      rd.onerror = () => res(null);
+      rd.onload = () => { const url = rd.result, img = new Image();
+        img.onerror = () => res({ src: url, cut: false, name: file.name });
+        img.onload = () => { let cut = false;
+          try { const c = document.createElement('canvas'); c.width = 32; c.height = 32; const x = c.getContext('2d'); x.drawImage(img, 0, 0, 32, 32); const d = x.getImageData(0, 0, 32, 32).data; let clear = 0, tot = 0;
+            for (let y = 0; y < 32; y++) for (let k = 0; k < 32; k++) { if (k > 1 && k < 30 && y > 1 && y < 30) continue; tot++; if (d[(y * 32 + k) * 4 + 3] < 16) clear++; } cut = clear / tot > 0.35; } catch (e) {}
+          res({ src: url, cut, name: file.name }); };
+        img.src = url; };
+      rd.readAsDataURL(file);
+    });
+  }
+  validate(final) {
+    const SA = window.SA, s = this.state, errs = [], t = this.targets();
+    if (!t.length) errs.push('Choisissez au moins une boutique.');
+    if (t.length && !t.some(id => s.ch[id] && (s.ch[id].fb || s.ch[id].ig))) errs.push('Cochez au moins un canal (Facebook ou Instagram).');
+    if (final && !s.text.trim() && s.mode === 'brut' && !s.photos.length && !s.video) errs.push('Ajoutez un texte ou un média.');
+    const nlShops = t.filter(id => SA.langsOf(id).includes('nl')).map(id => SA.byId(SA.SHOPS, id).name), frShops = t.filter(id => SA.langsOf(id).includes('fr')).map(id => SA.byId(SA.SHOPS, id).name);
+    if (final && nlShops.length && !s.textNl.trim() && s.text.trim()) errs.push('Texte néerlandais manquant pour ' + nlShops.join(', ') + '.');
+    if (final && frShops.length && !s.text.trim() && s.textNl.trim()) errs.push('Texte français manquant pour ' + frShops.join(', ') + '.');
+    if (final && s.mode === 'studio' && nlShops.length && s.v.showTitle && s.v.title.trim() && !(s.v.nl.title || '').trim()) errs.push('Nom du produit en néerlandais manquant sur le visuel (' + nlShops.join(', ') + ').');
+    if (final && s.when === 'later') { const m = this.schedMinutes(); if (m < 10) errs.push('Meta exige une programmation au moins 10 minutes à l\u2019avance (scheduled_publish_time).'); else if (m > 30 * 24 * 60) errs.push('Meta n\u2019accepte pas de programmation au-delà de 30 jours (scheduled_publish_time).'); }
+    if (final && s.mode === 'brut' && t.some(id => s.ch[id] && s.ch[id].ig) && !s.photos.length && !s.video) errs.push('Instagram exige au moins une image ou une vidéo.');
+    return errs;
+  }
+  async persist(status) {
+    const SA = window.SA, s = this.state;
+    const errs = this.validate(status !== 'Brouillon');
+    if (errs.length) { this.setState({ errors: errs }); return; }
+    this.setState({ saving: true, errors: [] });
+    const t = this.targets(), cat = s.product ? SA.CATALOGUE.find(x => x.id === s.product) : null;
+    let img = null, media;
+    if (s.mode === 'studio') {
+      try { if (this._api) img = await this._api.toImage({ jpeg: true, pixelRatio: 0.5, quality: 0.82 }); } catch (e) { console.error(e); }
+      if (!img) img = s.photos[0] ? s.photos[0].src : 'img/illus/decorative/bubble.png';
+      media = [{ src: img, kind: 'img', cut: false, name: 'Visuel composé' }];
+    } else {
+      media = s.photos.map(p => ({ src: p.src, kind: 'img', cut: p.cut, name: p.name })).concat(s.video ? [{ src: s.video.src, kind: 'video', name: s.video.name }] : []);
+      img = s.photos[0] ? s.photos[0].src : 'img/illus/products/bread-2.png';
+    }
+    const title = (s.v.title || '').trim() || (cat ? cat.name : (s.text.split(/[.\n]/)[0] || 'Post sans titre').slice(0, 60));
+    const now = new Date(), nowT = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    const post = { id: s.id || ('p' + Date.now()), date: s.when === 'now' ? SA.TODAY : s.date, time: s.when === 'now' ? nowT : s.time, type: s.type, title, img, media,
+      visual: s.mode === 'studio' ? { v: s.v, photos: s.photos.filter(p => !/^data:/.test(p.src) || p.src.length < 400000) } : null,
+      shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, spread: s.spread, product: s.product };
+    if (status === 'Publié') {
+      const ko = t.filter(id => s.ch[id].ig && SA.byId(SA.state().shops, id).igs !== 'connected').map(id => ({ shop: id, channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }));
+      if (ko.length) post.partial = { ok: t.filter(id => !ko.some(k => k.shop === id)), ko };
+    }
+    SA.save({ posts: SA.state().posts.filter(p => p.id !== post.id).concat(post) });
+    SA.log('Sarah Lambert (Franchiseur)', status === 'Brouillon' ? 'Brouillon' : status === 'Publié' ? 'Publication' : 'Programmation', '« ' + title + ' » — ' + SA.shopLabel(t) + (status === 'Programmé' ? ' le ' + SA.dShort(post.date) + ' à ' + post.time : ''));
+    this.setState({ id: post.id, status, saving: false });
+    this.toast(status === 'Brouillon' ? 'Brouillon enregistré.' : status === 'Publié' ? (post.partial ? 'Publié sur ' + post.partial.ok.length + ' Pages sur ' + t.length + ' — voir le détail des échecs.' : 'Publié sur ' + t.length + ' Pages.') : 'Programmé le ' + SA.dLabel(post.date) + ' à ' + post.time + '.');
+  }
+  schedMinutes() { const SA = window.SA, s = this.state, now = new Date(), [y, mo, d] = SA.TODAY.split('-').map(Number); const nowD = new Date(y, mo - 1, d, now.getHours(), now.getMinutes()); const [Y, M, D] = s.date.split('-').map(Number), [hh, mm] = s.time.split(':').map(Number); return (new Date(Y, M - 1, D, hh, mm) - nowD) / 60000; }
+  insertVar(code) {
+    const ta = this._ta, s = this.state;
+    const key = s.edLang === 'nl' ? 'textNl' : 'text', cur = s[key];
+    let pos = ta ? ta.selectionStart : cur.length; if (pos == null) pos = cur.length;
+    this.setState({ [key]: cur.slice(0, pos) + code + cur.slice(pos) }, () => { if (ta) { ta.focus(); ta.selectionStart = ta.selectionEnd = pos + code.length; } });
+  }
+  renderVals() {
+    const SA = window.SA, s = this.state;
+    if (!SA) return {};
+    const locked = s.status === 'Publié', st = SA.state(), shopsState = st.shops, t = this.targets(), v = s.v;
+    const seg = (on) => on ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
+    const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
+    const cat = s.product ? SA.CATALOGUE.find(x => x.id === s.product) : null;
+    const setScope = (scope) => { if (locked) return; if (scope === 'all') this.setState({ scope, sel: SA.SHOPS.map(x => x.id), group: null }); else if (scope === 'group') { const g = SA.GROUPS[0]; this.setState({ scope, group: g.id, sel: g.shops.slice() }); } else this.setState({ scope, group: null }); };
+    const shopRows = SA.SHOPS.map(sh => {
+      const live = SA.byId(shopsState, sh.id), on = t.includes(sh.id), c = s.ch[sh.id] || {}, fbOk = live.fb === 'connected', igOk = live.igs === 'connected';
+      return { name: sh.name, on, bg: on ? '#FFFFFF' : '#FCFAF7', lockShop: locked || s.scope === 'all',
+        toggle: () => this.setState({ scope: 'shop', group: null, sel: on ? s.sel.filter(x => x !== sh.id) : s.sel.concat(sh.id) }),
+        fb: on && !!c.fb, ig: on && !!c.ig, fbDis: locked || !on || !fbOk, igDis: locked || !on || !igOk, igColor: igOk ? '#444444' : '#B8B2A8',
+        toggleFb: () => this.setState({ ch: Object.assign({}, s.ch, { [sh.id]: Object.assign({}, c, { fb: !c.fb }) }) }),
+        toggleIg: () => this.setState({ ch: Object.assign({}, s.ch, { [sh.id]: Object.assign({}, c, { ig: !c.ig }) }) }),
+        note: !fbOk ? 'Page non connectée' : !igOk ? 'Instagram : ' + SA.CONN[live.igs].label.toLowerCase() : 'Connecté', noteFg: fbOk && igOk ? '#0F6B4A' : '#8A4B00' };
+    });
+    // photos
+    const photos = s.photos.map((p, i) => ({ src: p.src, n: i + 1, ring: i === 0 ? '#8D1D2C' : 'transparent',
+      first: () => { if (locked || i === 0) return; const l = s.photos.slice(); const [x] = l.splice(i, 1); l.unshift(x); this.setState({ photos: l }); },
+      remove: (e) => { e.stopPropagation(); this.setState({ photos: s.photos.filter((_, j) => j !== i) }); } }));
+    const curSlots = (this.STYLES2.find(x => x[0] === v.style) || [0, 0, 1])[2];
+    // aperçu
+    const pvId = t.includes(s.pvShop) ? s.pvShop : t[0], pvShop = pvId ? SA.byId(shopsState, pvId) : null;
+    const shopLangs = pvShop ? SA.langsOf(pvShop) : ['fr'], pvLang = shopLangs.includes(s.pvLang) ? s.pvLang : shopLangs[0];
+    const txt = (L) => L === 'nl' ? s.textNl : s.text;
+    const filled = pvShop ? shopLangs.map(L => SA.fill(txt(L), pvShop, cat, L)).filter(x => x.trim()).join('\n\n— — —\n\n') : s.text;
+    const LOC = ['eyebrow', 'title', 'phrase', 'unit', 'promoSub'];
+    const vL = pvLang === 'nl' ? Object.assign({}, v, ...LOC.map(k => ({ [k]: (v.nl || {})[k] || '' }))) : v;
+    const needed = [...new Set(t.flatMap(id => SA.langsOf(id)))];
+    const shopsFor = (L) => t.filter(id => SA.langsOf(id).includes(L)).map(id => SA.byId(SA.SHOPS, id).name);
+    const rawMedia = s.photos.map(p => ({ src: p.src, isImg: true, isVideo: false, fit: p.cut ? 'contain' : 'cover' })).concat(s.video ? [{ src: '', isImg: false, isVideo: true, fit: 'cover' }] : []);
+    const shown = rawMedia.slice(0, 4).map((m, i) => Object.assign({}, m, { more: i === 3 && rawMedia.length > 4, moreLabel: '+' + (rawMedia.length - 4) }));
+    const pv = { page: pvShop ? pvShop.page : "L'Atelier By", city: pvShop ? pvShop.name : '—', handle: pvShop ? pvShop.ig.replace('@', '') : 'latelierby',
+      when: s.when === 'now' ? "À l'instant" : SA.dLabel(s.date) + ' à ' + s.time, text: filled || 'Votre texte apparaîtra ici.', hasLink: !!s.link, link: s.link,
+      hasMedia: shown.length > 0, noMedia: shown.length === 0, media: shown, cols: shown.length > 1 ? '1fr 1fr' : '1fr',
+      resolved: pvShop ? ['{ville} → ' + pvShop.name, '{horaires} → ' + pvShop.hours, '{prix} → ' + (cat ? cat.price + ' €' : 'non défini')].join(' · ') : '—' };
+    const igBroken = t.filter(id => SA.byId(shopsState, id).igs !== 'connected');
+    const pages = t.filter(id => s.ch[id] && (s.ch[id].fb || s.ch[id].ig));
+    const [hh, mm] = (s.when === 'now' ? '12:00' : s.time).split(':').map(Number);
+    const schedule = pages.map((id, i) => { const off = pages.length > 1 ? Math.round(s.spread * i / (pages.length - 1)) : 0, tot = hh * 60 + mm + off; return { name: SA.byId(SA.SHOPS, id).name, t: s.when === 'now' ? '+' + off + ' min' : String(Math.floor(tot / 60) % 24).padStart(2, '0') + ':' + String(tot % 60).padStart(2, '0') }; });
+    // médiathèque
+    const norm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const libItems = s.lib.filter(it => (!s.lcat || it.cat === s.lcat) && (!s.lq || norm([it.name, it.cat, it.sub, it.season].join(' ')).includes(norm(s.lq)))).slice(0, 120).map(it => {
+      const idx = s.libPick.indexOf(it.id);
+      return { src: it.src, name: it.name, tags: [it.cat, it.sub, it.season].filter(Boolean).join(' · '), on: idx >= 0, order: idx + 1, ring: idx >= 0 ? '#8D1D2C' : 'transparent',
+        toggle: () => this.setState({ libPick: idx >= 0 ? s.libPick.filter(x => x !== it.id) : s.libPick.concat(it.id) }) };
+    });
+    const isNlEd = s.edLang === 'nl', LOCK = ['eyebrow', 'title', 'phrase', 'unit', 'promoSub'];
+    const gv = (key) => isNlEd && LOCK.includes(key) ? ((v.nl || {})[key] || '') : v[key];
+    const sv = (key, val) => isNlEd && LOCK.includes(key) ? this.V({ nl: Object.assign({}, v.nl, { [key]: val }) }) : this.V({ [key]: val });
+    const vf = (label, key, showKey, extra) => Object.assign({ label: isNlEd && LOCK.includes(key) ? label + ' (NL)' : label, value: gv(key), on: !!v[showKey], isInput: true, isLabel: false, hasSecond: false,
+      set: (e) => sv(key, e.target.value), toggle: () => this.V({ [showKey]: !v[showKey] }) }, extra || {});
+    const [msBg, msFg] = seg(s.mode === 'studio'), [mbBg, mbFg] = seg(s.mode === 'brut');
+    const [wnBg, wnFg] = seg(s.when === 'now'), [wlBg, wlFg] = seg(s.when === 'later'), [pfBg, pfFg] = seg(s.pv === 'fb'), [piBg, piFg] = seg(s.pv === 'ig');
+    const [saBg, saFg] = seg(s.scope === 'all'), [sgBg, sgFg] = seg(s.scope === 'group'), [ssBg, ssFg] = seg(s.scope === 'shop');
+    const len = filled.length;
+    return {
+      calHref: SA.href('cal'), pageTitle: s.id ? (locked ? 'POST PUBLIE' : 'MODIFIER LE POST') : 'NOUVEAU POST', locked, notLocked: !locked,
+      types: SA.POST_TYPES.map(n => Object.assign(chip(s.type === n), { name: n, pick: () => !locked && this.setState({ type: n }) })),
+      catalogue: SA.CATALOGUE.map(c => ({ img: c.img, name: c.name, meta: (c.kind === 'gamme' ? 'Gamme · ' : '') + c.price + ' €', ring: s.product === c.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)',
+        pick: () => { if (locked) return; if (s.product === c.id) { this.setState({ product: null }); return; }
+          const camp = c.gamme === 'Gamme Automne' || c.id === 'g-automne' ? 'c-automne' : s.campaign;
+          this.setState({ product: c.id, campaign: camp, type: c.kind === 'gamme' ? 'Gamme saisonnière' : 'Produit',
+            photos: [{ src: c.img, cut: true, name: c.name }].concat(s.photos.filter(p => p.src !== c.img)),
+            v: Object.assign({}, v, { title: c.name, showTitle: true, price: c.kind === 'produit' ? c.price : '', showPrice: c.kind === 'produit', nl: Object.assign({}, v.nl, { title: SA.pname(c, 'nl') }) }),
+            textNl: s.textNl.trim() ? s.textNl : (c.kind === 'gamme' ? 'Het ' + SA.pname(c, 'nl') + ' is er bij L\u2019Atelier By {ville}. Ontdek het {horaires}.' : SA.pname(c, 'nl') + ': {prix} € bij L\u2019Atelier By {ville}. Open {horaires}.'),
+            text: s.text.trim() ? s.text : (c.kind === 'gamme' ? 'La ' + c.name + ' est arrivée chez L\u2019Atelier By {ville}. À découvrir {horaires}.' : c.name + ' : {prix} € chez L\u2019Atelier By {ville}. Ouvert {horaires}.') }); } })),
+      // visuel
+      isStudio: s.mode === 'studio', isBrut: s.mode === 'brut', msBg, msFg, mbBg, mbFg,
+      modeStudio: () => !locked && this.setState({ mode: 'studio' }), modeBrut: () => !locked && this.setState({ mode: 'brut' }),
+      photos, photosLabel: s.mode === 'studio' ? 'Photos du visuel · ' + s.photos.length + (curSlots > 1 ? ' (ce montage a ' + curSlots + ' cases, les photos se répètent s\u2019il en manque)' : ' (la n°1 est utilisée)') : 'Photos publiées · ' + s.photos.length + ' (la n°1 apparaît en premier)',
+      hasVideo: !!s.video, videoName: s.video ? s.video.name : '', removeVideo: () => this.setState({ video: null }),
+      onFiles: async (e) => { const fl = Array.from(e.target.files || []); e.target.value = ''; const add = (await Promise.all(fl.slice(0, 12).map(f => this.readFile(f)))).filter(Boolean); if (add.length) this.setState({ photos: this.state.photos.concat(add) }); },
+      onVideo: (e) => { const f = e.target.files && e.target.files[0]; if (f) this.setState({ video: { src: URL.createObjectURL(f), name: f.name.slice(0, 12) }, type: s.type === 'Libre' ? 'Vidéo / film' : s.type }); e.target.value = ''; },
+      cutModes: [['auto', 'Auto'], ['cut', 'Détourées'], ['full', 'Pleines']].map(([k, label]) => { const [bg, fg] = seg(v.cutMode === k); return { label, bg, fg, pick: () => this.V({ cutMode: k }) }; }),
+      stylesSingle: this.STYLES1.map(([k, name, sw]) => Object.assign(chip(v.style === k), { name, sw, pick: () => !locked && this.V({ style: k }) })),
+      stylesMontage: this.STYLES2.map(([k, name, n]) => Object.assign(chip(v.style === k), { name, slots: n + ' photos', pick: () => !locked && this.V({ style: k }) })),
+      vFields: [
+        vf("Logo L'Atelier By", 'title', 'showLogo', { isInput: false, isLabel: true }),
+        vf('Mention saison · date', 'eyebrow', 'showEyebrow'),
+        vf('Nom du produit', 'title', 'showTitle'),
+        vf("Phrase d'accroche", 'phrase', 'showPhrase'),
+        vf('Prix', 'price', 'showPrice', { hasSecond: true, label2: isNlEd ? 'Unité (NL)' : 'Unité', value2: gv('unit'), set2: (e) => sv('unit', e.target.value) }),
+        vf('Offre (4+1)', 'promo', 'showPromo', { hasSecond: true, label2: isNlEd ? 'de 5de gratis' : 'la 5ᵉ offerte', value2: gv('promoSub'), set2: (e) => sv('promoSub', e.target.value) }),
+        vf('Site web', 'site', 'showSite'),
+      ],
+      fonts: [['script', 'Script', "'Playwrite DEVA'"], ['display', 'DISPLAY', "'Vank'"], ['sans', 'Sans', "'Gotham'"]].map(([k, label, family]) => { const [bg, fg] = seg(v.phraseFont === k); return { label, family, bg, fg, pick: () => this.V({ phraseFont: k }) }; }),
+      colors: [['auto', 'Automatique', '#FFFFFF', 'A'], ['ruby', 'Ruby', '#8D1D2C', ''], ['noir', 'Noir', '#232220', ''], ['abricot', 'Abricot', '#F2C9A0', ''], ['blanc', 'Blanc', '#FFFFFF', ''], ['gris', 'Gris', '#8A847C', '']].map(([k, label, c, txt]) => ({ label, c, txt, ring: v.phraseColor === k ? '#222222' : 'transparent', pick: () => this.V({ phraseColor: k }) })),
+      studioControl: Object.assign({}, vL, { photos: s.photos, showPrice: v.showPrice && !!String(v.price || '').trim(), showPromo: v.showPromo && !!String(v.promo || '').trim(), showTitle: v.showTitle && !!String(v.title || '').trim(), showPhrase: v.showPhrase && !!String(v.phrase || '').trim() }),
+      onStudioApi: (api) => { this._api = api; },
+      // ciblage
+      scopeAll: () => setScope('all'), scopeGroup: () => setScope('group'), scopeShop: () => setScope('shop'), saBg, saFg, sgBg, sgFg, ssBg, ssFg,
+      isGroup: s.scope === 'group', groups: (st.groups || SA.GROUPS).map(g => Object.assign(chip(s.group === g.id), { name: g.name, count: g.shops.length, pick: () => this.setState({ group: g.id, sel: g.shops.slice() }) })),
+      shopRows,
+      // texte
+      vars: [['{ville}', 'Nom de la boutique'], ['{adresse}', 'Adresse de la boutique'], ['{horaires}', "Horaires d'ouverture"], ['{prix}', 'Prix du produit choisi'], ['{produit_du_jour}', 'Produit du jour (catalogue)']].map(([code, tip]) => ({ code, tip, insert: () => !locked && this.insertVar(code) })),
+      taRef: (el) => { this._ta = el; }, text: isNlEd ? s.textNl : s.text, setText: (e) => this.setState({ [isNlEd ? 'textNl' : 'text']: e.target.value }),
+      templates: (st.templates || SA.TEMPLATES).map(tp => ({ name: tp.name, use: () => !locked && this.setState({ text: tp.text, textNl: tp.textNl || s.textNl, type: tp.type }) })),
+      langTabs: ['fr', 'nl'].map(L => { const on = s.edLang === L, req = needed.includes(L), done = L === 'nl' ? !!s.textNl.trim() : !!s.text.trim();
+        return { label: L.toUpperCase() + (req ? '' : ' · non requis'), bg: on ? '#8D1D2C' : 'transparent', fg: on ? '#FFFFFF' : (req ? '#444444' : '#9A948C'), dot: !req ? 'transparent' : done ? '#1F8A60' : '#D97B29', pick: () => this.setState({ edLang: L }) }; }),
+      langNote: isNlEd ? 'version néerlandaise' : 'version française', langNeed: needed.map(L => L.toUpperCase() + ' : ' + shopsFor(L).join(', ')).join(' · '),
+      showCopyFr: isNlEd && !locked, copyTextFr: () => this.setState({ textNl: s.textNl.trim() ? s.textNl : s.text }),
+      copyVisualFr: () => this.V({ nl: Object.assign({}, v.nl, ...LOCK.map(k => ({ [k]: (v.nl || {})[k] || v[k] }))) }),
+      pvBilingual: shopLangs.length > 1, pvLangs: shopLangs.map(L => Object.assign(chip(L === pvLang), { label: L.toUpperCase(), pick: () => this.setState({ pvLang: L }) })),
+      lenLabel: len + ' caractères' + (len > 125 ? ' · tronqué après 125 dans le fil' : ''), lenColor: len > 125 ? '#8A4B00' : '#666666',
+      link: s.link, setLink: (e) => this.setState({ link: e.target.value }),
+      campaign: s.campaign, setCampaign: (e) => this.setState({ campaign: e.target.value }), campOptions: st.campaigns.filter(c => c.status !== 'terminée').map(c => ({ id: c.id, name: c.name })),
+      // médiathèque
+      libCount: s.lib.length, openLib: () => this.setState({ libOpen: true, libPick: [] }), closeLib: () => this.setState({ libOpen: false }),
+      confirmLib: () => { const add = s.libPick.map(id => s.lib.find(x => x.id === id)).filter(Boolean).map(x => ({ src: x.src, cut: x.cut !== false, name: x.name })); this.setState({ photos: s.photos.concat(add), libOpen: false }); },
+      libPickCount: s.libPick.length, lq: s.lq, setLq: (e) => this.setState({ lq: e.target.value }), lcat: s.lcat, setLcat: (e) => this.setState({ lcat: e.target.value }), libItems, libCats: [...new Set(s.lib.map(x => x.cat).filter(Boolean))], libOpen: s.libOpen,
+      // publication
+      whenNow: () => this.setState({ when: 'now' }), whenLater: () => this.setState({ when: 'later' }), isLater: s.when === 'later', wnBg, wnFg, wlBg, wlFg,
+      date: s.date, time: s.time, setDate: (e) => this.setState({ date: e.target.value }), setTime: (e) => this.setState({ time: e.target.value }),
+      spread: s.spread, setSpread: (e) => this.setState({ spread: +e.target.value }), schedule,
+      errors: s.errors, hasErrors: s.errors.length > 0,
+      saveDraft: () => !s.saving && this.persist('Brouillon'), publish: () => !s.saving && this.persist(s.when === 'now' ? 'Publié' : 'Programmé'),
+      publishLabel: s.saving ? 'Préparation du visuel…' : (s.when === 'now' ? 'Publier maintenant sur ' : 'Programmer sur ') + pages.length + ' Page' + (pages.length > 1 ? 's' : ''),
+      // aperçu
+      pvFb: () => this.setState({ pv: 'fb' }), pvIg: () => this.setState({ pv: 'ig' }), pfBg, pfFg, piBg, piFg, isFb: s.pv === 'fb', isIg: s.pv === 'ig',
+      pvShops: t.map(id => Object.assign(chip(id === pvId), { name: SA.byId(SA.SHOPS, id).name, pick: () => this.setState({ pvShop: id }) })), pv,
+      igWarn: igBroken.length > 0, igWarnText: 'Instagram indisponible pour ' + igBroken.map(id => SA.byId(SA.SHOPS, id).name).join(', ') + ' (token expiré) : seule la Page Facebook sera publiée.',
+      vfVideo: () => this.setState({ videoFormat: 'video' }), vfReel: () => this.setState({ videoFormat: 'reel' }),
+      vvBg: s.videoFormat === 'video' ? '#8D1D2C' : 'transparent', vvFg: s.videoFormat === 'video' ? '#FFFFFF' : '#444444', vrBg: s.videoFormat === 'reel' ? '#8D1D2C' : 'transparent', vrFg: s.videoFormat === 'reel' ? '#FFFFFF' : '#444444',
+      videoTech: s.videoFormat === 'reel' ? 'POST /{page_id}/video_reels · upload_phase=start → upload → finish (video_state=PUBLISHED)' : 'POST /{page_id}/videos · file_url, title, description',
+      ...(() => {
+        const later = s.when === 'later', mins = later ? this.schedMinutes() : 0;
+        const ep = s.mode === 'studio' ? 'photos' : s.video ? (s.videoFormat === 'reel' ? 'video_reels' : 'videos') : s.photos.length === 1 ? 'photos' : 'feed';
+        const msg = (filled || '').slice(0, 60) + ((filled || '').length > 60 ? '…' : '');
+        const ts = later ? Math.round(new Date(s.date + 'T' + s.time + ':00').getTime() / 1000) : null;
+        const params = ep === 'photos' ? [['url', s.mode === 'studio' ? '{visuel rendu 1080×1080, stocké sur R2}' : '{photo n°1 sur R2}'], ['caption', '"' + msg + '"']]
+          : ep === 'feed' ? [['message', '"' + msg + '"']].concat(s.link ? [['link', s.link]] : []).concat(s.photos.length > 1 ? [['attached_media', '[' + s.photos.map((_, i) => '{media_fbid: ' + (i + 1) + '}').join(', ') + ']']] : [])
+          : ep === 'videos' ? [['file_url', '{vidéo sur R2}'], ['description', '"' + msg + '"']] : [['upload_phase', 'start → finish'], ['description', '"' + msg + '"'], ['video_state', 'PUBLISHED']];
+        const pubParams = later ? [['published', 'false'], ['scheduled_publish_time', ts + ' (' + SA.dShort(s.date) + ' ' + s.time + ')']] : [['published', 'true']];
+        return { apiCall: 'POST /{page_id}/' + ep, pageCount: pages.length, apiParams: params.concat(pubParams).map(([k, v]) => ({ k, v })), hasIgCall: t.some(id => s.ch[id] && s.ch[id].ig),
+          schedRule: !later ? 'Publication immédiate : published=true.' : mins < 10 ? 'Trop tôt : Meta exige au moins 10 minutes d\u2019avance.' : mins > 43200 ? 'Trop tard : 30 jours maximum.' : 'Fenêtre Meta respectée : entre 10 minutes et 30 jours.',
+          schedRuleColor: !later ? '#666666' : (mins < 10 || mins > 43200) ? '#8D1D2C' : '#0F6B4A' };
+      })(),
+      hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>
