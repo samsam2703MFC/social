@@ -428,7 +428,7 @@ class Component extends DCLogic {
           pfRefreshLabel: s.pfBusy ? 'Lecture chez Meta…' : 'Rafraîchir',
           pfRefresh: () => { if (s.pfBusy) return; this.setState({ pfBusy: true }); SA.api('POST', '/meta/portefeuille/rafraichir', { businessId: s.pfBiz || '' }).then(r => { this.setState({ pf: r.portefeuille, pfBusy: false }); this.toast((r.portefeuille.pages || []).length + ' Page(s), ' + (r.portefeuille.comptes || []).length + ' compte(s) pub relus.'); }).catch(e => { this.setState({ pfBusy: false }); this.toast('Lecture impossible : ' + e.message); }); },
           pfHasErr: (P.erreurs || []).length > 0,
-          pfErr: (() => { const J = (SA.metaStatus || {}).jeton || {}, manque = M.permissions.map(x => x[0]).filter(x => !(J.scopes || []).includes(x));
+          pfErr: (() => { const J = (SA.metaStatus || {}).jeton || {}, manque = SA.META.permissions.map(x => x[0]).filter(x => !(J.scopes || []).includes(x));
             // Le diagnostic d'abord : le type de token et les permissions qui manquent expliquent les refus.
             return (J.type && J.type !== 'SYSTEM_USER' ? 'Le token enregistré est un token ' + J.type + ' (personnel), pas celui d’un utilisateur système. ' : '')
               + (manque.length ? 'Permissions absentes du token : ' + manque.join(', ') + '. ' : '') + 'Lectures refusées par Meta : ' + (P.erreurs || []).join(' · '); })(),
