@@ -8,3 +8,4 @@ Relivraison : audit (500 validation = paramètre, 2e passage avec période), son
 Relivraison : catalogue et ventes depuis l'API, App ID Meta, recherche dans le catalogue — 2026-10-10T08:36:32Z
 Relivraison : audit lancé en arrière-plan — 2026-10-10T08:46:05Z
 Relivraison : portefeuille Business Manager, rapport d'audit — 2026-10-10T08:55:11Z
+Relivraison : permissions Instagram et Business Manager, diagnostic du token — 2026-10-10T08:58:51Z

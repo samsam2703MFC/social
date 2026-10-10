@@ -302,7 +302,7 @@
     },
     networkAccount: 'act_1428800',
     dsa: { beneficiary: "L'Atelier By SRL", payor: "L'Atelier By SRL" },
-    permissions: [['pages_manage_posts', 'Full access'], ['pages_read_engagement', 'Full access'], ['pages_show_list', 'Full access'], ['ads_management', 'Full access'], ['pages_manage_ads', 'Full access'], ['leads_retrieval', 'Limited access']],
+    permissions: [['business_management', 'Full access'], ['pages_show_list', 'Full access'], ['pages_manage_posts', 'Full access'], ['pages_read_engagement', 'Full access'], ['instagram_basic', 'Full access'], ['instagram_content_publish', 'Full access'], ['ads_management', 'Full access'], ['pages_manage_ads', 'Full access'], ['leads_retrieval', 'Limited access']],
     objectives: [
       { id: 'OUTCOME_AWARENESS', label: 'Notoriété locale', desc: 'Montrer la marque au plus grand nombre autour des boutiques.', icon: 'img/illus/decorative/bubble.png', goals: ['REACH', 'IMPRESSIONS', 'THRUPLAY'], dest: [''] },
       { id: 'OUTCOME_TRAFFIC', label: 'Trafic', desc: 'Faire venir en boutique ou sur le webshop.', icon: 'img/illus/customer-facing/click-collect.png', goals: ['LINK_CLICKS', 'LANDING_PAGE_VIEWS', 'REACH'], dest: ['WEBSITE', 'PHONE_CALL'] },
