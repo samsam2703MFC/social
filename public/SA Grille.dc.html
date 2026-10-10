@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button,textarea{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="grid" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Calendrier · vue grille Instagram · <span style="font-family:ui-monospace,monospace;text-transform:none;letter-spacing:0;">GET /{ig_user_id}/media</span></span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">GRILLE INSTAGRAM</h1>
+        <span style="font-size:13px;color:#4A443E;">Le profil tel qu’il sera : les posts programmés au-dessus de ceux déjà en ligne.</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+        <sc-for list="{{ shopChips }}" as="c" hint-placeholder-count="4">
+          <button onClick="{{ c.pick }}" title="{{ c.tip }}" style="border-radius:999px;padding:7px 13px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};display:flex;align-items:center;gap:6px;">{{ c.name }}<sc-if value="{{ c.noIg }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;opacity:0.75;">· sans Instagram</span></sc-if></button>
+        </sc-for>
+      </div>
+    </header>
+
+    <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
+      <!-- La grille -->
+      <section style="flex:0 0 auto;background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:14px;display:flex;flex-direction:column;gap:10px;width:484px;max-width:100%;box-sizing:border-box;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:13px;font-weight:600;">{{ handle }} · du plus récent au plus ancien</span>
+          <button onClick="{{ refresh }}" disabled="{{ loading }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;">{{ refreshLabel }}</button>
+        </div>
+        <span style="font-size:11px;color:#666666;">{{ readLabel }}</span>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;">
+          <sc-for list="{{ cells }}" as="c" hint-placeholder-count="9">
+            <div onClick="{{ c.click }}" draggable="{{ c.drag }}" onDragStart="{{ c.dragStart }}" onDragOver="{{ c.dragOver }}" onDrop="{{ c.drop }}" title="{{ c.tip }}" style="position:relative;width:100%;height:0;padding-bottom:133.333%;overflow:hidden;background:{{ c.bg }};cursor:{{ c.cursor }};box-shadow:{{ c.ring }};">
+              <sc-if value="{{ c.hasImg }}" hint-placeholder-val="{{ true }}"><img src="{{ c.src }}" alt="{{ c.alt }}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ c.op }};"></sc-if>
+              <sc-if value="{{ c.isVideo }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:6px;right:6px;font-size:12px;color:#FFFFFF;text-shadow:0 1px 3px rgba(0,0,0,0.5);">▶</span></sc-if>
+              <sc-if value="{{ c.isText }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:10px;text-align:center;font-size:11px;font-weight:500;color:#3A3530;">{{ c.alt }}</span></sc-if>
+              <sc-if value="{{ c.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:6px;left:6px;max-width:calc(100% - 12px);box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;font-weight:600;border-radius:999px;padding:3px 7px;background:{{ c.badgeBg }};color:{{ c.badgeFg }};">{{ c.badge }}</span></sc-if>
+              <sc-if value="{{ c.hasFlag }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:6px;bottom:6px;font-size:10px;font-weight:600;border-radius:6px;padding:2px 6px;background:#FCE7C8;color:#7A4100;">{{ c.flag }}</span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;padding:20px 0;text-align:center;">{{ emptyText }}</span></sc-if>
+      </section>
+
+      <section style="flex:1 1 360px;min-width:300px;display:flex;flex-direction:column;gap:12px;">
+        <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#FFFFFF;border-radius:12px;border:1.5px solid #8D1D2C;padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8D1D2C;">{{ sel.kind }}</span>
+            <span style="font-size:15px;font-weight:600;">{{ sel.title }}</span>
+            <span style="font-size:13px;color:#3A3530;">{{ sel.when }}</span>
+            <span style="font-size:12px;color:#666666;line-height:1.5;">{{ sel.help }}</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+              <sc-if value="{{ sel.canSwap }}" hint-placeholder-val="{{ false }}"><button onClick="{{ arm }}" style="border:1px solid #8D1D2C;background:#FFFFFF;color:#8D1D2C;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;">Échanger avec…</button></sc-if>
+              <sc-if value="{{ sel.hasOpen }}" hint-placeholder-val="{{ false }}"><a href="{{ sel.href }}" target="{{ sel.target }}" style="border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;background:#8D1D2C;color:#FFFFFF;text-decoration:none;">{{ sel.openLabel }}</a></sc-if>
+              <button onClick="{{ unselect }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;">Fermer</button>
+            </div>
+          </div>
+        </sc-if>
+        <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:16px;display:flex;flex-direction:column;gap:10px;">
+          <span style="font-size:15px;font-weight:600;">Contrôles avant validation</span>
+          <sc-for list="{{ checks }}" as="k" hint-placeholder-count="3">
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <span style="flex:0 0 auto;font-size:11px;font-weight:600;border-radius:6px;padding:3px 8px;background:{{ k.bg }};color:{{ k.fg }};">{{ k.tag }}</span>
+              <span style="font-size:13px;line-height:1.5;">{{ k.t }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:16px;display:flex;flex-direction:column;gap:8px;">
+          <span style="font-size:15px;font-weight:600;">Légende</span>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px;align-items:center;">
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:18px;height:24px;box-shadow:inset 0 0 0 2px #8D1D2C;box-sizing:border-box;"></span>Programmé</span>
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:18px;height:24px;background:#EAE4DC;"></span>Déjà publié (lu chez Instagram)</span>
+            <span style="display:flex;align-items:center;gap:6px;"><span style="font-size:10px;font-weight:600;border-radius:999px;padding:3px 7px;background:#FCE7C8;color:#7A4100;">à valider</span>Proposé par la boutique</span>
+          </div>
+        </div>
+        <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:16px;display:flex;flex-direction:column;gap:6px;">
+          <span style="font-size:15px;font-weight:600;">Réordonner</span>
+          <span style="font-size:13px;line-height:1.55;color:#3A3530;">Glissez une case programmée sur une autre (ou cliquez-la, « Échanger avec… », puis l’autre case) : les deux posts échangent leur date et leur heure de publication. Une frise se déplace en bloc. Les posts déjà en ligne ne bougent pas.</span>
+        </div>
+        <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:16px;display:flex;flex-direction:column;gap:6px;">
+          <span style="font-size:15px;font-weight:600;">D’où viennent les cases</span>
+          <span style="font-size:13px;line-height:1.55;color:#3A3530;">Les posts déjà publiés sont relus chez Instagram (les 30 dernières publications du compte de la boutique, toutes les heures, ou tout de suite avec « Relire chez Instagram ») ; les posts programmés viennent du calendrier du module. Le profil montre chaque post recadré en 3:4. Les posts épinglés ne sont pas lus par l’API : ils s’affichent en tête du profil et décalent la grille d’autant.</span>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;max-width:min(640px,92vw);box-shadow:0 12px 30px rgba(35,34,32,0.3);">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { shop: null, ig: {}, loading: false, sel: null, drag: null, toast: '', tick: 0 };
+  componentDidMount() {
+    const SA = window.SA;
+    this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
+    if (!SA) return;
+    const want = SA.param('shop'), first = SA.SHOPS.find(x => x.igs === 'connected') || SA.SHOPS[0];
+    const shop = want && SA.byId(SA.SHOPS, want) ? want : (first ? first.id : null);
+    this.setState({ shop }, () => this.load(false));
+  }
+  componentWillUnmount() { clearTimeout(this._tt); window.removeEventListener('sa-change', this._h); }
+  toast(msg) { clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: '' }), 6000); }
+
+  /** Les publications déjà en ligne : lues chez Instagram par le serveur ; en démonstration, des exemples. */
+  async load(force) {
+    const SA = window.SA, id = this.state.shop;
+    if (!SA || !id) return;
+    if (!SA.live) { this.setState({ ig: Object.assign({}, this.state.ig, { [id]: this.demo(id) }) }); return; }
+    this.setState({ loading: true });
+    try {
+      const r = await SA.api(force ? 'POST' : 'GET', '/instagram/grille' + (force ? '' : '?shop=' + encodeURIComponent(id)), force ? { shop: id } : undefined);
+      this.setState({ ig: Object.assign({}, this.state.ig, { [id]: r }) });
+      if (force) this.toast(typeof r.synchro === 'number' ? r.synchro + ' publication(s) relue(s) chez Instagram.' : 'Instagram : ' + r.synchro);
+    } catch (e) { this.toast('Lecture de la grille impossible : ' + e.message); }
+    this.setState({ loading: false });
+  }
+  demo(id) {
+    const SA = window.SA, imgs = (SA.CATALOGUE || []).map(c => c.img).filter(Boolean);
+    const media = Array.from({ length: 12 }, (_, i) => ({ id: 'demo' + i, type: i === 4 ? 'VIDEO' : 'IMAGE', src: imgs[(i * 5 + id.length) % Math.max(1, imgs.length)] || '',
+      permalink: '', at: SA.addDays(SA.TODAY, -1 - i * 2) + ' 08:00', caption: 'Publication d’exemple' }));
+    return { shop: id, media, lu_le: SA.TODAY + ' 07:07', instagram: true, demo: true };
+  }
+
+  /** Les cases de la grille d'une boutique, du plus récent au plus ancien. */
+  grid(id) {
+    const SA = window.SA, st = SA.state(), now = new Date();
+    const at = (d, t) => { const [Y, M, D] = String(d || '').split('-').map(Number), [hh, mm] = String(t || '00:00').split(':').map(Number); return new Date(Y, M - 1, D, hh, mm).getTime(); };
+    const nowMs = at(SA.TODAY, String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'));
+    const igOn = (p) => { const shops = p.shops === 'all' ? SA.SHOPS.map(x => x.id) : (p.shops || []); if (!shops.includes(id)) return false; const c = p.ch && p.ch[id]; return c ? !!c.ig : !!p.ig; };
+    const sched = st.posts.filter(p => ['Programmé', 'À valider'].includes(p.status) && igOn(p) && at(p.date, p.time) >= nowMs - 5 * 60000)
+      .sort((a, b) => at(b.date, b.time) - at(a.date, a.time) || String(b.id).localeCompare(String(a.id)));
+    const thumb = (p) => { const m = (p.media || []).find(x => x.kind !== 'video'); return m ? m.src : (p.img || ''); };
+    const cells = [];
+    sched.forEach(p => {
+      const tiles = p.frise && Array.isArray(p.frise.tiles) && p.frise.tiles.length === 3 ? p.frise.tiles : null;
+      if (tiles) tiles.forEach((src, j) => cells.push({ sched: true, post: p, src, tile: j, ms: at(p.date, p.time) }));
+      else cells.push({ sched: true, post: p, src: thumb(p), tile: -1, video: (p.media || []).some(x => x.kind === 'video') && !thumb(p), ms: at(p.date, p.time) });
+    });
+    const ig = this.state.ig[id] || { media: [] };
+    // Les frises déjà publiées par le module : leurs ids Instagram, tuile 3 → 1.
+    const friseOf = {};
+    st.posts.forEach(p => { const ids = p.frise && p.frise.ig && p.frise.ig[id]; if (Array.isArray(ids)) ids.forEach((mid, j) => { friseOf[mid] = { post: p, tile: 2 - j }; }); });
+    (ig.media || []).forEach(m => cells.push({ sched: false, media: m, src: m.src, video: m.type === 'VIDEO', frise: friseOf[m.id] || null }));
+    return { cells, sched, ig, nowMs, at };
+  }
+
+  /** Échange la date et l'heure de deux posts programmés. */
+  swap(aId, bId) {
+    const SA = window.SA, st = SA.state();
+    const a = st.posts.find(p => p.id === aId), b = st.posts.find(p => p.id === bId);
+    if (!a || !b || a.id === b.id) return;
+    const na = Object.assign({}, a, { date: b.date, time: b.time }), nb = Object.assign({}, b, { date: a.date, time: a.time });
+    const posts = st.posts.map(p => p.id === a.id ? na : p.id === b.id ? nb : p);
+    const clash = this.lockClash(posts, [na, nb]);
+    if (clash) { this.toast(clash); return; }
+    SA.save({ posts });
+    SA.log('Sarah Lambert (Franchiseur)', 'Programmation', 'Grille Instagram : « ' + a.title + ' » et « ' + b.title + ' » échangent leur créneau (' + SA.dShort(nb.date) + ' ' + nb.time + ' ↔ ' + SA.dShort(na.date) + ' ' + na.time + ')');
+    this.setState({ sel: null, drag: null });
+    this.toast('« ' + a.title + ' » passe le ' + SA.dShort(na.date) + ' à ' + na.time + ', « ' + b.title + ' » le ' + SA.dShort(nb.date) + ' à ' + nb.time + '.');
+  }
+  /** Le verrou de la frise après un déplacement (le serveur le vérifie aussi). */
+  lockClash(posts, moved) {
+    const SA = window.SA;
+    const at = (p) => { const [Y, M, D] = String(p.date).split('-').map(Number), [hh, mm] = String(p.time || '00:00').split(':').map(Number); return new Date(Y, M - 1, D, hh, mm).getTime(); };
+    const igOf = (p) => (p.shops === 'all' ? SA.SHOPS.map(x => x.id) : (p.shops || [])).filter(id => p.ch && p.ch[id] ? p.ch[id].ig : p.ig);
+    for (const m of moved) for (const q of posts) {
+      if (q.id === m.id || q.status !== 'Programmé' || m.status !== 'Programmé' || (!m.frise && !q.frise)) continue;
+      if (!igOf(m).some(id => igOf(q).includes(id)) || Math.abs(at(m) - at(q)) >= 30 * 60000) continue;
+      return 'Déplacement refusé : « ' + m.title + ' » tomberait à moins de 30 minutes de « ' + q.title + ' »' + ' — une frise demande 30 minutes sans autre post Instagram avant et après.';
+    }
+    return null;
+  }
+
+  renderVals() {
+    const SA = window.SA, s = this.state;
+    if (!SA) return {};
+    const st = SA.state(), id = s.shop, shop = id ? SA.byId(st.shops, id) : null;
+    const { cells: raw, sched, ig, at } = id ? this.grid(id) : { cells: [], sched: [], ig: {}, at: () => 0 };
+    const fmtWhen = (p) => SA.dShort(p.date) + ' · ' + p.time;
+    const pick = (cell) => {
+      if (!cell.sched) { this.setState({ sel: { media: cell.media, frise: cell.frise } }); return; }
+      const cur = s.sel && s.sel.post;
+      if (cur && cur !== cell.post.id && s.sel.armed) { this.swap(cur, cell.post.id); return; }
+      this.setState({ sel: cur === cell.post.id && !s.sel.armed ? null : { post: cell.post.id, armed: false } });
+    };
+    const cells = raw.map((c, i) => {
+      const p = c.post, selOn = s.sel && ((p && s.sel.post === p.id) || (c.media && s.sel.media && s.sel.media.id === c.media.id));
+      const first = c.sched && (c.tile <= 0), pending = p && p.status === 'À valider';
+      const badge = !c.sched ? (c.frise && c.frise.tile === 0 ? 'Frise publiée' : '') : first ? (p.frise ? 'Frise · ' : '') + fmtWhen(p) : '';
+      return { src: c.src, hasImg: !!c.src, isText: !c.src && !c.video, isVideo: !!c.video, alt: p ? p.title : (c.media && c.media.caption) || 'Publication',
+        op: c.sched ? 1 : 0.92, bg: c.sched ? '#FFFFFF' : '#EAE4DC',
+        ring: selOn ? 'inset 0 0 0 3px #232220' : c.sched ? 'inset 0 0 0 2px ' + (pending ? '#D97B29' : '#8D1D2C') : 'none',
+        cursor: c.sched ? 'grab' : 'pointer', drag: !!c.sched,
+        hasBadge: !!badge, badge, badgeBg: c.sched ? (p.frise ? '#8D1D2C' : '#FFFFFF') : '#232220', badgeFg: c.sched ? (p.frise ? '#FFFFFF' : '#8D1D2C') : '#FFFFFF',
+        hasFlag: !!pending && first, flag: 'à valider',
+        tip: c.sched ? (p.title + ' — ' + fmtWhen(p) + (p.frise ? ' · frise, tuile ' + (c.tile + 1) + '/3' : '') + ' · glisser pour échanger') : ((c.media && c.media.at) || ''),
+        click: () => pick(c),
+        dragStart: (e) => { if (!c.sched) return; try { e.dataTransfer.setData('text/plain', p.id); e.dataTransfer.effectAllowed = 'move'; } catch (x) {} this.setState({ drag: p.id }); },
+        dragOver: (e) => { if (c.sched && this.state.drag && this.state.drag !== p.id) e.preventDefault(); },
+        drop: (e) => { e.preventDefault(); const from = this.state.drag; this.setState({ drag: null }); if (c.sched && from && from !== p.id) this.swap(from, p.id); } };
+    });
+
+    // Contrôles
+    const ok = { bg: '#E2F0E8', fg: '#0B5A3E', tag: 'OK' }, warn = { bg: '#FCE7C8', fg: '#7A4100', tag: 'Attention' }, info = { bg: '#F4EFE8', fg: '#555555', tag: 'Info' };
+    const checks = [];
+    if (shop && shop.igs !== 'connected') checks.push(Object.assign({ t: 'Pas de compte Instagram connecté pour ' + shop.name + ' : rien ne partira sur Instagram (Paramètres → identifiants Meta).' }, warn));
+    const friseIdx = [];
+    raw.forEach((c, i) => {
+      if (c.sched && c.post.frise && c.tile === 0) friseIdx.push({ i, post: c.post, published: false });
+      if (!c.sched && c.frise && c.frise.tile === 0) friseIdx.push({ i, post: c.frise.post, published: true });
+    });
+    friseIdx.forEach(({ i, post, published }) => {
+      const r = i % 3, label = '« ' + post.title + ' » du ' + SA.dShort(post.date);
+      const newer = raw.slice(0, i).filter(c => !(c.sched && c.post.id === post.id)).length;
+      if (r === 0) checks.push(Object.assign({ t: 'La frise ' + label + (published ? ' (déjà en ligne)' : '') + ' reste alignée sur une ligne : ' + newer + ' case(s) avant elle.' }, ok));
+      else checks.push(Object.assign({ t: 'La frise ' + label + (published ? ' (déjà en ligne)' : '') + ' sera décalée de ' + r + ' case(s) : ' + newer + ' case(s) avant elle. Programmez ' + (3 - r) + ' post(s) de plus ou ' + r + ' de moins pour la remettre sur une ligne.' }, warn));
+      const pend = raw.slice(0, i).filter(c => c.sched && c.post.status === 'À valider').map(c => c.post.title);
+      if (pend.length) checks.push(Object.assign({ t: 'Si ' + pend.map(x => '« ' + x + ' »').join(', ') + ' (à valider) ' + (pend.length > 1 ? 'sont refusés' : 'est refusé') + ', la frise ' + label + ' sera décalée : prévoyez un remplaçant.' }, warn));
+    });
+    sched.filter(p => p.frise && p.status === 'Programmé').forEach(f => {
+      const near = sched.filter(q => q.id !== f.id && q.status === 'Programmé' && Math.abs(at(q.date, q.time) - at(f.date, f.time)) < 30 * 60000);
+      if (near.length) checks.push(Object.assign({ t: near.map(q => '« ' + q.title + ' »').join(', ') + ' tombe à moins de 30 minutes de la frise « ' + f.title + ' » : la ligne serait coupée. Déplacez-le.' }, warn));
+      else checks.push(Object.assign({ t: 'Aucun autre post Instagram dans la demi-heure qui entoure la frise « ' + f.title + ' ».' }, ok));
+    });
+    if (!friseIdx.length) checks.push(Object.assign({ t: 'Aucune frise dans la grille : pas de contrainte d’alignement. Une frise se crée dans « Créer un post » → Frise de grille.' }, info));
+    const lu = ig.lu_le ? String(ig.lu_le).slice(0, 16) : null;
+    const since = st.posts.filter(p => p.status === 'Publié' && (p.shops || []).includes(id) && p.publishedAt && lu && String(p.publishedAt).slice(0, 16) > lu);
+    if (since.length) checks.push(Object.assign({ t: since.length + ' post(s) publié(s) depuis la dernière lecture n’apparaissent pas encore : « Relire chez Instagram ».' }, info));
+
+    // Sélection
+    let sel = null;
+    if (s.sel && s.sel.post) {
+      const p = st.posts.find(x => x.id === s.sel.post);
+      if (p) sel = { kind: p.frise ? 'Frise programmée · 3 posts' : p.status === 'À valider' ? 'Proposé par la boutique · à valider' : 'Post programmé',
+        title: p.title, when: SA.dLabel(p.date) + ' à ' + p.time,
+        help: s.sel.armed ? 'Cliquez maintenant la case programmée avec laquelle échanger le créneau.' : 'Glissez la case sur une autre case programmée, ou « Échanger avec… » puis cliquez l’autre case.',
+        canSwap: !s.sel.armed && sched.length > 1, hasOpen: true, href: SA.href('post', 'id=' + encodeURIComponent(p.id)), target: '_self', openLabel: 'Ouvrir le post' };
+    } else if (s.sel && s.sel.media) {
+      const m = s.sel.media;
+      sel = { kind: s.sel.frise ? 'Frise publiée par le module' : 'Déjà en ligne', title: m.caption || 'Publication Instagram', when: m.at ? 'Publié le ' + SA.dShort(m.at.slice(0, 10)) + ' à ' + m.at.slice(11, 16) : '',
+        help: 'Les publications en ligne ne se déplacent pas (l’API Instagram ne permet ni de les réordonner ni de les supprimer).', hasOpen: !!m.permalink, href: m.permalink, target: '_blank', openLabel: 'Voir sur Instagram' };
+    }
+
+    const igShop = (x) => x.igs === 'connected';
+    return {
+      shopChips: SA.SHOPS.map(x => { const on = x.id === id, live = SA.byId(st.shops, x.id) || x; return { name: x.name, noIg: !igShop(live), tip: igShop(live) ? (live.ig || '') : 'Instagram : ' + ((SA.CONN[live.igs] || {}).label || 'non connecté'),
+        bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : '#CFC6BA', pick: () => this.setState({ shop: x.id, sel: null }, () => { if (!this.state.ig[x.id]) this.load(false); }) }; }),
+      handle: shop && shop.ig ? (String(shop.ig).startsWith('@') ? shop.ig : '@' + shop.ig) : (shop ? shop.name : '—'),
+      refresh: () => this.load(true), loading: s.loading, refreshLabel: s.loading ? 'Lecture…' : 'Relire chez Instagram',
+      readLabel: ig.demo ? 'Mode démonstration : publications d’exemple.' : lu ? 'Publications lues chez Instagram le ' + SA.dShort(lu.slice(0, 10)) + ' à ' + lu.slice(11, 16) + ' · ' + sched.length + ' post(s) programmé(s)' : (s.loading ? 'Lecture en cours…' : 'Pas encore lu chez Instagram — « Relire chez Instagram ».'),
+      cells, empty: cells.length === 0, emptyText: shop && shop.igs !== 'connected' ? 'Aucun compte Instagram connecté pour cette boutique.' : 'Rien de programmé, rien de lu : la grille est vide.',
+      checks, hasSel: !!sel, sel: sel || {}, unselect: () => this.setState({ sel: null }), arm: () => this.setState({ sel: Object.assign({}, s.sel, { armed: true }) }),
+      hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

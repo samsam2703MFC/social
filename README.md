@@ -46,6 +46,7 @@ Toutes les données **et toutes les clés** sont stockées et lues dans la base
 | `social_publication` | la file de publication (post × boutique × canal, heure prévue, résultat Meta) |
 | `social_meta_objet` | objets créés chez Meta (campagne, ad set, créa, pub, formulaire) |
 | `social_resultat` | résultats Meta + ventes caisse par campagne et boutique |
+| `social_instagram_media` | les 30 dernières publications de chaque compte Instagram (grille du profil) |
 | `social_activite` | le journal d'activité |
 
 Chaque table a des colonnes typées (lisibles en SQL) et une colonne `data` qui
@@ -104,9 +105,25 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
     `media_type=CAROUSEL` → `media_publish`), album Facebook (`/photos`
     `published=false` ×n → `/feed` + `attached_media`).
   - *Collage 4:5* — gabarits Duo, Trio, Quatuor en une image 1080 × 1350.
+  - *Frise de grille* (franchiseur) — un visuel découpé en 3 posts qui forment une
+    ligne du profil. Le profil recadre chaque post en 3:4 (1012,5 × 1350) : le
+    visuel est dessiné sur la largeur visible et chaque tuile 1080 × 1350 déborde
+    de 33,75 px sur ses voisines. Instagram : les 3 conteneurs sont préparés
+    d'abord (un refus ne publie rien), puis publiés à la suite, tuile 3 → 2 → 1 ;
+    les ids publiés sont notés dans le post (`frise.ig`), une relance ne republie
+    pas une tuile en ligne. Facebook reçoit le visuel entier en une photo. Verrou :
+    aucun autre post Instagram de la boutique dans la demi-heure avant et après
+    (refus à l'écran et côté serveur, le post reste en brouillon avec le motif).
   Les images partent en pleine définition, sont écrites en fichiers par le serveur
   (`public/uploads/`) ; les réglages et les photos sources restent dans le post
   (`montage`) pour le rouvrir et le modifier.
+- **Grille Instagram** (écran du même nom) — par boutique, le profil tel qu'il
+  sera : les posts programmés (calendrier) au-dessus des 30 dernières publications
+  relues chez Instagram (`GET /{ig_user_id}/media`, table
+  `social_instagram_media`, cron horaire + bouton « Relire chez Instagram »).
+  Contrôles : alignement de chaque frise (programmée ou déjà en ligne), posts « à
+  valider » qui la décaleraient s'ils étaient refusés, demi-heure autour des
+  frises. Glisser une case programmée sur une autre échange leurs créneaux.
 - **Publicités** — l'assistant envoie sa description complète ; le serveur crée
   campagne → ad set → créa → pub, un jeu par compte boutique ou un jeu réseau
   (un ad set par boutique, pour lire les résultats boutique par boutique).
@@ -169,7 +186,7 @@ session du cockpit.
 
 ```
 public/            écrans de la maquette (SA *.dc.html) + social-data.js (couche de données)
-  montage.js       montages Instagram (carrousel panoramique, collages 4:5) dessinés sur canvas
+  montage.js       montages Instagram (carrousel panoramique, frise, collages 4:5) dessinés sur canvas
   api/index.php    contrôleur frontal de l'API
   vendor/          React, ReactDOM, Babel, html-to-image (embarqués, aucun CDN)
 src/
@@ -182,6 +199,7 @@ src/
   ads.php          publicités
   leads.php        formulaires, leads, webhook
   results.php      insights Meta + ventes caisse
+  instagram.php    grille du profil (lecture des publications), frise (publication, verrou)
   api.php          routes
 bin/               cron.php, deploy.sh, tests.php
 ```

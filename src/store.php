@@ -236,6 +236,7 @@ function socStateSave(array $b): array
         }
     }
 
+    socLotPosts((array) ($b['changes']['posts']['upsert'] ?? []));
     foreach ((array) ($b['changes'] ?? []) as $kind => $ch) {
         if (!in_array($kind, SOC_KINDS, true) || !is_array($ch)) { continue; }
         foreach ((array) ($ch['delete'] ?? []) as $id) {
@@ -255,6 +256,10 @@ function socStateSave(array $b): array
                     'leadforms' => socLeadformHook($avant, $item),
                     default => $item,
                 };
+            } catch (SocRefus $e) {
+                // Refus métier (verrou de la frise…) : l'objet est gardé tel que le serveur l'a rendu.
+                $item = $e->item;
+                $out['errors'][] = ['kind' => $kind, 'id' => $item['id'], 'error' => $e->getMessage()];
             } catch (Throwable $e) {
                 $out['errors'][] = ['kind' => $kind, 'id' => $item['id'], 'error' => $e->getMessage()];
             }
@@ -271,11 +276,19 @@ function socStateSave(array $b): array
  * → publié dans la requête ; brouillon / à valider → retiré de la file.
  * Un post déjà publié garde ce que Meta en a dit.
  */
+/** Un refus métier : l'enregistrement a lieu, mais pas ce qui était demandé (programmation, publication). */
+final class SocRefus extends RuntimeException
+{
+    public function __construct(string $motif, public array $item) { parent::__construct($motif); }
+}
+
 function socPostHook(?array $avant, array $p): array
 {
     $sAvant = (string) ($avant['status'] ?? '');
     $s = (string) ($p['status'] ?? 'Brouillon');
     $publieAvant = in_array($sAvant, ['Publié', 'Échec'], true);
+    // Les tuiles de frise déjà publiées sont connues du serveur seul.
+    if (isset($avant['frise']['ig']) && socEstFrise($p)) { $p['frise']['ig'] = $avant['frise']['ig']; }
     if ($publieAvant && in_array($s, ['Publié', 'Échec'], true)) {
         // Le serveur garde la main sur le résultat de la publication.
         $p['status'] = $sAvant;
@@ -283,6 +296,15 @@ function socPostHook(?array $avant, array $p): array
         return $p;
     }
     foreach (SOC_POST_SERVEUR as $k) { $p[$k] = null; }
+    if ($s === 'Programmé' || $s === 'Publié') {
+        $motif = socFriseConflit($p);
+        if ($motif !== null) {
+            socUnqueue((string) $p['id']);
+            $p['status'] = 'Brouillon';  // gardé, mais ni programmé ni publié
+            $p['error'] = $motif;
+            throw new SocRefus($motif, $p);
+        }
+    }
     if ($s === 'Programmé') {
         socItemPut('posts', $p);
         socQueue($p);

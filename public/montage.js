@@ -4,6 +4,8 @@
 //    4:5. La photo et le bandeau traversent les découpes : le visuel continue quand
 //    on fait glisser ; le titre et la pastille prix restent entiers dans la 1re image. Publié en UN post (carrousel Instagram, album
 //    Facebook) par le serveur, comme n'importe quel post à plusieurs images.
+//  - Frise de grille : un visuel découpé en 3 posts qui forment une ligne du profil
+//    (recadrage 3:4 de la grille pris en compte) ; Facebook reçoit le visuel entier.
 //  - Collage : gabarits Duo, Trio, Quatuor en une image 1080 × 1350 (4:5), aux
 //    couleurs de la marque, avec le nom et le prix du produit.
 //
@@ -158,6 +160,69 @@
   }
 
   /**
+   * Frise de grille : 3 posts 1080 × 1350 qui forment une ligne du profil Instagram.
+   * Le profil montre chaque post recadré au centre en 3:4 (1012,5 × 1350) : le visuel
+   * est dessiné sur la largeur visible (3 × 1012,5) et chaque tuile déborde de
+   * 33,75 px de chaque côté sur ses voisines, pour que la ligne soit continue dans la
+   * grille. Facebook reçoit le visuel entier (`full`).
+   * o = { photos, title, band, price, sign } → { tiles: [gauche, milieu, droite], full, size }.
+   */
+  async function frise(o, scale) {
+    await fonts();
+    const k = scale || 1, V = H * 3 / 4, B = (W - V) / 2;
+    const v = V * k, b = B * k, w1 = W * k, TW = 3 * v + 2 * b, TH = H * k;
+    const cv = document.createElement('canvas'); cv.width = Math.round(TW); cv.height = Math.round(TH);
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = C.cream; ctx.fillRect(0, 0, TW, TH);
+    const photos = (o.photos || []).filter((p) => p && p.src);
+    const imgs = await Promise.all(photos.map((p) => load(p.src)));
+    if (imgs.length === 1) place(ctx, imgs[0], 0, 0, TW, TH, photos[0].cut);
+    else if (imgs.length > 1) {
+      // Des panneaux égaux sur la largeur visible ; les deux du bord prennent aussi le débord extérieur.
+      const pw = 3 * v / imgs.length;
+      imgs.forEach((img, i) => { const x0 = i === 0 ? 0 : b + i * pw, x1 = i === imgs.length - 1 ? TW : b + (i + 1) * pw; place(ctx, img, x0, 0, x1 - x0 + 1, TH, photos[i].cut); });
+    }
+    // Sur le profil, la ligne se lit d'un coup : le titre s'étale sur les trois tuiles.
+    const title = String(o.title || '').toUpperCase().trim();
+    if (title) {
+      const size = fit(ctx, title, 3 * v * 0.86, 190 * k, '500', 60 * k);
+      ctx.fillStyle = 'rgba(245,239,228,0.94)'; ctx.fillRect(0, 110 * k, TW, size * 1.5);
+      ctx.fillStyle = C.ruby; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(title, TW / 2, 110 * k + size * 0.78);
+    }
+    const bandH = 170 * k, bandY = TH - 330 * k, price = String(o.price || '').trim();
+    // Pastille posée sur le bandeau, dans la tuile de droite ; les éléments du bandeau
+    // (séparés par « · ») vont un par tuile, centrés : aucun mot sur l'intervalle de la grille.
+    const disc = price ? { cx: b + 2.5 * v, cy: bandY - 150 * k, r: 140 * k } : null;
+    ctx.fillStyle = C.ruby; ctx.fillRect(0, bandY, TW, bandH);
+    const segs = String(o.band || '').split(/\s+[·•|]\s+|\s*\n\s*/).map((x) => x.trim()).filter(Boolean);
+    const per = [[], [], []];
+    segs.forEach((x, j) => per[Math.min(2, Math.floor(j * 3 / segs.length))].push(x));
+    ctx.fillStyle = C.white; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    per.forEach((list, i) => {
+      if (!list.length) return;
+      const txt = list.join('  ·  '), x0 = b + i * v + 50 * k, x1 = b + (i + 1) * v - 50 * k;
+      fit(ctx, txt, x1 - x0, 62 * k, '400', 22 * k); ctx.fillText(txt, (x0 + x1) / 2, bandY + bandH / 2);
+    });
+    const sign = String(o.sign || '').trim();
+    if (sign) {
+      ctx.fillStyle = 'rgba(245,239,228,0.94)'; ctx.fillRect(0, bandY + bandH, TW, TH - bandY - bandH);
+      ctx.fillStyle = C.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      fit(ctx, sign, v * 0.86, 44 * k, '500', 20 * k); ctx.fillText(sign, b + 70 * k, bandY + bandH + (TH - bandY - bandH) / 2);
+    }
+    if (disc) priceDisc(ctx, disc.cx, disc.cy, disc.r, price, k);
+
+    const tiles = [0, 1, 2].map((i) => {
+      const s = document.createElement('canvas'); s.width = Math.round(w1); s.height = Math.round(TH);
+      s.getContext('2d').drawImage(cv, -Math.round(i * v), 0);
+      return exportCanvas(s, k < 1);
+    });
+    const f = document.createElement('canvas'); f.width = Math.round(3 * v); f.height = Math.round(TH);
+    f.getContext('2d').drawImage(cv, -Math.round(b), 0);
+    return { tiles, full: exportCanvas(f, k < 1), size: { w: Math.round(w1), h: Math.round(TH) } };
+  }
+
+  /**
    * Collage en une image 4:5.
    * o = { tpl: 'duo'|'trio'|'quatuor', photos: [{src, cut}], title, price, sign }.
    */
@@ -216,5 +281,5 @@
     return { image: exportCanvas(cv, k < 1), size: { w: Math.round(cw), h: Math.round(ch) } };
   }
 
-  window.SAMontage = { W, H, panorama, collage, fonts, TEMPLATES: [['duo', 'Duo', 2], ['trio', 'Trio', 3], ['quatuor', 'Quatuor', 4]] };
+  window.SAMontage = { W, H, panorama, frise, collage, fonts, TEMPLATES: [['duo', 'Duo', 2], ['trio', 'Trio', 3], ['quatuor', 'Quatuor', 4]] };
 })();

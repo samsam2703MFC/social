@@ -162,6 +162,8 @@ function socPublishIg(array $post, array $shop, string $message): string
     $ig = (string) $shop['ids']['instagram_user_id'];
     if ($ig === '') { throw new MetaError('compte Instagram non rattaché à ' . $shop['name'], 100); }
     $tok = $shop['ids']['page_id'] !== '' ? Meta::pageToken((string) $shop['ids']['page_id']) : null;
+    // Frise de grille : 3 posts à la suite (Facebook, lui, reçoit le visuel entier — `media`).
+    if (socEstFrise($post)) { return socPublishFrise($post, $shop, $ig, $tok, $message); }
     [$imgs, $video] = socMedias($post);
     if ($video !== null) {
         $c = Meta::call('POST', $ig . '/media', ['media_type' => 'REELS', 'video_url' => socPublicUrl($video), 'caption' => $message], $tok);

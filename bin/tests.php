@@ -65,8 +65,9 @@ for ($d = -48; $d <= 0; $d++) {
 $appels = [];
 $restreinte = ['222' => true];   // la Page de Wavre refuse (code 368) au premier passage
 $n = 100;
+$igPanne = 0; $igPub = 0;   // $igPanne = N : la N-ième publication Instagram échoue (frise interrompue)
 Meta::$sleep = static function (int $s): void {};
-Meta::$transport = static function (string $m, string $url, array $p) use (&$appels, &$restreinte, &$n): array {
+Meta::$transport = static function (string $m, string $url, array $p) use (&$appels, &$restreinte, &$n, &$igPanne, &$igPub): array {
     $path = preg_replace('#^https://graph\.facebook\.com/v[\d.]+/#', '', $url);
     $appels[] = [$m, $path, $p];
     $id = static function () use (&$n) { return (string) (++$n); };
@@ -80,8 +81,16 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
         return [200, $mm[2] === 'photos' ? ['id' => $id(), 'post_id' => $mm[1] . '_' . $id()] : ['id' => $mm[1] . '_' . $id()]];
     }
     if ($m === 'GET' && $path === '17841') { return [200, ['id' => '17841', 'username' => 'latelierby.halle']]; }
-    if ($path === '17841/media') { return [200, ['id' => 'c' . $id()]]; }
-    if ($path === '17841/media_publish') { return [200, ['id' => 'ig' . $id()]]; }
+    if ($m === 'POST' && $path === '17841/media') { return [200, ['id' => 'c' . $id()]]; }
+    if ($path === '17841/media_publish') {
+        if ($igPanne > 0 && ++$igPub === $igPanne) { return [400, ['error' => ['code' => 9007, 'message' => 'Media ID is not available']]]; }
+        return [200, ['id' => 'ig' . $id()]];
+    }
+    if ($m === 'GET' && $path === '17841/media') {
+        return [200, ['data' => [['id' => 'm2', 'media_type' => 'IMAGE', 'media_url' => 'https://cdn.ig/m2.jpg', 'permalink' => 'https://instagram.com/p/m2', 'timestamp' => date('c', strtotime('-1 day'))],
+            ['id' => 'm1', 'media_type' => 'VIDEO', 'media_url' => 'https://cdn.ig/m1.mp4', 'thumbnail_url' => 'https://cdn.ig/m1.jpg', 'timestamp' => date('c', strtotime('-3 days'))]]]];
+    }
+    if ($m === 'GET' && preg_match('#^c\d+$#', $path)) { return [200, ['status_code' => 'FINISHED']]; }
     if ($m === 'GET' && preg_match('#^act_\d+$#', $path)) { return [200, ['name' => 'Compte ' . $path, 'account_status' => 1]]; }
     if ($m === 'GET' && $path === 'search') { return [200, ['data' => ($p['type'] ?? '') === 'adlocale' ? [['key' => 9, 'name' => 'French (All)'], ['key' => 14, 'name' => 'Dutch']] : [['id' => '6003107902', 'name' => $p['q']]]]]; }
     if (preg_match('#^act_\d+/(campaigns|adsets|adcreatives|ads)$#', $path)) { return [200, ['id' => $id()]]; }
@@ -275,6 +284,74 @@ check('Instagram : 3 éléments de carrousel, dans l’ordre', count(array_filte
 check('Instagram : un conteneur CAROUSEL publié', count(array_filter($ig, static fn ($a) => ($a[2]['media_type'] ?? '') === 'CAROUSEL' && count(explode(',', $a[2]['children'])) === 3)) === 1
     && count($appelsVers('#^17841/media_publish$#')) === 1);
 check('post montage publié', $p4['status'] === 'Publié' && empty($p4['partial']));
+
+echo "Frise de grille : 3 posts Instagram, visuel entier sur Facebook\n";
+$full = 'data:image/jpeg;base64,' . base64_encode(str_repeat("\xFF\xD8visuel-entier", 40));
+$frise = static fn (string $id, string $date, string $time, string $status) => ['id' => $id, 'date' => $date, 'time' => $time, 'type' => 'Gamme saisonnière',
+    'title' => 'Frise ' . $id, 'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => true]], 'fb' => true, 'ig' => true, 'status' => $status, 'text' => 'Automne à {ville}',
+    'img' => $full, 'media' => [['src' => $full, 'kind' => 'img']], 'frise' => ['tiles' => [$tranche(11), $tranche(12), $tranche(13)]],
+    'montage' => ['kind' => 'frise', 'm' => ['title' => 'Automne'], 'photos' => []]];
+$appels = [];
+socStateSave(['changes' => ['posts' => ['upsert' => [$frise('p5', date('Y-m-d'), date('H:i'), 'Publié')]]]]);
+$p5 = socItem('posts', 'p5');
+$tuiles = array_map(static fn ($u) => socPublicUrl($u), $p5['frise']['tiles']);
+$ig = $appelsVers('#^17841/media$#');
+$chemins = array_column($appels, 1);
+check('frise : 3 conteneurs préparés avant toute publication', count($ig) === 3
+    && max(array_keys($chemins, '17841/media', true)) < min(array_keys($chemins, '17841/media_publish', true)));
+check('frise : publiée de droite à gauche (tuile 3, 2, 1)', array_column(array_column($ig, 2), 'image_url') === array_reverse($tuiles));
+check('frise : 3 publications, ni carrousel ni CAROUSEL', count($appelsVers('#^17841/media_publish$#')) === 3 && !array_filter($ig, static fn ($a) => isset($a[2]['is_carousel_item']) || isset($a[2]['media_type'])));
+check('frise : les 3 ids Instagram notés dans le post', count($p5['frise']['ig']['4'] ?? []) === 3 && $p5['status'] === 'Publié');
+check('frise : Facebook reçoit le visuel entier en une photo', count($appelsVers('#^111/photos$#')) === 1 && $appelsVers('#^111/photos$#')[0][2]['url'] === socPublicUrl($p5['media'][0]['src']));
+
+echo "Frise : verrou d'une demi-heure, relance sans doublon\n";
+$j5 = date('Y-m-d', strtotime('+5 days'));
+socStateSave(['changes' => ['posts' => ['upsert' => [$frise('p7', $j5, '10:00', 'Programmé')]]]]);
+check('frise programmée', socItem('posts', 'p7')['status'] === 'Programmé');
+$p8 = ['id' => 'p8', 'date' => $j5, 'time' => '10:20', 'title' => 'Trop près', 'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => true]], 'fb' => true, 'ig' => true, 'status' => 'Programmé', 'text' => 'x', 'img' => $img];
+$r = socStateSave(['changes' => ['posts' => ['upsert' => [$p8]]]]);
+$p8b = socItem('posts', 'p8');
+check('post Instagram à 20 min d’une frise : refusé, gardé en brouillon avec le motif', $p8b['status'] === 'Brouillon' && str_contains((string) $p8b['error'], '30 minutes')
+    && str_contains($r['errors'][0]['error'] ?? '', 'Frise p7') && (int) Db::row("SELECT COUNT(*) n FROM social_publication WHERE content_id = 'p8'")['n'] === 0);
+$p8['time'] = '10:40';
+socStateSave(['changes' => ['posts' => ['upsert' => [$p8]]]]);
+check('à 40 min : accepté et en file', socItem('posts', 'p8')['status'] === 'Programmé' && (int) Db::row("SELECT COUNT(*) n FROM social_publication WHERE content_id = 'p8'")['n'] === 2);
+$p9 = ['id' => 'p9', 'date' => $j5, 'time' => '10:10', 'title' => 'Facebook seul', 'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => false]], 'fb' => true, 'ig' => false, 'status' => 'Programmé', 'text' => 'x'];
+socStateSave(['changes' => ['posts' => ['upsert' => [$p9]]]]);
+check('Facebook seul pendant la frise : accepté', socItem('posts', 'p9')['status'] === 'Programmé');
+$appels = []; $igPanne = 2; $igPub = 0;
+Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'p7'");
+socRunQueue('p7');
+$p7 = socItem('posts', 'p7');
+check('frise interrompue à la 2e tuile : 1 tuile en ligne, notée, échec Instagram', count($p7['frise']['ig']['4'] ?? []) === 1 && ($p7['partial']['ko'][0]['channel'] ?? '') === 'Instagram');
+$appels = []; $igPanne = 0;
+$p7 = socRetry('p7');
+check('relance : seules les 2 tuiles manquantes repartent', count($appelsVers('#^17841/media$#')) === 2 && count($p7['frise']['ig']['4'] ?? []) === 3 && empty($p7['partial']),
+    json_encode($p7['frise']['ig'] ?? null));
+check('relance : dans l’ordre (tuile 2 puis 1)', array_column(array_column($appelsVers('#^17841/media$#'), 2), 'image_url') === [socPublicUrl($p7['frise']['tiles'][1]), socPublicUrl($p7['frise']['tiles'][0])]);
+$p7['text'] = 'Automne à {ville} !';
+socStateSave(['changes' => ['posts' => ['upsert' => [array_diff_key($p7, ['frise' => 1]) + ['frise' => ['tiles' => $p7['frise']['tiles']]]]]]]);
+check('l’écran ne peut pas effacer les ids des tuiles publiées', count(socItem('posts', 'p7')['frise']['ig']['4'] ?? []) === 3);
+
+$p10 = ['id' => 'p10', 'date' => $j5, 'time' => '12:00', 'title' => 'Midi', 'shops' => ['4'], 'ch' => ['4' => ['fb' => false, 'ig' => true]], 'fb' => false, 'ig' => true, 'status' => 'Programmé', 'text' => 'x', 'img' => $img];
+$f11 = $frise('p11', $j5, '14:00', 'Programmé');
+socStateSave(['changes' => ['posts' => ['upsert' => [$p10, $f11]]]]);
+// La grille échange les créneaux de la frise et du post de midi : un seul envoi, deux objets.
+$r = socStateSave(['changes' => ['posts' => ['upsert' => [array_merge($p10, ['time' => '14:00']), array_merge($f11, ['time' => '12:00'])]]]]);
+check('grille : échange de créneaux frise ↔ post, accepté (verrou évalué sur le nouvel état)', !$r['errors'] && socItem('posts', 'p10')['time'] === '14:00'
+    && socItem('posts', 'p11')['time'] === '12:00' && socItem('posts', 'p11')['status'] === 'Programmé', json_encode($r['errors']));
+
+echo "Grille Instagram\n";
+$sync = socIgMediaSync();
+check('grille relue chez Instagram (Halle seulement : Wavre n’a pas de compte)', ($sync['4'] ?? null) === 2 && !isset($sync['5']), json_encode($sync));
+$g = socIgGrille('4');
+check('grille : du plus récent au plus ancien, vignette pour la vidéo', array_column($g['media'], 'id') === ['m2', 'm1'] && $g['media'][1]['src'] === 'https://cdn.ig/m1.jpg' && $g['lu_le'] !== null);
+[$code, $b] = (static function () { $_GET['shop'] = '4'; try { return socRoute('GET', '/instagram/grille'); } finally { unset($_GET['shop']); } })();
+check('GET /instagram/grille?shop=4', $code === 200 && count($b['media']) === 2 && $b['instagram'] === true);
+$GLOBALS['SOC_BODY'] = ['shop' => '4'];
+[$code, $b] = socRoute('POST', '/instagram/grille');
+unset($GLOBALS['SOC_BODY']);
+check('POST /instagram/grille : relecture immédiate', $code === 200 && $b['synchro'] === 2);
 
 echo "Campagnes, publicités\n";
 $camp = ['id' => 'c1', 'name' => 'Automne', 'type' => 'saison', 'start' => $debutCamp, 'end' => date('Y-m-d', strtotime('+20 days')), 'status' => 'en cours',

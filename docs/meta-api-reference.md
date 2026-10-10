@@ -29,6 +29,9 @@ Permissions : `pages_manage_posts`, `pages_read_engagement`, `pages_show_list`, 
 | Vidéo | `POST /{page_id}/videos` | `file_url` ou `source`, `title`, `description`, `thumb` |
 | Reel | `POST /{page_id}/video_reels` | `upload_phase=start` → upload → `upload_phase=finish` + `video_id`, `description`, `video_state=PUBLISHED` |
 | Instagram | `POST /{ig_user_id}/media` → `POST /{ig_user_id}/media_publish` | `image_url`, `caption` (lien non cliquable) |
+| Instagram · carrousel panoramique | `POST /{ig_user_id}/media` ×n (`is_carousel_item=true`) → `POST /{ig_user_id}/media` (`media_type=CAROUSEL`, `children`) → `media_publish` | 2 à 10 images 1080×1350 ; Facebook : album (`/photos` `published=false` ×n → `/feed` + `attached_media`) |
+| Instagram · frise de grille | 3 × `POST /{ig_user_id}/media` (tuiles 3, 2, 1) → `GET /{container_id}?fields=status_code` → 3 × `media_publish` à la suite | 3 posts 1080×1350 (débord 33,75 px pour le recadrage 3:4 du profil) ; Facebook : le visuel entier en une photo ; aucun autre post Instagram ±30 min |
+| Grille du profil (lecture) | `GET /{ig_user_id}/media` | `fields=id,media_type,media_url,thumbnail_url,permalink,timestamp,caption`, `limit=30` — cron horaire |
 
 Programmation : `published=false` + `scheduled_publish_time`, **entre 10 minutes et 30 jours** dans le futur (bloqué côté UI). Champ « Étaler sur X min » : le backend décale chaque Page de `X / (n−1)` minutes.
 

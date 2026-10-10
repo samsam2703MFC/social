@@ -337,6 +337,19 @@
             <sc-if value="{{ pv.noMedia }}" hint-placeholder-val="{{ false }}"><div style="padding:40px 16px;text-align:center;font-size:12px;color:#8e8e8e;background:#F5EFE4;">Aucune photo</div></sc-if>
           </sc-if>
           <sc-if value="{{ isMontage }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ mv.row }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:2px 12px 12px;display:flex;flex-direction:column;gap:6px;">
+                <span style="font-size:11px;color:#8e8e8e;">Sur le profil · une ligne de la grille (recadrage 3:4)</span>
+                <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;">
+                  <sc-for list="{{ mv.rowTiles }}" as="t" hint-placeholder-count="3"><div style="position:relative;width:100%;height:0;padding-bottom:133.333%;background:#F5EFE4;overflow:hidden;"><sc-if value="{{ t.src }}" hint-placeholder-val="{{ false }}"><img src="{{ t.src }}" alt="{{ t.alt }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div></sc-for>
+                </div>
+                <span style="font-size:11px;color:#8e8e8e;">Dans le fil, chaque post est vu seul :</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ mv.wide }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ mv.hasSrc }}" hint-placeholder-val="{{ false }}"><img src="{{ mv.fullSrc }}" alt="Frise : le visuel entier" style="display:block;width:100%;height:auto;background:#F5EFE4;"></sc-if>
+              <sc-if value="{{ mv.empty }}" hint-placeholder-val="{{ true }}"><div style="padding:40px 16px;text-align:center;font-size:12px;color:#8e8e8e;background:#F5EFE4;">{{ mv.emptyText }}</div></sc-if>
+            </sc-if>
             <sc-if value="{{ mv.slide }}" hint-placeholder-val="{{ true }}">
               <div style="position:relative;width:100%;height:0;padding-bottom:125%;background:#F5EFE4;overflow:hidden;">
                 <sc-if value="{{ mv.hasSrc }}" hint-placeholder-val="{{ false }}"><img src="{{ mv.src }}" alt="{{ mv.alt }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
@@ -454,7 +467,7 @@ class Component extends DCLogic {
       Object.assign(base, { id: p.id, type: p.type, text: p.text || '', textNl: p.textNl || '', link: p.link || '', campaign: p.campaign || '', date: p.date, time: p.time, sel: shops,
         scope: shops.length === SA.SHOPS.length ? 'all' : 'shop', status: p.status, spread: p.spread || 10, product: p.product || null });
       if (p.ch) base.ch = p.ch;
-      if (p.montage) { base.mode = p.montage.kind === 'collage' ? 'collage' : 'pano'; base.m = Object.assign(this.MONTAGE(), p.montage.m); base.photos = p.montage.photos || []; }
+      if (p.montage) { base.mode = ['collage', 'frise'].includes(p.montage.kind) ? p.montage.kind : 'pano'; base.m = Object.assign(this.MONTAGE(), p.montage.m); base.photos = p.montage.photos || []; }
       else if (p.visual) { base.mode = 'studio'; base.v = Object.assign({}, v, p.visual.v, { nl: Object.assign({}, v.nl, (p.visual.v || {}).nl) }); base.photos = p.visual.photos || []; }
       else { base.mode = 'brut'; base.photos = (p.media || [{ src: p.img, kind: 'img', cut: true }]).filter(m => m.kind !== 'video').map(m => ({ src: m.src, cut: m.cut !== false, name: m.name || '' })); base.v.title = p.title; }
     }
@@ -478,7 +491,7 @@ class Component extends DCLogic {
   }
   componentDidUpdate() { this.montagePreview(); }
   componentWillUnmount() { clearTimeout(this._tt); clearTimeout(this._mT); this._dead = true; }
-  isMontage(mode) { return (mode || this.state.mode) === 'pano' || (mode || this.state.mode) === 'collage'; }
+  isMontage(mode) { return ['pano', 'collage', 'frise'].includes(mode || this.state.mode); }
   montageInput() { const s = this.state; return Object.assign({}, s.m, { photos: s.photos }); }
   /** Aperçu basse définition du montage, recalculé (avec un court délai) quand un réglage ou une photo change. */
   montagePreview() {
@@ -490,10 +503,10 @@ class Component extends DCLogic {
     clearTimeout(this._mT);
     this._mT = setTimeout(async () => {
       try {
-        const cur = this.state, r = cur.mode === 'pano' ? await M.panorama(this.montageInput(), 0.4) : await M.collage(this.montageInput(), 0.4);
+        const cur = this.state, r = cur.mode === 'pano' ? await M.panorama(this.montageInput(), 0.4) : cur.mode === 'frise' ? await M.frise(this.montageInput(), 0.4) : await M.collage(this.montageInput(), 0.4);
         if (this._dead || this._mKey !== key) return;
-        const slices = r.slices || [r.image];
-        this.setState({ mPrev: { key, slices }, mIdx: Math.min(this.state.mIdx, slices.length - 1) });
+        const slices = r.slices || r.tiles || [r.image];
+        this.setState({ mPrev: { key, slices, full: r.full || '' }, mIdx: Math.min(this.state.mIdx, slices.length - 1) });
       } catch (e) { console.error(e); }
     }, 200);
   }
@@ -520,7 +533,24 @@ class Component extends DCLogic {
       rd.readAsDataURL(file);
     });
   }
-  validate(final) {
+  /** Le verrou de la frise (le serveur le vérifie aussi) : 30 minutes sans autre post Instagram avant et après. */
+  friseLock() {
+    const SA = window.SA, s = this.state, igShops = this.targets().filter(id => s.ch[id] && s.ch[id].ig);
+    if (!igShops.length) return null;
+    const at = (d, h) => { const [Y, M, D] = String(d).split('-').map(Number), [hh, mm] = String(h || '00:00').split(':').map(Number); return new Date(Y, M - 1, D, hh, mm).getTime(); };
+    const now = new Date(), nowT = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    const me = s.when === 'now' ? at(SA.TODAY, nowT) : at(s.date, s.time), isFrise = s.mode === 'frise';
+    const igOf = (q) => (Array.isArray(q.shops) ? q.shops : SA.SHOPS.map(x => x.id)).filter(id => q.ch && q.ch[id] ? q.ch[id].ig : q.ig);
+    for (const q of SA.state().posts) {
+      if (q.id === s.id || q.status !== 'Programmé' || (!isFrise && !q.frise)) continue;
+      const common = igOf(q).filter(id => igShops.includes(id));
+      if (!common.length || Math.abs(at(q.date, q.time) - me) >= 30 * 60000) continue;
+      return 'Instagram ' + common.map(id => (SA.byId(SA.SHOPS, id) || { name: id }).name).join(', ') + ' : « ' + q.title + ' » est programmé le ' + SA.dShort(q.date) + ' à ' + q.time
+        + (q.frise ? ' (frise)' : '') + ' — une frise demande 30 minutes sans autre post Instagram avant et après.';
+    }
+    return null;
+  }
+  validate(final, status) {
     const SA = window.SA, s = this.state, errs = [], t = this.targets();
     if (!t.length) errs.push('Choisissez au moins une boutique.');
     if (t.length && !t.some(id => s.ch[id] && (s.ch[id].fb || s.ch[id].ig))) errs.push('Cochez au moins un canal (Facebook ou Instagram).');
@@ -532,16 +562,18 @@ class Component extends DCLogic {
     if (final && s.when === 'later') { const m = this.schedMinutes(); if (m < 10) errs.push('Meta exige une programmation au moins 10 minutes à l\u2019avance (scheduled_publish_time).'); else if (m > 30 * 24 * 60) errs.push('Meta n\u2019accepte pas de programmation au-delà de 30 jours (scheduled_publish_time).'); }
     if (final && s.mode === 'brut' && t.some(id => s.ch[id] && s.ch[id].ig) && !s.photos.length && !s.video) errs.push('Instagram exige au moins une image ou une vidéo.');
     if (final && this.isMontage() && !s.photos.length) errs.push('Ajoutez au moins une photo pour le montage.');
+    if (final && s.mode === 'frise' && !t.some(id => s.ch[id] && s.ch[id].ig)) errs.push('Une frise se publie sur Instagram : cochez Instagram pour au moins une boutique.');
+    if (final && status !== 'Brouillon') { const lock = this.friseLock(); if (lock) errs.push(lock); }
     if (final && this.isMontage() && !window.SAMontage) errs.push('Le moteur des montages (montage.js) ne s\u2019est pas chargé : rechargez la page.');
     return errs;
   }
   async persist(status) {
     const SA = window.SA, s = this.state;
-    const errs = this.validate(status !== 'Brouillon');
+    const errs = this.validate(status !== 'Brouillon', status);
     if (errs.length) { this.setState({ errors: errs }); return; }
     this.setState({ saving: true, errors: [] });
     const t = this.targets(), cat = s.product ? SA.CATALOGUE.find(x => x.id === s.product) : null;
-    let img = null, media;
+    let img = null, media, friseTiles = null;
     if (s.mode === 'studio') {
       // En ligne, le visuel part chez Meta : pleine définition (1080 × 1080). En démo, il reste dans le navigateur : demi-définition.
       try { if (this._api) img = await this._api.toImage({ jpeg: true, pixelRatio: SA.live ? 1 : 0.5, quality: SA.live ? 0.9 : 0.82 }); } catch (e) { console.error(e); }
@@ -551,9 +583,10 @@ class Component extends DCLogic {
       // Montage rendu en pleine définition (1080 × 1350 par image) ; en démo, à moitié pour ne pas saturer le navigateur.
       const M = window.SAMontage, k = SA.live ? 1 : 0.5;
       let slices = [];
-      try { const r = s.mode === 'pano' ? await M.panorama(this.montageInput(), k) : await M.collage(this.montageInput(), k); slices = r.slices || [r.image]; }
+      try { const r = s.mode === 'pano' ? await M.panorama(this.montageInput(), k) : s.mode === 'frise' ? await M.frise(this.montageInput(), k) : await M.collage(this.montageInput(), k);
+        slices = r.slices || [r.image]; if (r.tiles) { friseTiles = r.tiles; slices = [r.full]; } }
       catch (e) { console.error(e); this.setState({ saving: false, errors: ['Le montage n\u2019a pas pu être dessiné : ' + (e && e.message ? e.message : e) + '.'] }); return; }
-      media = slices.map((src, i) => ({ src, kind: 'img', cut: false, name: s.mode === 'pano' ? 'Carrousel ' + (i + 1) + '/' + slices.length : 'Collage ' + s.m.tpl }));
+      media = slices.map((src, i) => ({ src, kind: 'img', cut: false, name: s.mode === 'pano' ? 'Carrousel ' + (i + 1) + '/' + slices.length : s.mode === 'frise' ? 'Frise · visuel entier (Facebook)' : 'Collage ' + s.m.tpl }));
       img = slices[0];
     } else {
       media = s.photos.map(p => ({ src: p.src, kind: 'img', cut: p.cut, name: p.name })).concat(s.video ? [{ src: s.video.src, kind: 'video', name: s.video.name }] : []);
@@ -563,6 +596,7 @@ class Component extends DCLogic {
     const now = new Date(), nowT = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
     const post = { id: s.id || ('p' + Date.now()), date: s.when === 'now' ? SA.TODAY : s.date, time: s.when === 'now' ? nowT : s.time, type: s.type, title, img, media,
       visual: s.mode === 'studio' ? { v: s.v, photos: s.photos.filter(p => !/^data:/.test(p.src) || p.src.length < 400000) } : null,
+      frise: friseTiles ? { tiles: friseTiles } : null,
       montage: this.isMontage() ? { kind: s.mode, m: s.m, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
       shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, spread: s.spread, product: s.product };
     if (status === 'Publié') {
@@ -656,37 +690,45 @@ class Component extends DCLogic {
       isStudio: s.mode === 'studio', isBrut: s.mode === 'brut', msBg, msFg, mbBg, mbFg,
       modeStudio: () => !locked && this.setState({ mode: 'studio' }), modeBrut: () => !locked && this.setState({ mode: 'brut' }),
       modes: [['studio', 'Visuel composé', 'Un visuel carré aux couleurs de la marque (studio)'], ['pano', 'Carrousel panoramique', 'Un seul post : la photo continue d\u2019une image à l\u2019autre en glissant'],
-        ['collage', 'Collage 4:5', 'Plusieurs photos réunies en une image 1080 × 1350'], ['brut', 'Photos telles quelles', 'Les photos et la vidéo partent sans retouche']]
+        ['collage', 'Collage 4:5', 'Plusieurs photos réunies en une image 1080 × 1350'], ['frise', 'Frise de grille', '3 posts Instagram qui forment une ligne du profil (franchiseur)'],
+        ['brut', 'Photos telles quelles', 'Les photos et la vidéo partent sans retouche']]
+        .filter(([k]) => k !== 'frise' || SA.user.role === 'Franchiseur' || s.mode === 'frise')
         .map(([k, label, tip]) => { const [bg, fg] = seg(s.mode === k); return { label, tip, bg, fg, pick: () => !locked && this.setState({ mode: k }) }; }),
       ...(() => {
-        const M = window.SAMontage, m = s.m, isPano = s.mode === 'pano', isCollage = s.mode === 'collage';
+        const M = window.SAMontage, m = s.m, isPano = s.mode === 'pano', isCollage = s.mode === 'collage', isFrise = s.mode === 'frise';
         const tpl = M ? (M.TEMPLATES.find(x => x[0] === m.tpl) || M.TEMPLATES[1]) : ['trio', 'Trio', 3];
         const setM = (patch) => !locked && this.setState({ m: Object.assign({}, this.state.m, patch) });
         const field = (key, label, ph) => ({ label, ph, value: m[key] || '', set: (e) => setM({ [key]: e.target.value }) });
         const slices = s.mPrev.slices || [], n = slices.length, i = Math.min(s.mIdx, Math.max(0, n - 1));
-        const fresh = this._mKey && s.mPrev.key === this._mKey, album = isPano && s.pv === 'fb' && n > 1;
+        const fresh = this._mKey && s.mPrev.key === this._mKey, album = isPano && s.pv === 'fb' && n > 1, wide = isFrise && s.pv === 'fb';
         const tiles = slices.slice(0, 4).map((src, j) => ({ src, more: j === 3 && n > 4, moreLabel: '+' + (n - 4) }));
         return {
-          isMontage: isPano || isCollage, isPano, isCollage,
+          isMontage: isPano || isCollage || isFrise, isPano, isCollage, isFrise,
           mCounts: [2, 3, 4, 5, 6, 7, 8, 9, 10].map(k => { const [bg, fg] = seg(m.n === k); return { label: String(k), bg, fg, pick: () => setM({ n: k }) }; }),
           mTpls: (M ? M.TEMPLATES : []).map(([k, name, slots]) => Object.assign(chip(m.tpl === k), { name, slots: slots + ' photos', pick: () => setM({ tpl: k }) })),
-          mFields: [field('title', 'Titre', 'Ex. : Gamme automne')].concat(isPano ? [field('band', 'Bandeau', 'Ex. : Brioche · tarte aux pommes · tartelette poire')] : [])
+          mFields: [field('title', 'Titre', 'Ex. : Gamme automne')].concat(isPano || isFrise ? [field('band', 'Bandeau', 'Ex. : Brioche · tarte aux pommes · tartelette poire')] : [])
             .concat([field('price', 'Prix (pastille)', 'Ex. : dès 3,60 €'), field('sign', 'Signature', "L'Atelier By")]),
-          mHints: isPano ? ['Publié en un seul post : carrousel de ' + m.n + ' images sur Instagram, album de ' + m.n + ' photos sur Facebook.',
+          mHints: isFrise ? ['3 posts Instagram publiés à la suite, de droite à gauche : ils forment une ligne du profil (le plus récent s\u2019affiche en haut à gauche).',
+              'Le profil recadre chaque post en 3:4 : la découpe en tient compte, la ligne reste continue dans la grille.',
+              'Facebook reçoit le visuel entier, en une photo.',
+              'Aucun autre post Instagram de la boutique dans la demi-heure avant et après. Ensuite, publiez par 3 pour que la ligne reste alignée — voir Grille Instagram.']
+            : isPano ? ['Publié en un seul post : carrousel de ' + m.n + ' images sur Instagram, album de ' + m.n + ' photos sur Facebook.',
               'Sur le profil Instagram, seule la 1re image apparaît : le titre et la pastille prix y restent entiers.',
               'Bandeau : séparez les éléments par « · » — ils sont répartis un par image, aucun mot n\u2019est coupé entre deux images.',
               'Une photo couvre toute la largeur ; plusieurs photos se partagent la largeur, dans l\u2019ordre (cliquez une photo pour la mettre en n°1).',
               'Textes incrustés : une seule langue pour toutes les boutiques ciblées — pour une boutique néerlandophone, faites un post à part.']
             : ['Une image 1080 × 1350 (4:5), le format le plus grand dans le fil Instagram.', 'Gabarit ' + tpl[1] + ' : ' + tpl[2] + ' cases, remplies dans l\u2019ordre des photos ; elles se répètent s\u2019il en manque.',
               'Textes incrustés : une seule langue pour toutes les boutiques ciblées.'],
-          mv: { slide: !album, album, tiles, hasSrc: n > 0, src: slices[i] || '', alt: isPano ? 'Image ' + (i + 1) + ' sur ' + n + ' du carrousel' : 'Collage ' + tpl[1],
+          mv: { slide: !album && !wide, album, wide, tiles, fullSrc: s.mPrev.full || '',
+            row: isFrise && s.pv === 'ig' && n > 0, rowTiles: slices.map((src, j) => ({ src, alt: 'Tuile ' + (j + 1) + ' de la frise' })), hasSrc: n > 0, src: slices[i] || '', alt: isPano ? 'Image ' + (i + 1) + ' sur ' + n + ' du carrousel' : isFrise ? 'Post ' + (i + 1) + ' sur 3 de la frise' : 'Collage ' + tpl[1],
             empty: n === 0, emptyText: !s.photos.length ? 'Ajoutez une ou plusieurs photos : le montage se dessine ici.' : 'Préparation de l\u2019aperçu…',
-            many: n > 1 && !album, counter: (i + 1) + '/' + n + (fresh ? '' : ' · mise à jour…'), canPrev: i > 0 && !album, canNext: i < n - 1 && !album,
+            many: n > 1 && !album && !wide, counter: (isFrise ? 'Post ' : '') + (i + 1) + '/' + n + (fresh ? '' : ' · mise à jour…'), canPrev: i > 0 && !album && !wide, canNext: i < n - 1 && !album && !wide,
             prev: () => this.setState({ mIdx: Math.max(0, i - 1) }), next: () => this.setState({ mIdx: Math.min(n - 1, i + 1) }),
             dots: slices.map((_, j) => ({ c: j === i ? '#0095F6' : '#C7C7C7' })) },
         };
       })(),
-      photos, photosLabel: s.mode === 'pano' ? 'Photos du panorama · ' + s.photos.length + ' (une seule photo couvre les ' + s.m.n + ' images ; plusieurs se partagent la largeur)'
+      photos, photosLabel: s.mode === 'frise' ? 'Photos de la frise · ' + s.photos.length + ' (une seule photo couvre la ligne ; plusieurs se partagent la largeur)'
+        : s.mode === 'pano' ? 'Photos du panorama · ' + s.photos.length + ' (une seule photo couvre les ' + s.m.n + ' images ; plusieurs se partagent la largeur)'
         : s.mode === 'collage' ? 'Photos du collage · ' + s.photos.length + ' (la n°1 prend la plus grande case)'
         : s.mode === 'studio' ? 'Photos du visuel · ' + s.photos.length + (curSlots > 1 ? ' (ce montage a ' + curSlots + ' cases, les photos se répètent s\u2019il en manque)' : ' (la n°1 est utilisée)') : 'Photos publiées · ' + s.photos.length + ' (la n°1 apparaît en premier)',
       hasVideo: !!s.video, videoName: s.video ? s.video.name : '', removeVideo: () => this.setState({ video: null }),
@@ -746,16 +788,17 @@ class Component extends DCLogic {
       ...(() => {
         const later = s.when === 'later', mins = later ? this.schedMinutes() : 0;
         const nPano = s.mode === 'pano' ? (s.mPrev.slices || []).length || s.m.n : 0;
-        const ep = s.mode === 'studio' || s.mode === 'collage' ? 'photos' : s.mode === 'pano' ? 'feed' : s.video ? (s.videoFormat === 'reel' ? 'video_reels' : 'videos') : s.photos.length === 1 ? 'photos' : 'feed';
+        const ep = s.mode === 'studio' || s.mode === 'collage' || s.mode === 'frise' ? 'photos' : s.mode === 'pano' ? 'feed' : s.video ? (s.videoFormat === 'reel' ? 'video_reels' : 'videos') : s.photos.length === 1 ? 'photos' : 'feed';
         const msg = (filled || '').slice(0, 60) + ((filled || '').length > 60 ? '…' : '');
         const ts = later ? Math.round(new Date(s.date + 'T' + s.time + ':00').getTime() / 1000) : null;
-        const params = ep === 'photos' ? [['url', s.mode === 'studio' ? '{visuel rendu 1080×1080, stocké sur R2}' : s.mode === 'collage' ? '{collage rendu 1080×1350}' : '{photo n°1 sur R2}'], ['caption', '"' + msg + '"']]
+        const params = ep === 'photos' ? [['url', s.mode === 'studio' ? '{visuel rendu 1080×1080, stocké sur R2}' : s.mode === 'collage' ? '{collage rendu 1080×1350}' : s.mode === 'frise' ? '{frise : visuel entier 3038×1350}' : '{photo n°1 sur R2}'], ['caption', '"' + msg + '"']]
           : nPano ? [['message', '"' + msg + '"'], ['attached_media', '[' + Array.from({ length: nPano }, (_, i) => '{media_fbid: ' + (i + 1) + '}').join(', ') + '] · ' + nPano + ' photos 1080×1350 envoyées avec published=false']]
           : ep === 'feed' ? [['message', '"' + msg + '"']].concat(s.link ? [['link', s.link]] : []).concat(s.photos.length > 1 ? [['attached_media', '[' + s.photos.map((_, i) => '{media_fbid: ' + (i + 1) + '}').join(', ') + ']']] : [])
           : ep === 'videos' ? [['file_url', '{vidéo sur R2}'], ['description', '"' + msg + '"']] : [['upload_phase', 'start → finish'], ['description', '"' + msg + '"'], ['video_state', 'PUBLISHED']];
         const pubParams = later ? [['published', 'false'], ['scheduled_publish_time', ts + ' (' + SA.dShort(s.date) + ' ' + s.time + ')']] : [['published', 'true']];
         return { apiCall: 'POST /{page_id}/' + ep, pageCount: pages.length, apiParams: params.concat(pubParams).map(([k, v]) => ({ k, v })), hasIgCall: t.some(id => s.ch[id] && s.ch[id].ig),
-          igCall: nPano ? 'Instagram : ' + nPano + ' × POST /{ig_user_id}/media (is_carousel_item=true) → POST /{ig_user_id}/media (media_type=CAROUSEL, children) → media_publish'
+          igCall: s.mode === 'frise' ? 'Instagram : 3 × POST /{ig_user_id}/media (tuiles 3, 2, 1 · 1080×1350) → 3 × POST /{ig_user_id}/media_publish à la suite'
+            : nPano ? 'Instagram : ' + nPano + ' × POST /{ig_user_id}/media (is_carousel_item=true) → POST /{ig_user_id}/media (media_type=CAROUSEL, children) → media_publish'
             : 'Instagram : POST /{ig_user_id}/media → POST /{ig_user_id}/media_publish',
           schedRule: !later ? 'Publication immédiate : published=true.' : mins < 10 ? 'Trop tôt : Meta exige au moins 10 minutes d\u2019avance.' : mins > 43200 ? 'Trop tard : 30 jours maximum.' : 'Fenêtre Meta respectée : entre 10 minutes et 30 jours.',
           schedRuleColor: !later ? '#666666' : (mins < 10 || mins > 43200) ? '#8D1D2C' : '#0F6B4A' };

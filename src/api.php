@@ -20,6 +20,7 @@ require_once __DIR__ . '/leads.php';
 require_once __DIR__ . '/results.php';
 require_once __DIR__ . '/audit.php';
 require_once __DIR__ . '/portefeuille.php';
+require_once __DIR__ . '/instagram.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -91,6 +92,18 @@ function socRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/meta/portefeuille/appliquer') {
         $r = socPortefeuilleAppliquer(!empty(body()['ecraser']));
         return [200, $r + ['shops' => socShops(), 'brand' => socBrand()]];
+    }
+    if ($method === 'GET' && $path === '/instagram/grille') {
+        $sid = (string) ($_GET['shop'] ?? '');
+        if (socShop($sid) === null) { throw new HttpError(404, 'boutique inconnue'); }
+        return [200, socIgGrille($sid)];
+    }
+    if ($method === 'POST' && $path === '/instagram/grille') {
+        // Relecture immédiate chez Instagram (le cron le fait toutes les heures).
+        $sid = (string) (body()['shop'] ?? '');
+        if (socShop($sid) === null) { throw new HttpError(404, 'boutique inconnue'); }
+        $r = socIgMediaSync($sid);
+        return [200, socIgGrille($sid) + ['synchro' => $r[$sid] ?? ($r['erreur'] ?? 'aucun compte Instagram rattaché')]];
     }
     if ($method === 'GET' && $path === '/audit/api') { return [200, socAuditGet()]; }
     if ($method === 'POST' && $path === '/audit/api') {

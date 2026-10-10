@@ -21,6 +21,8 @@ declare(strict_types=1);
  *  - social_publication: la file de publication (post × boutique × canal) ;
  *  - social_meta_objet : les objets créés chez Meta (campagne, ad set, créa, pub, formulaire) ;
  *  - social_resultat   : résultats Meta + ventes par campagne et boutique ;
+ *  - social_instagram_media : les dernières publications de chaque compte
+ *                        Instagram, relues chez Meta (grille du profil) ;
  *  - social_activite   : le journal d'activité.
  *
  * Les colonnes typées portent ce que le serveur interroge et ce qu'on lit en
@@ -94,6 +96,10 @@ function socInstall(): void
     Db::exec('CREATE TABLE IF NOT EXISTS social_resultat (campagne_id VARCHAR(64) NOT NULL, shop_id VARCHAR(16) NOT NULL,'
         . 'depense DECIMAL(12,2) NULL, portee INT NULL, impressions INT NULL, clics INT NULL, ca_campagne DECIMAL(12,2) NULL,'
         . 'ca_reference DECIMAL(12,2) NULL, data LONGTEXT NOT NULL, synchro_le DATETIME NOT NULL, PRIMARY KEY (campagne_id, shop_id))' . $t);
+
+    Db::exec('CREATE TABLE IF NOT EXISTS social_instagram_media (media_id VARCHAR(40) PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
+        . 'type VARCHAR(20) NULL, media_url VARCHAR(1000) NULL, vignette_url VARCHAR(1000) NULL, permalink VARCHAR(300) NULL,'
+        . 'publie_le DATETIME NOT NULL, legende TEXT NULL, maj_le DATETIME NOT NULL, KEY idx_shop (shop_id, publie_le))' . $t);
 
     socParamsInit();
     socTfbInit();

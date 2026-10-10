@@ -285,7 +285,7 @@
       .replace(/\{ville\}/g, s ? s.name : '{ville}').replace(/\{adresse\}/g, s ? s.address : '{adresse}').replace(/\{horaires\}/g, s ? s.hours : '{horaires}')
       .replace(/\{prix\}/g, product && product.price ? product.price : '{prix}').replace(/\{produit_du_jour\}/g, product && product.name ? product.name : 'Brioche croustillante');
   }
-  const PAGES = { cal: 'SA Calendrier.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', set: 'SA Parametres.dc.html' };
+  const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', set: 'SA Parametres.dc.html' };
   const href = (k, q) => encodeURI(PAGES[k]) + (q ? '?' + q : '');
   const param = (k) => { try { return new URLSearchParams(location.search).get(k); } catch (e) { return null; } };
 
