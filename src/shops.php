@@ -156,7 +156,7 @@ function socTestConnexions(?string $seule = null): array
     $now = date('Y-m-d H:i:s');
     $tokens = null; $global = null;
     if (!Meta::configured()) {
-        $global = ['none', 'Token Meta absent : META_SYSTEM_TOKEN (ou bloc meta du config du BO) à renseigner'];
+        $global = ['none', 'Token Meta absent : à saisir dans « Clés d’accès Meta » (onglet API Meta)'];
     } else {
         try { $tokens = Meta::pageTokens(true); }
         catch (MetaError $e) { $global = [$e->metaCode === 190 ? 'expired' : 'none', $e->getMessage()]; }

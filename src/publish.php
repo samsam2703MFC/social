@@ -220,7 +220,7 @@ function socRunQueue(?string $postId = null, int $max = 60): array
         try {
             if ($post === null) { throw new MetaError('post supprimé', 0); }
             if ($shop === null) { throw new MetaError('boutique inconnue ou fermée', 0); }
-            if (!Meta::configured()) { throw new MetaError('token Meta absent (META_SYSTEM_TOKEN)', 190); }
+            if (!Meta::configured()) { throw new MetaError('token Meta absent : à saisir dans Paramètres → API Meta → Clés d’accès Meta', 190); }
             $msg = socMessage($post, $shop);
             $mid = $r['canal'] === 'ig' ? socPublishIg($post, $shop, $msg) : socPublishFb($post, $shop, $msg);
             Db::exec("UPDATE social_publication SET statut = 'publie', meta_id = ?, erreur = NULL, code_erreur = NULL, maj_le = ? WHERE id = ?", [$mid, date('Y-m-d H:i:s'), $r['id']]);

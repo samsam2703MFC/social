@@ -110,7 +110,7 @@ function socAdCreate(array $ad): array
 {
     $w = (array) ($ad['spec'] ?? []);
     if (!$w) { $ad['status'] = 'Refusée'; $ad['reason'] = 'Non envoyée à Meta : la description de l’assistant manque (créez la pub depuis l’assistant).'; return $ad; }
-    if (!Meta::configured()) { $ad['status'] = 'Refusée'; $ad['reason'] = 'Non envoyée à Meta : token Meta absent (META_SYSTEM_TOKEN dans le config du BO).'; return $ad; }
+    if (!Meta::configured()) { $ad['status'] = 'Refusée'; $ad['reason'] = 'Non envoyée à Meta : token Meta absent : à saisir dans Paramètres → API Meta → Clés d’accès Meta.'; return $ad; }
     $shops = []; foreach (socShops() as $s) { $shops[$s['id']] = $s; }
     $reseau = ($w['account'] ?? 'boutique') === 'reseau';
     $cibles = array_values(array_filter((array) ($w['shops'] ?? []), static fn ($id) => isset($shops[$id])));
