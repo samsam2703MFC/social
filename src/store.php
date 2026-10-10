@@ -122,7 +122,8 @@ function socSeed(): void
     $zones = [];
     foreach (socShops() as $s) { if ($s['zone'] !== '') { $zones[$s['zone']][] = $s['id']; } }
     $i = 0;
-    foreach ($zones as $z => $ids) { socItemPut('groups', ['id' => 'g' . (++$i), 'name' => $z, 'shops' => $ids]); }
+    // Une zone d'une seule boutique n'est pas un groupe (en production, les zones portent souvent le nom du magasin).
+    foreach ($zones as $z => $ids) { if (count($ids) > 1) { socItemPut('groups', ['id' => 'g' . (++$i), 'name' => $z, 'shops' => $ids]); } }
     socSettingPut('donnees_initiales', date('Y-m-d H:i:s'));
 }
 
