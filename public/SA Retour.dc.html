@@ -52,10 +52,12 @@
     </div>
 
     <!-- Avertissement estimation -->
+    <sc-if value="{{ hasCampaign }}" hint-placeholder-val="{{ true }}">
     <div style="display:flex;gap:12px;align-items:flex-start;background:#FFFFFF;border:0.5px solid #E3B155;border-radius:10px;padding:12px 14px;">
       <span style="width:22px;height:22px;border-radius:50%;background:#FAC775;color:#6b3d0a;font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">≈</span>
       <span style="font-size:12px;line-height:1.55;color:#444444;"><strong style="font-weight:500;color:#222222;">Le CA additionnel est une estimation, pas une attribution exacte.</strong> Il compare le CA des produits de la campagne pendant la période ({{ periodLabel }}) à la moyenne des mêmes jours sur les 6 semaines précédentes. D'autres facteurs (météo, vacances, travaux) peuvent l'influencer. Taux de marge appliqué : {{ marginLabel }}.</span>
     </div>
+    </sc-if>
 
     <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
@@ -64,6 +66,13 @@
       <div style="height:320px;border-radius:10px;background:#F4EFE8;"></div>
     </sc-if>
 
+    <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:28px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
+        <span style="font-size:15px;font-weight:500;">Aucune campagne à mesurer pour l'instant</span>
+        <span style="font-size:13px;color:#444444;line-height:1.5;max-width:720px;">Créez une campagne (dates, boutiques, produits), puis ses publicités. Les résultats Meta et les ventes des produits — lues dans l'API TFBuddy — sont recalculés chaque heure, pour les campagnes en cours ou finies depuis moins de 60 jours.</span>
+        <a href="{{ campHref }}" style="margin-top:6px;background:#8D1D2C;color:#FFFFFF;text-decoration:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;">Créer une campagne</a>
+      </section>
+    </sc-if>
     <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
       <!-- Indisponible -->
       <sc-if value="{{ noSales }}" hint-placeholder-val="{{ false }}">
@@ -188,6 +197,9 @@ class Component extends DCLogic {
     const ids = Object.keys(SA.RESULTS);
     const all = ids.map(id => SA.roi(id)).filter(Boolean);
     const R = all.find(x => x.c.id === s.cid) || all[0];
+    // Aucune campagne avec des résultats (base neuve) : un état vide, pas un écran cassé.
+    if (!R) return { loading: false, ready: false, isEmpty: true, hasCampaign: false, nShopsLabel, shopOptions: [], campTabs: [], hero: {}, skeleton: [], marginLabel: '', periodLabel: '',
+      focus: '', setFocus: () => {}, exportXls: () => {}, exportPdf: () => {}, campHref: SA.href('camp') };
     const c = R.c, T = SA.CTYPES.find(t => t.id === c.type);
     const row = s.focus ? R.perShop.find(x => x.sid === s.focus) : null;
     const X = row || R.total, has = row ? row.caRef != null : true;
@@ -233,7 +245,7 @@ class Component extends DCLogic {
         spend: SA.eur(x.total.spend), caAdd: SA.eur(x.total.caAdd), roas: SA.fmt(x.total.roas, 1) + ' ×', roi: (x.total.roi >= 0 ? '+' : '') + SA.pct(x.total.roi), roiColor: roiColor(x.total.roi),
         ragLabel: r.label, ragBg: r.bg, ragFg: r.fg, bg: x.c.id === c.id ? '#FBF3F4' : '#F4EFE8', pick: () => { this.setState({ cid: x.c.id, focus: '' }); this.load(); } }; });
     const focusRow = row;
-    return { nShopsLabel,
+    return { nShopsLabel, hasCampaign: true,
       shopOptions: R.perShop.map(x => ({ id: x.sid, name: x.name })), focus: s.focus, setFocus: (e) => this.setState({ focus: e.target.value }),
       campTabs: all.map(x => { const t = SA.CTYPES.find(y => y.id === x.c.type), r = SA.RAG[x.total.rag];
         return { name: x.c.name, icon: t.icon, tint: t.color + '22', meta: t.name + ' · ' + SA.dShort(x.c.start) + ' → ' + SA.dShort(x.c.end) + (x.c.status === 'en cours' ? ' · en cours' : ' · terminée'),

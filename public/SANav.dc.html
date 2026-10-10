@@ -18,8 +18,24 @@
     <span style="font-size:11px;color:#666666;letter-spacing:0.08em;text-transform:uppercase;">Franchise Buddy</span>
   </div>
   <div style="padding:16px 12px 8px;display:flex;flex-direction:column;gap:2px;">
-    <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8D1D2C;padding:0 10px 8px;">Social &amp; Ads</span>
+    <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8D1D2C;padding:0 10px 2px;">Social &amp; Ads</span>
+    <span style="font-size:11px;color:#8A847C;padding:0 10px 8px;">Développement publicitaire · réseaux sociaux</span>
     <sc-for list="{{ items }}" as="it" hint-placeholder-count="6">
+      <a href="{{ it.href }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:{{ it.w }};color:{{ it.fg }};background:{{ it.bg }};" style-hover="background:#F4EFE8;">
+        <span style="display:flex;align-items:center;gap:10px;">
+          <span style="width:18px;height:18px;border-radius:5px;background:{{ it.numBg }};color:{{ it.numFg }};font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">{{ it.n }}</span>
+          {{ it.label }}
+        </span>
+        <sc-if value="{{ it.hasBadge }}" hint-placeholder-val="{{ false }}">
+          <span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#8D1D2C;color:#FFFFFF;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ it.badge }}</span>
+        </sc-if>
+      </a>
+    </sc-for>
+  </div>
+  <div style="padding:8px 12px 8px;border-top:0.5px solid rgba(34,34,34,0.10);margin-top:6px;display:flex;flex-direction:column;gap:2px;">
+    <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8D1D2C;padding:0 10px 2px;">Recrutement</span>
+    <span style="font-size:11px;color:#8A847C;padding:0 10px 8px;">Formulaires de candidature Meta</span>
+    <sc-for list="{{ itemsRec }}" as="it" hint-placeholder-count="1">
       <a href="{{ it.href }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:{{ it.w }};color:{{ it.fg }};background:{{ it.bg }};" style-hover="background:#F4EFE8;">
         <span style="display:flex;align-items:center;gap:10px;">
           <span style="width:18px;height:18px;border-radius:5px;background:{{ it.numBg }};color:{{ it.numFg }};font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">{{ it.n }}</span>
@@ -61,16 +77,20 @@ class Component extends DCLogic {
     const toValidate = st.posts.filter(p => p.status === 'À valider').length;
     const failed = st.posts.filter(p => p.status === 'Échec' || p.partial).length;
     const refused = (st.ads || []).filter(a => a.status === 'Refusée').length;
+    // Deux rubriques : le développement publicitaire sur les réseaux sociaux, et le
+    // recrutement (formulaires de leads Meta), badge = leads reçus ces 7 derniers jours.
     const defs = [
       ['cal', 'Calendrier', toValidate + failed],
       ['post', 'Créer un post', 0],
       ['camp', 'Campagnes', 0],
       ['ads', 'Publicités', refused],
-      ['leads', 'Formulaires de leads', 0],
       ['roi', 'Retour sur campagne', 0],
       ['set', 'Paramètres', alerts.length],
     ];
-    const items = defs.map(([k, label, badge], i) => {
+    const since = SA ? SA.addDays(SA.TODAY, -7) : '';
+    const newLeads = SA ? (SA.LEADS || []).filter(l => String(l.created_time || '').slice(0, 10) >= since).length : 0;
+    const defsRec = [['leads', 'Formulaires de leads', newLeads]];
+    const mk = (list) => list.map(([k, label, badge], i) => {
       const on = k === active;
       return { n: i + 1, label, href: SA ? SA.href(k) : '#', badge, hasBadge: badge > 0,
         fg: on ? '#8D1D2C' : '#222222', bg: on ? '#F4EFE8' : 'transparent', w: on ? 500 : 400,
@@ -78,7 +98,7 @@ class Component extends DCLogic {
     });
     const shops = [...new Set(alerts.map(a => a.shop))];
     return {
-      items, hasAlerts: alerts.length > 0, setHref: SA ? SA.href('set') : '#',
+      items: mk(defs), itemsRec: mk(defsRec), hasAlerts: alerts.length > 0, setHref: SA ? SA.href('set') : '#',
       alertTitle: alerts.length + (alerts.length > 1 ? ' connexions à rétablir' : ' connexion à rétablir'),
       alertDetail: alerts.map(a => a.shop + ' · ' + a.what + ' (' + (SA.CONN[a.st] || {}).label + ')').join(' — '),
       userName: SA ? SA.user.name : '', userIni: SA ? SA.user.name.split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase() : '',

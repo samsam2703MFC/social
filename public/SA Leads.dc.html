@@ -198,6 +198,11 @@
 class Component extends DCLogic {
   state = { selId: 'lf-b2b-2', draft: null, pv: 'intro', leadScope: 'version', err: '', toast: '', tick: 0 };
   componentDidMount() { this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h); }
+  blankDraft() {
+    const SA = window.SA;
+    return { isNew: true, id: 'new', family: 'f' + Date.now(), version: 1, status: 'Brouillon', name: '', locale: 'fr_FR', created: SA.TODAY, shops: [(SA.SHOPS[0] || {}).id].filter(Boolean), questions: [{ type: 'FULL_NAME' }, { type: 'EMAIL' }],
+      privacy: { url: 'https://www.latelierby.be/confidentialite', link_text: 'Politique de confidentialité' }, context: { title: '', style: 'LIST_STYLE', content: [], button_text: 'Continuer' }, thanks: { title: 'Merci !', body: '', button_type: 'VIEW_WEBSITE', button_text: 'Voir le site', website_url: 'https://www.latelierby.be' }, quality: true, followUp: 'https://www.latelierby.be' };
+  }
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2800); }
   D(patch) { this.setState({ draft: Object.assign({}, this.state.draft, patch), err: '' }); }
@@ -205,6 +210,11 @@ class Component extends DCLogic {
     const SA = window.SA, s = this.state;
     if (!SA) return { families: [], d: { context: {}, thanks: {}, privacy: {} }, f: {} };
     const forms = SA.state().leadforms || SA.LEADFORMS;
+    // Aucun formulaire (base neuve) : on ouvre directement un nouveau formulaire.
+    if (!forms.length && !s.draft) {
+      if (!this._autoNew) { this._autoNew = true; setTimeout(() => { this._autoNew = false; this.setState({ draft: this.blankDraft(), err: '' }); }, 0); }
+      return { families: [], d: { context: {}, thanks: {}, privacy: {} }, f: {} };
+    }
     const fam = {}; forms.forEach(x => { (fam[x.family] = fam[x.family] || []).push(x); });
     const sel = forms.find(x => x.id === s.selId) || forms[0];
     const d = s.draft || sel, editable = !!s.draft;
@@ -234,8 +244,7 @@ class Component extends DCLogic {
       d: Object.assign({}, d, { context: ctx, thanks: ty, privacy: d.privacy || {} }),
       hasErr: !!s.err, err: s.err,
       newVersion: () => this.setState({ draft: JSON.parse(JSON.stringify(Object.assign({}, sel, { status: 'Brouillon' }))), err: '' }),
-      newForm: () => this.setState({ draft: { isNew: true, id: 'new', family: 'f' + Date.now(), version: 1, status: 'Brouillon', name: '', locale: 'fr_FR', created: SA.TODAY, shops: [(SA.SHOPS[0] || {}).id].filter(Boolean), questions: [{ type: 'FULL_NAME' }, { type: 'EMAIL' }],
-        privacy: { url: 'https://www.latelierby.be/confidentialite', link_text: 'Politique de confidentialité' }, context: { title: '', style: 'LIST_STYLE', content: [], button_text: 'Continuer' }, thanks: { title: 'Merci !', body: '', button_type: 'VIEW_WEBSITE', button_text: 'Voir le site', website_url: 'https://www.latelierby.be' }, quality: true, followUp: 'https://www.latelierby.be' }, err: '' }),
+      newForm: () => this.setState({ draft: this.blankDraft(), err: '' }),
       cancelDraft: () => this.setState({ draft: null, err: '' }),
       publishDraft: () => {
         const dr = s.draft;
