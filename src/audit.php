@@ -183,6 +183,7 @@ function socAuditRun(int $max = 0, int $parallele = 8): array
     foreach (['ok', 'refuse', 'absent', 'erreur', 'parametre', 'non_teste', 'injoignable'] as $s) { $res[$s] = 0; }
     foreach (Db::rows('SELECT statut, COUNT(*) n FROM social_api_audit GROUP BY statut') as $r) { $res[$r['statut']] = (int) $r['n']; $res['total'] += (int) $r['n']; }
     socSettingPut('tfb_audit', $res);
+    socSettingPut('tfb_audit_en_cours', null);
     socLog('Système', 'Audit API', 'API TFBuddy : ' . $res['ok'] . ' route(s) GET fonctionnent sur ' . $res['total'] . ' (' . $res['refuse'] . ' refusées, '
         . ($res['erreur'] + $res['injoignable']) . ' en erreur, ' . $res['non_teste'] . ' non testées)');
     return $res;
@@ -196,11 +197,26 @@ function socAuditErreur(string $corps): string
     return mb_substr(is_string($m) && $m !== '' ? $m : trim(strip_tags($corps)), 0, 200);
 }
 
+/** Lance l'audit en arrière-plan (bin/cron.php audit). */
+function socAuditLancer(): array
+{
+    $cours = socSetting('tfb_audit_en_cours');
+    if (is_array($cours) && ($cours['depuis'] ?? 0) > time() - 900) { return ['lance' => false, 'enCours' => $cours]; }
+    $php = trim((string) @shell_exec('command -v php')) ?: 'php';
+    $cmd = escapeshellarg($php) . ' ' . escapeshellarg(realpath(__DIR__ . '/../bin/cron.php')) . ' audit';
+    if (!function_exists('exec')) { throw new HttpError(503, 'exec() désactivé sur ce serveur : l’audit tourne par le cron de 5 h 20'); }
+    $cours = ['depuis' => time(), 'le' => date('Y-m-d H:i:s')];
+    socSettingPut('tfb_audit_en_cours', $cours);
+    exec('nohup ' . $cmd . ' > /dev/null 2>&1 &');
+    return ['lance' => true, 'enCours' => $cours];
+}
+
 /** Les résultats pour l'écran. */
 function socAuditGet(): array
 {
     socAuditTable();
-    return ['resume' => socSetting('tfb_audit'), 'tfb' => Tfb::statut(),
+    $cours = socSetting('tfb_audit_en_cours');
+    return ['resume' => socSetting('tfb_audit'), 'tfb' => Tfb::statut(), 'enCours' => is_array($cours) && ($cours['depuis'] ?? 0) > time() - 900 ? $cours : null,
         'routes' => Db::rows('SELECT methode, chemin, tag, realm, http, statut, ms, taille, apercu, resume, utilise, teste_le FROM social_api_audit
                               ORDER BY FIELD(statut, "ok", "parametre", "refuse", "erreur", "injoignable", "absent", "non_teste"), tag, chemin')];
 }

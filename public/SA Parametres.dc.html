@@ -279,7 +279,7 @@
 class Component extends DCLogic {
   state = { tab: 'conn', busy: {}, testing: false, logF: '', toast: '', tick: 0, keys: { appId: '', systemToken: '', appSecret: '', verifyToken: '' }, publicUrl: null, tfb: {}, tfbTest: '', audit: null, auditing: false, auditF: 'ko', auditQ: '' };
   componentDidMount() { const SA = window.SA; const t = SA && SA.param('tab'); if (t) this.setState({ tab: t }); this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h); }
-  componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); }
+  componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); clearTimeout(this._aud); }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2800); }
   renderVals() {
     const SA = window.SA, s = this.state;
@@ -357,8 +357,18 @@ class Component extends DCLogic {
           apiShops: SA.SHOPS.map(b => ({ id: b.id, name: b.name, fullName: b.fullName || '', address: b.address || '—', hours: b.hours || '—', email: b.email || '', phone: b.phone || '', vat: b.vat || '', sources: (b.sources || []).join(' · ') })),
           reloadShops: () => SA.api('GET', '/shops/api?forcer=1').then(() => SA.refresh()).then(() => this.toast('Boutiques relues dans l’API.')).catch(e => this.toast(e.message)),
           auditSummary: R ? (R.ok + ' fonctionnent · ' + (R.refuse || 0) + ' refusées · ' + ((R.erreur || 0) + (R.injoignable || 0)) + ' en erreur · ' + (R.absent || 0) + ' absentes · ' + (R.parametre || 0) + ' paramètre requis · ' + (R.non_teste || 0) + ' non testées — sur ' + R.total + ' routes GET · audit du ' + String(R.le).slice(8, 10) + '/' + String(R.le).slice(5, 7) + ' à ' + String(R.le).slice(11, 16) + ' (' + R.duree + ' s)') : 'Aucun audit encore : lancez-le (une à deux minutes).',
-          auditLabel: s.auditing ? 'Audit en cours…' : 'Lancer l’audit',
-          runAudit: () => { if (s.auditing) return; this.setState({ auditing: true }); SA.api('POST', '/audit/api', {}).then(a => { this.setState({ audit: a, auditing: false }); this.toast(a.resume.ok + ' routes fonctionnent sur ' + a.resume.total + '.'); }).catch(e => { this.setState({ auditing: false }); this.toast('Audit impossible : ' + e.message); }); },
+          auditLabel: s.auditing || A.enCours ? 'Audit en cours… (2-3 min)' : 'Lancer l’audit',
+          runAudit: () => {
+            if (s.auditing || A.enCours) return;
+            const avant = R ? R.le : null; this.setState({ auditing: true });
+            // L'audit tourne côté serveur ; on relit le résultat toutes les 8 s.
+            const relire = (n) => SA.api('GET', '/audit/api').then(a => {
+              if (a.resume && a.resume.le !== avant) { this.setState({ audit: a, auditing: false }); this.toast(a.resume.ok + ' routes fonctionnent sur ' + a.resume.total + '.'); return; }
+              if (n > 60) { this.setState({ auditing: false }); this.toast('L’audit n’a pas rendu de résultat : voir /var/log/social-cron.log.'); return; }
+              this._aud = setTimeout(() => relire(n + 1), 8000);
+            });
+            SA.api('POST', '/audit/api', {}).then(() => { this._aud = setTimeout(() => relire(0), 8000); }).catch(e => { this.setState({ auditing: false }); this.toast('Audit impossible : ' + e.message); });
+          },
           auditFilters: [['ko', 'Ne fonctionnent pas · ' + n('ko')], ['ok', 'Fonctionnent · ' + n('ok')], ['non_teste', 'Non testées · ' + n('non_teste')], ['used', 'Utilisées par le module'], ['all', 'Toutes · ' + (A.routes || []).length]].map(([k, label]) => Object.assign(chip(s.auditF === k), { label, pick: () => this.setState({ auditF: k }) })),
           auditQ: s.auditQ, setAuditQ: (e) => this.setState({ auditQ: e.target.value }),
           auditRows: rows.slice(0, 400).map(r => { const c = ST[r.statut] || ST.non_teste; return { label: c[0], bg: c[1], fg: c[2], chemin: r.chemin, tag: r.tag || '', http: r.http || '—', ms: r.ms != null ? r.ms + ' ms' : '', used: !!r.utilise, utilise: r.utilise || '', detail: r.statut === 'ok' ? (r.apercu || '') : (r.resume || '') }; }),

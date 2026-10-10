@@ -84,9 +84,10 @@ function socRoute(string $method, string $path): array
     }
     if ($method === 'GET' && $path === '/audit/api') { return [200, socAuditGet()]; }
     if ($method === 'POST' && $path === '/audit/api') {
-        // Plusieurs minutes possibles : l'audit continue si le navigateur se ferme.
-        ignore_user_abort(true);
-        return [200, ['resume' => socAuditRun((int) (body()['max'] ?? 0))] + socAuditGet()];
+        // Trois minutes environ : trop long pour une requête web (le serveur la
+        // coupe). L'audit part en arrière-plan — la même commande que le cron,
+        // avec son verrou — et l'écran relit GET /audit/api jusqu'au résultat.
+        return [200, socAuditLancer()];
     }
     if ($method === 'GET' && $path === '/shops/api') { return [200, ['shops' => socApiShops(isset($_GET['forcer'])), 'tfb' => Tfb::statut()]]; }
     if ($method === 'POST' && $path === '/parametres/tfb') {

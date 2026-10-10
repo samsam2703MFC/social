@@ -6,3 +6,4 @@ Relivraison : API TFBuddy source principale, marque, audit des routes — 2026-1
 Relivraison : sonde des routes produits, ventes, campagnes — 2026-10-10T08:24:30Z
 Relivraison : audit (500 validation = paramètre, 2e passage avec période), sonde des paramètres de date — sonde — 2026-10-10T08:29:25Z
 Relivraison : catalogue et ventes depuis l'API, App ID Meta, recherche dans le catalogue — 2026-10-10T08:36:32Z
+Relivraison : audit lancé en arrière-plan — 2026-10-10T08:46:05Z
