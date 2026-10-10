@@ -11,3 +11,4 @@ Relivraison : portefeuille Business Manager, rapport d'audit — 2026-10-10T08:5
 Relivraison : permissions Instagram et Business Manager, diagnostic du token — 2026-10-10T08:58:51Z
 Relivraison : correctif écran Paramètres (M non défini) — 2026-10-10T09:02:30Z
 Relivraison : rail en deux rubriques (publicité / recrutement), écrans vides Leads et Retour — 2026-10-10T09:08:57Z
+Relivraison : montages Instagram — carrousel panoramique et collages 4:5 — 2026-10-10T16:47:55Z

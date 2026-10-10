@@ -94,6 +94,19 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   (+ `attached_media`), `/videos`. Instagram : `/media` → `/media_publish`.
   Échecs remontés au calendrier avec le motif et le code Meta (190, 368, 2) :
   statut « Échec » ou « Partiel », bouton **Relancer** réel.
+- **Montages Instagram** (écran « Créer un post », `public/montage.js`, dessinés
+  dans le navigateur sur un canvas, aux couleurs et polices de la marque) :
+  - *Carrousel panoramique* — un visuel large découpé en 2 à 10 images 1080 × 1350
+    (4:5) ; la photo et le bandeau bordeaux traversent les découpes, le titre et la
+    pastille prix restent entiers dans la 1re image (la seule visible sur le
+    profil), les éléments du bandeau (séparés par « · ») sont répartis un par
+    image. Publié en **un** post : carrousel Instagram (`is_carousel_item` ×n →
+    `media_type=CAROUSEL` → `media_publish`), album Facebook (`/photos`
+    `published=false` ×n → `/feed` + `attached_media`).
+  - *Collage 4:5* — gabarits Duo, Trio, Quatuor en une image 1080 × 1350.
+  Les images partent en pleine définition, sont écrites en fichiers par le serveur
+  (`public/uploads/`) ; les réglages et les photos sources restent dans le post
+  (`montage`) pour le rouvrir et le modifier.
 - **Publicités** — l'assistant envoie sa description complète ; le serveur crée
   campagne → ad set → créa → pub, un jeu par compte boutique ou un jeu réseau
   (un ad set par boutique, pour lire les résultats boutique par boutique).
@@ -156,6 +169,7 @@ session du cockpit.
 
 ```
 public/            écrans de la maquette (SA *.dc.html) + social-data.js (couche de données)
+  montage.js       montages Instagram (carrousel panoramique, collages 4:5) dessinés sur canvas
   api/index.php    contrôleur frontal de l'API
   vendor/          React, ReactDOM, Babel, html-to-image (embarqués, aucun CDN)
 src/

@@ -23,3 +23,10 @@ RewriteRule ^uploads/ - [R=404,L]
     Header set X-Content-Type-Options "nosniff"
   </FilesMatch>
 </IfModule>
+
+# Un post peut porter jusqu'à 10 images 1080 × 1350 (carrousel panoramique) et leurs
+# photos sources : le corps JSON dépasse alors les 8 Mo par défaut de PHP.
+<IfModule mod_php.c>
+  php_value post_max_size 64M
+  php_value memory_limit 256M
+</IfModule>

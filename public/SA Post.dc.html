@@ -12,6 +12,7 @@
   <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
   <script src="social-data.js"></script>
   <script src="ds-catalogue.js"></script>
+  <script src="montage.js"></script>
   <style>
     html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
     a{color:#8D1D2C;} a:hover{color:#232220;}
@@ -72,9 +73,8 @@
         <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:14px;">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">3 · Visuel</span>
-            <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
-              <button onClick="{{ modeStudio }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ msBg }};color:{{ msFg }};">Visuel composé</button>
-              <button onClick="{{ modeBrut }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ mbBg }};color:{{ mbFg }};">Photos telles quelles</button>
+            <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap;">
+              <sc-for list="{{ modes }}" as="md" hint-placeholder-count="4"><button onClick="{{ md.pick }}" title="{{ md.tip }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ md.bg }};color:{{ md.fg }};">{{ md.label }}</button></sc-for>
             </div>
           </div>
 
@@ -158,6 +158,37 @@
                   <sc-for list="{{ colors }}" as="co" hint-placeholder-count="6"><button onClick="{{ co.pick }}" title="{{ co.label }}" style="width:24px;height:24px;border-radius:50%;cursor:pointer;background:{{ co.c }};border:2px solid {{ co.ring }};padding:0;font-size:9px;font-weight:500;color:#666666;box-shadow:inset 0 0 0 1px rgba(34,34,34,0.12);">{{ co.txt }}</button></sc-for>
                 </div>
               </div>
+            </div>
+          </sc-if>
+
+          <!-- Montages Instagram : carrousel panoramique (B) et collage 4:5 (C) -->
+          <sc-if value="{{ isMontage }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:10px;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:12px;">
+              <sc-if value="{{ isPano }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <span style="font-size:12px;color:#666666;">Nombre d’images à faire glisser</span>
+                  <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap;">
+                    <sc-for list="{{ mCounts }}" as="mc" hint-placeholder-count="9"><button onClick="{{ mc.pick }}" style="border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:500;cursor:pointer;background:{{ mc.bg }};color:{{ mc.fg }};">{{ mc.label }}</button></sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isCollage }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <span style="font-size:12px;color:#666666;">Gabarit</span>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                    <sc-for list="{{ mTpls }}" as="mt" hint-placeholder-count="3"><button onClick="{{ mt.pick }}" style="border-radius:8px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ mt.border }};background:{{ mt.bg }};color:{{ mt.fg }};">{{ mt.name }} <span style="font-size:10px;opacity:0.7;">· {{ mt.slots }}</span></button></sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <span style="font-size:12px;color:#666666;">Textes incrustés dans l’image</span>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 14px;">
+                <sc-for list="{{ mFields }}" as="f" hint-placeholder-count="4">
+                  <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:#666666;">{{ f.label }}
+                    <input type="text" value="{{ f.value }}" onChange="{{ f.set }}" disabled="{{ locked }}" placeholder="{{ f.ph }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;" style-focus="border-color:#8D1D2C;">
+                  </label>
+                </sc-for>
+              </div>
+              <sc-for list="{{ mHints }}" as="mh" hint-placeholder-count="2"><span style="font-size:11px;color:#666666;line-height:1.5;">· {{ mh }}</span></sc-for>
             </div>
           </sc-if>
         </section>
@@ -245,7 +276,7 @@
           <div style="border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;overflow:hidden;">
             <div style="background:#232220;color:#F2C9A0;font-family:ui-monospace,monospace;font-size:11px;padding:7px 10px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span>{{ apiCall }}</span><span style="color:#B8B2A8;">× {{ pageCount }} Pages · Page token</span></div>
             <div style="padding:8px 10px;background:#FAF7F2;display:flex;flex-direction:column;gap:3px;"><sc-for list="{{ apiParams }}" as="ap" hint-placeholder-count="0"><span style="font-family:ui-monospace,monospace;font-size:11px;color:#444444;"><span style="color:#8D1D2C;">{{ ap.k }}</span> = {{ ap.v }}</span></sc-for></div>
-            <sc-if value="{{ hasIgCall }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 10px;border-top:0.5px solid rgba(34,34,34,0.08);font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">Instagram : POST /{ig_user_id}/media → POST /{ig_user_id}/media_publish</div></sc-if>
+            <sc-if value="{{ hasIgCall }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 10px;border-top:0.5px solid rgba(34,34,34,0.08);font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">{{ igCall }}</div></sc-if>
           </div>
           <sc-if value="{{ hasErrors }}" hint-placeholder-val="{{ false }}">
             <div style="background:#F6DCDF;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;"><sc-for list="{{ errors }}" as="er" hint-placeholder-count="0"><span style="font-size:12px;color:#8D1D2C;">{{ er }}</span></sc-for></div>
@@ -304,6 +335,34 @@
               </div>
             </sc-if>
             <sc-if value="{{ pv.noMedia }}" hint-placeholder-val="{{ false }}"><div style="padding:40px 16px;text-align:center;font-size:12px;color:#8e8e8e;background:#F5EFE4;">Aucune photo</div></sc-if>
+          </sc-if>
+          <sc-if value="{{ isMontage }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ mv.slide }}" hint-placeholder-val="{{ true }}">
+              <div style="position:relative;width:100%;height:0;padding-bottom:125%;background:#F5EFE4;overflow:hidden;">
+                <sc-if value="{{ mv.hasSrc }}" hint-placeholder-val="{{ false }}"><img src="{{ mv.src }}" alt="{{ mv.alt }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                <sc-if value="{{ mv.empty }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;font-size:12px;color:#8e8e8e;">{{ mv.emptyText }}</span></sc-if>
+                <sc-if value="{{ mv.many }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:10px;right:10px;font-size:11px;font-weight:600;color:#FFFFFF;background:rgba(35,34,32,0.72);border-radius:999px;padding:3px 9px;">{{ mv.counter }}</span></sc-if>
+                <sc-if value="{{ mv.canPrev }}" hint-placeholder-val="{{ false }}">
+                  <button type="button" onClick="{{ mv.prev }}" aria-label="Image précédente" style="position:absolute;left:8px;top:50%;margin-top:-18px;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,0.92);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#232220" stroke-width="2.4" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button>
+                </sc-if>
+                <sc-if value="{{ mv.canNext }}" hint-placeholder-val="{{ false }}">
+                  <button type="button" onClick="{{ mv.next }}" aria-label="Image suivante" style="position:absolute;right:8px;top:50%;margin-top:-18px;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,0.92);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#232220" stroke-width="2.4" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg></button>
+                </sc-if>
+              </div>
+              <sc-if value="{{ mv.many }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;justify-content:center;gap:5px;padding:9px 0 2px;"><sc-for list="{{ mv.dots }}" as="d" hint-placeholder-count="3"><span style="width:6px;height:6px;border-radius:50%;background:{{ d.c }};"></span></sc-for></div>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ mv.album }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;">
+                <sc-for list="{{ mv.tiles }}" as="m" hint-placeholder-count="0">
+                  <div style="position:relative;width:100%;height:0;padding-bottom:125%;background:#F5EFE4;overflow:hidden;">
+                    <img src="{{ m.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
+                    <sc-if value="{{ m.more }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;background:rgba(0,0,0,0.45);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;">{{ m.moreLabel }}</span></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
           </sc-if>
 
           <sc-if value="{{ isFb }}" hint-placeholder-val="{{ true }}">
@@ -376,6 +435,8 @@
 class Component extends DCLogic {
   STYLES1 = [['epure', 'Épuré', '#F5EFE4'], ['abricot', 'Abricot', '#F2C9A0'], ['ruby', 'Ruby', '#8D1D2C'], ['noir', 'Noir', '#232220'], ['plein', 'Plein cadre', '#8A847C'], ['duo', 'Duo', '#EAE4DC']];
   STYLES2 = [['mosaique', 'Mosaïque', 12], ['grille', 'Grille 2×2', 4], ['trio', 'Trio', 3], ['collage', 'Collage', 5], ['bandes', 'Bandes', 3], ['galerie', 'Galerie 3×3', 9], ['frise', 'Frise', 4], ['puzzle', 'Puzzle', 5], ['pastilles', 'Pastilles', 4], ['epinglees', 'Épinglées', 3], ['etagere', 'Étagère', 6], ['diagonale', 'Diagonale', 3], ['vedette', 'Vedette', 5], ['damier', 'Damier', 8], ['encadre', 'Encadré', 4], ['nuit', 'Nuit', 3]];
+  // Montages Instagram : réglages par défaut (B · carrousel panoramique, C · collage 4:5).
+  MONTAGE() { return { n: 3, tpl: 'trio', title: '', band: '', price: '', sign: "L'Atelier By" }; }
   state = this.initState();
   initState() {
     const SA = window.SA;
@@ -383,7 +444,7 @@ class Component extends DCLogic {
       nl: { eyebrow: 'Seizoenseditie · Herfst 2026', title: '', phrase: '', unit: 'Per stuk', promoSub: 'de 5de gratis' },
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', campaign: '',
-      mode: 'studio', photos: [], video: null, videoFormat: 'video', v, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
+      mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
       libOpen: false, lib: [], libPick: [], lq: '', lcat: '', toast: '', errors: [], saving: false };
     if (!SA) return base;
     SA.SHOPS.forEach(s => { base.ch[s.id] = { fb: s.fb === 'connected', ig: s.igs === 'connected' }; });
@@ -393,7 +454,8 @@ class Component extends DCLogic {
       Object.assign(base, { id: p.id, type: p.type, text: p.text || '', textNl: p.textNl || '', link: p.link || '', campaign: p.campaign || '', date: p.date, time: p.time, sel: shops,
         scope: shops.length === SA.SHOPS.length ? 'all' : 'shop', status: p.status, spread: p.spread || 10, product: p.product || null });
       if (p.ch) base.ch = p.ch;
-      if (p.visual) { base.mode = 'studio'; base.v = Object.assign({}, v, p.visual.v, { nl: Object.assign({}, v.nl, (p.visual.v || {}).nl) }); base.photos = p.visual.photos || []; }
+      if (p.montage) { base.mode = p.montage.kind === 'collage' ? 'collage' : 'pano'; base.m = Object.assign(this.MONTAGE(), p.montage.m); base.photos = p.montage.photos || []; }
+      else if (p.visual) { base.mode = 'studio'; base.v = Object.assign({}, v, p.visual.v, { nl: Object.assign({}, v.nl, (p.visual.v || {}).nl) }); base.photos = p.visual.photos || []; }
       else { base.mode = 'brut'; base.photos = (p.media || [{ src: p.img, kind: 'img', cut: true }]).filter(m => m.kind !== 'video').map(m => ({ src: m.src, cut: m.cut !== false, name: m.name || '' })); base.v.title = p.title; }
     }
     const shop = SA.param('shop'); if (shop && !p) { base.scope = 'shop'; base.sel = [shop]; }
@@ -401,6 +463,7 @@ class Component extends DCLogic {
     return base;
   }
   async componentDidMount() {
+    this.montagePreview();
     let lib = null;
     try {
       lib = await new Promise((res, rej) => {
@@ -413,7 +476,27 @@ class Component extends DCLogic {
     if (!Array.isArray(lib) || !lib.length) lib = window.DS_ILLUS || [];
     this.setState({ lib });
   }
-  componentWillUnmount() { clearTimeout(this._tt); }
+  componentDidUpdate() { this.montagePreview(); }
+  componentWillUnmount() { clearTimeout(this._tt); clearTimeout(this._mT); this._dead = true; }
+  isMontage(mode) { return (mode || this.state.mode) === 'pano' || (mode || this.state.mode) === 'collage'; }
+  montageInput() { const s = this.state; return Object.assign({}, s.m, { photos: s.photos }); }
+  /** Aperçu basse définition du montage, recalculé (avec un court délai) quand un réglage ou une photo change. */
+  montagePreview() {
+    const s = this.state, M = window.SAMontage;
+    if (!M || !this.isMontage()) return;
+    const key = JSON.stringify([s.mode, s.m, s.photos.map(p => p.src.length + ':' + p.src.slice(0, 48) + p.src.slice(-48) + (p.cut ? 'c' : ''))]);
+    if (key === this._mKey) return;
+    this._mKey = key;
+    clearTimeout(this._mT);
+    this._mT = setTimeout(async () => {
+      try {
+        const cur = this.state, r = cur.mode === 'pano' ? await M.panorama(this.montageInput(), 0.4) : await M.collage(this.montageInput(), 0.4);
+        if (this._dead || this._mKey !== key) return;
+        const slices = r.slices || [r.image];
+        this.setState({ mPrev: { key, slices }, mIdx: Math.min(this.state.mIdx, slices.length - 1) });
+      } catch (e) { console.error(e); }
+    }, 200);
+  }
   toast(msg) { clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: '' }), 4000); }
   V(patch) { this.setState({ v: Object.assign({}, this.state.v, patch) }); }
   targets() { const SA = window.SA; return this.state.sel.filter(id => SA.byId(SA.SHOPS, id)); }
@@ -427,7 +510,12 @@ class Component extends DCLogic {
         img.onload = () => { let cut = false;
           try { const c = document.createElement('canvas'); c.width = 32; c.height = 32; const x = c.getContext('2d'); x.drawImage(img, 0, 0, 32, 32); const d = x.getImageData(0, 0, 32, 32).data; let clear = 0, tot = 0;
             for (let y = 0; y < 32; y++) for (let k = 0; k < 32; k++) { if (k > 1 && k < 30 && y > 1 && y < 30) continue; tot++; if (d[(y * 32 + k) * 4 + 3] < 16) clear++; } cut = clear / tot > 0.35; } catch (e) {}
-          res({ src: url, cut, name: file.name }); };
+          // Photo de téléphone : réduite à 2048 px (Meta n'en garde pas plus) pour que l'envoi reste léger.
+          let src = url;
+          try { const big = Math.max(img.width, img.height), r = big > 2048 ? 2048 / big : 1;
+            if (r < 1 || (!cut && file.size > 1500000)) { const c = document.createElement('canvas'); c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+              c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); src = cut ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.9); } } catch (e) { src = url; }
+          res({ src, cut, name: file.name }); };
         img.src = url; };
       rd.readAsDataURL(file);
     });
@@ -443,6 +531,8 @@ class Component extends DCLogic {
     if (final && s.mode === 'studio' && nlShops.length && s.v.showTitle && s.v.title.trim() && !(s.v.nl.title || '').trim()) errs.push('Nom du produit en néerlandais manquant sur le visuel (' + nlShops.join(', ') + ').');
     if (final && s.when === 'later') { const m = this.schedMinutes(); if (m < 10) errs.push('Meta exige une programmation au moins 10 minutes à l\u2019avance (scheduled_publish_time).'); else if (m > 30 * 24 * 60) errs.push('Meta n\u2019accepte pas de programmation au-delà de 30 jours (scheduled_publish_time).'); }
     if (final && s.mode === 'brut' && t.some(id => s.ch[id] && s.ch[id].ig) && !s.photos.length && !s.video) errs.push('Instagram exige au moins une image ou une vidéo.');
+    if (final && this.isMontage() && !s.photos.length) errs.push('Ajoutez au moins une photo pour le montage.');
+    if (final && this.isMontage() && !window.SAMontage) errs.push('Le moteur des montages (montage.js) ne s\u2019est pas chargé : rechargez la page.');
     return errs;
   }
   async persist(status) {
@@ -453,17 +543,27 @@ class Component extends DCLogic {
     const t = this.targets(), cat = s.product ? SA.CATALOGUE.find(x => x.id === s.product) : null;
     let img = null, media;
     if (s.mode === 'studio') {
-      try { if (this._api) img = await this._api.toImage({ jpeg: true, pixelRatio: 0.5, quality: 0.82 }); } catch (e) { console.error(e); }
+      // En ligne, le visuel part chez Meta : pleine définition (1080 × 1080). En démo, il reste dans le navigateur : demi-définition.
+      try { if (this._api) img = await this._api.toImage({ jpeg: true, pixelRatio: SA.live ? 1 : 0.5, quality: SA.live ? 0.9 : 0.82 }); } catch (e) { console.error(e); }
       if (!img) img = s.photos[0] ? s.photos[0].src : 'img/illus/decorative/bubble.png';
       media = [{ src: img, kind: 'img', cut: false, name: 'Visuel composé' }];
+    } else if (this.isMontage()) {
+      // Montage rendu en pleine définition (1080 × 1350 par image) ; en démo, à moitié pour ne pas saturer le navigateur.
+      const M = window.SAMontage, k = SA.live ? 1 : 0.5;
+      let slices = [];
+      try { const r = s.mode === 'pano' ? await M.panorama(this.montageInput(), k) : await M.collage(this.montageInput(), k); slices = r.slices || [r.image]; }
+      catch (e) { console.error(e); this.setState({ saving: false, errors: ['Le montage n\u2019a pas pu être dessiné : ' + (e && e.message ? e.message : e) + '.'] }); return; }
+      media = slices.map((src, i) => ({ src, kind: 'img', cut: false, name: s.mode === 'pano' ? 'Carrousel ' + (i + 1) + '/' + slices.length : 'Collage ' + s.m.tpl }));
+      img = slices[0];
     } else {
       media = s.photos.map(p => ({ src: p.src, kind: 'img', cut: p.cut, name: p.name })).concat(s.video ? [{ src: s.video.src, kind: 'video', name: s.video.name }] : []);
       img = s.photos[0] ? s.photos[0].src : 'img/illus/products/bread-2.png';
     }
-    const title = (s.v.title || '').trim() || (cat ? cat.name : (s.text.split(/[.\n]/)[0] || 'Post sans titre').slice(0, 60));
+    const title = (this.isMontage() ? (s.m.title || '').trim() : '') || (s.v.title || '').trim() || (cat ? cat.name : (s.text.split(/[.\n]/)[0] || 'Post sans titre').slice(0, 60));
     const now = new Date(), nowT = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
     const post = { id: s.id || ('p' + Date.now()), date: s.when === 'now' ? SA.TODAY : s.date, time: s.when === 'now' ? nowT : s.time, type: s.type, title, img, media,
       visual: s.mode === 'studio' ? { v: s.v, photos: s.photos.filter(p => !/^data:/.test(p.src) || p.src.length < 400000) } : null,
+      montage: this.isMontage() ? { kind: s.mode, m: s.m, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
       shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, spread: s.spread, product: s.product };
     if (status === 'Publié') {
       const ko = t.filter(id => s.ch[id].ig && SA.byId(SA.state().shops, id).igs !== 'connected').map(id => ({ shop: id, channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }));
@@ -549,12 +649,46 @@ class Component extends DCLogic {
           this.setState({ product: c.id, campaign: camp, type: c.kind === 'gamme' ? 'Gamme saisonnière' : 'Produit',
             photos: [{ src: c.img, cut: true, name: c.name }].concat(s.photos.filter(p => p.src !== c.img)),
             v: Object.assign({}, v, { title: c.name, showTitle: true, price: c.kind === 'produit' ? c.price : '', showPrice: c.kind === 'produit', nl: Object.assign({}, v.nl, { title: SA.pname(c, 'nl') }) }),
+            m: Object.assign({}, s.m, { title: s.m.title.trim() ? s.m.title : c.name, price: s.m.price.trim() ? s.m.price : (c.price ? c.price + ' €' : '') }),
             textNl: s.textNl.trim() ? s.textNl : (c.kind === 'gamme' ? 'Het ' + SA.pname(c, 'nl') + ' is er bij L\u2019Atelier By {ville}. Ontdek het {horaires}.' : SA.pname(c, 'nl') + ': {prix} € bij L\u2019Atelier By {ville}. Open {horaires}.'),
             text: s.text.trim() ? s.text : (c.kind === 'gamme' ? 'La ' + c.name + ' est arrivée chez L\u2019Atelier By {ville}. À découvrir {horaires}.' : c.name + ' : {prix} € chez L\u2019Atelier By {ville}. Ouvert {horaires}.') }); } })),
       // visuel
       isStudio: s.mode === 'studio', isBrut: s.mode === 'brut', msBg, msFg, mbBg, mbFg,
       modeStudio: () => !locked && this.setState({ mode: 'studio' }), modeBrut: () => !locked && this.setState({ mode: 'brut' }),
-      photos, photosLabel: s.mode === 'studio' ? 'Photos du visuel · ' + s.photos.length + (curSlots > 1 ? ' (ce montage a ' + curSlots + ' cases, les photos se répètent s\u2019il en manque)' : ' (la n°1 est utilisée)') : 'Photos publiées · ' + s.photos.length + ' (la n°1 apparaît en premier)',
+      modes: [['studio', 'Visuel composé', 'Un visuel carré aux couleurs de la marque (studio)'], ['pano', 'Carrousel panoramique', 'Un seul post : la photo continue d\u2019une image à l\u2019autre en glissant'],
+        ['collage', 'Collage 4:5', 'Plusieurs photos réunies en une image 1080 × 1350'], ['brut', 'Photos telles quelles', 'Les photos et la vidéo partent sans retouche']]
+        .map(([k, label, tip]) => { const [bg, fg] = seg(s.mode === k); return { label, tip, bg, fg, pick: () => !locked && this.setState({ mode: k }) }; }),
+      ...(() => {
+        const M = window.SAMontage, m = s.m, isPano = s.mode === 'pano', isCollage = s.mode === 'collage';
+        const tpl = M ? (M.TEMPLATES.find(x => x[0] === m.tpl) || M.TEMPLATES[1]) : ['trio', 'Trio', 3];
+        const setM = (patch) => !locked && this.setState({ m: Object.assign({}, this.state.m, patch) });
+        const field = (key, label, ph) => ({ label, ph, value: m[key] || '', set: (e) => setM({ [key]: e.target.value }) });
+        const slices = s.mPrev.slices || [], n = slices.length, i = Math.min(s.mIdx, Math.max(0, n - 1));
+        const fresh = this._mKey && s.mPrev.key === this._mKey, album = isPano && s.pv === 'fb' && n > 1;
+        const tiles = slices.slice(0, 4).map((src, j) => ({ src, more: j === 3 && n > 4, moreLabel: '+' + (n - 4) }));
+        return {
+          isMontage: isPano || isCollage, isPano, isCollage,
+          mCounts: [2, 3, 4, 5, 6, 7, 8, 9, 10].map(k => { const [bg, fg] = seg(m.n === k); return { label: String(k), bg, fg, pick: () => setM({ n: k }) }; }),
+          mTpls: (M ? M.TEMPLATES : []).map(([k, name, slots]) => Object.assign(chip(m.tpl === k), { name, slots: slots + ' photos', pick: () => setM({ tpl: k }) })),
+          mFields: [field('title', 'Titre', 'Ex. : Gamme automne')].concat(isPano ? [field('band', 'Bandeau', 'Ex. : Brioche · tarte aux pommes · tartelette poire')] : [])
+            .concat([field('price', 'Prix (pastille)', 'Ex. : dès 3,60 €'), field('sign', 'Signature', "L'Atelier By")]),
+          mHints: isPano ? ['Publié en un seul post : carrousel de ' + m.n + ' images sur Instagram, album de ' + m.n + ' photos sur Facebook.',
+              'Sur le profil Instagram, seule la 1re image apparaît : le titre et la pastille prix y restent entiers.',
+              'Bandeau : séparez les éléments par « · » — ils sont répartis un par image, aucun mot n\u2019est coupé entre deux images.',
+              'Une photo couvre toute la largeur ; plusieurs photos se partagent la largeur, dans l\u2019ordre (cliquez une photo pour la mettre en n°1).',
+              'Textes incrustés : une seule langue pour toutes les boutiques ciblées — pour une boutique néerlandophone, faites un post à part.']
+            : ['Une image 1080 × 1350 (4:5), le format le plus grand dans le fil Instagram.', 'Gabarit ' + tpl[1] + ' : ' + tpl[2] + ' cases, remplies dans l\u2019ordre des photos ; elles se répètent s\u2019il en manque.',
+              'Textes incrustés : une seule langue pour toutes les boutiques ciblées.'],
+          mv: { slide: !album, album, tiles, hasSrc: n > 0, src: slices[i] || '', alt: isPano ? 'Image ' + (i + 1) + ' sur ' + n + ' du carrousel' : 'Collage ' + tpl[1],
+            empty: n === 0, emptyText: !s.photos.length ? 'Ajoutez une ou plusieurs photos : le montage se dessine ici.' : 'Préparation de l\u2019aperçu…',
+            many: n > 1 && !album, counter: (i + 1) + '/' + n + (fresh ? '' : ' · mise à jour…'), canPrev: i > 0 && !album, canNext: i < n - 1 && !album,
+            prev: () => this.setState({ mIdx: Math.max(0, i - 1) }), next: () => this.setState({ mIdx: Math.min(n - 1, i + 1) }),
+            dots: slices.map((_, j) => ({ c: j === i ? '#0095F6' : '#C7C7C7' })) },
+        };
+      })(),
+      photos, photosLabel: s.mode === 'pano' ? 'Photos du panorama · ' + s.photos.length + ' (une seule photo couvre les ' + s.m.n + ' images ; plusieurs se partagent la largeur)'
+        : s.mode === 'collage' ? 'Photos du collage · ' + s.photos.length + ' (la n°1 prend la plus grande case)'
+        : s.mode === 'studio' ? 'Photos du visuel · ' + s.photos.length + (curSlots > 1 ? ' (ce montage a ' + curSlots + ' cases, les photos se répètent s\u2019il en manque)' : ' (la n°1 est utilisée)') : 'Photos publiées · ' + s.photos.length + ' (la n°1 apparaît en premier)',
       hasVideo: !!s.video, videoName: s.video ? s.video.name : '', removeVideo: () => this.setState({ video: null }),
       onFiles: async (e) => { const fl = Array.from(e.target.files || []); e.target.value = ''; const add = (await Promise.all(fl.slice(0, 12).map(f => this.readFile(f)))).filter(Boolean); if (add.length) this.setState({ photos: this.state.photos.concat(add) }); },
       onVideo: (e) => { const f = e.target.files && e.target.files[0]; if (f) this.setState({ video: { src: URL.createObjectURL(f), name: f.name.slice(0, 12) }, type: s.type === 'Libre' ? 'Vidéo / film' : s.type }); e.target.value = ''; },
@@ -611,14 +745,18 @@ class Component extends DCLogic {
       videoTech: s.videoFormat === 'reel' ? 'POST /{page_id}/video_reels · upload_phase=start → upload → finish (video_state=PUBLISHED)' : 'POST /{page_id}/videos · file_url, title, description',
       ...(() => {
         const later = s.when === 'later', mins = later ? this.schedMinutes() : 0;
-        const ep = s.mode === 'studio' ? 'photos' : s.video ? (s.videoFormat === 'reel' ? 'video_reels' : 'videos') : s.photos.length === 1 ? 'photos' : 'feed';
+        const nPano = s.mode === 'pano' ? (s.mPrev.slices || []).length || s.m.n : 0;
+        const ep = s.mode === 'studio' || s.mode === 'collage' ? 'photos' : s.mode === 'pano' ? 'feed' : s.video ? (s.videoFormat === 'reel' ? 'video_reels' : 'videos') : s.photos.length === 1 ? 'photos' : 'feed';
         const msg = (filled || '').slice(0, 60) + ((filled || '').length > 60 ? '…' : '');
         const ts = later ? Math.round(new Date(s.date + 'T' + s.time + ':00').getTime() / 1000) : null;
-        const params = ep === 'photos' ? [['url', s.mode === 'studio' ? '{visuel rendu 1080×1080, stocké sur R2}' : '{photo n°1 sur R2}'], ['caption', '"' + msg + '"']]
+        const params = ep === 'photos' ? [['url', s.mode === 'studio' ? '{visuel rendu 1080×1080, stocké sur R2}' : s.mode === 'collage' ? '{collage rendu 1080×1350}' : '{photo n°1 sur R2}'], ['caption', '"' + msg + '"']]
+          : nPano ? [['message', '"' + msg + '"'], ['attached_media', '[' + Array.from({ length: nPano }, (_, i) => '{media_fbid: ' + (i + 1) + '}').join(', ') + '] · ' + nPano + ' photos 1080×1350 envoyées avec published=false']]
           : ep === 'feed' ? [['message', '"' + msg + '"']].concat(s.link ? [['link', s.link]] : []).concat(s.photos.length > 1 ? [['attached_media', '[' + s.photos.map((_, i) => '{media_fbid: ' + (i + 1) + '}').join(', ') + ']']] : [])
           : ep === 'videos' ? [['file_url', '{vidéo sur R2}'], ['description', '"' + msg + '"']] : [['upload_phase', 'start → finish'], ['description', '"' + msg + '"'], ['video_state', 'PUBLISHED']];
         const pubParams = later ? [['published', 'false'], ['scheduled_publish_time', ts + ' (' + SA.dShort(s.date) + ' ' + s.time + ')']] : [['published', 'true']];
         return { apiCall: 'POST /{page_id}/' + ep, pageCount: pages.length, apiParams: params.concat(pubParams).map(([k, v]) => ({ k, v })), hasIgCall: t.some(id => s.ch[id] && s.ch[id].ig),
+          igCall: nPano ? 'Instagram : ' + nPano + ' × POST /{ig_user_id}/media (is_carousel_item=true) → POST /{ig_user_id}/media (media_type=CAROUSEL, children) → media_publish'
+            : 'Instagram : POST /{ig_user_id}/media → POST /{ig_user_id}/media_publish',
           schedRule: !later ? 'Publication immédiate : published=true.' : mins < 10 ? 'Trop tôt : Meta exige au moins 10 minutes d\u2019avance.' : mins > 43200 ? 'Trop tard : 30 jours maximum.' : 'Fenêtre Meta respectée : entre 10 minutes et 30 jours.',
           schedRuleColor: !later ? '#666666' : (mins < 10 || mins > 43200) ? '#8D1D2C' : '#0F6B4A' };
       })(),

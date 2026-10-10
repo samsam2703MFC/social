@@ -253,6 +253,29 @@ check('repassé en brouillon → retiré de la file', (int) Db::row("SELECT COUN
 socStateSave(['changes' => ['posts' => ['delete' => ['p3']]]]);
 check('suppression', socItem('posts', 'p3') === null);
 
+echo "Montages Instagram : carrousel panoramique\n";
+$tranche = static fn (int $i) => 'data:image/jpeg;base64,' . base64_encode(str_repeat("\xFF\xD8tranche$i", 40));
+$p4 = ['id' => 'p4', 'date' => date('Y-m-d'), 'time' => '10:00', 'type' => 'Gamme saisonnière', 'title' => 'Gamme automne', 'shops' => ['4'],
+    'ch' => ['4' => ['fb' => true, 'ig' => true]], 'fb' => true, 'ig' => true, 'status' => 'Publié', 'text' => 'La gamme automne à {ville}',
+    'img' => $tranche(1), 'media' => [['src' => $tranche(1), 'kind' => 'img'], ['src' => $tranche(2), 'kind' => 'img'], ['src' => $tranche(3), 'kind' => 'img']],
+    'montage' => ['kind' => 'pano', 'm' => ['n' => 3, 'title' => 'Gamme automne', 'band' => 'Brioche · Tarte · Tartelette', 'price' => 'dès 3,60 €', 'sign' => "L'Atelier By"],
+        'photos' => [['src' => $img, 'cut' => true, 'name' => 'brioche.png']]]];
+$appels = [];
+socStateSave(['changes' => ['posts' => ['upsert' => [$p4]]]]);
+$p4 = socItem('posts', 'p4');
+check('montage : les 3 images et la photo source écrites en fichiers', count(array_filter($p4['media'], static fn ($m) => str_starts_with($m['src'], 'uploads/'))) === 3
+    && str_starts_with((string) ($p4['montage']['photos'][0]['src'] ?? ''), 'uploads/'));
+check('montage : réglages gardés pour la réouverture', ($p4['montage']['m']['n'] ?? 0) === 3 && ($p4['montage']['kind'] ?? '') === 'pano');
+$albums = $appelsVers('#^111/photos$#');
+check('Facebook : 3 photos non publiées puis un post album', count($albums) === 3 && in_array($albums[0][2]['published'] ?? null, [false, 'false'], true)
+    && count(json_decode((string) ($appelsVers('#^111/feed$#')[0][2]['attached_media'] ?? '[]'), true) ?: []) === 3);
+$ig = $appelsVers('#^17841/media$#');
+check('Instagram : 3 éléments de carrousel, dans l’ordre', count(array_filter($ig, static fn ($a) => !empty($a[2]['is_carousel_item']))) === 3
+    && $ig[0][2]['image_url'] === socPublicUrl($p4['media'][0]['src']));
+check('Instagram : un conteneur CAROUSEL publié', count(array_filter($ig, static fn ($a) => ($a[2]['media_type'] ?? '') === 'CAROUSEL' && count(explode(',', $a[2]['children'])) === 3)) === 1
+    && count($appelsVers('#^17841/media_publish$#')) === 1);
+check('post montage publié', $p4['status'] === 'Publié' && empty($p4['partial']));
+
 echo "Campagnes, publicités\n";
 $camp = ['id' => 'c1', 'name' => 'Automne', 'type' => 'saison', 'start' => $debutCamp, 'end' => date('Y-m-d', strtotime('+20 days')), 'status' => 'en cours',
     'shops' => ['4', '5'], 'products' => ['Brioche croustillante'], 'goal' => ['metric' => 'CA additionnel', 'value' => 1000], 'budget' => 400, 'split' => ['4' => 200, '5' => 200]];
