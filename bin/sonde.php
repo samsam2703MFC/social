@@ -13,14 +13,20 @@ socInstall();
 
 $shop = (string) (socApiShops()[0]['id'] ?? '4');
 $jour = date('Y-m-d');
+$j7 = date('Y-m-d', strtotime('-7 days')); $j1 = date('Y-m-d', strtotime('-1 day'));
 $routes = [
-    '/products', '/products/aliases', "/shops/$shop/products/available", '/product-availability-periods',
-    '/product-categories', '/marketing-campaigns', '/marketing-materials', "/shops/$shop/marketing-materials",
-    "/shops/$shop/statistics/sales/product-category-groups", "/shops/$shop/statistics/sales/kpis",
-    "/shops/$shop/transactions", "/shops/$shop/statistics/daily-summary", "/shops/$shop/statistics/monthly-summary",
-    '/owner/network/sales/trend', '/owner/network/dashboard/today', "/shops/$shop/owner/dashboard/today",
-    '/consultant/shops/sales-kpis/quarterly', "/shops/$shop/statistics/sales/compare-to-last-week/$jour",
-    '/shops', "/shops/$shop", '/consultant/shops',
+    "/shops/$shop/statistics/sales/product-category-groups?date=$j1",
+    "/shops/$shop/statistics/sales/product-category-groups?date_from=$j7&date_to=$j1",
+    "/shops/$shop/statistics/sales/product-category-groups?from=$j7&to=$j1",
+    "/shops/$shop/statistics/sales/product-category-groups?start_date=$j7&end_date=$j1",
+    "/shops/$shop/statistics/sales/kpis?date_from=$j7&date_to=$j1",
+    "/shops/$shop/statistics/sales/kpis?date=$j1",
+    "/consultant/shops/category-sales?date_from=$j7&date_to=$j1&shop_ids=$shop",
+    "/consultant/shops/sales-kpis?date_from=$j7&date_to=$j1&shop_ids=$shop",
+    "/shops/$shop/statistics/daily-summary?date=$j1",
+    "/products/aliases?lang_code=nl",
+    "/shops/$shop/products/available?lang_code=nl",
+    '/product-availability-periods?lang_code=nl',
 ];
 
 [$c, $corps] = Tfb::raw('GET', Tfb::swaggerUrl(), [], null, 60);
@@ -33,15 +39,18 @@ $ref = static function (array $p) use ($spec): array {
 $masque = static function (mixed $v): mixed {
     if (!is_string($v)) { return $v; }
     if (str_contains($v, '@')) { return '…@…'; }
-    if (preg_match('/^\+?[\d .\/-]{8,}$/', $v)) { return '…tél…'; }
+    if (preg_match('/^\+?[\d .\/]{8,}$/', $v) && !preg_match('/^\d{4}-\d{2}-\d{2}/', $v)) { return '…tél…'; }
     return mb_strlen($v) > 60 ? mb_substr($v, 0, 60) . '…' : $v;
 };
-$forme = static function (mixed $x, int $prof = 0) use (&$forme, $masque): mixed {
+// Champs sensibles masqués PAR LEUR NOM, quelle que soit la valeur : l'API rend
+// par exemple `email_password` en clair et les coordonnées bancaires des boutiques.
+$sensible = static fn (string $k): bool => (bool) preg_match('/pass|secret|token|iban|bank|swift|account_number|tax_number|vat|peppol|email|phone|billing/i', $k);
+$forme = static function (mixed $x, int $prof = 0) use (&$forme, $masque, $sensible): mixed {
     if (!is_array($x)) { return $masque($x); }
     if ($prof > 2) { return '[' . (array_is_list($x) ? count($x) . ' él.' : 'objet') . ']'; }
     if (array_is_list($x)) { return ['_n' => count($x), '_premier' => isset($x[0]) ? $forme($x[0], $prof + 1) : null]; }
     $o = [];
-    foreach (array_slice($x, 0, 40, true) as $k => $v) { $o[$k] = $forme($v, $prof + 1); }
+    foreach (array_slice($x, 0, 40, true) as $k => $v) { $o[$k] = $sensible((string) $k) ? '«masqué»' : $forme($v, $prof + 1); }
     return $o;
 };
 
@@ -60,7 +69,12 @@ foreach ($routes as $r) {
     $realm = str_starts_with($r, '/consultant/') ? 'consultant' : 'admin';
     try {
         $j = Tfb::get($r, $realm);
-        echo json_encode($forme($j), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . "\n";
+        $l = Tfb::liste($j);
+        if ($l && isset($l[0]['sales_value'])) {
+            echo 'empreinte : ' . count($l) . ' lignes, ventes = ' . round(array_sum(array_map(static fn ($x) => (float) $x['sales_value'], $l)), 2)
+                . ' €, qté = ' . array_sum(array_map(static fn ($x) => (float) $x['sold_qty'], $l)) . "\n";
+        }
+        echo mb_substr(json_encode($forme($j), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT), 0, 2500) . "\n";
     } catch (Throwable $e) {
         echo 'ERREUR : ' . $e->getMessage() . "\n";
     }

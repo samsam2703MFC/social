@@ -33,9 +33,14 @@ function socAuditTable(): void
         . 'PRIMARY KEY (methode, chemin), KEY idx_statut (statut)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
-/** Le statut d'un code HTTP, en mots de l'écran. */
-function socAuditStatut(int $http): string
+/**
+ * Le statut d'un code HTTP, en mots de l'écran. L'API répond 500 « Validation
+ * errors in request » quand un paramètre obligatoire manque (au lieu d'un
+ * 4xx) : ce n'est pas une panne, c'est un paramètre requis.
+ */
+function socAuditStatut(int $http, string $corps = ''): string
 {
+    if ($http === 500 && str_contains($corps, 'Validation errors in request')) { return 'parametre'; }
     return match (true) {
         $http >= 200 && $http < 300 => 'ok',
         $http === 401 || $http === 403 => 'refuse',
@@ -126,7 +131,7 @@ function socAuditRun(int $max = 0, int $parallele = 8): array
             foreach ($paquet as $r) {
                 $d = microtime(true);
                 [$http, $b] = (Tfb::$transport)('GET', $r['url'], $r['realm'] === 'public' ? [] : ['Authorization: Bearer ' . $jetons[$r['realm']]], null);
-                $ecrire($r, $http, socAuditStatut($http), (int) ((microtime(true) - $d) * 1000), strlen($b), $http >= 200 && $http < 300 ? socAuditApercu($b) : null, $http >= 300 ? socAuditErreur($b) : null);
+                $ecrire($r, $http, socAuditStatut($http, $b), (int) ((microtime(true) - $d) * 1000), strlen($b), $http >= 200 && $http < 300 ? socAuditApercu($b) : null, $http >= 300 ? socAuditErreur($b) : null);
             }
             continue;
         }
@@ -145,10 +150,30 @@ function socAuditRun(int $max = 0, int $parallele = 8): array
             $b = (string) curl_multi_getcontent($ch);
             $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $ms = (int) round(curl_getinfo($ch, CURLINFO_TOTAL_TIME) * 1000);
-            $ecrire($r, $http, socAuditStatut($http), $ms, strlen($b), $http >= 200 && $http < 300 ? socAuditApercu($b) : null, $http >= 300 || $http === 0 ? socAuditErreur($b) : null);
+            $ecrire($r, $http, socAuditStatut($http, $b), $ms, strlen($b), $http >= 200 && $http < 300 ? socAuditApercu($b) : null, $http >= 300 || $http === 0 ? socAuditErreur($b) : null);
             curl_multi_remove_handle($mh, $ch); curl_close($ch);
         }
         curl_multi_close($mh);
+    }
+    // Deuxième passage : les routes qui demandent un paramètre sont rejouées
+    // avec des périodes usuelles (7 derniers jours, puis 6 derniers mois).
+    $j7 = date('Y-m-d', strtotime('-7 days')); $m6 = date('Y-m', strtotime('-6 months'));
+    $variantes = [
+        http_build_query(['date' => $jour, 'date_from' => $j7, 'date_to' => $jour, 'from' => $j7, 'to' => $jour, 'start_date' => $j7, 'end_date' => $jour]),
+        http_build_query(['from' => $m6, 'to' => date('Y-m'), 'date_from' => $m6, 'date_to' => date('Y-m'), 'year' => date('Y'), 'month' => date('n')]),
+    ];
+    foreach (Db::rows("SELECT * FROM social_api_audit WHERE statut = 'parametre' AND teste_le = ?", [$now]) as $row) {
+        $r = ['chemin' => $row['chemin'], 'tag' => (string) $row['tag'], 'realm' => $row['realm'], 'url' => $row['url_testee']];
+        if ($r['realm'] !== 'public' && empty($jetons[$r['realm']])) { continue; }
+        foreach ($variantes as $q) {
+            $url = $r['url'] . (str_contains($r['url'], '?') ? '&' : '?') . $q;
+            $d = microtime(true);
+            [$http, $b] = Tfb::raw('GET', $url, $r['realm'] === 'public' ? [] : ['Authorization: Bearer ' . $jetons[$r['realm']]], null, 25);
+            if ($http >= 200 && $http < 300) {
+                $ecrire(['url' => $url] + $r, $http, 'ok', (int) ((microtime(true) - $d) * 1000), strlen($b), socAuditApercu($b), 'fonctionne avec ' . (str_contains($q, 'start_date') ? 'une période en jours' : 'une période en mois'));
+                break;
+            }
+        }
     }
     // Les routes disparues du swagger ne restent pas affichées.
     Db::exec('DELETE FROM social_api_audit WHERE teste_le < ?', [$now]);

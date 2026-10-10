@@ -120,7 +120,7 @@ Tfb::$transport = static function (string $m, string $url, array $h, ?string $bo
             '/api/v1/public/shops' => ['get' => []], '/api/v1/shops' => ['get' => ['tags' => ['Franchise shop']]],
             '/api/v1/shops/{id}' => ['get' => []], '/api/v1/products' => ['get' => []], '/api/v1/consultant/shops' => ['get' => []],
             '/api/v1/recipes/{param1}' => ['get' => []], '/api/v1/franchisee-shop/{id}/transactions/{date}' => ['get' => []],
-            '/api/v1/broken' => ['get' => []], '/api/v1/shops/{id}/x' => ['post' => []]]])];
+            '/api/v1/broken' => ['get' => []], '/api/v1/consultant/shops/sales-kpis' => ['get' => []], '/api/v1/shops/{id}/x' => ['post' => []]]])];
     }
     if (!$auth) { return [401, '{"message":"Unauthenticated"}']; }
     if ($p === '/api/v1/shops') { return [200, json_encode(['data' => [['id' => 4, 'name' => 'Halle', 'active' => true], ['id' => 5, 'name' => 'Wavre', 'active' => true]]])]; }
@@ -128,6 +128,7 @@ Tfb::$transport = static function (string $m, string $url, array $h, ?string $bo
     if ($p === '/api/v1/products') { return [403, '{"message":"Forbidden"}']; }
     if (str_starts_with($p, '/api/v1/franchisee-shop/4/transactions/')) { return [200, '[]']; }
     if ($p === '/api/v1/broken') { return [500, '{"message":"Server Error"}']; }
+    if ($p === '/api/v1/consultant/shops/sales-kpis') { return str_contains($url, 'date_from=') ? [200, '{"kpis":{}}'] : [500, '{"status":"error","description":"Validation errors in request"}']; }
     return [404, 'not found'];
 };
 
@@ -288,12 +289,13 @@ check('compte publicitaire réseau = celui de la marque', socStateGet()['meta'][
 $aud = socAuditRun();
 $st = [];
 foreach (socAuditGet()['routes'] as $r) { $st[$r['chemin']] = $r['statut']; }
-check('audit : routes GET seulement (POST ignorée)', !isset($st['/api/v1/shops/{id}/x']) && count($st) === 8, json_encode($st));
+check('audit : routes GET seulement (POST ignorée)', !isset($st['/api/v1/shops/{id}/x']) && count($st) === 9, json_encode($st));
+check('audit : 500 « validation » rejoué avec une période → fonctionne', ($st['/api/v1/consultant/shops/sales-kpis'] ?? '') === 'ok');
 check('audit : /public/shops fonctionne sans compte', ($st['/api/v1/public/shops'] ?? '') === 'ok');
 check('audit : paramètre boutique deviné', ($st['/api/v1/shops/{id}'] ?? '') === 'ok' && ($st['/api/v1/franchisee-shop/{id}/transactions/{date}'] ?? '') === 'ok');
 check('audit : réalm consultant', ($st['/api/v1/consultant/shops'] ?? '') === 'ok');
 check('audit : refus, erreur, non testée', ($st['/api/v1/products'] ?? '') === 'refuse' && ($st['/api/v1/broken'] ?? '') === 'erreur' && ($st['/api/v1/recipes/{param1}'] ?? '') === 'non_teste');
-check('audit : résumé en base', ($aud['ok'] ?? 0) === 5 && socSetting('tfb_audit')['total'] === 8, json_encode($aud));
+check('audit : résumé en base', ($aud['ok'] ?? 0) === 6 && socSetting('tfb_audit')['total'] === 9, json_encode($aud));
 
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');
