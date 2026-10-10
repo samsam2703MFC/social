@@ -80,6 +80,35 @@
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button onClick="{{ saveKeys }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Enregistrer les clés</button>
             <label style="font-size:12px;color:#444444;display:flex;gap:6px;align-items:center;">URL publique du module (Meta y télécharge les visuels) <input value="{{ publicUrl }}" onChange="{{ setPublicUrl }}" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 8px;width:260px;"></label></div>
         </section>
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+            <span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:13px;font-weight:500;">Portefeuille Business Manager</span><span style="font-size:11px;color:#666666;">{{ pfSummary }}</span></span>
+            <span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input value="{{ pfBiz }}" onChange="{{ setPfBiz }}" placeholder="Business ID (facultatif)" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 10px;width:190px;">
+              <button onClick="{{ pfRefresh }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">{{ pfRefreshLabel }}</button>
+            </span>
+          </div>
+          <sc-if value="{{ pfHasErr }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;line-height:1.5;background:#FCE7C8;color:#6b3d0a;border-radius:8px;padding:8px 10px;">{{ pfErr }}</div></sc-if>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;">
+            <sc-for list="{{ pfGroups }}" as="g" hint-placeholder-count="4">
+              <div style="border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;overflow:hidden;">
+                <div style="padding:8px 10px;background:#FBF8F4;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ g.title }}</div>
+                <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+                  <div style="padding:7px 10px;border-top:0.5px solid rgba(34,34,34,0.06);display:flex;justify-content:space-between;gap:8px;font-size:12px;">
+                    <span style="display:flex;flex-direction:column;min-width:0;"><span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.name }}</span><span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">{{ r.id }} {{ r.note }}</span></span>
+                    <span style="align-self:center;font-size:10px;border-radius:999px;padding:2px 7px;white-space:nowrap;background:{{ r.bg }};color:{{ r.fg }};">{{ r.shop }}</span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ g.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:10px;font-size:12px;color:#8A847C;">Rien de visible</div></sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button onClick="{{ pfApply }}" style="background:#FFFFFF;border:0.5px solid #8D1D2C;color:#8D1D2C;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;">Remplir les identifiants vides</button>
+            <button onClick="{{ pfApplyAll }}" style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);color:#444444;border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;">Tout remplacer par le portefeuille</button>
+            <span style="font-size:11px;color:#666666;">Rapprochement par le nom de la ville dans le nom de la Page / du compte ; « L'Atelier By » seul → la marque. Vérifiez puis corrigez au besoin dans le tableau des identifiants.</span>
+          </div>
+        </section>
       </sc-if>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;">
         <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
@@ -277,7 +306,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { tab: 'conn', busy: {}, testing: false, logF: '', toast: '', tick: 0, keys: { appId: '', systemToken: '', appSecret: '', verifyToken: '' }, publicUrl: null, tfb: {}, tfbTest: '', audit: null, auditing: false, auditF: 'ko', auditQ: '' };
+  state = { tab: 'conn', busy: {}, testing: false, logF: '', toast: '', tick: 0, keys: { appId: '', systemToken: '', appSecret: '', verifyToken: '' }, publicUrl: null, pf: null, pfBiz: null, pfBusy: false, tfb: {}, tfbTest: '', audit: null, auditing: false, auditF: 'ko', auditQ: '' };
   componentDidMount() { const SA = window.SA; const t = SA && SA.param('tab'); if (t) this.setState({ tab: t }); this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h); }
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); clearTimeout(this._aud); }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2800); }
@@ -384,6 +413,25 @@ class Component extends DCLogic {
           stFg: (k === 'systemToken' ? (J && J.valide && !J.erreur) : ms[flag]) ? '#0F6B4A' : '#8D1D2C',
           set: (e) => this.setState({ keys: Object.assign({}, this.state.keys, { [k]: e.target.value }) }) })); })(),
       saveKeys: () => { SA.api('POST', '/parametres/cles', s.keys).then(r => { SA.metaStatus = r.metaStatus; this.setState({ keys: { appId: '', systemToken: '', appSecret: '', verifyToken: '' } }); this.toast(r.maj.length ? r.maj.length + ' clé(s) enregistrée(s) en base.' : 'Aucune clé saisie.'); SA.refresh(); }).catch(e => this.toast('Enregistrement impossible : ' + e.message)); },
+      ...(() => {
+        // Portefeuille Business Manager : GET au premier affichage, Rafraîchir = relecture chez Meta.
+        if (!SA.live) return {};
+        if (s.tab === 'api' && !s.pf && !this._pfLoading) { this._pfLoading = true; SA.api('GET', '/meta/portefeuille').then(r => this.setState({ pf: r.portefeuille || {}, pfBiz: s.pfBiz != null ? s.pfBiz : r.businessId })).catch(() => {}); }
+        const P = s.pf || {}, nom = (id) => id === 'marque' ? 'Marque' : id ? ((SA.byId(SA.SHOPS, id) || {}).name || id) : 'non rapprochée';
+        const row = (r, note) => ({ name: r.name || r.username || '—', id: r.id, note: note || '', shop: nom(r.boutique), bg: r.boutique ? '#E2F0E8' : '#F4EFE8', fg: r.boutique ? '#0F6B4A' : '#8A847C' });
+        const groups = [['Pages Facebook', (P.pages || []).map(r => row(r, r.lien))], ['Comptes publicitaires', (P.comptes || []).map(r => row(r, (r.actif ? '' : '· inactif ') + (r.devise || '')))],
+          ['Instagram', (P.instagram || []).map(r => row(Object.assign({}, r, { name: '@' + (r.username || r.id) })))], ['Pixels', (P.pixels || []).map(r => row(r))]];
+        const apply = (ecraser) => SA.api('POST', '/meta/portefeuille/appliquer', { ecraser }).then(r => { SA.refresh(); this.toast(r.appliques.length ? 'Identifiants remplis : ' + r.appliques.join(' · ') : 'Rien à remplir.'); }).catch(e => this.toast(e.message));
+        return {
+          pfSummary: P.le ? (P.business && P.business.id ? 'Business ' + (P.business.name || '') + ' (' + P.business.id + ') · ' : 'Business non trouvé · ') + 'relu le ' + P.le.slice(8, 10) + '/' + P.le.slice(5, 7) + ' à ' + P.le.slice(11, 16) : 'Jamais relu — « Rafraîchir » lit chez Meta les Pages, comptes publicitaires, comptes Instagram et pixels visibles du System User.',
+          pfBiz: s.pfBiz || '', setPfBiz: (e) => this.setState({ pfBiz: e.target.value }),
+          pfRefreshLabel: s.pfBusy ? 'Lecture chez Meta…' : 'Rafraîchir',
+          pfRefresh: () => { if (s.pfBusy) return; this.setState({ pfBusy: true }); SA.api('POST', '/meta/portefeuille/rafraichir', { businessId: s.pfBiz || '' }).then(r => { this.setState({ pf: r.portefeuille, pfBusy: false }); this.toast((r.portefeuille.pages || []).length + ' Page(s), ' + (r.portefeuille.comptes || []).length + ' compte(s) pub relus.'); }).catch(e => { this.setState({ pfBusy: false }); this.toast('Lecture impossible : ' + e.message); }); },
+          pfHasErr: (P.erreurs || []).length > 0, pfErr: 'Lectures refusées par Meta (permissions du System User ?) : ' + (P.erreurs || []).join(' · '),
+          pfGroups: groups.map(([title, rows]) => ({ title: title + ' · ' + rows.length, rows, empty: rows.length === 0 })),
+          pfApply: () => apply(false), pfApplyAll: () => apply(true),
+        };
+      })(),
       publicUrl: s.publicUrl != null ? s.publicUrl : ((st.params || {}).url_publique || ''),
       setPublicUrl: (e) => { const v = e.target.value; this.setState({ publicUrl: v }); clearTimeout(this._pu); this._pu = setTimeout(() => SA.api('POST', '/parametres', { url_publique: v }).then(() => this.toast('URL publique enregistrée.')).catch(err => this.toast(err.message)), 700); },
       ...(() => { const M = SA.META, meta = st.meta || { version: M.version, dsa: M.dsa, ids: M.ids }, setMeta = (p) => SA.save({ meta: Object.assign({}, meta, p) });

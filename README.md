@@ -56,6 +56,31 @@ appel (`src/schema.php`), sans migration, comme le BO.
 Les clés Meta se saisissent dans **Paramètres → API Meta → Clés d'accès Meta**
 (un champ vide ne change rien ; la valeur n'est jamais réaffichée).
 
+## API TFBuddy : la source principale
+
+Le module lit l'API TFBuddy (`https://atelierby.tfbuddy.com/api/v1`, swagger
+`/api/swagger/openapi.json`) avant la base du BO, pour pouvoir être déplacé :
+boutiques (`/public/shops`, `/shops`), catalogue et prix
+(`/shops/{id}/products/available`, `?lang_code=nl`), gammes
+(`/product-availability-periods`), ventes par produit et tickets
+(`/shops/{id}/statistics/sales/product-category-groups` et `/kpis`, avec
+`date_from`/`date_to`). Comptes admin et consultant dans `social_parametre`
+(repris une fois du BO), modifiables dans **Paramètres → API TFBuddy**.
+
+Ce même onglet liste **les routes qui fonctionnent et celles qui ne
+fonctionnent pas** sur le serveur : audit de toutes les routes GET du swagger
+(bouton, ou cron chaque nuit à 5 h 20), résultat dans `social_api_audit`.
+Rapport complet : **`docs/AUDIT.md`**.
+
+## Portefeuille Business Manager
+
+**Paramètres → API Meta → Portefeuille Business Manager → Rafraîchir** relit
+chez Meta les Pages, comptes publicitaires, comptes Instagram et pixels visibles
+du System User (Business trouvé automatiquement ou saisi), les rapproche des
+boutiques et de la **marque**, puis « Remplir les identifiants vides » ou « Tout
+remplacer » complète le tableau « Identifiants Meta par boutique » (la marque
+y a sa ligne ; son compte publicitaire est le compte réseau).
+
 ## Ce que fait le serveur chez Meta
 
 Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
@@ -122,8 +147,8 @@ SOCIAL_BO_DIR=/chemin/vers/consultant_BO php -S 0.0.0.0:8090 -t public public/ro
 SOCIAL_TEST_DSN='mysql:host=127.0.0.1;dbname=social_test' SOCIAL_TEST_USER=… SOCIAL_TEST_PASS=… php bin/tests.php
 ```
 
-80 contrôles sur une vraie base (vidée : son nom doit contenir « test ») et un
-Graph Meta simulé : tables, clés en base, boutiques lues dans le BO, file de
+113 contrôles sur une vraie base (vidée : son nom doit contenir « test ») et un
+Graph Meta et API TFBuddy simulés : tables, clés en base, boutiques lues dans le BO, file de
 publication, échecs partiels et relance, pubs, formulaires, leads, ventes,
 session du cockpit.
 

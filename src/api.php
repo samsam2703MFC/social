@@ -19,6 +19,7 @@ require_once __DIR__ . '/ads.php';
 require_once __DIR__ . '/leads.php';
 require_once __DIR__ . '/results.php';
 require_once __DIR__ . '/audit.php';
+require_once __DIR__ . '/portefeuille.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -81,6 +82,15 @@ function socRoute(string $method, string $path): array
         }
         if ($faits) { socLog(socUser(), 'Paramètres', 'Modifiés : ' . implode(', ', $faits)); }
         return [200, ['ok' => true, 'params' => socParams()]];
+    }
+    if ($method === 'GET' && $path === '/meta/portefeuille') { return [200, ['portefeuille' => socSetting('meta_portefeuille'), 'businessId' => (string) (socSetting('meta_business_id') ?? '')]]; }
+    if ($method === 'POST' && $path === '/meta/portefeuille/rafraichir') {
+        if (isset(body()['businessId'])) { socSettingPut('meta_business_id', preg_replace('/\D/', '', (string) body()['businessId']), false); }
+        return [200, ['portefeuille' => socPortefeuilleRafraichir()]];
+    }
+    if ($method === 'POST' && $path === '/meta/portefeuille/appliquer') {
+        $r = socPortefeuilleAppliquer(!empty(body()['ecraser']));
+        return [200, $r + ['shops' => socShops(), 'brand' => socBrand()]];
     }
     if ($method === 'GET' && $path === '/audit/api') { return [200, socAuditGet()]; }
     if ($method === 'POST' && $path === '/audit/api') {

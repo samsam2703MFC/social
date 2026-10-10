@@ -95,6 +95,18 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
         return [200, ['data' => [['spend' => '40.50', 'reach' => '1200', 'impressions' => '3000', 'clicks' => '60',
             'actions' => [['action_type' => 'post_engagement', 'value' => '90'], ['action_type' => 'video_view', 'value' => '15']]]]]];
     }
+    if ($m === 'GET' && $path === 'me' && str_contains((string) ($p['fields'] ?? ''), 'business')) { return [200, ['id' => '55', 'name' => 'SU', 'business' => ['id' => '900', 'name' => 'Atelier By BM']]]; }
+    if ($m === 'GET' && $path === '900/owned_pages') {
+        return [200, ['data' => [['id' => '111', 'name' => "L'Atelier By Halle", 'instagram_business_account' => ['id' => '17841', 'username' => 'latelierby.halle']],
+            ['id' => '222', 'name' => "L'Atelier By Wavre"], ['id' => '999', 'name' => "L'Atelier By"]]]];
+    }
+    if ($m === 'GET' && $path === '900/client_pages') { return [400, ['error' => ['code' => 200, 'message' => 'Permissions error']]]; }
+    if ($m === 'GET' && $path === '900/owned_ad_accounts') {
+        return [200, ['data' => [['id' => 'act_2001', 'account_id' => '2001', 'name' => 'Atelier By - Halle', 'account_status' => 1, 'currency' => 'EUR'],
+            ['id' => 'act_2002', 'account_id' => '2002', 'name' => 'Atelier Wavre', 'account_status' => 2, 'currency' => 'EUR'], ['id' => 'act_2000', 'name' => "L'Atelier By réseau", 'account_status' => 1]]]];
+    }
+    if ($m === 'GET' && in_array($path, ['900/client_ad_accounts', 'me/adaccounts', '900/instagram_accounts'], true)) { return [200, ['data' => []]]; }
+    if ($m === 'GET' && $path === '900/adspixels') { return [200, ['data' => [['id' => '880112', 'name' => 'Pixel webshop']]]]; }
     if ($m === 'GET' && $path === 'debug_token') {
         return [200, ['data' => ['is_valid' => true, 'expires_at' => strtotime('2027-01-01 12:00'), 'app_id' => '424242', 'application' => 'Atelier Social',
             'type' => 'SYSTEM_USER', 'scopes' => ['pages_manage_posts', 'ads_management']]]];
@@ -344,6 +356,23 @@ socRoute('POST', '/parametres/tfb');
 check('adresse de l’API acceptée sur tfbuddy.com', Tfb::base() === 'https://demo.tfbuddy.com/api/v1');
 socSettingPut('tfb_base', 'https://atelierby.tfbuddy.com/api/v1', false);
 unset($GLOBALS['SOC_BODY']);
+
+echo "Portefeuille Business Manager\n";
+$pf = socPortefeuilleRafraichir();
+$pb = array_column($pf['pages'], 'boutique', 'id');
+check('portefeuille : business trouvé par le System User', $pf['business']['id'] === '900');
+check('portefeuille : Pages rapprochées (ville → boutique, nom seul → marque)', ($pb['111'] ?? '') === '4' && ($pb['222'] ?? '') === '5' && ($pb['999'] ?? '') === 'marque', json_encode($pb));
+check('portefeuille : lecture refusée signalée, le reste lu', count($pf['erreurs']) === 1 && count($pf['comptes']) === 3);
+check('portefeuille : Instagram rattaché à sa Page', ($pf['instagram'][0]['boutique'] ?? '') === '4');
+socShopPut('5', ['ids' => ['page_id' => '', 'ad_account_id' => '', 'instagram_user_id' => '', 'pixel_id' => '']]);
+socShopPut('marque', ['ids' => ['page_id' => '', 'ad_account_id' => '', 'instagram_user_id' => '', 'pixel_id' => '']]);
+socSettingPut('meta_compte_reseau', '', false);  // l'ancien compte réseau saisi à la main compterait comme rempli
+$ap = socPortefeuilleAppliquer(false);
+check('appliquer : champs vides remplis, compte inactif ignoré', socShop('5')['ids']['page_id'] === '222' && socShop('5')['ids']['ad_account_id'] === '' && socShop('5')['ids']['pixel_id'] === '880112', json_encode(socShop('5')['ids']));
+check('appliquer : la marque reçoit sa Page et le compte réseau', socBrand()['ids']['page_id'] === '999' && socBrand()['ids']['ad_account_id'] === 'act_2000', json_encode(socBrand()['ids']));
+check('appliquer : un champ déjà rempli n’est pas écrasé', socShop('4')['ids']['ad_account_id'] === 'act_1001');
+socPortefeuilleAppliquer(true);
+check('tout remplacer : écrase', socShop('4')['ids']['ad_account_id'] === 'act_2001');
 
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');
