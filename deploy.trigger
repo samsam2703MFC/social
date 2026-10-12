@@ -40,3 +40,4 @@ Relivraison : Contrôle sur les posts déjà publiés — 2026-10-12T11:14:31Z
 Relivraison : Contrôle, pastilles des boutiques — 2026-10-12T12:10:08Z
 Relivraison : opérations = campagnes du Marketing du BO — sonde — 2026-10-12T16:37:03Z
 Relivraison : rattacher posts et pubs aux campagnes du Marketing — 2026-10-12T17:16:38Z
+Relivraison : libellé du panneau Rattacher — 2026-10-12T17:18:52Z
