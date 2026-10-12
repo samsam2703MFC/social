@@ -47,3 +47,4 @@ Relivraison : zoom des photos dans les gabarits — 2026-10-12T17:55:36Z
 Relivraison : liens du webshop, pastilles des boutiques — 2026-10-12T18:06:16Z
 Relivraison : catalogue relu (webshop) — 2026-10-12T18:08:39Z
 Relivraison : recherche webshop, permissions signalées — 2026-10-12T18:17:23Z
+Relivraison : espace franchisé aligné — 2026-10-12T18:35:32Z
