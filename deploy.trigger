@@ -42,3 +42,4 @@ Relivraison : opérations = campagnes du Marketing du BO — sonde — 2026-10-1
 Relivraison : rattacher posts et pubs aux campagnes du Marketing — 2026-10-12T17:16:38Z
 Relivraison : libellé du panneau Rattacher — 2026-10-12T17:18:52Z
 Relivraison : Suivi, graphique vide expliqué — 2026-10-12T17:28:13Z
+Relivraison : Créer un post, constructeur et médiathèque complète — 2026-10-12T17:41:13Z
