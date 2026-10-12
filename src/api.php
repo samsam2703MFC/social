@@ -21,6 +21,7 @@ require_once __DIR__ . '/results.php';
 require_once __DIR__ . '/audit.php';
 require_once __DIR__ . '/portefeuille.php';
 require_once __DIR__ . '/instagram.php';
+require_once __DIR__ . '/darkposts.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -92,6 +93,18 @@ function socRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/meta/portefeuille/appliquer') {
         $r = socPortefeuilleAppliquer(!empty(body()['ecraser']));
         return [200, $r + ['shops' => socShops(), 'brand' => socBrand()]];
+    }
+    if ($method === 'GET' && $path === '/darkposts/commentaires') {
+        return [200, ['comments' => socDarkComments(isset($_GET['ad']) ? (string) $_GET['ad'] : null, isset($_GET['post']) ? (string) $_GET['post'] : null)]];
+    }
+    if ($method === 'POST' && $path === '/darkposts/commentaires') {
+        // Relecture immédiate chez Meta (le cron le fait toutes les heures).
+        $ad = isset(body()['ad']) ? (string) body()['ad'] : null;
+        $r = socDarkCommentsSync($ad);
+        return [200, ['synchro' => $r, 'comments' => socDarkComments($ad, isset(body()['post']) ? (string) body()['post'] : null), 'darkPosts' => socDarkPosts()]];
+    }
+    if ($method === 'POST' && preg_match('#^/darkposts/commentaires/([\w.\-]{1,80})/masquer$#', $path, $m)) {
+        return [200, socDarkCommentMasquer($m[1], (bool) (body()['masquer'] ?? true))];
     }
     if ($method === 'GET' && $path === '/instagram/grille') {
         $sid = (string) ($_GET['shop'] ?? '');

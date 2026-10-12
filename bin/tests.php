@@ -91,6 +91,20 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
             ['id' => 'm1', 'media_type' => 'VIDEO', 'media_url' => 'https://cdn.ig/m1.mp4', 'thumbnail_url' => 'https://cdn.ig/m1.jpg', 'timestamp' => date('c', strtotime('-3 days'))]]]];
     }
     if ($m === 'GET' && preg_match('#^c\d+$#', $path)) { return [200, ['status_code' => 'FINISHED']]; }
+    // Dark posts : vidéo de pub, relecture de la créa, commentaires.
+    if ($m === 'POST' && preg_match('#^act_\d+/advideos$#', $path)) { return [200, ['id' => 'v' . $id()]]; }
+    if ($m === 'GET' && preg_match('#^v\d+$#', $path)) { return [200, ['status' => ['video_status' => 'ready']]]; }
+    if ($m === 'GET' && preg_match('#^v\d+/thumbnails$#', $path)) { return [200, ['data' => [['uri' => 'https://cdn.fb/vignette.jpg', 'is_preferred' => true]]]]; }
+    if ($m === 'GET' && preg_match('#^\d+$#', $path) && str_contains((string) ($p['fields'] ?? ''), 'effective_object_story_id')) {
+        return [200, ['effective_object_story_id' => '111_8' . $path, 'effective_instagram_media_id' => '1790' . $path]];
+    }
+    if ($m === 'GET' && preg_match('#^1790\d+$#', $path)) { return [200, ['permalink' => 'https://www.instagram.com/p/AD' . $path]]; }
+    if ($m === 'GET' && preg_match('#^(\d+_\d+)/comments$#', $path, $mm)) {
+        return [200, ['data' => [['id' => $mm[1] . '_c1', 'from' => ['name' => 'Julie D.'], 'message' => 'Ça a l’air délicieux', 'created_time' => date('c')]]]];
+    }
+    if ($m === 'GET' && preg_match('#^(1790\d+)/comments$#', $path, $mm)) {
+        return [200, ['data' => [['id' => 'igc' . $mm[1], 'username' => 'marc.b', 'text' => 'On passe samedi', 'timestamp' => date('c')]]]];
+    }
     if ($m === 'GET' && preg_match('#^act_\d+$#', $path)) { return [200, ['name' => 'Compte ' . $path, 'account_status' => 1]]; }
     if ($m === 'GET' && $path === 'search') { return [200, ['data' => ($p['type'] ?? '') === 'adlocale' ? [['key' => 9, 'name' => 'French (All)'], ['key' => 14, 'name' => 'Dutch']] : [['id' => '6003107902', 'name' => $p['q']]]]]; }
     if (preg_match('#^act_\d+/(campaigns|adsets|adcreatives|ads)$#', $path)) { return [200, ['id' => $id()]]; }
@@ -384,6 +398,70 @@ check('synchro : statut Meta ACTIVE, dépense relue', socItem('ads', 'a1')['stat
 check('dépense en colonne', Db::row("SELECT depense FROM social_publicite WHERE id = 'a1'")['depense'] === '121.50');
 socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a2', 'name' => 'Sans spec', 'shops' => ['5'], 'status' => 'En revue']]]]]);
 check('pub sans description d’assistant : refusée avec motif', socItem('ads', 'a2')['status'] === 'Refusée');
+
+echo "Dark posts : réservés à la publicité\n";
+$video = 'data:video/mp4;base64,' . base64_encode(str_repeat("\x00\x00\x00\x18ftypmp42", 30));
+$d1 = ['id' => 'd1', 'date' => date('Y-m-d'), 'time' => '09:00', 'title' => 'Panorama automne', 'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => true]], 'fb' => true, 'ig' => true,
+    'status' => 'Programmé', 'dark' => true, 'text' => 'La gamme automne à {ville}', 'img' => $tranche(31),
+    'media' => [['src' => $tranche(31), 'kind' => 'img'], ['src' => $tranche(32), 'kind' => 'img'], ['src' => $tranche(33), 'kind' => 'img']],
+    'montage' => ['kind' => 'pano', 'm' => ['n' => 3], 'photos' => []]];
+$d2 = ['id' => 'd2', 'date' => date('Y-m-d'), 'time' => '09:00', 'title' => 'Film brioche', 'shops' => ['4'], 'fb' => true, 'ig' => true, 'status' => 'Brouillon', 'dark' => true,
+    'text' => 'x', 'media' => [['src' => $video, 'kind' => 'video', 'name' => 'brioche.mp4']]];
+socStateSave(['changes' => ['posts' => ['upsert' => [$d1, $d2]]]]);
+check('dark post : jamais publié (statut « Dark post », rien en file)', socItem('posts', 'd1')['status'] === 'Dark post' && socItem('posts', 'd2')['status'] === 'Dark post'
+    && (int) Db::row("SELECT COUNT(*) n FROM social_publication WHERE content_id IN ('d1','d2')")['n'] === 0);
+check('dark post : absent de la grille Instagram (non programmé)', !in_array('d1', array_column(socItems('posts'), 'id'), true) || socItem('posts', 'd1')['status'] !== 'Programmé');
+$appels = [];
+$spec3 = array_merge($spec, ['name' => 'Automne dark', 'shops' => ['4'], 'crea' => 'new', 'post' => 'd1', 'message' => 'Le panorama de {ville}', 'messageNl' => 'Het panorama van {ville}',
+    'headline' => 'Gamme automne', 'headlineNl' => 'Herfstgamma', 'variants' => [['post' => 'd2', 'message' => 'Le film de la brioche', 'headline' => '']], 'adName' => 'Automne dark']);
+socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a3', 'name' => 'Automne dark', 'campaign' => null, 'objective' => 'Trafic', 'shops' => ['4'], 'scope' => 'boutique',
+    'budgetType' => 'quotidien', 'budget' => 10, 'cap' => 200, 'spent' => 0, 'start' => $spec['start'], 'end' => $spec['end'], 'status' => 'En revue', 'radius' => 8, 'post' => 'd1', 'spec' => $spec3]]]]]);
+$a3 = socItem('ads', 'a3');
+$cr = array_column($appelsVers('#^act_1001/adcreatives$#'), 2);
+$specs = array_map(static fn ($c) => json_decode((string) ($c['object_story_spec'] ?? '{}'), true), $cr);
+$carr = array_values(array_filter($specs, static fn ($x) => isset($x['link_data']['child_attachments'])));
+$vids = array_values(array_filter($specs, static fn ($x) => isset($x['video_data'])));
+check('dark post : Halle bilingue × 2 variantes = 4 créas et 4 pubs', count($cr) === 4 && count($appelsVers('#^act_1001/ads$#')) === 4 && $a3['status'] === 'En revue', (string) ($a3['reason'] ?? ''));
+check('variante A (panorama) : carrousel de 3 cartes, ordre verrouillé, sans carte de fin', count($carr) === 2 && count($carr[0]['link_data']['child_attachments']) === 3
+    && $carr[0]['link_data']['multi_share_optimized'] === false && $carr[0]['link_data']['multi_share_end_card'] === false);
+check('variante A : texte par langue, variables résolues', in_array('Het panorama van Halle', array_column(array_column($carr, 'link_data'), 'message'), true)
+    && in_array('Le panorama de Halle', array_column(array_column($carr, 'link_data'), 'message'), true));
+check('variante B (vidéo) : video_data, vignette de Meta, titre repris de la variante A', count($vids) === 2 && str_starts_with((string) $vids[0]['video_data']['video_id'], 'v')
+    && ($vids[0]['video_data']['image_url'] ?? '') === 'https://cdn.fb/vignette.jpg' && in_array($vids[0]['video_data']['title'], ['Gamme automne', 'Herfstgamma'], true));
+check('vidéo envoyée une fois au compte (advideos), images une fois chacune (adimages)', count($appelsVers('#^act_1001/advideos$#')) === 1 && count($appelsVers('#^act_1001/adimages$#')) === 3);
+check('identité Instagram de la boutique sur chaque créa', count(array_filter($specs, static fn ($x) => ($x['instagram_user_id'] ?? '') === '17841')) === 4);
+$objs = Db::rows("SELECT * FROM social_meta_objet WHERE kind = 'ad' AND local_id = 'a3' AND ad_id IS NOT NULL ORDER BY id");
+check('dark posts relus : id Facebook, id Instagram, liens', count($objs) === 4 && !array_filter($objs, static fn ($o) => !$o['story_id'] || !$o['ig_media_id'] || !str_starts_with((string) $o['lien'], 'https://www.facebook.com/111_') || !str_starts_with((string) $o['lien_ig'], 'https://www.instagram.com/p/')));
+check('variante, langue et post du module notés', array_map(static fn ($o) => [(int) $o['variante'], $o['langue'], $o['post_id'], (int) $o['dark']], $objs)
+    === [[0, 'nl', 'd1', 1], [1, 'nl', 'd2', 1], [0, 'fr', 'd1', 1], [1, 'fr', 'd2', 1]]);
+$appels = [];
+$spec4 = array_merge($spec, ['name' => 'Relance', 'shops' => ['4'], 'crea' => 'existing', 'post' => 'd1', 'adName' => 'Relance']);
+socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a4', 'name' => 'Relance', 'shops' => ['4'], 'scope' => 'boutique', 'budgetType' => 'quotidien', 'budget' => 5, 'cap' => 50, 'spent' => 0,
+    'start' => $spec['start'], 'end' => $spec['end'], 'status' => 'En revue', 'radius' => 8, 'post' => 'd1', 'spec' => $spec4]]]]]);
+$stories = array_column(array_column($appelsVers('#^act_1001/adcreatives$#'), 2), 'object_story_id');
+$attendu = [Db::row("SELECT story_id FROM social_meta_objet WHERE local_id = 'a3' AND post_id = 'd1' AND langue = 'nl'")['story_id'], Db::row("SELECT story_id FROM social_meta_objet WHERE local_id = 'a3' AND post_id = 'd1' AND langue = 'fr'")['story_id']];
+check('réutilisation : le même dark post (par langue) sponsorisé à nouveau', $stories === $attendu, json_encode($stories));
+socAdsSync();
+$st3 = socItem('ads', 'a3')['stats'] ?? [];
+check('résultats par variante (A, B) : dépense, impressions, clics, CTR', array_column($st3, 'variant') === ['A', 'B'] && $st3[0]['impressions'] === 6000 && abs((float) $st3[0]['ctr'] - 0.02) < 0.0001, json_encode($st3));
+
+echo "Dark posts : commentaires\n";
+$sync = socDarkCommentsSync('a3');
+$com = socDarkComments('a3', null);
+check('commentaires relus sur les dark posts Facebook et Instagram', $sync['lus'] === 8 && count($com) === 8 && count(array_filter($com, static fn ($c) => $c['channel'] === 'Instagram')) === 4, json_encode($sync));
+check('commentaires aussi retrouvés par post du module', count(socDarkComments(null, 'd2')) === 4);
+$appels = [];
+$cid = $com[0]['id'];
+$GLOBALS['SOC_BODY'] = ['masquer' => true];
+[$code, $b] = socRoute('POST', '/darkposts/commentaires/' . $cid . '/masquer');
+unset($GLOBALS['SOC_BODY']);
+$hide = $appels[count($appels) - 1] ?? [];
+check('masquer un commentaire : appel Meta et état en base', $code === 200 && $hide[1] === $cid && (($hide[2]['is_hidden'] ?? $hide[2]['hide'] ?? '') === 'true')
+    && (int) Db::row('SELECT masque FROM social_commentaire WHERE id = ?', [$cid])['masque'] === 1);
+[$code, $b] = (static function () { $_GET['ad'] = 'a3'; try { return socRoute('GET', '/darkposts/commentaires'); } finally { unset($_GET['ad']); } })();
+check('GET /darkposts/commentaires?ad=a3', $code === 200 && count($b['comments']) === 8);
+$dp = array_values(array_filter(socStateGet()['darkPosts'], static fn ($x) => $x['ad'] === 'a3'));
+check('état : dark posts de la pub avec liens et nombre de commentaires', count($dp) === 4 && $dp[0]['comments'] === 2 && $dp[0]['link'] !== '' && array_sum(array_column($dp, 'hidden')) === 1);
 
 echo "Formulaires de leads\n";
 $lf = ['id' => 'lf1', 'family' => 'b2b', 'version' => 1, 'status' => 'Actif', 'name' => 'Plateaux', 'locale' => 'fr_FR', 'created' => date('Y-m-d'), 'shops' => ['4', '5'],

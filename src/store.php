@@ -181,6 +181,7 @@ function socStateGet(): array
         'posts' => socItems('posts'), 'ads' => socItems('ads'), 'campaigns' => socItems('campaigns'),
         'leadforms' => socItems('leadforms'), 'groups' => socItems('groups'), 'templates' => socItems('templates'),
         'leads' => socLeads(),
+        'darkPosts' => socDarkPosts(),
         'activity' => array_map(static fn ($r) => ['at' => substr((string) $r['at'], 0, 16), 'who' => $r['who'], 'what' => $r['what'], 'detail' => $r['detail']],
             Db::rows('SELECT le AS at, qui AS who, quoi AS what, detail FROM social_activite ORDER BY le DESC, id DESC LIMIT 400')),
         'meta' => ['version' => Meta::config()['version'], 'dsa' => (array) (socSetting('meta_dsa') ?? ($d['dsa'] ?? [])),
@@ -296,6 +297,12 @@ function socPostHook(?array $avant, array $p): array
         return $p;
     }
     foreach (SOC_POST_SERVEUR as $k) { $p[$k] = null; }
+    // Dark post : réservé à la publicité, il n'est jamais publié sur la Page ni sur Instagram.
+    if (!empty($p['dark'])) {
+        socUnqueue((string) $p['id']);
+        $p['status'] = 'Dark post';
+        return $p;
+    }
     if ($s === 'Programmé' || $s === 'Publié') {
         $motif = socFriseConflit($p);
         if ($motif !== null) {

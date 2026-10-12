@@ -13,3 +13,4 @@ Relivraison : correctif écran Paramètres (M non défini) — 2026-10-10T09:02:
 Relivraison : rail en deux rubriques (publicité / recrutement), écrans vides Leads et Retour — 2026-10-10T09:08:57Z
 Relivraison : montages Instagram — carrousel panoramique et collages 4:5 — 2026-10-10T16:47:55Z
 Relivraison : frise de grille Instagram et écran Grille Instagram (planificateur) — 2026-10-10T17:00:01Z
+Relivraison : dark posts (pub uniquement), variantes A/B/C, commentaires — 2026-10-12T05:47:57Z

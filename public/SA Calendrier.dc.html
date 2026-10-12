@@ -82,6 +82,7 @@
         <option value="Publié">Publié</option>
         <option value="Partiel">Publication partielle</option>
         <option value="Échec">Échec</option>
+        <option value="Dark post">Dark post (pub uniquement)</option>
       </select>
       <select value="{{ fCamp }}" onChange="{{ setFCamp }}" style="font-size:12px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:7px 8px;">
         <option value="">Toutes campagnes</option>
@@ -248,6 +249,7 @@
                   <button onClick="{{ approve }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Approuver</button>
                   <button onClick="{{ reject }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Renvoyer en brouillon</button>
                 </sc-if>
+                <sc-if value="{{ sel.isDark }}" hint-placeholder-val="{{ false }}"><a href="{{ sel.adsHref }}" style="border:none;background:#232220;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;color:#F2C9A0;text-decoration:none;">Créer la publicité →</a></sc-if>
                 <a href="{{ sel.editHref }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;color:#222222;text-decoration:none;">{{ sel.editLabel }}</a>
                 <button onClick="{{ openDup }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Dupliquer</button>
               </div>
@@ -351,7 +353,7 @@ class Component extends DCLogic {
   updatePost(id, patch) { const SA = window.SA; const posts = SA.state().posts.map(p => p.id === id ? Object.assign({}, p, patch) : p); SA.save({ posts }); }
   move(id, date) {
     const SA = window.SA; const p = SA.state().posts.find(x => x.id === id);
-    if (!p || p.status === 'Publié' || p.date === date) return;
+    if (!p || p.status === 'Publié' || p.dark || p.date === date) return;
     if (date < SA.TODAY) { this.toast('Impossible de programmer un post dans le passé.'); return; }
     this.updatePost(id, { date });
     SA.log('Sarah Lambert (Franchiseur)', 'Déplacement', '« ' + p.title + ' » déplacé au ' + SA.dShort(date));
@@ -372,10 +374,11 @@ class Component extends DCLogic {
       return true;
     }).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
     const sc = (p) => { const k = statusOf(p); const c = SA.STATUS[k]; return { k, bg: c.bg, fg: c.fg }; };
-    const dotOf = { 'Brouillon': '#B8B2A8', 'À valider': '#E3B155', 'Programmé': '#D97B29', 'Publié': '#1F8A60', 'Échec': '#8D1D2C', 'Partiel': '#C96A6E' };
+    const dotOf = { 'Brouillon': '#B8B2A8', 'À valider': '#E3B155', 'Programmé': '#D97B29', 'Publié': '#1F8A60', 'Échec': '#8D1D2C', 'Partiel': '#C96A6E', 'Dark post': '#232220' };
     const shortShops = (p) => { const ids = shopsOf(p); return ids.length === SA.SHOPS.length ? 'Réseau' : ids.length > 1 ? ids.length + ' boutiques' : (SA.byId(SA.SHOPS, ids[0]) || {}).name; };
     const card = (p) => {
-      const st = sc(p), locked = p.status === 'Publié';
+      // Un dark post n'a pas de date de publication : il ne se déplace pas dans le calendrier.
+      const st = sc(p), locked = p.status === 'Publié' || !!p.dark;
       return {
         id: p.id, img: p.img, time: p.time, title: p.title, type: p.type, shops: SA.shopLabel(shopsOf(p)), shopShort: shortShops(p),
         dot: dotOf[st.k], stBg: st.bg, stFg: st.fg, stLabel: st.k === 'Partiel' ? 'Partiel · ' + p.partial.ok.length + '/' + (p.partial.ok.length + p.partial.ko.length) : st.k,
@@ -384,7 +387,7 @@ class Component extends DCLogic {
         tip: p.title + ' — ' + st.k,
         dragStart: (e) => { this._drag = p.id; try { e.dataTransfer.setData('text/plain', p.id); e.dataTransfer.effectAllowed = 'move'; } catch (er) {} },
         open: () => this.setState({ selId: p.id }),
-        dateLabel: SA.dLabel(p.date), channels: [p.fb ? 'FB' : '', p.ig ? 'IG' : ''].filter(Boolean).join(' · '),
+        dateLabel: SA.dLabel(p.date), channels: p.dark ? 'Pub uniquement' : [p.fb ? 'FB' : '', p.ig ? 'IG' : ''].filter(Boolean).join(' · '),
         campName: p.campaign ? (SA.byId(camps, p.campaign) || {}).name : '—',
       };
     };
@@ -454,13 +457,15 @@ class Component extends DCLogic {
       const c = card(sp), st = sc(sp);
       sel = Object.assign(c, {
         langs: [...new Set(shopsOf(sp).flatMap(id => SA.langsOf(id)))].map(L => L.toUpperCase() + (L === 'nl' && !sp.textNl && sp.text ? ' (texte manquant)' : '')).join(' · '),
-        when: SA.dLabel(sp.date) + ' · ' + sp.time, channels: [sp.fb ? 'Facebook' : '', sp.ig ? 'Instagram' : ''].filter(Boolean).join(' + '),
+        when: sp.dark ? 'Créé le ' + SA.dLabel(sp.date) + ' · jamais publié sur la Page' : SA.dLabel(sp.date) + ' · ' + sp.time,
+        channels: sp.dark ? 'Publicité uniquement (dark post)' : [sp.fb ? 'Facebook' : '', sp.ig ? 'Instagram' : ''].filter(Boolean).join(' + '),
         hasAuthor: !!sp.author, author: sp.author || '', hasText: !!sp.text, textPreview: SA.fill(sp.text, shopsOf(sp)[0], SA.CATALOGUE.find(x => sp.title.indexOf(x.name) >= 0)),
         isFail: sp.status === 'Échec', error: sp.error || '', isPartial: st.k === 'Partiel',
         partialTitle: st.k === 'Partiel' ? 'Publié sur ' + sp.partial.ok.length + ' Pages sur ' + (sp.partial.ok.length + sp.partial.ko.length) : '',
         ko: st.k === 'Partiel' ? sp.partial.ko.map(k => Object.assign({ shopName: SA.byId(SA.SHOPS, k.shop).name }, k)) : [],
         canRetry: (sp.status === 'Échec' || st.k === 'Partiel') && !s.retrying, canValidate: sp.status === 'À valider',
         editHref: SA.href('post', 'id=' + sp.id), editLabel: sp.status === 'Publié' ? 'Voir' : 'Modifier',
+        isDark: !!sp.dark, adsHref: SA.href('ads', 'new=1&post=' + encodeURIComponent(sp.id)),
       });
     }
     const typeOptions = SA.POST_TYPES;
@@ -529,7 +534,7 @@ class Component extends DCLogic {
         this.setState({ dupOpen: false }); this.toast(copies.length + (copies.length > 1 ? ' copies créées.' : ' copie créée.'));
       },
       gapRange: 'du ' + SA.dShort(g0) + ' au ' + SA.dShort(g1), gaps, noGaps: gaps.length === 0, coverage,
-      legend: [['Brouillon', '#B8B2A8'], ['À valider', '#E3B155'], ['Programmé', '#D97B29'], ['Publié', '#1F8A60'], ['Partiel', '#C96A6E'], ['Échec', '#8D1D2C']].map(([n, c]) => ({ n, c })),
+      legend: [['Brouillon', '#B8B2A8'], ['À valider', '#E3B155'], ['Programmé', '#D97B29'], ['Publié', '#1F8A60'], ['Partiel', '#C96A6E'], ['Échec', '#8D1D2C'], ['Dark post', '#232220']].map(([n, c]) => ({ n, c })),
       hasToast: !!s.toast, toast: s.toast,
     };
   }

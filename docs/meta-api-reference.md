@@ -82,7 +82,12 @@ Catégorie spéciale cochée → l'UI force rayon ≥ 15 km, 18–65 ans, tous g
 | Champ UI | Paramètre |
 |---|---|
 | Sponsoriser un post existant | `object_story_id: "{page_id}_{post_id}"` |
-| Nouvelle créa | upload `POST /act_{id}/adimages` → `image_hash`, puis `object_story_spec: {page_id, instagram_user_id, link_data}` |
+| Dark post (pub uniquement) · image | upload `POST /act_{id}/adimages` → `image_hash`, puis `object_story_spec: {page_id, instagram_user_id, link_data}` |
+| Dark post · carrousel | `adimages` × n → `link_data.child_attachments: [{link, image_hash, name, call_to_action}]` ; panorama et frise : `multi_share_optimized: false`, `multi_share_end_card: false` (ordre fixe) |
+| Dark post · vidéo | `POST /act_{id}/advideos` (`file_url`) → `GET /{video_id}?fields=status` jusqu'à `ready` → `video_data: {video_id, image_hash \| image_url (GET /{video_id}/thumbnails), message, title, call_to_action}` |
+| Relecture du dark post | `GET /{creative_id}?fields=effective_object_story_id,effective_instagram_media_id` (+ `GET /{ig_media_id}?fields=permalink`) — réutilisable ensuite en `object_story_id` |
+| Variantes A/B/C | une créa et une pub par variante dans chaque ad set ; résultats `GET /{ad_id}/insights?fields=spend,impressions,clicks` |
+| Commentaires des dark posts | `GET /{story_id}/comments?fields=id,from{name},message,created_time,is_hidden&filter=stream`, `GET /{ig_media_id}/comments?fields=id,username,text,timestamp,hidden` ; masquer : `POST /{comment_id}` `is_hidden` (Facebook) / `hide` (Instagram) — permissions `pages_manage_engagement`, `instagram_manage_comments` |
 | Texte principal, Titre, Description, Lien | `link_data.message`, `name`, `description`, `link` * |
 | Bouton | `call_to_action.type` : `LEARN_MORE`, `SHOP_NOW`, `ORDER_NOW`, `GET_DIRECTIONS`, `CALL_NOW`, `SIGN_UP`, `CONTACT_US`, `GET_OFFER`, `GET_QUOTE`, `APPLY_NOW`, `MESSAGE_PAGE`, `WHATSAPP_MESSAGE` |
 | Formulaire de leads | `call_to_action.value.lead_gen_form_id` |

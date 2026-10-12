@@ -256,7 +256,35 @@
 
         <!-- 6 Publication -->
         <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
-          <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">6 · Publication <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">published · scheduled_publish_time</span></span>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">6 · Publication <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">{{ pubTech }}</span></span>
+            <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap;">
+              <button onClick="{{ destPage }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ dpBg }};color:{{ dpFg }};">Publier sur la Page</button>
+              <button onClick="{{ destDark }}" title="Le post ne paraît ni sur le mur de la Page ni sur la grille Instagram : il n’existe qu’en publicité." style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ ddBg }};color:{{ ddFg }};">Réservé à la publicité (dark post)</button>
+            </div>
+          </div>
+          <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#232220;color:#F5EFE4;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:13px;font-weight:500;color:#F2C9A0;">Dark post · pub uniquement</span>
+              <span style="font-size:12px;line-height:1.55;">Ce post ne sera jamais publié sur la Page ni sur Instagram. Il sert de visuel et de texte à une publicité : Meta crée alors un post visible seulement en sponsorisé, auprès de l’audience choisie. {{ darkFormat }}</span>
+              <span style="font-size:11px;line-height:1.5;color:#CFC6BA;">Les boutiques cochées servent à l’aperçu et aux variables ; la diffusion (boutiques, rayon, budget) se règle dans la publicité.</span>
+            </div>
+            <sc-if value="{{ hasDarkUses }}" hint-placeholder-val="{{ false }}">
+              <div style="border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+                <span style="font-size:12px;font-weight:500;">Déjà diffusé · {{ darkUsesLabel }}</span>
+                <sc-for list="{{ darkUses }}" as="du" hint-placeholder-count="0">
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;">
+                    <span style="min-width:150px;">{{ du.label }}</span>
+                    <sc-if value="{{ du.hasFb }}" hint-placeholder-val="{{ false }}"><a href="{{ du.link }}" target="_blank" rel="noopener">Facebook ↗</a></sc-if>
+                    <sc-if value="{{ du.hasIg }}" hint-placeholder-val="{{ false }}"><a href="{{ du.linkIg }}" target="_blank" rel="noopener">Instagram ↗</a></sc-if>
+                    <span style="color:#666666;">{{ du.comments }}</span>
+                  </div>
+                </sc-for>
+                <a href="{{ darkAdsHref }}" style="font-size:12px;font-weight:500;">Voir les publicités et les commentaires →</a>
+              </div>
+            </sc-if>
+          </sc-if>
+          <sc-if value="{{ notDark }}" hint-placeholder-val="{{ true }}">
           <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
             <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
               <button onClick="{{ whenNow }}" style="border:none;border-radius:6px;padding:8px 13px;font-size:12px;font-weight:500;cursor:pointer;background:{{ wnBg }};color:{{ wnFg }};">Immédiate</button>
@@ -278,12 +306,13 @@
             <div style="padding:8px 10px;background:#FAF7F2;display:flex;flex-direction:column;gap:3px;"><sc-for list="{{ apiParams }}" as="ap" hint-placeholder-count="0"><span style="font-family:ui-monospace,monospace;font-size:11px;color:#444444;"><span style="color:#8D1D2C;">{{ ap.k }}</span> = {{ ap.v }}</span></sc-for></div>
             <sc-if value="{{ hasIgCall }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 10px;border-top:0.5px solid rgba(34,34,34,0.08);font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">{{ igCall }}</div></sc-if>
           </div>
+          </sc-if>
           <sc-if value="{{ hasErrors }}" hint-placeholder-val="{{ false }}">
             <div style="background:#F6DCDF;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;"><sc-for list="{{ errors }}" as="er" hint-placeholder-count="0"><span style="font-size:12px;color:#8D1D2C;">{{ er }}</span></sc-for></div>
           </sc-if>
           <sc-if value="{{ notLocked }}" hint-placeholder-val="{{ true }}">
             <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;border-top:0.5px solid rgba(34,34,34,0.10);padding-top:12px;">
-              <button onClick="{{ saveDraft }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:500;cursor:pointer;">Enregistrer le brouillon</button>
+              <button onClick="{{ saveDraft }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:500;cursor:pointer;">{{ draftLabel }}</button>
               <button onClick="{{ publish }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">{{ publishLabel }}</button>
             </div>
           </sc-if>
@@ -457,7 +486,7 @@ class Component extends DCLogic {
       nl: { eyebrow: 'Seizoenseditie · Herfst 2026', title: '', phrase: '', unit: 'Per stuk', promoSub: 'de 5de gratis' },
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', campaign: '',
-      mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
+      mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
       libOpen: false, lib: [], libPick: [], lq: '', lcat: '', toast: '', errors: [], saving: false };
     if (!SA) return base;
     SA.SHOPS.forEach(s => { base.ch[s.id] = { fb: s.fb === 'connected', ig: s.igs === 'connected' }; });
@@ -465,7 +494,7 @@ class Component extends DCLogic {
     if (p) {
       const shops = p.shops === 'all' ? SA.SHOPS.map(s => s.id) : p.shops.slice();
       Object.assign(base, { id: p.id, type: p.type, text: p.text || '', textNl: p.textNl || '', link: p.link || '', campaign: p.campaign || '', date: p.date, time: p.time, sel: shops,
-        scope: shops.length === SA.SHOPS.length ? 'all' : 'shop', status: p.status, spread: p.spread || 10, product: p.product || null });
+        scope: shops.length === SA.SHOPS.length ? 'all' : 'shop', status: p.status, spread: p.spread || 10, product: p.product || null, dark: !!p.dark });
       if (p.ch) base.ch = p.ch;
       if (p.montage) { base.mode = ['collage', 'frise'].includes(p.montage.kind) ? p.montage.kind : 'pano'; base.m = Object.assign(this.MONTAGE(), p.montage.m); base.photos = p.montage.photos || []; }
       else if (p.visual) { base.mode = 'studio'; base.v = Object.assign({}, v, p.visual.v, { nl: Object.assign({}, v.nl, (p.visual.v || {}).nl) }); base.photos = p.visual.photos || []; }
@@ -552,6 +581,14 @@ class Component extends DCLogic {
   }
   validate(final, status) {
     const SA = window.SA, s = this.state, errs = [], t = this.targets();
+    if (s.dark) {
+      // Dark post : ni date ni canal (la pub les fixe) — il lui faut un visuel.
+      if (s.mode === 'brut' && !s.photos.length && !s.video) errs.push('Un dark post a besoin d\u2019un visuel : ajoutez une photo ou une vidéo.');
+      if (this.isMontage() && !s.photos.length) errs.push('Ajoutez au moins une photo pour le montage.');
+      if (this.isMontage() && !window.SAMontage) errs.push('Le moteur des montages (montage.js) ne s\u2019est pas chargé : rechargez la page.');
+      if (!s.text.trim() && !s.textNl.trim() && !(s.v.title || '').trim() && !(s.m.title || '').trim()) errs.push('Donnez au moins un texte ou un titre : il pré-remplit le texte de la publicité.');
+      return errs;
+    }
     if (!t.length) errs.push('Choisissez au moins une boutique.');
     if (t.length && !t.some(id => s.ch[id] && (s.ch[id].fb || s.ch[id].ig))) errs.push('Cochez au moins un canal (Facebook ou Instagram).');
     if (final && !s.text.trim() && s.mode === 'brut' && !s.photos.length && !s.video) errs.push('Ajoutez un texte ou un média.');
@@ -567,8 +604,9 @@ class Component extends DCLogic {
     if (final && this.isMontage() && !window.SAMontage) errs.push('Le moteur des montages (montage.js) ne s\u2019est pas chargé : rechargez la page.');
     return errs;
   }
-  async persist(status) {
+  async persist(status, goAds) {
     const SA = window.SA, s = this.state;
+    if (s.dark) status = 'Dark post';
     const errs = this.validate(status !== 'Brouillon', status);
     if (errs.length) { this.setState({ errors: errs }); return; }
     this.setState({ saving: true, errors: [] });
@@ -599,11 +637,19 @@ class Component extends DCLogic {
       frise: friseTiles ? { tiles: friseTiles } : null,
       montage: this.isMontage() ? { kind: s.mode, m: s.m, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
       shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, spread: s.spread, product: s.product };
+    if (s.dark) { post.dark = true; post.fb = false; post.ig = false; if (!s.id) { post.date = SA.TODAY; post.time = nowT; } }
     if (status === 'Publié') {
       const ko = t.filter(id => s.ch[id].ig && SA.byId(SA.state().shops, id).igs !== 'connected').map(id => ({ shop: id, channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }));
       if (ko.length) post.partial = { ok: t.filter(id => !ko.some(k => k.shop === id)), ko };
     }
     SA.save({ posts: SA.state().posts.filter(p => p.id !== post.id).concat(post) });
+    if (s.dark) {
+      SA.log('Sarah Lambert (Franchiseur)', 'Dark post', '« ' + title + ' » enregistré, réservé à la publicité');
+      this.setState({ id: post.id, status, saving: false });
+      if (goAds) { this.toast('Dark post enregistré : ouverture de l\u2019assistant des publicités…'); try { await SA.saved(); } catch (e) {} location.href = SA.href('ads', 'new=1&post=' + encodeURIComponent(post.id)); return; }
+      this.toast('Dark post enregistré : il ne sera jamais publié sur la Page. Créez la publicité pour le diffuser.');
+      return;
+    }
     SA.log('Sarah Lambert (Franchiseur)', status === 'Brouillon' ? 'Brouillon' : status === 'Publié' ? 'Publication' : 'Programmation', '« ' + title + ' » — ' + SA.shopLabel(t) + (status === 'Programmé' ? ' le ' + SA.dShort(post.date) + ' à ' + post.time : ''));
     this.setState({ id: post.id, status, saving: false });
     this.toast(status === 'Brouillon' ? 'Brouillon enregistré.' : status === 'Publié' ? (post.partial ? 'Publié sur ' + post.partial.ok.length + ' Pages sur ' + t.length + ' — voir le détail des échecs.' : 'Publié sur ' + t.length + ' Pages.') : 'Programmé le ' + SA.dLabel(post.date) + ' à ' + post.time + '.');
@@ -649,7 +695,7 @@ class Component extends DCLogic {
     const rawMedia = s.photos.map(p => ({ src: p.src, isImg: true, isVideo: false, fit: p.cut ? 'contain' : 'cover' })).concat(s.video ? [{ src: '', isImg: false, isVideo: true, fit: 'cover' }] : []);
     const shown = rawMedia.slice(0, 4).map((m, i) => Object.assign({}, m, { more: i === 3 && rawMedia.length > 4, moreLabel: '+' + (rawMedia.length - 4) }));
     const pv = { page: pvShop ? pvShop.page : "L'Atelier By", city: pvShop ? pvShop.name : '—', handle: pvShop ? pvShop.ig.replace('@', '') : 'latelierby',
-      when: s.when === 'now' ? "À l'instant" : SA.dLabel(s.date) + ' à ' + s.time, text: filled || 'Votre texte apparaîtra ici.', hasLink: !!s.link, link: s.link,
+      when: s.dark ? 'Sponsorisé' : s.when === 'now' ? "À l'instant" : SA.dLabel(s.date) + ' à ' + s.time, text: filled || 'Votre texte apparaîtra ici.', hasLink: !!s.link, link: s.link,
       hasMedia: shown.length > 0, noMedia: shown.length === 0, media: shown, cols: shown.length > 1 ? '1fr 1fr' : '1fr',
       resolved: pvShop ? ['{ville} → ' + pvShop.name, '{horaires} → ' + pvShop.hours, '{prix} → ' + (cat ? cat.price + ' €' : 'non défini')].join(' · ') : '—' };
     const igBroken = t.filter(id => SA.byId(shopsState, id).igs !== 'connected');
@@ -673,7 +719,24 @@ class Component extends DCLogic {
     const [saBg, saFg] = seg(s.scope === 'all'), [sgBg, sgFg] = seg(s.scope === 'group'), [ssBg, ssFg] = seg(s.scope === 'shop');
     const len = filled.length;
     return {
-      calHref: SA.href('cal'), pageTitle: s.id ? (locked ? 'POST PUBLIE' : 'MODIFIER LE POST') : 'NOUVEAU POST', locked, notLocked: !locked,
+      calHref: SA.href('cal'), pageTitle: s.dark ? (s.id ? 'MODIFIER LE DARK POST' : 'NOUVEAU DARK POST') : s.id ? (locked ? 'POST PUBLIE' : 'MODIFIER LE POST') : 'NOUVEAU POST', locked, notLocked: !locked,
+      // destination : la Page, ou la publicité seulement (dark post)
+      ...(() => {
+        const [dpBg, dpFg] = seg(!s.dark), [ddBg, ddFg] = seg(s.dark), nImg = s.mode === 'pano' ? s.m.n : s.mode === 'frise' ? 3 : s.mode === 'brut' ? s.photos.length : 1;
+        const format = s.mode === 'brut' && s.video ? 'vidéo' + (s.photos.length ? ' (la photo n°1 sert de couverture)' : ' (vignette choisie par Meta)')
+          : s.mode === 'pano' || s.mode === 'frise' ? 'carrousel de ' + nImg + ' images, ordre verrouillé — la continuité du visuel est gardée'
+          : nImg > 1 ? 'carrousel de ' + Math.min(10, nImg) + ' images' : 'image';
+        const uses = (SA.DARK || []).filter(x => x.post === s.id && s.id), multiLang = new Set(uses.map(x => x.lang)).size > 1;
+        const ads = [...new Set(uses.map(x => x.ad))];
+        return { isDark: s.dark, notDark: !s.dark, dpBg, dpFg, ddBg, ddFg, darkFormat: 'Format de la publicité : ' + format + '.',
+          destPage: () => !locked && this.setState({ dark: false }), destDark: () => !locked && this.setState({ dark: true }),
+          pubTech: s.dark ? 'object_story_spec · dark post' : 'published · scheduled_publish_time',
+          hasDarkUses: uses.length > 0, darkUsesLabel: ads.length + ' publicité' + (ads.length > 1 ? 's' : '') + ', ' + uses.length + ' dark post' + (uses.length > 1 ? 's' : ''),
+          darkUses: uses.map(x => ({ label: ((SA.byId(SA.SHOPS, x.shop) || {}).name || x.shop) + (multiLang || x.lang === 'nl' ? ' · ' + String(x.lang).toUpperCase() : '') + ' · variante ' + x.variant,
+            hasFb: !!x.link, link: x.link, hasIg: !!x.linkIg, linkIg: x.linkIg, comments: x.comments + ' commentaire' + (x.comments > 1 ? 's' : '') + (x.hidden ? ' · ' + x.hidden + ' masqué' + (x.hidden > 1 ? 's' : '') : '') })),
+          darkAdsHref: SA.href('ads', ads[0] ? 'ad=' + encodeURIComponent(ads[0]) : ''),
+          draftLabel: s.dark ? 'Enregistrer le dark post' : 'Enregistrer le brouillon' };
+      })(),
       types: SA.POST_TYPES.map(n => Object.assign(chip(s.type === n), { name: n, pick: () => !locked && this.setState({ type: n }) })),
       // Le catalogue vient de l'API (plusieurs centaines de produits) : recherche, 24 résultats, la sélection en tête.
       catQ: this.state.catQ || '', setCatQ: (e) => this.setState({ catQ: e.target.value }), catPh: 'Rechercher parmi ' + SA.CATALOGUE.length + ' produits et gammes…',
@@ -776,8 +839,8 @@ class Component extends DCLogic {
       date: s.date, time: s.time, setDate: (e) => this.setState({ date: e.target.value }), setTime: (e) => this.setState({ time: e.target.value }),
       spread: s.spread, setSpread: (e) => this.setState({ spread: +e.target.value }), schedule,
       errors: s.errors, hasErrors: s.errors.length > 0,
-      saveDraft: () => !s.saving && this.persist('Brouillon'), publish: () => !s.saving && this.persist(s.when === 'now' ? 'Publié' : 'Programmé'),
-      publishLabel: s.saving ? 'Préparation du visuel…' : (s.when === 'now' ? 'Publier maintenant sur ' : 'Programmer sur ') + pages.length + ' Page' + (pages.length > 1 ? 's' : ''),
+      saveDraft: () => !s.saving && this.persist('Brouillon'), publish: () => !s.saving && (s.dark ? this.persist('Dark post', true) : this.persist(s.when === 'now' ? 'Publié' : 'Programmé')),
+      publishLabel: s.saving ? 'Préparation du visuel…' : s.dark ? 'Enregistrer et créer la publicité →' : (s.when === 'now' ? 'Publier maintenant sur ' : 'Programmer sur ') + pages.length + ' Page' + (pages.length > 1 ? 's' : ''),
       // aperçu
       pvFb: () => this.setState({ pv: 'fb' }), pvIg: () => this.setState({ pv: 'ig' }), pfBg, pfFg, piBg, piFg, isFb: s.pv === 'fb', isIg: s.pv === 'ig',
       pvShops: t.map(id => Object.assign(chip(id === pvId), { name: SA.byId(SA.SHOPS, id).name, pick: () => this.setState({ pvShop: id }) })), pv,

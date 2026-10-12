@@ -9,7 +9,14 @@ declare(strict_types=1);
  *  - « Compte réseau » : une campagne sur le compte réseau, et un ad set par
  *    boutique (une zone chacun) — c'est ce qui permet de lire la dépense et
  *    les résultats boutique par boutique dans « Retour sur campagne » ;
- *  - boutique bilingue : un ad set et une créa par langue (`targeting.locales`).
+ *  - boutique bilingue : un ad set et une créa par langue (`targeting.locales`) ;
+ *  - variantes (A/B/C) : une créa et une pub par variante dans chaque ad set —
+ *    Meta répartit la diffusion et privilégie la plus performante ;
+ *  - « dark post » (nouvelle créa) : Meta crée un post « pub uniquement », absent
+ *    du mur de la Page et de la grille Instagram. Image, carrousel (ordre verrouillé
+ *    pour un carrousel panoramique ou une frise) ou vidéo selon le post du module ;
+ *    son id est relu (`effective_object_story_id`) pour le réutiliser et suivre ses
+ *    commentaires (src/darkposts.php).
  *
  * L'assistant de l'écran envoie son état complet (`spec`) ; le serveur en
  * tire les appels, résout ce que l'écran ne peut pas savoir (ids des centres
@@ -120,8 +127,8 @@ function socAdCreate(array $ad): array
     $nCamp = $reseau ? 1 : count($cibles);
     $erreurs = []; $crees = 0;
     $interets = !empty($w['interests']) ? socInterets((array) $w['interests']) : [];
-    $post = !empty($w['post']) ? socItem('posts', (string) $w['post']) : null;
-    $postIds = $post ? socPostMetaIds((string) $post['id']) : [];
+    $variantes = socVariantes($w);
+    $dark = ($w['crea'] ?? 'existing') === 'new';
     $form = $isLeads && !empty($w['leadForm']) ? socLeadformMetaIds((string) $w['leadForm']) : [];
 
     // Les unités : [compte, [boutiques]] — une par boutique, ou une seule réseau.
@@ -174,22 +181,35 @@ function socAdCreate(array $ad): array
                     $r = Meta::call('POST', $act . '/adsets', $as);
                     $obj['adset_id'] = (string) ($r['id'] ?? '');
 
-                    $obj['creative_id'] = socCreative($act, $w, $shop, $L, $post, $postIds, $form);
-                    $pub = ['name' => (string) ($w['adName'] ?? $ad['name']) . ' · ' . $shop['name'] . ($bilingue ? ' · ' . strtoupper($L) : ''),
-                        'adset_id' => $obj['adset_id'], 'creative' => ['creative_id' => $obj['creative_id']], 'status' => (string) ($w['adStatus'] ?? 'ACTIVE')];
-                    if (!empty($w['pixel']) && $shop['ids']['pixel_id'] !== '') {
-                        $pub['tracking_specs'] = [['action.type' => ['offsite_conversion'], 'fb_pixel' => [$shop['ids']['pixel_id']]]];
-                        $pub['conversion_domain'] = 'latelierby.be';
-                    }
-                    $r = Meta::call('POST', $act . '/ads', $pub);
-                    $obj['ad_id'] = (string) ($r['id'] ?? '');
-                    $obj['meta_status'] = 'IN_PROCESS';
-                    $crees++;
                 } catch (MetaError $e) {
                     $obj['error'] = mb_substr($e->getMessage(), 0, 500);
                     $erreurs[] = $shop['name'] . ($bilingue ? ' ' . strtoupper($L) : '') . ' : ' . $e->getMessage();
+                    socMetaObjectAdd($obj);
+                    continue;
                 }
-                socMetaObjectAdd($obj);
+                // Une créa et une pub par variante, dans le même ad set.
+                foreach ($variantes as $k => $v) {
+                    $o = $obj + ['variante' => $k, 'langue' => $L, 'dark' => $dark ? 1 : 0, 'post_id' => $v['post'] ?? null];
+                    $lettre = count($variantes) > 1 ? ' · ' . chr(65 + $k) : '';
+                    try {
+                        $o['creative_id'] = socCreative($act, $w, $shop, $L, $v, $form);
+                        $pub = ['name' => (string) ($w['adName'] ?? $ad['name']) . ' · ' . $shop['name'] . ($bilingue ? ' · ' . strtoupper($L) : '') . $lettre,
+                            'adset_id' => $obj['adset_id'], 'creative' => ['creative_id' => $o['creative_id']], 'status' => (string) ($w['adStatus'] ?? 'ACTIVE')];
+                        if (!empty($w['pixel']) && $shop['ids']['pixel_id'] !== '') {
+                            $pub['tracking_specs'] = [['action.type' => ['offsite_conversion'], 'fb_pixel' => [$shop['ids']['pixel_id']]]];
+                            $pub['conversion_domain'] = 'latelierby.be';
+                        }
+                        $r = Meta::call('POST', $act . '/ads', $pub);
+                        $o['ad_id'] = (string) ($r['id'] ?? '');
+                        $o['meta_status'] = 'IN_PROCESS';
+                        $o = socDarkRelire($o, $shop);
+                        $crees++;
+                    } catch (MetaError $e) {
+                        $o['error'] = mb_substr($e->getMessage(), 0, 500);
+                        $erreurs[] = $shop['name'] . ($bilingue ? ' ' . strtoupper($L) : '') . $lettre . ' : ' . $e->getMessage();
+                    }
+                    socMetaObjectAdd($o);
+                }
             }
         } catch (MetaError $e) {
             $erreurs[] = $nomU . ' : ' . $e->getMessage();
@@ -207,52 +227,164 @@ function socAdCreate(array $ad): array
     return $ad;
 }
 
-/** La créa d'une boutique dans une langue : post sponsorisé, ou nouvelle créa avec son image. */
-function socCreative(string $act, array $w, array $shop, string $L, ?array $post, array $postIds, array $form): string
+/** Les variantes de la créa : A (les champs de l'assistant), puis B et C (`variants`). */
+function socVariantes(array $w): array
+{
+    $a = ['post' => $w['post'] ?? null, 'message' => (string) ($w['message'] ?? ''), 'headline' => (string) ($w['headline'] ?? ''),
+        'messageNl' => (string) ($w['messageNl'] ?? ''), 'headlineNl' => (string) ($w['headlineNl'] ?? ''), 'description' => (string) ($w['description'] ?? '')];
+    $out = [$a];
+    foreach (array_slice(array_values((array) ($w['variants'] ?? [])), 0, 2) as $v) {
+        if (!is_array($v)) { continue; }
+        // Un champ laissé vide reprend celui de la variante A.
+        $out[] = array_merge($a, array_filter(array_intersect_key($v, $a), static fn ($x) => $x !== null && $x !== ''));
+    }
+    return $out;
+}
+
+/**
+ * Ce qu'un post du module apporte à une créa : ses images dans l'ordre, sa vidéo,
+ * et si l'ordre est imposé (carrousel panoramique, frise : la continuité du visuel).
+ */
+function socCreaMedia(?array $post): array
+{
+    if (!$post) { return ['imgs' => [], 'video' => null, 'ordre' => false]; }
+    $kind = (string) ($post['montage']['kind'] ?? '');
+    if (socEstFrise($post)) {
+        $imgs = array_values(array_filter(array_map('strval', (array) $post['frise']['tiles']), static fn ($u) => $u !== '' && !str_starts_with($u, 'data:')));
+        return ['imgs' => $imgs, 'video' => null, 'ordre' => true];
+    }
+    [$imgs, $video] = socMedias($post);
+    return ['imgs' => array_slice($imgs, 0, 10), 'video' => $video, 'ordre' => $kind === 'pano'];
+}
+
+/** Une image envoyée au compte publicitaire (`/adimages`), une seule fois par compte. */
+function socAdImageHash(string $act, string $src): ?string
+{
+    static $memo = [];
+    $cle = $act . '|' . $src;
+    if (!array_key_exists($cle, $memo)) {
+        $memo[$cle] = null;
+        if (($bytes = socImageBytes($src)) !== null) {
+            $r = Meta::call('POST', $act . '/adimages', ['bytes' => $bytes]);
+            foreach ((array) ($r['images'] ?? []) as $img) { $memo[$cle] = (string) ($img['hash'] ?? '') ?: null; break; }
+        }
+    }
+    return $memo[$cle];
+}
+
+/** Attente entre deux relectures chez Meta (neutralisée en recette). */
+function socDormir(int $s): void
+{
+    if (Meta::$sleep) { (Meta::$sleep)($s); return; }
+    sleep($s);
+}
+
+/** Une vidéo envoyée au compte publicitaire (`/advideos`), attendue jusqu'à ce que Meta l'ait traitée. */
+function socAdVideo(string $act, string $src): string
+{
+    static $memo = [];
+    $cle = $act . '|' . $src;
+    if (isset($memo[$cle])) { return $memo[$cle]; }
+    $r = Meta::call('POST', $act . '/advideos', ['file_url' => socPublicUrl($src), 'name' => basename($src)]);
+    $vid = (string) ($r['id'] ?? '');
+    if ($vid === '') { throw new MetaError('Meta n’a pas accepté la vidéo', 100); }
+    for ($i = 0; $i < 30; $i++) {
+        $st = Meta::call('GET', $vid, ['fields' => 'status']);
+        $etat = (string) ($st['status']['video_status'] ?? 'ready');
+        if ($etat === 'ready') { return $memo[$cle] = $vid; }
+        if ($etat === 'error') { throw new MetaError('Meta n’a pas pu traiter la vidéo', 100); }
+        socDormir(3);
+    }
+    throw new MetaError('la vidéo est encore en traitement chez Meta : relancez dans quelques minutes', 2, 0, true);
+}
+
+/**
+ * La créa d'une variante, pour une boutique et une langue.
+ *  - « Sponsoriser un post existant » : le post publié sur la Page, ou un dark post
+ *    déjà diffusé par une autre pub (ses likes et commentaires se cumulent) ;
+ *  - « Dark post » : `object_story_spec` — image (`link_data.image_hash`), carrousel
+ *    (`link_data.child_attachments`, ordre verrouillé pour un panorama ou une frise)
+ *    ou vidéo (`video_data`) selon le post du module.
+ */
+function socCreative(string $act, array $w, array $shop, string $L, array $v, array $form): string
 {
     $pid = (string) $shop['ids']['page_id'];
     if ($pid === '') { throw new MetaError('page_id non renseigné', 100); }
+    $post = !empty($v['post']) ? socItem('posts', (string) $v['post']) : null;
+    $nom = static fn (string $t) => 'Créa · ' . ($t !== '' ? $t : (string) ($post['title'] ?? ''));
     if (($w['crea'] ?? 'existing') === 'existing') {
-        $fbPost = $postIds[$shop['id']] ?? '';
-        if ($fbPost === '') { throw new MetaError('le post choisi n’est pas (encore) publié sur la Page de ' . $shop['name'], 100); }
-        $objectStory = str_contains($fbPost, '_') ? $fbPost : $pid . '_' . $fbPost;
-        $r = Meta::call('POST', $act . '/adcreatives', array_filter(['name' => 'Créa · ' . ($post['title'] ?? ''), 'object_story_id' => $objectStory, 'url_tags' => (string) ($w['urlTags'] ?? '')]));
+        $story = '';
+        if ($post && !empty($post['dark'])) {
+            $story = socDarkStory((string) $post['id'], (string) $shop['id'], $L);
+            if ($story === '') { throw new MetaError('ce dark post n’a pas encore été diffusé pour ' . $shop['name'] . ' : choisissez « Dark post » pour le créer', 100); }
+        } else {
+            $fbPost = $post ? (socPostMetaIds((string) $post['id'])[$shop['id']] ?? '') : '';
+            if ($fbPost === '') { throw new MetaError('le post choisi n’est pas (encore) publié sur la Page de ' . $shop['name'], 100); }
+            $story = str_contains($fbPost, '_') ? $fbPost : $pid . '_' . $fbPost;
+        }
+        $r = Meta::call('POST', $act . '/adcreatives', array_filter(['name' => $nom(''), 'object_story_id' => $story, 'url_tags' => (string) ($w['urlTags'] ?? '')]));
         return (string) ($r['id'] ?? '');
     }
-    $src = '';
-    if ($post) { [$imgs] = socMedias($post); $src = $imgs[0] ?? ''; }
-    $hash = null;
-    if ($src !== '' && ($bytes = socImageBytes($src)) !== null) {
-        $r = Meta::call('POST', $act . '/adimages', ['bytes' => $bytes]);
-        foreach ((array) ($r['images'] ?? []) as $img) { $hash = (string) ($img['hash'] ?? ''); break; }
-    }
+
     $nl = $L === 'nl';
-    $msg = $nl && trim((string) ($w['messageNl'] ?? '')) !== '' ? (string) $w['messageNl'] : (string) ($w['message'] ?? '');
-    $titre = $nl && trim((string) ($w['headlineNl'] ?? '')) !== '' ? (string) $w['headlineNl'] : (string) ($w['headline'] ?? '');
-    $isLeads = ($w['objective'] ?? '') === 'OUTCOME_LEADS';
+    $msg = $nl && trim((string) ($v['messageNl'] ?? '')) !== '' ? (string) $v['messageNl'] : (string) ($v['message'] ?? '');
+    $titre = $nl && trim((string) ($v['headlineNl'] ?? '')) !== '' ? (string) $v['headlineNl'] : (string) ($v['headline'] ?? '');
+    $desc = (string) ($v['description'] ?? '');
+    $url = (string) (($w['link'] ?? '') ?: 'https://www.latelierby.be');
     $cta = ['type' => (string) ($w['cta'] ?? 'LEARN_MORE')];
-    if ($isLeads) {
+    if (($w['objective'] ?? '') === 'OUTCOME_LEADS') {
         $fid = $form[$shop['id']] ?? '';
         if ($fid === '') { throw new MetaError('le formulaire de leads n’est pas publié sur la Page de ' . $shop['name'], 100); }
         $cta['value'] = ['lead_gen_form_id' => $fid];
     } else {
-        $cta['value'] = ['link' => (string) ($w['link'] ?? '')];
+        $cta['value'] = ['link' => $url];
     }
-    $link = ['link' => (string) (($w['link'] ?? '') ?: 'https://www.latelierby.be'), 'message' => socFill($msg, $shop, null, $L), 'name' => $titre,
-        'description' => (string) ($w['description'] ?? ''), 'call_to_action' => $cta];
-    if ($hash) { $link['image_hash'] = $hash; }
-    $spec = ['page_id' => $pid, 'link_data' => $link];
+    $texte = socFill($msg, $shop, null, $L);
+    $media = socCreaMedia($post);
+    $spec = ['page_id' => $pid];
     if ($shop['ids']['instagram_user_id'] !== '') { $spec['instagram_user_id'] = $shop['ids']['instagram_user_id']; }
-    $r = Meta::call('POST', $act . '/adcreatives', array_filter(['name' => 'Créa · ' . ($titre ?: ($post['title'] ?? '')), 'object_story_spec' => $spec, 'url_tags' => (string) ($w['urlTags'] ?? '')]));
+
+    if ($media['video'] !== null) {
+        $vid = socAdVideo($act, $media['video']);
+        $vd = ['video_id' => $vid, 'message' => $texte, 'title' => $titre, 'link_description' => $desc, 'call_to_action' => $cta];
+        $couv = $media['imgs'][0] ?? null;
+        if ($couv !== null && ($h = socAdImageHash($act, $couv)) !== null) { $vd['image_hash'] = $h; }
+        else {
+            $th = Meta::call('GET', $vid . '/thumbnails', []);
+            $uri = '';
+            foreach ((array) ($th['data'] ?? []) as $t) { if (!empty($t['is_preferred']) || $uri === '') { $uri = (string) ($t['uri'] ?? ''); } }
+            if ($uri === '') { throw new MetaError('vignette de la vidéo indisponible : ajoutez une photo de couverture au post', 100); }
+            $vd['image_url'] = $uri;
+        }
+        $spec['video_data'] = array_filter($vd, static fn ($x) => $x !== '');
+    } elseif (count($media['imgs']) > 1) {
+        $cartes = [];
+        foreach ($media['imgs'] as $u) {
+            $h = socAdImageHash($act, $u);
+            if ($h === null) { throw new MetaError('une image du carrousel est introuvable sur le serveur (' . basename($u) . ')', 100); }
+            $cartes[] = array_filter(['link' => $url, 'image_hash' => $h, 'name' => $titre, 'description' => $desc, 'call_to_action' => $cta], static fn ($x) => $x !== '');
+        }
+        // Panorama ou frise : Meta ne réordonne pas les cartes et n'ajoute pas de carte de fin.
+        $spec['link_data'] = ['link' => $url, 'message' => $texte, 'child_attachments' => $cartes,
+            'multi_share_optimized' => !$media['ordre'], 'multi_share_end_card' => !$media['ordre'], 'call_to_action' => $cta];
+    } else {
+        $link = ['link' => $url, 'message' => $texte, 'name' => $titre, 'description' => $desc, 'call_to_action' => $cta];
+        if (isset($media['imgs'][0]) && ($h = socAdImageHash($act, $media['imgs'][0])) !== null) { $link['image_hash'] = $h; }
+        $spec['link_data'] = $link;
+    }
+    $r = Meta::call('POST', $act . '/adcreatives', array_filter(['name' => $nom($titre), 'object_story_spec' => $spec, 'url_tags' => (string) ($w['urlTags'] ?? '')]));
     return (string) ($r['id'] ?? '');
 }
 
 function socMetaObjectAdd(array $o): void
 {
-    Db::exec('INSERT INTO social_meta_objet (kind, local_id, shop_id, account, campaign_id, adset_id, creative_id, ad_id, form_id, meta_status, error, created_at)
-              VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+    Db::exec('INSERT INTO social_meta_objet (kind, local_id, shop_id, account, campaign_id, adset_id, creative_id, ad_id, form_id, meta_status, error, created_at,
+                variante, post_id, langue, dark, story_id, ig_media_id, lien, lien_ig)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$o['kind'], $o['local_id'], $o['shop_id'] ?? null, $o['account'] ?? null, $o['campaign_id'] ?? null, $o['adset_id'] ?? null,
-         $o['creative_id'] ?? null, $o['ad_id'] ?? null, $o['form_id'] ?? null, $o['meta_status'] ?? null, $o['error'] ?? null, date('Y-m-d H:i:s')]);
+         $o['creative_id'] ?? null, $o['ad_id'] ?? null, $o['form_id'] ?? null, $o['meta_status'] ?? null, $o['error'] ?? null, date('Y-m-d H:i:s'),
+         $o['variante'] ?? null, $o['post_id'] ?? null, $o['langue'] ?? null, $o['dark'] ?? null, $o['story_id'] ?? null, $o['ig_media_id'] ?? null,
+         $o['lien'] ?? null, $o['lien_ig'] ?? null]);
 }
 
 function socMetaObjects(string $kind, string $localId): array
@@ -269,7 +401,7 @@ function socAdHook(?array $avant, array $ad): array
 {
     if ($avant === null) { return socAdCreate($ad); }
     // Les champs qui viennent de Meta restent ceux du serveur.
-    foreach (['spent', 'reason', 'spec'] as $k) { if (array_key_exists($k, $avant)) { $ad[$k] = $avant[$k]; } }
+    foreach (['spent', 'reason', 'spec', 'stats'] as $k) { if (array_key_exists($k, $avant)) { $ad[$k] = $avant[$k]; } }
     $objs = array_filter(socMetaObjects('ad', (string) $ad['id']), static fn ($o) => $o['ad_id']);
     if (!$objs) { return $ad; }
     $s = (string) ($ad['status'] ?? ''); $sAvant = (string) ($avant['status'] ?? '');
@@ -298,11 +430,13 @@ function socAdHook(?array $avant, array $ad): array
         $shops = []; foreach (socShops() as $sh) { $shops[$sh['id']] = $sh; }
         $form = socLeadformMetaIds((string) $ad['leadForm']);
         $w = (array) $ad['spec']; $w['leadForm'] = $ad['leadForm'];
+        $variantes = socVariantes($w);
         foreach ($objs as $o) {
             $shop = $shops[(string) $o['shop_id']] ?? null;
             if (!$shop) { continue; }
             try {
-                $cr = socCreative((string) $o['account'], $w, $shop, $shop['langs'][0] ?? 'fr', null, [], $form);
+                $v = $variantes[(int) ($o['variante'] ?? 0)] ?? $variantes[0];
+                $cr = socCreative((string) $o['account'], $w, $shop, (string) ($o['langue'] ?: ($shop['langs'][0] ?? 'fr')), $v, $form);
                 Meta::call('POST', (string) $o['ad_id'], ['creative' => ['creative_id' => $cr]]);
                 Db::exec('UPDATE social_meta_objet SET creative_id = ? WHERE id = ?', [$cr, $o['id']]);
             } catch (MetaError $e) { $erreurs[] = $shop['name'] . ' : ' . $e->getMessage(); }
@@ -340,7 +474,8 @@ function socAdsSync(): int
     foreach (socItems('ads') as $ad) {
         $objs = array_filter(socMetaObjects('ad', (string) $ad['id']), static fn ($o) => $o['ad_id']);
         if (!$objs) { continue; }
-        $statuts = []; $motifs = []; $spent = 0.0; $lu = false;
+        $statuts = []; $motifs = []; $spent = 0.0; $lu = false; $parVariante = [];
+        $shops = null;
         foreach ($objs as $o) {
             try {
                 $r = Meta::call('GET', (string) $o['ad_id'], ['fields' => 'effective_status,ad_review_feedback']);
@@ -348,10 +483,30 @@ function socAdsSync(): int
                 $statuts[] = socAdStatutEcran($eff);
                 Db::exec('UPDATE social_meta_objet SET meta_status = ? WHERE id = ?', [$eff, $o['id']]);
                 foreach ((array) ($r['ad_review_feedback']['global'] ?? []) as $k => $v) { $motifs[] = is_string($v) ? $v : (string) $k; }
-                $i = Meta::call('GET', (string) $o['ad_id'] . '/insights', ['fields' => 'spend', 'date_preset' => 'maximum']);
-                $spent += (float) ($i['data'][0]['spend'] ?? 0);
+                $i = Meta::call('GET', (string) $o['ad_id'] . '/insights', ['fields' => 'spend,impressions,clicks', 'date_preset' => 'maximum']);
+                $row = (array) ($i['data'][0] ?? []);
+                $spent += (float) ($row['spend'] ?? 0);
+                $k = (int) ($o['variante'] ?? 0);
+                $parVariante[$k] ??= ['spend' => 0.0, 'impressions' => 0, 'clicks' => 0];
+                $parVariante[$k]['spend'] += (float) ($row['spend'] ?? 0);
+                $parVariante[$k]['impressions'] += (int) ($row['impressions'] ?? 0);
+                $parVariante[$k]['clicks'] += (int) ($row['clicks'] ?? 0);
                 $lu = true;
+                // Le dark post (et son pendant Instagram) apparaît parfois après la revue de la pub.
+                if ((int) ($o['dark'] ?? 0) === 1 && (empty($o['story_id']) || empty($o['ig_media_id'])) && !empty($o['creative_id'])) {
+                    if ($shops === null) { $shops = []; foreach (socShops() as $sh) { $shops[$sh['id']] = $sh; } }
+                    if (isset($shops[(string) $o['shop_id']])) {
+                        $n2 = socDarkRelire($o, $shops[(string) $o['shop_id']]);
+                        Db::exec('UPDATE social_meta_objet SET story_id = ?, ig_media_id = ?, lien = ?, lien_ig = ? WHERE id = ?',
+                            [$n2['story_id'] ?? null, $n2['ig_media_id'] ?? null, $n2['lien'] ?? null, $n2['lien_ig'] ?? null, $o['id']]);
+                    }
+                }
             } catch (MetaError $e) { /* une pub illisible n'empêche pas les autres */ }
+        }
+        if (count($parVariante) > 1 || isset($ad['stats'])) {
+            ksort($parVariante);
+            $ad['stats'] = array_values(array_map(static fn ($k, $x) => ['variant' => chr(65 + $k), 'spend' => round($x['spend'], 2), 'impressions' => $x['impressions'],
+                'clicks' => $x['clicks'], 'ctr' => $x['impressions'] ? round($x['clicks'] / $x['impressions'], 4) : null], array_keys($parVariante), $parVariante));
         }
         if (!$lu) { continue; }
         $statuts = array_filter($statuts);

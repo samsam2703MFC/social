@@ -200,6 +200,7 @@
     'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' },
     'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' },
     'Partiel': { bg: '#F6DCDF', fg: '#8D1D2C' },
+    'Dark post': { bg: '#232220', fg: '#F2C9A0' },
   };
   const AD_STATUS = {
     'En revue': { bg: '#FAC775', fg: '#6b3d0a' }, 'Active': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusée': { bg: '#8D1D2C', fg: '#FFFFFF' },
@@ -302,7 +303,7 @@
     },
     networkAccount: 'act_1428800',
     dsa: { beneficiary: "L'Atelier By SRL", payor: "L'Atelier By SRL" },
-    permissions: [['business_management', 'Full access'], ['pages_show_list', 'Full access'], ['pages_manage_posts', 'Full access'], ['pages_read_engagement', 'Full access'], ['instagram_basic', 'Full access'], ['instagram_content_publish', 'Full access'], ['ads_management', 'Full access'], ['pages_manage_ads', 'Full access'], ['leads_retrieval', 'Limited access']],
+    permissions: [['business_management', 'Full access'], ['pages_show_list', 'Full access'], ['pages_manage_posts', 'Full access'], ['pages_read_engagement', 'Full access'], ['instagram_basic', 'Full access'], ['instagram_content_publish', 'Full access'], ['ads_management', 'Full access'], ['pages_manage_ads', 'Full access'], ['leads_retrieval', 'Limited access'], ['pages_manage_engagement', 'Full access'], ['instagram_manage_comments', 'Full access']],
     objectives: [
       { id: 'OUTCOME_AWARENESS', label: 'Notoriété locale', desc: 'Montrer la marque au plus grand nombre autour des boutiques.', icon: 'img/illus/decorative/bubble.png', goals: ['REACH', 'IMPRESSIONS', 'THRUPLAY'], dest: [''] },
       { id: 'OUTCOME_TRAFFIC', label: 'Trafic', desc: 'Faire venir en boutique ou sur le webshop.', icon: 'img/illus/customer-facing/click-collect.png', goals: ['LINK_CLICKS', 'LANDING_PAGE_VIEWS', 'REACH'], dest: ['WEBSITE', 'PHONE_CALL'] },
@@ -334,6 +335,8 @@
       context: { title: 'Rejoignez l\u2019équipe', style: 'PARAGRAPH_STYLE', content: ['Nous cherchons des vendeur·ses souriant·es pour nos boutiques de Wavre et Gembloux.'], button_text: 'Postuler' },
       thanks: { title: 'Candidature envoyée', body: 'Le manager de la boutique vous contacte rapidement.', button_type: 'VIEW_WEBSITE', button_text: 'Découvrir la marque', website_url: 'https://www.latelierby.be' }, quality: true, followUp: 'https://www.latelierby.be' },
   ];
+  // Les dark posts créés par les pubs (relus chez Meta par le serveur) : pub, post, boutique, langue, variante, liens, commentaires.
+  const DARK = [];
   const LEADS = [
     { id: 'ld1', form: 'lf-b2b-2', created_time: '2026-10-09 16:42', ad: 'Plateaux B2B · leads', shop: 'wavre', field_data: { FULL_NAME: 'Marie Claes', EMAIL: 'm.claes@exemple.be', PHONE: '+32 470 11 22 33', COMPANY_NAME: 'Bureau Claes', nb_personnes: '16 à 30' } },
     { id: 'ld2', form: 'lf-b2b-2', created_time: '2026-10-08 10:05', ad: 'Plateaux B2B · leads', shop: 'gembloux', field_data: { FULL_NAME: 'Pierre Dumont', EMAIL: 'p.dumont@exemple.be', PHONE: '+32 471 44 55 66', COMPANY_NAME: 'AgroTech SA', nb_personnes: 'Plus de 30' } },
@@ -368,7 +371,7 @@
   function apply(L) {
     LIVE = L; TODAY = L.today || TODAY; MARGIN = L.margin != null ? +L.margin : MARGIN;
     const swap = (arr, v) => { arr.splice(0, arr.length, ...(v || [])); };
-    swap(SHOPS, L.shops); swap(GROUPS, L.groups); swap(TEMPLATES, L.templates); swap(LEADFORMS, L.leadforms); swap(LEADS, L.leads);
+    swap(SHOPS, L.shops); swap(GROUPS, L.groups); swap(TEMPLATES, L.templates); swap(LEADFORMS, L.leadforms); swap(LEADS, L.leads); swap(DARK, L.darkPosts);
     if (L.catalogue && L.catalogue.length) swap(CATALOGUE, L.catalogue);
     Object.keys(RESULTS).forEach(k => delete RESULTS[k]); Object.assign(RESULTS, L.results || {});
     const m = L.meta || {};
@@ -456,7 +459,7 @@
   else window.addEventListener('focus', () => { refresh(); });
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
-    api, refresh, retryPost, testConnexions, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
+    api, refresh, retryPost, testConnexions, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
     TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
     byId, fmt, eur, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param };
 })();

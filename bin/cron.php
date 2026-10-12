@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Le cron du module (posé par bin/deploy.sh dans /etc/cron.d/social) :
  *
  *   * * * * *   php bin/cron.php queue      la file de publication (posts échus)
- *   7 * * * *   php bin/cron.php sync       pubs (statut, dépense), leads, résultats, grille Instagram
+ *   7 * * * *   php bin/cron.php sync       pubs (statut, dépense, dark posts), leads, résultats, grille Instagram, commentaires des dark posts
  *   40 6 * * *  php bin/cron.php conn       contrôle des connexions Meta
  *   20 5 * * *  php bin/cron.php audit      audit des routes de l'API TFBuddy
  *
@@ -21,7 +21,7 @@ try {
     socInstall();
     $r = match ($tache) {
         'queue' => ['publies' => count(socRunQueue())],
-        'sync'  => ['ads' => socAdsSync(), 'leads' => socLeadsSync(), 'results' => socResultsSync(), 'instagram' => socIgMediaSync()],
+        'sync'  => ['ads' => socAdsSync(), 'leads' => socLeadsSync(), 'results' => socResultsSync(), 'instagram' => socIgMediaSync(), 'commentaires' => socDarkCommentsSync()],
         'conn'  => ['boutiques' => count(socTestConnexions())],
         'audit' => socAuditRun(),
         default => throw new InvalidArgumentException('tâche inconnue : ' . $tache . ' (queue | sync | conn | audit)'),

@@ -47,6 +47,7 @@ Toutes les données **et toutes les clés** sont stockées et lues dans la base
 | `social_meta_objet` | objets créés chez Meta (campagne, ad set, créa, pub, formulaire) |
 | `social_resultat` | résultats Meta + ventes caisse par campagne et boutique |
 | `social_instagram_media` | les 30 dernières publications de chaque compte Instagram (grille du profil) |
+| `social_commentaire` | les commentaires reçus sur les dark posts (Facebook et Instagram), masqués ou non |
 | `social_activite` | le journal d'activité |
 
 Chaque table a des colonnes typées (lisibles en SQL) et une colonne `data` qui
@@ -124,6 +125,17 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   Contrôles : alignement de chaque frise (programmée ou déjà en ligne), posts « à
   valider » qui la décaleraient s'ils étaient refusés, demi-heure autour des
   frises. Glisser une case programmée sur une autre échange leurs créneaux.
+- **Dark posts** (pub uniquement) — dans « Créer un post », destination
+  « Réservé à la publicité » : le post n'est jamais publié (statut « Dark post »,
+  hors file, hors grille Instagram) et ouvre l'assistant des publicités. En
+  « Dark post », la créa suit le format du post : image, carrousel (ordre fixe pour
+  un panorama ou une frise) ou vidéo (`advideos` + `video_data`). Jusqu'à 3
+  variantes A/B/C (visuel et/ou texte) : une créa et une pub par variante, résultats
+  par variante dans le suivi. Après création, le serveur relit l'id du dark post
+  (`effective_object_story_id`, `effective_instagram_media_id`) : liens, réutilisation
+  dans une autre pub (« Sponsoriser un post existant », likes et commentaires
+  cumulés), commentaires relus toutes les heures (`social_commentaire`), masquables
+  depuis l'écran Publicités.
 - **Publicités** — l'assistant envoie sa description complète ; le serveur crée
   campagne → ad set → créa → pub, un jeu par compte boutique ou un jeu réseau
   (un ad set par boutique, pour lire les résultats boutique par boutique).
@@ -200,6 +212,7 @@ src/
   leads.php        formulaires, leads, webhook
   results.php      insights Meta + ventes caisse
   instagram.php    grille du profil (lecture des publications), frise (publication, verrou)
+  darkposts.php    dark posts : relecture chez Meta, réutilisation, commentaires (lecture, masquage)
   api.php          routes
 bin/               cron.php, deploy.sh, tests.php
 ```

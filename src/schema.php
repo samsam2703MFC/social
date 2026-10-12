@@ -19,7 +19,10 @@ declare(strict_types=1);
  *  - social_boutique   : ce que le social sait d'une boutique en plus du BO
  *                        (langues, horaires, identifiants Meta, connexions) ;
  *  - social_publication: la file de publication (post × boutique × canal) ;
- *  - social_meta_objet : les objets créés chez Meta (campagne, ad set, créa, pub, formulaire) ;
+ *  - social_meta_objet : les objets créés chez Meta (campagne, ad set, créa, pub, formulaire),
+ *                        et pour chaque pub le post qu'elle diffuse (dark post : `story_id`,
+ *                        `ig_media_id`, liens) ;
+ *  - social_commentaire : les commentaires reçus sur les dark posts (Facebook et Instagram) ;
  *  - social_resultat   : résultats Meta + ventes par campagne et boutique ;
  *  - social_instagram_media : les dernières publications de chaque compte
  *                        Instagram, relues chez Meta (grille du profil) ;
@@ -97,12 +100,30 @@ function socInstall(): void
         . 'depense DECIMAL(12,2) NULL, portee INT NULL, impressions INT NULL, clics INT NULL, ca_campagne DECIMAL(12,2) NULL,'
         . 'ca_reference DECIMAL(12,2) NULL, data LONGTEXT NOT NULL, synchro_le DATETIME NOT NULL, PRIMARY KEY (campagne_id, shop_id))' . $t);
 
+    // Les dark posts : la variante, le post du module, la langue et ce que Meta en a fait.
+    socColonnes('social_meta_objet', ['variante' => 'TINYINT NULL', 'post_id' => 'VARCHAR(64) NULL', 'langue' => 'VARCHAR(5) NULL', 'dark' => 'TINYINT NULL',
+        'story_id' => 'VARCHAR(80) NULL', 'ig_media_id' => 'VARCHAR(40) NULL', 'lien' => 'VARCHAR(300) NULL', 'lien_ig' => 'VARCHAR(300) NULL']);
+
+    Db::exec('CREATE TABLE IF NOT EXISTS social_commentaire (id VARCHAR(80) PRIMARY KEY, canal VARCHAR(4) NOT NULL, objet_id VARCHAR(80) NOT NULL,'
+        . 'shop_id VARCHAR(16) NULL, post_id VARCHAR(64) NULL, pub_id VARCHAR(64) NULL, auteur VARCHAR(160) NULL, message TEXT NULL,'
+        . 'cree_le DATETIME NOT NULL, masque TINYINT NOT NULL DEFAULT 0, maj_le DATETIME NOT NULL, KEY idx_objet (objet_id), KEY idx_pub (pub_id, cree_le))' . $t);
+
     Db::exec('CREATE TABLE IF NOT EXISTS social_instagram_media (media_id VARCHAR(40) PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
         . 'type VARCHAR(20) NULL, media_url VARCHAR(1000) NULL, vignette_url VARCHAR(1000) NULL, permalink VARCHAR(300) NULL,'
         . 'publie_le DATETIME NOT NULL, legende TEXT NULL, maj_le DATETIME NOT NULL, KEY idx_shop (shop_id, publie_le))' . $t);
 
     socParamsInit();
     socTfbInit();
+}
+
+/** Ajoute à une table existante les colonnes qui lui manquent (évolution du schéma, idempotent). */
+function socColonnes(string $table, array $cols): void
+{
+    $ont = array_column(Db::rows('SELECT column_name AS c FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ?', [$table]), 'c');
+    $ont = array_map('strtolower', $ont);
+    foreach ($cols as $nom => $def) {
+        if (!in_array(strtolower($nom), $ont, true)) { Db::exec("ALTER TABLE $table ADD COLUMN $nom $def"); }
+    }
 }
 
 /**
