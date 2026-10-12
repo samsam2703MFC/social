@@ -668,6 +668,31 @@ check('appliquer : un champ déjà rempli n’est pas écrasé', socShop('4')['i
 socPortefeuilleAppliquer(true);
 check('tout remplacer : écrase', socShop('4')['ids']['ad_account_id'] === 'act_2001');
 
+echo "Identifiants Meta : mise à jour automatique\n";
+socShopPut('5', ['ids' => ['page_id' => '', 'ad_account_id' => '', 'instagram_user_id' => '', 'pixel_id' => '']]);
+$journalAvant = (int) Db::row("SELECT COUNT(*) n FROM social_activite WHERE detail LIKE 'Portefeuille Meta relu%'")['n'];
+$r = socIdsAuto();
+check('auto (cron) : identifiants vides remplis depuis le portefeuille', ($r['ok'] ?? false) && socShop('5')['ids']['page_id'] === '222' && socShop('5')['ids']['pixel_id'] === '880112'
+    && socShop('4')['ids']['ad_account_id'] === 'act_2001', json_encode($r));
+check('auto : pas relancé avant la fréquence choisie (1 h)', isset(socIdsAuto()['ignore']));
+$r2 = socIdsAuto(true);
+check('auto : rien de nouveau → journal silencieux', ($r2['ok'] ?? false) && $r2['appliques'] === []
+    && (int) Db::row("SELECT COUNT(*) n FROM social_activite WHERE detail LIKE 'Portefeuille Meta relu%'")['n'] === $journalAvant);
+socShopPut('5', ['ids' => array_merge(socShop('5')['ids'], ['page_id' => '777'])]);
+socIdsAutoPut(['actif' => true, 'ecraser' => true, 'frequence' => 6]);
+socIdsAuto(true);
+check('auto « remplacer les saisies » : la valeur manuelle est remplacée par le portefeuille', socShop('5')['ids']['page_id'] === '222');
+socIdsAutoPut(['actif' => false]);
+check('auto désactivé : le cron ne fait rien', (socIdsAuto()['ignore'] ?? '') === 'désactivé');
+socIdsAutoPut(['actif' => true, 'ecraser' => false, 'frequence' => 1]);
+socShopPut('5', ['ids' => ['page_id' => '', 'ad_account_id' => '', 'instagram_user_id' => '', 'pixel_id' => '']]);
+$GLOBALS['SOC_BODY'] = ['systemToken' => 'TOK-NOUVEAU'];
+[$code, $b] = socRoute('POST', '/parametres/cles');
+unset($GLOBALS['SOC_BODY']);
+check('nouveau token enregistré : identifiants relus tout de suite', $code === 200 && ($b['ids']['ok'] ?? false) && socShop('5')['ids']['page_id'] === '222');
+[$code, $b] = socRoute('GET', '/meta/ids/auto');
+check('GET /meta/ids/auto : réglages et dernier passage', $code === 200 && $b['config']['frequence'] === 1 && !empty($b['dernier']['le']));
+
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');
 check('GET /state', $code === 200 && $b['mode'] === 'live' && count($b['shops']) === 2);

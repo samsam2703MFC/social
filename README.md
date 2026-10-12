@@ -85,6 +85,15 @@ boutiques et de la **marque**, puis « Remplir les identifiants vides » ou « T
 remplacer » complète le tableau « Identifiants Meta par boutique » (la marque
 y a sa ligne ; son compte publicitaire est le compte réseau).
 
+**Mise à jour automatique** (bandeau au-dessus du tableau des identifiants) : le
+cron relit le portefeuille toutes les heures (à la 37e minute ; ou toutes les 6 h /
+24 h) et remplit les identifiants vides — ou les remplace tous si « Remplacer aussi
+les identifiants saisis à la main » est coché — puis revérifie les connexions des
+boutiques modifiées. Elle part aussi dès qu'un nouveau token est enregistré, et à la
+demande (« Mettre à jour maintenant »). Le journal ne garde que les changements.
+Réglages en base : `social_parametre.meta_ids_auto` (dernier passage :
+`meta_ids_auto_dernier`).
+
 ## Ce que fait le serveur chez Meta
 
 Le navigateur n'appelle **jamais** Meta. Référence complète des appels :

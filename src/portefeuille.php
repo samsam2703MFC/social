@@ -57,8 +57,8 @@ function socDevinerBoutique(string $libelle, array $shops): ?string
     return preg_match('/atelier\s*by|latelierby/', socNorm($libelle) . ' ' . str_replace(' ', '', socNorm($libelle))) ? 'marque' : null;
 }
 
-/** Relit le portefeuille chez Meta. */
-function socPortefeuilleRafraichir(): array
+/** Relit le portefeuille chez Meta. `$journal` faux : pas de trace (rafraîchissement automatique). */
+function socPortefeuilleRafraichir(bool $journal = true): array
 {
     if (!Meta::configured()) { throw new HttpError(409, 'token Meta absent : saisissez-le dans « Clés d’accès Meta »'); }
     $err = [];
@@ -144,7 +144,7 @@ function socPortefeuilleRafraichir(): array
     $res = ['le' => date('Y-m-d H:i'), 'business' => ['id' => $biz, 'name' => $bizNom], 'pages' => $listePages, 'comptes' => $listeComptes,
         'instagram' => $listeIg, 'pixels' => $listePixels, 'erreurs' => $err];
     socSettingPut('meta_portefeuille', $res);
-    socLog(socUser(), 'Connexion', 'Portefeuille Meta relu : ' . count($listePages) . ' Page(s), ' . count($listeComptes) . ' compte(s) pub, '
+    if ($journal) socLog(socUser(), 'Connexion', 'Portefeuille Meta relu : ' . count($listePages) . ' Page(s), ' . count($listeComptes) . ' compte(s) pub, '
         . count($listeIg) . ' Instagram, ' . count($listePixels) . ' pixel(s)' . ($err ? ' — ' . count($err) . ' lecture(s) refusée(s)' : ''));
     return $res;
 }
@@ -178,3 +178,49 @@ function socPortefeuilleAppliquer(bool $ecraser = false): array
     if ($faits) { socLog(socUser(), 'Connexion', 'Identifiants Meta repris du portefeuille : ' . implode(' · ', $faits)); }
     return ['appliques' => $faits];
 }
+
+/* --- rafraîchissement automatique des identifiants ------------------------------------- */
+
+/** Réglages : actif, remplacer aussi les identifiants saisis à la main, fréquence (heures). */
+function socIdsAutoConfig(): array
+{
+    $c = socSetting('meta_ids_auto');
+    return array_replace(['actif' => true, 'ecraser' => false, 'frequence' => 1], is_array($c) ? $c : []);
+}
+
+function socIdsAutoPut(array $in): array
+{
+    $f = (int) ($in['frequence'] ?? 1);
+    $c = ['actif' => (bool) ($in['actif'] ?? true), 'ecraser' => (bool) ($in['ecraser'] ?? false), 'frequence' => in_array($f, [1, 6, 24], true) ? $f : 1];
+    socSettingPut('meta_ids_auto', $c, false);
+    socLog(socUser(), 'Connexion', 'Mise à jour automatique des identifiants Meta : ' . ($c['actif'] ? 'toutes les ' . $c['frequence'] . ' h' . ($c['ecraser'] ? ', remplace les saisies' : ', champs vides seulement') : 'désactivée'));
+    return $c;
+}
+
+/**
+ * « Identifiants Meta par boutique » tenus à jour tout seuls : relit le portefeuille
+ * Business et remplit les identifiants (vides seulement, ou tous si « remplacer »),
+ * puis revérifie les connexions des boutiques modifiées. Lancé par le cron (toutes
+ * les heures, selon la fréquence choisie) et dès qu'un nouveau token est enregistré.
+ * Le journal ne garde que les changements.
+ */
+function socIdsAuto(bool $forcer = false): array
+{
+    $c = socIdsAutoConfig();
+    if (!$c['actif'] && !$forcer) { return ['ignore' => 'désactivé']; }
+    if (!Meta::configured()) { return ['ignore' => 'token Meta absent']; }
+    $der = socSetting('meta_ids_auto_dernier');
+    if (!$forcer && is_array($der) && ($t = strtotime((string) ($der['le'] ?? ''))) && $t > time() - $c['frequence'] * 3600 + 300) { return ['ignore' => 'déjà fait à ' . $der['le']]; }
+    try {
+        $pf = socPortefeuilleRafraichir(false);
+        $ap = socPortefeuilleAppliquer($c['ecraser']);
+        if ($ap['appliques']) { socTestConnexions(); }
+        $res = ['le' => date('Y-m-d H:i'), 'ok' => true, 'appliques' => $ap['appliques'], 'erreurs' => $pf['erreurs'],
+            'lus' => ['pages' => count($pf['pages']), 'comptes' => count($pf['comptes']), 'instagram' => count($pf['instagram']), 'pixels' => count($pf['pixels'])]];
+    } catch (Throwable $e) {
+        $res = ['le' => date('Y-m-d H:i'), 'ok' => false, 'appliques' => [], 'erreurs' => [$e->getMessage()]];
+    }
+    socSettingPut('meta_ids_auto_dernier', $res, false);
+    return $res;
+}
+

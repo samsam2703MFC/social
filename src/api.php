@@ -76,7 +76,9 @@ function socRoute(string $method, string $path): array
         Meta::reset();
         Meta::verifierJeton();
         if ($faits) { socLog(socUser(), 'Connexion', 'Clés Meta mises à jour : ' . implode(', ', $faits)); }
-        return [200, ['ok' => true, 'maj' => $faits, 'metaStatus' => Meta::statut()]];
+        // Nouveau token : les identifiants des boutiques sont relus tout de suite dans le portefeuille.
+        $ids = in_array('meta_system_token', $faits, true) ? socIdsAuto(true) : null;
+        return [200, ['ok' => true, 'maj' => $faits, 'metaStatus' => Meta::statut(), 'ids' => $ids]];
     }
     if ($method === 'POST' && $path === '/parametres') {
         // Les réglages non secrets modifiables depuis l'écran.
@@ -89,6 +91,11 @@ function socRoute(string $method, string $path): array
         }
         if ($faits) { socLog(socUser(), 'Paramètres', 'Modifiés : ' . implode(', ', $faits)); }
         return [200, ['ok' => true, 'params' => socParams()]];
+    }
+    if ($method === 'GET' && $path === '/meta/ids/auto') { return [200, ['config' => socIdsAutoConfig(), 'dernier' => socSetting('meta_ids_auto_dernier')]]; }
+    if ($method === 'POST' && $path === '/meta/ids/auto') { return [200, ['config' => socIdsAutoPut(body()), 'dernier' => socSetting('meta_ids_auto_dernier')]]; }
+    if ($method === 'POST' && $path === '/meta/ids/auto/lancer') {
+        return [200, ['dernier' => socIdsAuto(true), 'config' => socIdsAutoConfig(), 'shops' => socShops(), 'brand' => socBrand(), 'portefeuille' => socSetting('meta_portefeuille')]];
     }
     if ($method === 'GET' && $path === '/meta/portefeuille') { return [200, ['portefeuille' => socSetting('meta_portefeuille'), 'businessId' => (string) (socSetting('meta_business_id') ?? '')]]; }
     if ($method === 'POST' && $path === '/meta/portefeuille/rafraichir') {

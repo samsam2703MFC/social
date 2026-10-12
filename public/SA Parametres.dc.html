@@ -144,6 +144,15 @@
       </div>
       <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
         <div style="padding:12px 16px;border-bottom:0.5px solid rgba(34,34,34,0.10);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Identifiants Meta par boutique</span><span style="font-size:11px;color:#666666;">Compte réseau : <sc-if value="{{ live }}" hint-placeholder-val="{{ false }}"><input value="{{ networkAccount }}" onChange="{{ setNetworkAccount }}" placeholder="act_…" style="font-family:ui-monospace,monospace;font-size:11px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:3px 6px;width:150px;"></sc-if><sc-if value="{{ !live }}" hint-placeholder-val="{{ true }}"><span style="font-family:ui-monospace,monospace;">{{ networkAccount }}</span></sc-if></span></div>
+        <sc-if value="{{ live }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:10px 16px;border-bottom:0.5px solid rgba(34,34,34,0.10);background:#FBF8F4;display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12px;color:#444444;">
+            <label style="display:flex;align-items:center;gap:6px;font-weight:500;color:#222222;cursor:pointer;"><input type="checkbox" checked="{{ idsAuto.actif }}" onChange="{{ idsToggle }}" style="accent-color:#8D1D2C;margin:0;">Mise à jour automatique depuis le portefeuille Meta</label>
+            <span style="display:flex;align-items:center;gap:6px;">toutes les <select value="{{ idsFreq }}" onChange="{{ idsSetFreq }}" disabled="{{ idsOff }}" style="font-size:12px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:4px 6px;"><option value="1">heures</option><option value="6">6 heures</option><option value="24">24 heures</option></select></span>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked="{{ idsAuto.ecraser }}" onChange="{{ idsToggleEcraser }}" disabled="{{ idsOff }}" style="accent-color:#8D1D2C;margin:0;">Remplacer aussi les identifiants saisis à la main</label>
+            <span style="color:{{ idsLastFg }};flex:1 1 220px;">{{ idsLast }}</span>
+            <button onClick="{{ idsRun }}" style="background:#FFFFFF;border:0.5px solid #8D1D2C;color:#8D1D2C;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;">{{ idsRunLabel }}</button>
+          </div>
+        </sc-if>
         <div style="display:grid;grid-template-columns:120px repeat(4,minmax(150px,1fr));gap:0;min-width:760px;">
           <sc-for list="{{ idHead }}" as="h" hint-placeholder-count="5"><span style="padding:9px 12px;font-size:11px;font-weight:500;color:#666666;background:#F4EFE8;font-family:{{ h.f }};">{{ h.l }}</span></sc-for>
           <sc-for list="{{ idRows }}" as="r" hint-placeholder-count="6">
@@ -412,17 +421,38 @@ class Component extends DCLogic {
           state: k === 'systemToken' ? etatJeton : k === 'appId' ? (ms.appId ? ms.appId : 'absent') : (ms[flag] ? 'enregistré' : 'absent'),
           stFg: (k === 'systemToken' ? (J && J.valide && !J.erreur) : ms[flag]) ? '#0F6B4A' : '#8D1D2C',
           set: (e) => this.setState({ keys: Object.assign({}, this.state.keys, { [k]: e.target.value }) }) })); })(),
-      saveKeys: () => { SA.api('POST', '/parametres/cles', s.keys).then(r => { SA.metaStatus = r.metaStatus; this.setState({ keys: { appId: '', systemToken: '', appSecret: '', verifyToken: '' } }); this.toast(r.maj.length ? r.maj.length + ' clé(s) enregistrée(s) en base.' : 'Aucune clé saisie.'); SA.refresh(); }).catch(e => this.toast('Enregistrement impossible : ' + e.message)); },
+      saveKeys: () => { SA.api('POST', '/parametres/cles', s.keys).then(r => { SA.metaStatus = r.metaStatus; this.setState({ keys: { appId: '', systemToken: '', appSecret: '', verifyToken: '' } }); const ids = r.ids && r.ids.ok ? (r.ids.appliques.length ? ' Identifiants des boutiques relus dans le portefeuille : ' + r.ids.appliques.join(' · ') + '.' : ' Portefeuille relu : identifiants déjà à jour.') : '';
+        if (r.ids) this.setState({ idsAuto: Object.assign({}, s.idsAuto, { dernier: r.ids }), pf: null }); this._pfLoading = false;
+        this.toast((r.maj.length ? r.maj.length + ' clé(s) enregistrée(s) en base.' : 'Aucune clé saisie.') + ids); SA.refresh(); }).catch(e => this.toast('Enregistrement impossible : ' + e.message)); },
       ...(() => {
         // Portefeuille Business Manager : GET au premier affichage, Rafraîchir = relecture chez Meta.
         if (!SA.live) return {};
         if (s.tab === 'api' && !s.pf && !this._pfLoading) { this._pfLoading = true; SA.api('GET', '/meta/portefeuille').then(r => this.setState({ pf: r.portefeuille || {}, pfBiz: s.pfBiz != null ? s.pfBiz : r.businessId })).catch(() => {}); }
+        // Mise à jour automatique des identifiants (cron toutes les heures, selon la fréquence choisie).
+        if (s.tab === 'api' && !s.idsAuto && !this._idsLoading) { this._idsLoading = true; SA.api('GET', '/meta/ids/auto').then(r => this.setState({ idsAuto: r })).catch(() => {}); }
+        const IA = (s.idsAuto && s.idsAuto.config) || { actif: true, ecraser: false, frequence: 1 }, D = s.idsAuto && s.idsAuto.dernier;
+        const saveIds = (patch) => { const c = Object.assign({}, IA, patch); this.setState({ idsAuto: Object.assign({}, s.idsAuto, { config: c }) });
+          SA.api('POST', '/meta/ids/auto', c).then(r => { this.setState({ idsAuto: r }); this.toast(c.actif ? 'Mise à jour automatique : toutes les ' + c.frequence + ' h' + (c.ecraser ? ', saisies manuelles comprises.' : ', champs vides seulement.') : 'Mise à jour automatique désactivée.'); }).catch(e => this.toast(e.message)); };
+        const dd = (le) => le ? le.slice(8, 10) + '/' + le.slice(5, 7) + ' à ' + le.slice(11, 16) : '';
+        const idsVals = {
+          idsAuto: IA, idsOff: !IA.actif, idsFreq: String(IA.frequence || 1),
+          idsToggle: () => saveIds({ actif: !IA.actif }), idsToggleEcraser: () => saveIds({ ecraser: !IA.ecraser }), idsSetFreq: (e) => saveIds({ frequence: +e.target.value }),
+          idsLast: !D ? (IA.actif ? 'Jamais lancée : elle part au prochain passage (à la 37e minute de chaque heure), ou tout de suite avec le bouton.' : 'Désactivée.')
+            : D.ok ? 'Dernière mise à jour le ' + dd(D.le) + ' · ' + (D.appliques && D.appliques.length ? D.appliques.length + ' boutique(s) complétée(s) : ' + D.appliques.join(' · ') : 'rien de nouveau') + ((D.erreurs || []).length ? ' · ' + D.erreurs.length + ' lecture(s) refusée(s) par Meta' : '')
+            : 'Échec le ' + dd(D.le) + ' : ' + (D.erreurs || []).join(' · '),
+          idsLastFg: D && !D.ok ? '#8D1D2C' : D && (D.erreurs || []).length ? '#8A4B00' : '#444444',
+          idsRunLabel: s.idsBusy ? 'Lecture chez Meta…' : 'Mettre à jour maintenant',
+          idsRun: () => { if (s.idsBusy) return; this.setState({ idsBusy: true });
+            SA.api('POST', '/meta/ids/auto/lancer', {}).then(r => { SA.refresh(); this.setState({ idsBusy: false, idsAuto: { config: r.config, dernier: r.dernier }, pf: r.portefeuille || s.pf });
+              const d = r.dernier || {}; this.toast(d.ok === false ? 'Échec : ' + (d.erreurs || []).join(' · ') : d.appliques && d.appliques.length ? 'Identifiants mis à jour : ' + d.appliques.join(' · ') : 'Portefeuille relu : rien de nouveau à remplir.'); })
+              .catch(e => { this.setState({ idsBusy: false }); this.toast('Mise à jour impossible : ' + e.message); }); },
+        };
         const P = s.pf || {}, nom = (id) => id === 'marque' ? 'Marque' : id ? ((SA.byId(SA.SHOPS, id) || {}).name || id) : 'non rapprochée';
         const row = (r, note) => ({ name: r.name || r.username || '—', id: r.id, note: note || '', shop: nom(r.boutique), bg: r.boutique ? '#E2F0E8' : '#F4EFE8', fg: r.boutique ? '#0F6B4A' : '#8A847C' });
         const groups = [['Pages Facebook', (P.pages || []).map(r => row(r, r.lien))], ['Comptes publicitaires', (P.comptes || []).map(r => row(r, (r.actif ? '' : '· inactif ') + (r.devise || '')))],
           ['Instagram', (P.instagram || []).map(r => row(Object.assign({}, r, { name: '@' + (r.username || r.id) })))], ['Pixels', (P.pixels || []).map(r => row(r))]];
         const apply = (ecraser) => SA.api('POST', '/meta/portefeuille/appliquer', { ecraser }).then(r => { SA.refresh(); this.toast(r.appliques.length ? 'Identifiants remplis : ' + r.appliques.join(' · ') : 'Rien à remplir.'); }).catch(e => this.toast(e.message));
-        return {
+        return Object.assign(idsVals, {
           pfSummary: P.le ? (P.business && P.business.id ? 'Business ' + (P.business.name || '') + ' (' + P.business.id + ') · ' : 'Business non trouvé · ') + 'relu le ' + P.le.slice(8, 10) + '/' + P.le.slice(5, 7) + ' à ' + P.le.slice(11, 16) : 'Jamais relu — « Rafraîchir » lit chez Meta les Pages, comptes publicitaires, comptes Instagram et pixels visibles du System User.',
           pfBiz: s.pfBiz || '', setPfBiz: (e) => this.setState({ pfBiz: e.target.value }),
           pfRefreshLabel: s.pfBusy ? 'Lecture chez Meta…' : 'Rafraîchir',
@@ -434,7 +464,7 @@ class Component extends DCLogic {
               + (manque.length ? 'Permissions absentes du token : ' + manque.join(', ') + '. ' : '') + 'Lectures refusées par Meta : ' + (P.erreurs || []).join(' · '); })(),
           pfGroups: groups.map(([title, rows]) => ({ title: title + ' · ' + rows.length, rows, empty: rows.length === 0 })),
           pfApply: () => apply(false), pfApplyAll: () => apply(true),
-        };
+        });
       })(),
       publicUrl: s.publicUrl != null ? s.publicUrl : ((st.params || {}).url_publique || ''),
       setPublicUrl: (e) => { const v = e.target.value; this.setState({ publicUrl: v }); clearTimeout(this._pu); this._pu = setTimeout(() => SA.api('POST', '/parametres', { url_publique: v }).then(() => this.toast('URL publique enregistrée.')).catch(err => this.toast(err.message)), 700); },
