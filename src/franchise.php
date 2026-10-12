@@ -31,7 +31,7 @@ function sfReglesDefaut(): array
 {
     return ['actif' => true, 'validation' => 'modele', 'quotaSemaine' => 3, 'delaiMinHeures' => 24, 'horizonJours' => 30,
         'jours' => [1, 2, 3, 4, 5, 6, 0], 'heureMin' => '07:00', 'heureMax' => '20:00', 'fb' => true, 'ig' => true,
-        'remiseMax' => 30, 'promoDureeMax' => 14, 'voirReseau' => true, 'voirCampagnes' => true, 'voirResultats' => true,
+        'remiseMax' => 30, 'promoDureeMax' => 14, 'voirReseau' => true, 'voirCampagnes' => true, 'voirResultats' => true, 'voirSuivi' => true,
         'message' => 'Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By.'];
 }
 
@@ -57,7 +57,7 @@ function sfReglesPut(array $in): array
         'fb' => (bool) ($in['fb'] ?? true), 'ig' => (bool) ($in['ig'] ?? true),
         'remiseMax' => max(0, min(90, (int) ($in['remiseMax'] ?? $d['remiseMax']))),
         'promoDureeMax' => max(1, min(90, (int) ($in['promoDureeMax'] ?? $d['promoDureeMax']))),
-        'voirReseau' => (bool) ($in['voirReseau'] ?? true), 'voirCampagnes' => (bool) ($in['voirCampagnes'] ?? true), 'voirResultats' => (bool) ($in['voirResultats'] ?? true),
+        'voirReseau' => (bool) ($in['voirReseau'] ?? true), 'voirCampagnes' => (bool) ($in['voirCampagnes'] ?? true), 'voirResultats' => (bool) ($in['voirResultats'] ?? true), 'voirSuivi' => (bool) ($in['voirSuivi'] ?? true),
         'message' => mb_substr(trim((string) ($in['message'] ?? $d['message'])), 0, 600),
     ];
     if ($r['heureMax'] <= $r['heureMin']) { $r['heureMax'] = $d['heureMax']; $r['heureMin'] = $d['heureMin']; }
@@ -506,6 +506,25 @@ function sfPostAnnuler(string $shop, string $id): void
     socLog('Franchisé · ' . (socShop($shop)['name'] ?? $shop), 'Annulation', '« ' . ($p['title'] ?? $id) . ' » retiré');
 }
 
+/**
+ * Le suivi de la boutique (src/suivi.php) limité à SA Page et à son Instagram :
+ * abonnés gagnés / perdus face au budget dépensé pour elle. Lu en direct chez Meta.
+ */
+function sfSuivi(string $shop, int $jours): array
+{
+    if (!sfRegles()['voirSuivi']) { throw new HttpError(403, 'Le réseau ne partage pas le suivi des boutiques dans cet espace.'); }
+    $s = socShop($shop);
+    $page = (string) ($s['ids']['page_id'] ?? '');
+    $vide = ['jours' => in_array($jours, SOC_SUIVI_PERIODES, true) ? $jours : 28, 'lignes' => [], 'devise' => 'EUR', 'erreurs' => []];
+    if ($page === '') { return $vide + ['message' => 'La Page Facebook de votre boutique n’est pas encore reliée par le réseau.']; }
+    if (!Meta::configured()) { return $vide + ['message' => 'Le réseau n’a pas encore relié ses comptes Meta.']; }
+    $r = socSuiviAbonnes($jours, $page);
+    // Rien des autres boutiques : ni leurs lignes, ni la dépense non attribuée, ni le détail des erreurs du réseau.
+    return ['du' => $r['du'], 'au' => $r['au'], 'jours' => $r['jours'], 'devise' => $r['devise'], 'le' => $r['le'], 'lignes' => $r['lignes'],
+        'erreurs' => $r['erreurs'] ? ['une partie des chiffres n’a pas pu être lue chez Meta'] : [],
+        'message' => $r['lignes'] ? null : 'La Page de votre boutique n’est pas accessible au réseau chez Meta.'];
+}
+
 /* --- routes ------------------------------------------------------------------------------- */
 
 /** Les routes de l'espace franchisé (session franchisé) — null si la route n'en est pas une. */
@@ -538,6 +557,7 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/franchise/etat') { return [200, sfEtat($shop, $session)]; }
     if ($method === 'POST' && $path === '/franchise/posts') { return [200, ['post' => sfPostCreer($shop, body(), $session), 'quota' => ['used' => sfQuotaUtilise($shop, date('Y-m-d')), 'max' => sfRegles()['quotaSemaine']]]]; }
     if ($method === 'POST' && preg_match('#^/franchise/posts/([\w.\-]{1,64})/annuler$#', $path, $m)) { sfPostAnnuler($shop, $m[1]); return [200, ['ok' => true]]; }
+    if ($method === 'GET' && $path === '/franchise/suivi') { return [200, sfSuivi($shop, (int) ($_GET['jours'] ?? 28))]; }
     throw new HttpError(404, 'route inconnue');
 }
 

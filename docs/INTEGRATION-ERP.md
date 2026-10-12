@@ -87,4 +87,4 @@ Franchiseur (session `auth`) :
 
 Espace franchisé (session franchisé, limitée à ses boutiques) :
 `POST /franchise/connexion` · `POST /franchise/deconnexion` · `GET /franchise/session` ·
-`GET /franchise/etat` · `POST /franchise/posts` · `POST /franchise/posts/{id}/annuler`.
+`GET /franchise/etat` · `POST /franchise/posts` · `POST /franchise/posts/{id}/annuler` · `GET /franchise/suivi?jours=7|28|90`.

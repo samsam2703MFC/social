@@ -22,3 +22,4 @@ Relivraison : campagnes Meta — brouillons sans date, alerte compte impayé dan
 Relivraison : indicateurs Publicités par devise — 2026-10-12T09:22:07Z
 Relivraison : menus Opérations / Publicités Meta, filtre Actives par défaut — 2026-10-12T09:35:42Z
 Relivraison : calendriers Meta en direct + pastilles de comptes, Suivi des boutiques (abonnés / budget) — 2026-10-12T09:43:48Z
+Relivraison : suivi des boutiques (historique vide = non mesuré), Suivi de ma boutique (espace franchisé), Instagram unique du réseau — 2026-10-12T09:49:29Z

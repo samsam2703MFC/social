@@ -51,24 +51,36 @@ function socSuiviPage(array $c, string $du, string $au): array
         $out['picture'] = (string) ($pr['picture']['data']['url'] ?? '') ?: null; $out['link'] = (string) ($pr['link'] ?? '') ?: null;
     } catch (MetaError $e) { $out['motif'] = 'Page illisible : ' . $e->getMessage(); return $out; }
     $periode = ['period' => 'day', 'since' => $du, 'until' => date('Y-m-d', strtotime($au . ' +1 day'))];
-    try {
-        $r = Meta::call('GET', $c['id'] . '/insights', ['metric' => 'page_daily_follows_unique,page_daily_unfollows_unique'] + $periode, $c['token']);
+    // Meta a changé plusieurs fois ces métriques : on essaie dans l'ordre, une réponse vide compte comme un échec.
+    $essais = [
+        ['page_daily_follows_unique', 'page_daily_unfollows_unique'],
+        ['page_follows'],                                     // total du jour → variation
+        ['page_fan_adds_unique', 'page_fan_removes_unique'],  // anciennes métriques
+    ];
+    $premiereErreur = null;
+    foreach ($essais as $metriques) {
+        try {
+            $r = Meta::call('GET', $c['id'] . '/insights', ['metric' => implode(',', $metriques)] + $periode, $c['token']);
+        } catch (MetaError $e) { $premiereErreur ??= $e; continue; }
         $par = [];
-        foreach ((array) ($r['data'] ?? []) as $m) { $par[(string) ($m['name'] ?? '')] = socSuiviSerie($m); }
-        $g = $par['page_daily_follows_unique'] ?? []; $p = $par['page_daily_unfollows_unique'] ?? [];
+        foreach ((array) ($r['data'] ?? []) as $m) { $s = socSuiviSerie($m); if ($s) { $par[(string) ($m['name'] ?? '')] = $s; } }
+        if (!$par) { continue; }
         $serie = [];
-        foreach (array_unique(array_merge(array_keys($g), array_keys($p))) as $j) { $serie[$j] = ['gagnes' => $g[$j] ?? 0, 'perdus' => $p[$j] ?? 0]; }
+        if (isset($par['page_follows'])) {
+            $prec = null;
+            foreach ($par['page_follows'] as $j => $v) { if ($prec !== null) { $d = $v - $prec; $serie[$j] = ['gagnes' => max(0, $d), 'perdus' => max(0, -$d)]; } $prec = $v; }
+        } else {
+            $g = $par[$metriques[0]] ?? []; $p = $par[$metriques[1]] ?? [];
+            foreach (array_unique(array_merge(array_keys($g), array_keys($p))) as $j) { $serie[$j] = ['gagnes' => $g[$j] ?? 0, 'perdus' => $p[$j] ?? 0]; }
+        }
+        if (!$serie) { continue; }
         ksort($serie);
         $out['serie'] = $serie;
-    } catch (MetaError $e) {
-        try {
-            // Repli : le total d'abonnés jour par jour, dont on tire la variation.
-            $r = Meta::call('GET', $c['id'] . '/insights', ['metric' => 'page_follows'] + $periode, $c['token']);
-            $tot = socSuiviSerie((array) ($r['data'][0] ?? []));
-            $serie = []; $prec = null;
-            foreach ($tot as $j => $v) { if ($prec !== null) { $d = $v - $prec; $serie[$j] = ['gagnes' => max(0, $d), 'perdus' => max(0, -$d)]; } $prec = $v; }
-            $out['serie'] = $serie;
-        } catch (MetaError $e2) { $out['motif'] = socSuiviMotif($e, 'read_insights'); }
+        break;
+    }
+    if ($out['serie'] === null) {
+        $out['motif'] = $premiereErreur !== null ? socSuiviMotif($premiereErreur, 'read_insights')
+            : 'historique indisponible : Meta ne renvoie aucun chiffre d’abonnés jour par jour pour cette Page (ajoutez la permission read_insights au token)';
     }
     if (is_array($out['serie'])) {
         $out['gagnes'] = array_sum(array_column($out['serie'], 'gagnes')); $out['perdus'] = array_sum(array_column($out['serie'], 'perdus'));
@@ -139,7 +151,7 @@ function socSuiviDepenses(string $du, string $au): array
 }
 
 /** Le rapport complet pour l'écran « Suivi des boutiques ». */
-function socSuiviAbonnes(int $jours): array
+function socSuiviAbonnes(int $jours, ?string $seulePage = null): array
 {
     if (!Meta::configured()) { throw new HttpError(409, 'token Meta absent : saisissez-le dans Paramètres → API Meta → Clés d’accès Meta'); }
     $jours = in_array($jours, SOC_SUIVI_PERIODES, true) ? $jours : 28;
@@ -152,7 +164,7 @@ function socSuiviAbonnes(int $jours): array
     $noms = array_column(socShops(), 'name', 'id');
     $lignes = [];
     foreach ($comptes as $c) {
-        if ($c['type'] !== 'facebook') { continue; }
+        if ($c['type'] !== 'facebook' || ($seulePage !== null && $c['id'] !== $seulePage)) { continue; }
         $fb = socSuiviPage($c, $du, $au);
         $ig = null;
         foreach ($comptes as $c2) { if ($c2['type'] === 'instagram' && ($c2['page'] ?? null) === $c['id']) { $ig = socSuiviInstagram($c2, $du, $au); break; } }

@@ -10,7 +10,7 @@
   const Q = new URLSearchParams(location.search);
   const PAGE = decodeURIComponent(location.pathname.split('/').pop() || '');
   const ON_LOGIN = /^Connexion/.test(PAGE);
-  const PAGES = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', promo: 'Promotions.dc.html', camp: 'Campagnes.dc.html', login: 'Connexion.dc.html' };
+  const PAGES = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', promo: 'Promotions.dc.html', camp: 'Campagnes.dc.html', suivi: 'Suivi.dc.html', login: 'Connexion.dc.html' };
   let DEMO = Q.has('demo');
   try { if (!DEMO && sessionStorage.getItem('sf.demo') === '1' && !Q.has('live')) DEMO = true; if (DEMO) sessionStorage.setItem('sf.demo', '1'); else sessionStorage.removeItem('sf.demo'); } catch (e) {}
 
@@ -28,7 +28,7 @@
 
   // ---------- démonstration ----------
   const TEMPLATES = [{"id": "fp-produit", "order": 1, "name": "Produit du jour", "description": "Mettre un produit de votre vitrine en avant, à son prix.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "{produit}", "text": "{produit} : {prix} € chez L’Atelier By {ville}. Ouvert {horaires}.", "textNl": "{produit}: {prix} € bij L’Atelier By {ville}. Open {horaires}.", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "choix", "visual": {"style": "epure", "eyebrow": "Aujourd’hui en vitrine", "eyebrowNl": "Vandaag in de etalage"}}, {"id": "fp-remise", "order": 2, "name": "Promotion en %", "description": "Une remise sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{produit} -{remise} %", "text": "-{remise} % sur {produit} chez L’Atelier By {ville}, du {du} au {au}. Ouvert {horaires}.", "textNl": "-{remise} % op {produit} bij L’Atelier By {ville}, van {du} tot {au}. Open {horaires}.", "product": "choix", "promo": {"kind": "remise", "min": 10, "max": 30}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "ruby", "eyebrow": "Promotion", "eyebrowNl": "Promotie"}}, {"id": "fp-offre", "order": 3, "name": "Offre spéciale", "description": "4+1, 2+1… sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{offre} · {produit}", "text": "{offre} sur {produit} chez L’Atelier By {ville}, du {du} au {au} !", "textNl": "{offre} op {produit} bij L’Atelier By {ville}, van {du} tot {au}!", "product": "choix", "promo": {"kind": "offre", "offres": ["4+1", "2+1", "1 acheté = 1 offert"]}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "abricot", "eyebrow": "Offre spéciale", "eyebrowNl": "Speciale actie"}}, {"id": "fp-evenement", "order": 4, "name": "Événement en boutique", "description": "Une dégustation, une animation, un horaire spécial.", "active": true, "type": "Événement local", "fb": true, "ig": true, "validation": true, "title": "Événement à {ville}", "text": "Chez L’Atelier By {ville} : {libre}", "textNl": "Bij L’Atelier By {ville}: {libre}", "product": "aucun", "promo": {"kind": "aucune"}, "period": false, "free": 90, "photo": "upload", "visual": {"style": "noir", "eyebrow": "En boutique", "eyebrowNl": "In de winkel"}}, {"id": "fp-vitrine", "order": 5, "name": "Nouveau en vitrine", "description": "Votre photo d’un produit qui arrive.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "Nouveau : {produit}", "text": "Nouveau dans notre vitrine à {ville} : {produit}. À découvrir {horaires} !", "textNl": "Nieuw in onze etalage in {ville}: {produit}. Te ontdekken {horaires}!", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "upload", "visual": {"style": "plein", "eyebrow": "Nouveau", "eyebrowNl": "Nieuw"}}];
-  const RULES = {"actif": true, "validation": "modele", "quotaSemaine": 3, "delaiMinHeures": 24, "horizonJours": 30, "jours": [1, 2, 3, 4, 5, 6, 0], "heureMin": "07:00", "heureMax": "20:00", "fb": true, "ig": true, "remiseMax": 30, "promoDureeMax": 14, "voirReseau": true, "voirCampagnes": true, "voirResultats": true, "message": "Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By."};
+  const RULES = {"actif": true, "validation": "modele", "quotaSemaine": 3, "delaiMinHeures": 24, "horizonJours": 30, "jours": [1, 2, 3, 4, 5, 6, 0], "heureMin": "07:00", "heureMax": "20:00", "fb": true, "ig": true, "remiseMax": 30, "promoDureeMax": 14, "voirReseau": true, "voirCampagnes": true, "voirResultats": true, "voirSuivi": true, "message": "Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By."};
   function demoState() {
     const today = iso(new Date()), t = (n) => addDays(today, n);
     const cat = [
@@ -167,10 +167,28 @@
     try { localStorage.removeItem('sf.shop'); } catch (e) {}
     location.href = PAGES.login;
   }
+  /** Suivi de la boutique : abonnés gagnés / perdus face au budget, lu en direct chez Meta (sa Page seulement). */
+  function suivi(jours) {
+    if (!DEMO) return api('GET', '/franchise/suivi?jours=' + jours + '&shop=' + encodeURIComponent(STATE.shop.id));
+    const h = (t) => { let x = 7; for (let i = 0; i < t.length; i++) x = (x * 31 + t.charCodeAt(i)) % 100003; return x; };
+    const au = addDays(STATE.today, -1), du = addDays(au, -(jours - 1)), fbS = {}, dep = {};
+    let gF = 0, pF = 0, tot = 0;
+    for (let d = du; d <= au; d = addDays(d, 1)) {
+      const k = h(STATE.shop.id + d), v = k % 7 < 3 ? 4 + k % 9 : 0;
+      if (v) { dep[d] = v; tot += v; }
+      const g = Math.round(v * 0.6 + k % 3), p = k % 6 === 0 ? 2 : k % 3 === 0 ? 1 : 0;
+      fbS[d] = { gagnes: g, perdus: p }; gF += g; pF += p;
+    }
+    const net = gF - pF;  // Instagram est commun à tout le réseau : il n'entre pas dans le suivi de la boutique
+    return Promise.resolve({ du, au, jours, devise: 'EUR', le: STATE.today + ' 10:00', demo: true, erreurs: [], message: null, lignes: [{ page: 'demo', name: STATE.shop.page || 'L’Atelier By ' + STATE.shop.name, picture: null,
+      facebook: { followers: 4780, gagnes: gF, perdus: pF, net: gF - pF, serie: fbS, motif: null },
+      instagram: null,
+      depense: tot, depenseJours: dep, abonnesNet: net, coutParAbonne: net > 0 && tot ? Math.round(tot / net * 100) / 100 : null }] });
+  }
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, logout, switchShop, reset, emit,
+  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, logout, switchShop, reset, emit, suivi,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();

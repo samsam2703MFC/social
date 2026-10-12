@@ -166,6 +166,9 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   de la pub (abonnés par jour avec et sans budget) et classement. Permissions :
   `read_insights` et `instagram_manage_insights` pour l'historique ; sans elles,
   le total actuel et le budget s'affichent avec le motif.
+  Dans l'espace franchisé, **Suivi de ma boutique** montre la même chose pour la
+  seule Page de la boutique (`GET /franchise/suivi`, règle « Voir le suivi de sa
+  boutique ») ; le compte Instagram, commun à tout le réseau, n'y est pas attribué.
 - **Publicités** — l'assistant envoie sa description complète ; le serveur crée
   campagne → ad set → créa → pub, un jeu par compte boutique ou un jeu réseau
   (un ad set par boutique, pour lire les résultats boutique par boutique).

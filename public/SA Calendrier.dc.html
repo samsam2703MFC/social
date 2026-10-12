@@ -415,7 +415,8 @@ class Component extends DCLogic {
       (p.shops === 'all' ? SA.SHOPS.map(x => x.id) : (p.shops || [])).forEach(sid => {
         const ch = (p.ch && p.ch[sid]) || {}, ids = idsOf(sid);
         if ((ch.fb ?? p.fb) && ids.page_id) out.push('fb:' + ids.page_id);
-        if ((ch.ig ?? p.ig) && ids.instagram_user_id) out.push('ig:' + ids.instagram_user_id);
+        const ig = ids.instagram_user_id || (((SA.state().brand || {}).ids || {}).instagram_user_id) || (SA.live ? '' : '17841400000');  // Instagram unique du réseau
+        if ((ch.ig ?? p.ig) && ig && !out.includes('ig:' + ig)) out.push('ig:' + ig);
       });
       return out;
     };

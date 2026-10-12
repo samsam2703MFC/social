@@ -820,6 +820,22 @@ check('budget rapporté à la Page de chaque pub, jour par jour ; coût par abon
 check('permission d’insights manquante : motif clair, le total et le budget restent', $w['facebook']['followers'] === 800 && str_contains((string) $w['facebook']['motif'], 'read_insights') && $w['abonnesNet'] === null);
 check('suivi : rien n’est écrit en base', (int) Db::row("SELECT COUNT(*) n FROM social_parametre WHERE cle LIKE '%suivi%'")['n'] === 0);
 
+echo "Espace franchisé : suivi de sa boutique\n";
+unset($GLOBALS['SOCIAL_HOTE']);
+sfSessionOuvrir(['4'], 'Test suivi', 'code');
+[$code, $b] = $fr('GET', '/franchise/suivi', [], ['jours' => '7']);
+check('franchisé : le suivi de SA Page seulement (ni les autres, ni la dépense non attribuée)', $code === 200 && count($b['lignes']) === 1 && $b['lignes'][0]['page'] === '111'
+    && $b['lignes'][0]['depense'] == 10 && !isset($b['nonAttribue']), json_encode($b));
+[$code] = $fr('GET', '/franchise/suivi', [], ['shop' => '5', 'jours' => '7']);
+check('franchisé : le suivi d’une autre boutique est refusé', $code === 403);
+sfReglesPut(array_merge(sfRegles(), ['voirSuivi' => false]));
+[$code] = $fr('GET', '/franchise/suivi', [], ['jours' => '7']);
+check('suivi non partagé par le réseau : refusé', $code === 403);
+sfReglesPut(array_merge(sfRegles(), ['voirSuivi' => true]));
+$b = sfSuivi('999', 7);
+check('boutique sans Page reliée : message, aucune donnée', $b['lignes'] === [] && str_contains((string) $b['message'], 'Page Facebook'));
+unset($_COOKIE[SF_COOKIE]);
+
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');
 check('GET /state', $code === 200 && $b['mode'] === 'live' && count($b['shops']) === 2);

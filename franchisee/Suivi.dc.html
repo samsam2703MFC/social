@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="config.js"></script>
+  <script src="franchise-data.js"></script>
+  <style>html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
+    section{padding-top:0;padding-bottom:0;} a{color:#8D1D2C;} button{font-family:var(--font-ui);}</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="FNav" active="suivi" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+    <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }}</div></sc-if>
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">L’Atelier By {{ shopName }} · vos abonnés face aux publicités du réseau</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">SUIVI DE MA BOUTIQUE</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:#666666;">{{ periodLabel }}</span>
+        <div style="display:inline-flex;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:3px;gap:2px;">
+          <sc-for list="{{ periods }}" as="pp" hint-placeholder-count="3"><button onClick="{{ pp.pick }}" style="border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer;background:{{ pp.bg }};color:{{ pp.fg }};">{{ pp.label }}</button></sc-for>
+        </div>
+      </div>
+    </header>
+
+    <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:40px 20px;text-align:center;font-size:13px;color:#666666;">Lecture de votre Page et de votre Instagram chez Meta…</div>
+    </sc-if>
+    <sc-if value="{{ hasMessage }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:28px 20px;text-align:center;font-size:13px;color:#666666;line-height:1.5;">{{ message }}</div>
+    </sc-if>
+
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="5">
+            <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;">
+              <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ k.label }}</span>
+              <span style="font-size:26px;font-weight:300;line-height:1.1;color:{{ k.color }};">{{ k.value }}</span>
+              <span style="font-size:11px;color:#666666;">{{ k.sub }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:14px;font-weight:500;">Jour par jour</span>
+            <span style="font-size:11px;color:#666666;">bordeaux = budget publicitaire · vert = abonnés gagnés · rouge = perdus</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <div style="display:flex;align-items:flex-end;gap:3px;height:120px;">
+              <sc-for list="{{ days }}" as="d" hint-placeholder-count="0"><span title="{{ d.tip }}" style="flex:1 1 0;min-width:2px;height:{{ d.spendH }};background:#8D1D2C;border-radius:3px 3px 0 0;opacity:0.85;"></span></sc-for>
+            </div>
+            <div style="height:1px;background:rgba(34,34,34,0.25);"></div>
+            <div style="display:flex;align-items:flex-start;gap:3px;height:64px;">
+              <sc-for list="{{ days }}" as="d" hint-placeholder-count="0"><span title="{{ d.tip }}" style="flex:1 1 0;min-width:2px;display:flex;flex-direction:column;height:64px;"><span style="height:{{ d.upH }};background:#1F8A60;border-radius:0 0 3px 3px;"></span><span style="height:{{ d.downH }};background:#C9474F;border-radius:0 0 3px 3px;margin-top:1px;"></span></span></sc-for>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:#8A847C;"><span>{{ from }}</span><span>{{ to }}</span></div>
+          </div>
+          <span style="font-size:13px;color:#222222;line-height:1.5;">{{ insight }}</span>
+          <sc-if value="{{ hasMotif }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.45;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:6px 8px;">{{ motif }}</span></sc-if>
+        </div>
+        <span style="font-size:11px;color:#666666;line-height:1.45;">Chiffres lus en direct chez Meta pour la Page Facebook de votre boutique. Le compte Instagram est commun à tout le réseau : il est suivi par le franchiseur. Le budget est celui des publicités du réseau qui mettent votre boutique en avant.</span>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { jours: 28, data: null, loading: true, err: '' };
+  componentDidMount() { this.load(28); }
+  load(jours) {
+    const SF = window.SF; if (!SF || !SF.state()) { this.setState({ loading: false }); return; }
+    const k = this._k = (this._k || 0) + 1; this.setState({ jours, loading: true, err: '' });
+    SF.suivi(jours).then(r => { if (k === this._k) this.setState({ data: r, loading: false }); })
+      .catch(e => { if (k === this._k) this.setState({ loading: false, err: e.message || 'erreur' }); });
+  }
+  renderVals() {
+    const SF = window.SF, st = SF && SF.state(), s = this.state, r = s.data;
+    const base = { shopName: st ? st.shop.name : '', hasError: !!(SF && SF.error) || !!s.err, error: (SF && SF.error) || ('Lecture impossible : ' + s.err), loading: s.loading,
+      periods: [7, 28, 90].map(j => ({ label: j + ' j', bg: s.jours === j ? '#8D1D2C' : 'transparent', fg: s.jours === j ? '#FFFFFF' : '#444444', pick: () => this.load(j) })) };
+    const x = r && (r.lignes || [])[0];
+    if (!r || !x) return Object.assign(base, { ready: false, hasMessage: !!(r && !s.loading), message: (r && r.message) || 'Aucune donnée pour votre boutique.', periodLabel: '', kpis: [], days: [] });
+    const fmt = (n, d = 0) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const money = (v, d = 0) => fmt(v, d) + (r.devise === 'EUR' ? ' €' : ' ' + r.devise);
+    const signed = (n) => n == null ? '—' : (n > 0 ? '▲ +' : n < 0 ? '▼ ' : '') + fmt(n);
+    const col = (n) => n == null ? '#8A847C' : n > 0 ? '#0F6B4A' : n < 0 ? '#8D1D2C' : '#444444';
+    const fb = x.facebook || {}, ig = x.instagram || null, dep = x.depenseJours || {};
+    const days = []; for (let d = r.du; d <= r.au; d = SF.addDays(d, 1)) days.push(d);
+    const flow = (d) => { const f = (fb.serie || {})[d], i = ig ? (ig.serie || {})[d] : null; return f || i ? { g: ((f && f.gagnes) || 0) + ((i && i.gagnes) || 0), p: (f && f.perdus) || 0 } : null; };
+    const maxS = Math.max(1, ...Object.values(dep)), maxF = Math.max(1, ...days.map(d => { const v = flow(d); return v ? Math.max(v.g, v.p) : 0; }));
+    const ds = days.map(d => { const v = dep[d] || 0, fl = flow(d);
+      return { v, fl, spendH: Math.round(v / maxS * 120) + 'px', upH: fl ? Math.round(fl.g / maxF * 34) + 'px' : '0px', downH: fl ? Math.round(fl.p / maxF * 28) + 'px' : '0px',
+        tip: SF.dLabel(d) + ' · budget ' + money(v, 2) + (fl ? ' · +' + fl.g + ' / −' + fl.p + ' abonnés' : ' · abonnés non mesurés') }; });
+    const avec = ds.filter(d => d.v > 0 && d.fl), sans = ds.filter(d => d.v === 0 && d.fl), moy = (a) => a.length ? a.reduce((t, d) => t + d.fl.g - d.fl.p, 0) / a.length : null;
+    const mA = moy(avec), mS = moy(sans);
+    const insight = mA == null && mS == null ? 'Les abonnés jour par jour ne sont pas encore disponibles : le total actuel et le budget s’affichent.'
+      : 'Les jours avec publicité, votre boutique gagne ' + (mA == null ? '—' : fmt(mA, 1)) + ' abonnés par jour ; sans publicité, ' + (mS == null ? '—' : fmt(mS, 1)) + '.'
+        + (mA != null && mS != null && mA > mS ? ' La publicité vous apporte ' + fmt(mA - mS, 1) + ' abonnés de plus par jour.' : '');
+    const kpis = [
+      { label: 'Facebook', value: fmt(fb.followers), sub: fb.net == null ? 'abonnés' : 'abonnés · +' + fmt(fb.gagnes) + ' / −' + fmt(fb.perdus) + ' sur ' + r.jours + ' j', color: '#222222' },
+      { label: 'Instagram', value: ig ? fmt(ig.followers) : '—', sub: !ig ? 'compte commun à tout le réseau' : ig.gagnes == null ? 'abonnés' : 'abonnés · +' + fmt(ig.gagnes) + ' nouveaux', color: '#222222' },
+      { label: 'Gagnés nets · ' + r.jours + ' j', value: signed(x.abonnesNet), sub: ig ? 'Facebook + Instagram' : 'Page Facebook de la boutique', color: col(x.abonnesNet) },
+      { label: 'Budget publicitaire', value: money(x.depense), sub: Object.keys(dep).length + ' jour(s) de diffusion', color: '#222222' },
+      { label: 'Coût par abonné', value: x.coutParAbonne == null ? '—' : money(x.coutParAbonne, 2), sub: 'budget ÷ abonnés nets', color: '#222222' },
+    ];
+    const motifs = [fb.motif, ig && ig.motif].filter(Boolean);
+    return Object.assign(base, { ready: true, hasMessage: false, kpis, days: ds, from: SF.dShort(r.du), to: SF.dShort(r.au), insight, hasMotif: motifs.length > 0, motif: motifs.join(' · '),
+      periodLabel: (r.demo ? 'Démonstration · ' : '') + 'du ' + SF.dShort(r.du) + ' au ' + SF.dShort(r.au) });
+  }
+}
+</script>
+</body>
+</html>
