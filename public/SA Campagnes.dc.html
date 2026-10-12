@@ -284,7 +284,7 @@ class Component extends DCLogic {
       const cand = st.posts.filter(p => !p.dark && p.date >= pStart && p.date <= pEnd && inShops(p) || p.campaign === c.id)
         .concat(mpo.posts.filter(p => p.status === 'Publié' && p.date >= pStart && p.date <= pEnd && inShops(p) || p.campaign === c.id))
         .sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
-      const postRows = cand.map(p => rowOf('post', p, p.title, SA.dShort(p.date) + (p.time ? ' ' + p.time : '') + ' · ' + (p.origin === 'meta' ? (p.accountName || '') + ' · ' + p.channel + ' (publié sur la Page)' : SA.shopLabel(p.shops) + ' · ' + p.status + ' (module)'),
+      const postRows = cand.map(p => rowOf('post', p, p.title, SA.dShort(p.date) + (p.time ? ' ' + p.time : '') + ' · ' + (p.origin === 'meta' ? (p.accountName || '') + ' · ' + (p.ig ? 'publié sur Instagram' : 'publié sur la Page Facebook') : SA.shopLabel(p.shops) + ' · ' + p.status + ' (module)'),
         p.img || SA.avatar(p.accountName || p.title, p.ig ? 'instagram' : 'facebook')));
       const adRows = st.ads.filter(a => a.campaign === c.id || ((a.start || '0000') <= pEnd && (a.end || a.start || '9999') >= pStart))
         .map(a => rowOf('ad', a, a.name, (a.origin === 'meta' ? 'Campagne Meta · ' : 'Publicité du module · ') + a.status + ' · ' + SA.eur(a.spent || 0) + ' dépensés' + (a.start ? ' · ' + SA.dShort(a.start) + (a.end ? ' → ' + SA.dShort(a.end) : '') : ''),
