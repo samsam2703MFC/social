@@ -23,6 +23,7 @@ require_once __DIR__ . '/portefeuille.php';
 require_once __DIR__ . '/instagram.php';
 require_once __DIR__ . '/darkposts.php';
 require_once __DIR__ . '/franchise.php';
+require_once __DIR__ . '/metacampagnes.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -96,6 +97,13 @@ function socRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/meta/ids/auto') { return [200, ['config' => socIdsAutoPut(body()), 'dernier' => socSetting('meta_ids_auto_dernier')]]; }
     if ($method === 'POST' && $path === '/meta/ids/auto/lancer') {
         return [200, ['dernier' => socIdsAuto(true), 'config' => socIdsAutoConfig(), 'shops' => socShops(), 'brand' => socBrand(), 'portefeuille' => socSetting('meta_portefeuille')]];
+    }
+    // Les campagnes déjà présentes chez Meta (src/metacampagnes.php), puis l'état des pubs du module.
+    if ($method === 'GET' && $path === '/meta/campagnes') { return [200, ['import' => socSetting('meta_campagnes_import'), 'comptes' => array_values(socComptesPub())]]; }
+    if ($method === 'POST' && $path === '/meta/campagnes/rafraichir') {
+        $r = socCampagnesMetaImporter();
+        $n = socAdsSync();
+        return [200, ['import' => $r, 'synchro' => $n, 'ads' => socItems('ads')]];
     }
     if ($method === 'GET' && $path === '/meta/portefeuille') { return [200, ['portefeuille' => socSetting('meta_portefeuille'), 'businessId' => (string) (socSetting('meta_business_id') ?? '')]]; }
     if ($method === 'POST' && $path === '/meta/portefeuille/rafraichir') {

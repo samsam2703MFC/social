@@ -28,7 +28,11 @@
         <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Meta Ads · comptes publicitaires des boutiques</span>
         <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">PUBLICITES</h1>
       </div>
-      <button onClick="{{ openWiz }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Nouvelle publicité</button>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+        <span style="font-size:11px;color:#666666;line-height:1.35;max-width:320px;text-align:right;">{{ impNote }}</span>
+        <button onClick="{{ importMeta }}" title="Relit chez Meta les campagnes de vos comptes publicitaires (créées dans le Gestionnaire de publicités, par une agence…) et met à jour l’état et la dépense de toutes les pubs. Automatique toutes les heures." style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;color:#222222;font-size:14px;font-weight:500;cursor:pointer;opacity:{{ impOp }};" style-hover="background:#F4EFE8;">{{ impLabel }}</button>
+        <button onClick="{{ openWiz }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Nouvelle publicité</button>
+      </div>
     </header>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
@@ -41,6 +45,11 @@
       </sc-for>
     </div>
 
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <sc-for list="{{ srcTabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.pick }}" style="border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ t.border }};background:{{ t.bg }};color:{{ t.fg }};">{{ t.label }}</button></sc-for>
+      <sc-if value="{{ impErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.4;color:#8D1D2C;">{{ impErrText }}</span></sc-if>
+    </div>
+
     <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
       <!-- Tableau -->
       <section style="flex:1 1 640px;min-width:0;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
@@ -50,7 +59,7 @@
             <div onClick="{{ r.pick }}" style="display:contents;cursor:pointer;">
               <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;align-items:center;gap:10px;min-width:0;">
                 <img src="{{ r.img }}" alt="" style="width:32px;height:32px;object-fit:contain;border-radius:6px;background:#F4EFE8;flex:0 0 auto;">
-                <span style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</span><span style="font-size:11px;color:#666666;">{{ r.objective }}</span></span>
+                <span style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</span><span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#666666;"><sc-if value="{{ r.isMeta }}" hint-placeholder-val="{{ false }}"><span title="Créée hors du module, récupérée chez Meta" style="font-size:10px;font-weight:600;border-radius:999px;padding:1px 6px;background:#E3EBF8;color:#1F4E9A;">Meta</span></sc-if>{{ r.objective }}</span></span>
               </span>
               <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:12px;color:#444444;display:flex;flex-direction:column;justify-content:center;gap:2px;"><span>{{ r.campName }}</span><span style="font-size:11px;color:#666666;">{{ r.shops }}</span></span>
               <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:12px;display:flex;flex-direction:column;justify-content:center;gap:2px;"><span>{{ r.budget }}</span><span style="font-size:11px;color:#666666;">{{ r.scope }}</span></span>
@@ -75,7 +84,7 @@
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
               <div style="display:flex;flex-direction:column;gap:4px;min-width:0;">
                 <span style="font-size:15px;font-weight:500;">{{ d.name }}</span>
-                <span style="font-size:12px;color:#666666;">{{ d.objective }} · rayon {{ d.radius }} km</span>
+                <span style="font-size:12px;color:#666666;">{{ d.sub }}</span>
               </div>
               <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ d.stBg }};color:{{ d.stFg }};white-space:nowrap;">{{ d.status }}</span>
             </div>
@@ -93,10 +102,22 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <sc-if value="{{ d.canPause }}" hint-placeholder-val="{{ false }}"><button onClick="{{ pause }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Mettre en pause</button></sc-if>
               <sc-if value="{{ d.canResume }}" hint-placeholder-val="{{ false }}"><button onClick="{{ resume }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Reprendre</button></sc-if>
-              <sc-if value="{{ d.canTopUp }}" hint-placeholder-val="{{ false }}"><button onClick="{{ topUp }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">+ 100 € de budget</button></sc-if>
-              <sc-if value="{{ d.refused }}" hint-placeholder-val="{{ false }}"><button onClick="{{ fixAd }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Corriger et resoumettre</button></sc-if>
+              <sc-if value="{{ d.canTopUp }}" hint-placeholder-val="{{ false }}"><button onClick="{{ topUp }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">{{ d.topUpLabel }}</button></sc-if>
+              <sc-if value="{{ d.canFix }}" hint-placeholder-val="{{ false }}"><button onClick="{{ fixAd }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Corriger et resoumettre</button></sc-if>
               <sc-if value="{{ d.canStop }}" hint-placeholder-val="{{ false }}"><button onClick="{{ stop }}" style="border:none;background:transparent;color:#8D1D2C;padding:8px 4px;font-size:13px;font-weight:500;cursor:pointer;">Arrêter</button></sc-if>
             </div>
+            <sc-if value="{{ d.isMeta }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:8px;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Campagne Meta</span><a href="{{ d.lienMeta }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;color:#8D1D2C;">Gestionnaire de publicités ↗</a></div>
+                <span style="font-size:11px;color:#666666;line-height:1.45;">{{ d.metaFacts }}</span>
+                <sc-if value="{{ d.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#FCE7C8;color:#6b3d0a;border-radius:8px;padding:8px 10px;">{{ d.note }}</span></sc-if>
+                <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">
+                  <sc-for list="{{ d.metrics }}" as="mt" hint-placeholder-count="6"><div style="background:#F4EFE8;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:1px;min-width:0;"><span style="font-size:10px;color:#666666;">{{ mt.k }}</span><span style="font-size:14px;font-weight:500;">{{ mt.v }}</span></div></sc-for>
+                </div>
+                <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Rattacher à une campagne (pour le Retour sur campagne)<select value="{{ d.campaign }}" onChange="{{ attach }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="">Hors campagne</option><sc-for list="{{ d.campOptions }}" as="c" hint-placeholder-count="0"><option value="{{ c.id }}">{{ c.name }}</option></sc-for></select></label>
+                <span style="font-size:11px;color:#666666;line-height:1.45;">Pause, reprise, arrêt et plafond s’appliquent à la campagne chez Meta. Le reste (ciblage, créas, budget) se règle dans le Gestionnaire de publicités ; relu toutes les heures.</span>
+              </div>
+            </sc-if>
             <sc-if value="{{ d.hasStats }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:6px;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:10px;">
                 <span style="font-size:13px;font-weight:500;">Résultats par variante</span>
@@ -365,10 +386,10 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { selId: null, wizOpen: false, step: 1, w: null, err: '', toast: '', tick: 0, com: null };
+  state = { selId: null, wizOpen: false, step: 1, w: null, err: '', toast: '', tick: 0, com: null, src: 'all', imp: false };
   componentDidMount() {
     const SA = window.SA;
-    if (SA) { const ad = SA.param('ad'); if (ad) this.setState({ selId: ad }); if (SA.param('new')) this.openWiz(SA.param('c') || '', SA.param('post')); }
+    if (SA) { const ad = SA.param('ad'); if (ad) this.setState({ selId: ad }); if (SA.param('new')) this.openWiz(SA.param('c') || '', SA.param('post')); if (SA.param('src') === 'meta') this.setState({ src: 'meta' }); if (SA.param('importer')) this.importMeta(); }
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
   }
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); clearTimeout(this._rv); }
@@ -425,26 +446,43 @@ class Component extends DCLogic {
         message: SA.fill(p.text || '', sid0, null, 'fr'), messageNl: SA.fill(p.textNl || '', sid0, null, 'nl'), headline: title, adName: title + (p.dark ? ' · dark post' : ' · sponsorisé') }) }));
     }
   }
+  async importMeta() {
+    const SA = window.SA;
+    if (this.state.imp) return;
+    this.setState({ imp: true });
+    try {
+      const r = await SA.importMeta(), nc = (r.comptes || []).length, err = r.erreurs || [];
+      this.setState({ imp: false, src: r.importees ? 'meta' : this.state.src });
+      this.toast((r.demo ? 'Mode démonstration : ' : '') + r.total + ' campagne(s) Meta relue(s) dans ' + nc + ' compte(s) — ' + r.importees + ' nouvelle(s), ' + r.majs + ' mise(s) à jour'
+        + (r.disparues ? ', ' + r.disparues + ' disparue(s)' : '') + '.' + (err.length ? ' ' + err.length + ' erreur(s) : voir sous les filtres.' : ''));
+    } catch (e) { this.setState({ imp: false }); this.toast('Récupération impossible : ' + e.message); }
+  }
   upd(id, patch, logMsg) { const SA = window.SA; SA.save({ ads: SA.state().ads.map(a => a.id === id ? Object.assign({}, a, patch) : a) }); if (logMsg) SA.log('Sarah Lambert (Franchiseur)', 'Publicité', logMsg); }
   renderVals() {
     const SA = window.SA, s = this.state;
     if (!SA) return { rows: [], kpis: [], d: {} };
     const st = SA.state(), ads = st.ads, camps = st.campaigns;
     const postOf = (id) => st.posts.find(p => p.id === id);
-    const totalOf = (a) => a.budgetType === 'quotidien' ? a.budget * (SA.daysBetween(a.start, a.end) + 1) : a.budget;
+    // Une campagne Meta sans date de fin court « en continu » : son total courant s'arrête à aujourd'hui.
+    const endOf = (a) => a.end || (a.start > SA.TODAY ? a.start : SA.TODAY);
+    const totalOf = (a) => a.budgetType === 'quotidien' ? a.budget * (SA.daysBetween(a.start, endOf(a)) + 1) : a.budget;
+    const money = (a, v, dec = 0) => !a.devise || a.devise === 'EUR' ? SA.eur(v, dec) : SA.fmt(v, dec) + ' ' + a.devise;
+    const period = (a) => SA.dShort(a.start) + ' → ' + (a.end ? SA.dShort(a.end) : 'en continu');
+    const nMeta = ads.filter(a => a.origin === 'meta').length, src = s.src;
     const order = { 'Refusée': 0, 'Budget épuisé': 1, 'En revue': 2, 'Active': 3, 'En pause': 4, 'Arrêtée': 5, 'Terminée': 6 };
-    const sorted = ads.slice().sort((a, b) => (order[a.status] - order[b.status]) || b.start.localeCompare(a.start));
+    const sorted = ads.filter(a => src === 'all' || (src === 'meta') === (a.origin === 'meta')).sort((a, b) => ((order[a.status] ?? 9) - (order[b.status] ?? 9)) || b.start.localeCompare(a.start));
     const rows = sorted.map(a => {
       const sc = SA.AD_STATUS[a.status] || SA.AD_STATUS['Active'], tot = Math.min(totalOf(a), a.cap || Infinity), p = postOf(a.post);
       const ratio = tot ? a.spent / tot : 0;
-      return { name: a.name, objective: a.objective + (a.dark ? ' · dark post' : '') + (a.variants > 1 ? ' · ' + a.variants + ' variantes' : ''), img: p ? p.img : 'img/illus/decorative/bubble.png', campName: a.campaign ? (SA.byId(camps, a.campaign) || {}).name : 'Hors campagne', shops: SA.shopLabel(a.shops),
-        budget: a.budgetType === 'quotidien' ? SA.eur(a.budget) + ' / jour' : SA.eur(a.budget) + ' total', scope: a.scope === 'reseau' ? 'Mutualisé réseau' : 'Par boutique',
-        spentLabel: SA.eur(a.spent) + ' / ' + SA.eur(tot) + ' · reste ' + SA.eur(Math.max(0, tot - a.spent)), spentPct: Math.min(100, ratio * 100) + '%', barColor: ratio >= 0.9 && a.status === 'Active' ? '#D97B29' : a.status === 'Budget épuisé' ? '#8D1D2C' : '#8D1D2C',
-        status: a.status, stBg: sc.bg, stFg: sc.fg, hasReason: !!a.reason && a.status === 'Refusée', reason: a.reason || '', period: SA.dShort(a.start) + ' → ' + SA.dShort(a.end),
+      const isMeta = a.origin === 'meta';
+      return { name: a.name, objective: a.objective + (a.dark ? ' · dark post' : '') + (a.variants > 1 ? ' · ' + a.variants + ' variantes' : ''), isMeta, img: p ? p.img : (a.thumb || 'img/illus/decorative/bubble.png'), campName: a.campaign ? (SA.byId(camps, a.campaign) || {}).name : 'Hors campagne', shops: SA.shopLabel(a.shops),
+        budget: !a.budget ? (isMeta ? 'Budget dans les pubs' : '—') : a.budgetType === 'quotidien' ? money(a, a.budget) + ' / jour' : money(a, a.budget) + ' total', scope: isMeta ? (a.accountName || a.account || 'Compte Meta') : a.scope === 'reseau' ? 'Mutualisé réseau' : 'Par boutique',
+        spentLabel: money(a, a.spent) + (tot ? ' / ' + money(a, tot) + ' · reste ' + money(a, Math.max(0, tot - a.spent)) : ' dépensés'), spentPct: Math.min(100, ratio * 100) + '%', barColor: ratio >= 0.9 && a.status === 'Active' ? '#D97B29' : a.status === 'Budget épuisé' ? '#8D1D2C' : '#8D1D2C',
+        status: a.status, stBg: sc.bg, stFg: sc.fg, hasReason: !!a.reason && a.status === 'Refusée', reason: a.reason || '', period: period(a),
         bg: a.id === s.selId ? '#F4EFE8' : '#FFFFFF', pick: () => this.setState({ selId: a.id }) };
     });
     const active = ads.filter(a => a.status === 'Active');
-    const monthSpent = ads.filter(a => a.end >= SA.TODAY.slice(0, 8) + '01').reduce((x, a) => x + a.spent, 0);
+    const monthSpent = ads.filter(a => endOf(a) >= SA.TODAY.slice(0, 8) + '01').reduce((x, a) => x + a.spent, 0);
     const kpis = [
       { label: 'Actives', value: active.length, sub: SA.eur(active.reduce((x, a) => x + a.spent, 0)) + ' dépensés', color: '#0F6B4A', border: 'rgba(34,34,34,0.10)' },
       { label: 'Dépensé en ' + SA.MONTHS[+SA.TODAY.slice(5, 7) - 1], value: SA.eur(monthSpent), sub: 'tous comptes confondus', color: '#222222', border: 'rgba(34,34,34,0.10)' },
@@ -457,11 +495,22 @@ class Component extends DCLogic {
     let d = {};
     if (a) {
       const sc = SA.AD_STATUS[a.status] || SA.AD_STATUS['Active'], tot = Math.min(totalOf(a), a.cap || Infinity);
-      const days = Math.max(1, Math.min(SA.daysBetween(a.start, a.end) + 1, SA.daysBetween(a.start, SA.TODAY) + 1));
+      const days = Math.max(1, Math.min(SA.daysBetween(a.start, endOf(a)) + 1, SA.daysBetween(a.start, SA.TODAY) + 1));
       const bars = []; const n = Math.max(1, Math.min(28, days)); let acc = 0;
       for (let i = 0; i < n; i++) { const v = a.spent / n * (0.7 + 0.6 * Math.abs(Math.sin(i * 1.7 + a.id.length))); acc += v; bars.push(v); }
-      const max = Math.max(...bars, 1), dailyCap = a.budgetType === 'quotidien' ? a.budget : tot / Math.max(1, SA.daysBetween(a.start, a.end) + 1);
-      d = { name: a.name, objective: a.objective, radius: a.radius, status: a.status, stBg: sc.bg, stFg: sc.fg, spent: SA.eur(a.spent), left: SA.eur(Math.max(0, tot - a.spent)), cap: SA.eur(a.cap),
+      const max = Math.max(...bars, 1), dailyCap = a.budgetType === 'quotidien' ? a.budget : tot / Math.max(1, SA.daysBetween(a.start, endOf(a)) + 1);
+      const isMeta = a.origin === 'meta', ins = a.insights || {}, imp = SA.metaImport && SA.metaImport();
+      d = { name: a.name, objective: a.objective, sub: [a.objective, a.radius ? 'rayon ' + a.radius + ' km' : '', isMeta ? period(a) : ''].filter(Boolean).join(' · '),
+        status: a.status, stBg: sc.bg, stFg: sc.fg, spent: money(a, a.spent), left: tot ? money(a, Math.max(0, tot - a.spent)) : '—', cap: a.cap ? money(a, a.cap) : '—',
+        canFix: a.status === 'Refusée' && !isMeta, topUpLabel: '+ 100 ' + (a.devise && a.devise !== 'EUR' ? a.devise : '€') + (isMeta ? ' de plafond' : ' de budget'), isMeta,
+        lienMeta: a.lienMeta || '#', hasNote: isMeta && !!(a.note || a.gone), note: a.note || '',
+        metaFacts: isMeta ? [(a.accountName ? a.accountName + ' · ' : '') + (a.account || ''), a.devise && a.devise !== 'EUR' ? 'montants en ' + a.devise : '', (a.nAds || 0) + ' pub(s) dans ' + (a.nAdsets || 0) + ' ensemble(s)',
+          a.metaObjective || '', 'relue ' + (a.syncedAt ? 'le ' + SA.dShort(a.syncedAt.slice(0, 10)) + ' à ' + a.syncedAt.slice(11, 16) : '—')].filter(Boolean).join(' · ') : '',
+        metrics: isMeta ? [['Impressions', SA.fmt(ins.impressions || 0)], ['Couverture', SA.fmt(ins.reach || 0)], ['Clics', SA.fmt(ins.clicks || 0)], ['CTR', ins.ctr == null ? '—' : SA.pct(ins.ctr, 2)],
+          ['Coût / clic', ins.cpc == null ? '—' : money(a, ins.cpc, 2)], ['CPM', ins.cpm == null ? '—' : money(a, ins.cpm, 2)], ['Répétition', ins.frequency == null ? '—' : SA.fmt(ins.frequency, 2)],
+          ins.engagement != null ? ['Interactions', SA.fmt(ins.engagement)] : null, ins.videoViews != null ? ['Vues vidéo', SA.fmt(ins.videoViews)] : null, ins.leads != null ? ['Prospects', SA.fmt(ins.leads)] : null]
+          .filter(Boolean).map(([k, v]) => ({ k, v })) : [],
+        campaign: a.campaign || '', campOptions: camps.map(c => ({ id: c.id, name: c.name + (c.status === 'terminée' ? ' (terminée)' : '') })),
         bars: a.spent ? bars.map((v, i) => ({ h: Math.round(v / max * 100) + '%', c: v > dailyCap * 1.15 ? '#D97B29' : '#8D1D2C', tip: 'J' + (i + 1) + ' · ' + SA.eur(v * (a.spent / acc)) })) : [],
         capAlert: a.status === 'Active' && a.spent / tot >= 0.85, capText: 'Alerte dépassement : ' + SA.pct(a.spent / tot) + ' du plafond consommé. La diffusion s\u2019arrêtera automatiquement à ' + SA.eur(a.cap) + '.',
         exhausted: a.status === 'Budget épuisé', refused: a.status === 'Refusée', reason: a.reason || '',
@@ -610,7 +659,13 @@ class Component extends DCLogic {
       pause: () => this.upd(a.id, { status: 'En pause' }, '« ' + a.name + ' » mise en pause'),
       resume: () => this.upd(a.id, { status: 'Active' }, '« ' + a.name + ' » reprise'),
       stop: () => this.upd(a.id, { status: 'Arrêtée' }, '« ' + a.name + ' » arrêtée'),
-      topUp: () => this.upd(a.id, { budget: a.budget + 100, cap: (a.cap || a.budget) + 100, status: 'Active' }, '« ' + a.name + ' » : +100 € de budget'),
+      topUp: () => a.origin === 'meta' ? this.upd(a.id, { cap: (a.cap || a.spent) + 100, status: 'Active' }, '« ' + a.name + ' » : plafond relevé de 100') : this.upd(a.id, { budget: a.budget + 100, cap: (a.cap || a.budget) + 100, status: 'Active' }, '« ' + a.name + ' » : +100 € de budget'),
+      attach: (e) => { if (!a) return; const v = e.target.value || null; this.upd(a.id, { campaign: v }, '« ' + a.name + ' » ' + (v ? 'rattachée à « ' + ((SA.byId(camps, v) || {}).name || v) + ' »' : 'détachée de sa campagne')); this.toast(v ? 'Rattachée : sa dépense et ses résultats Meta comptent dans le Retour sur campagne (relu toutes les heures).' : 'Détachée de la campagne.'); },
+      importMeta: () => this.importMeta(), impLabel: s.imp ? 'Récupération…' : 'Récupérer les campagnes Meta', impOp: s.imp ? 0.6 : 1,
+      impNote: (() => { const r = SA.metaImport && SA.metaImport(); return r && r.le ? 'Dernière relecture Meta : ' + SA.dShort(r.le.slice(0, 10)) + ' à ' + r.le.slice(11, 16) + ' · ' + (r.comptes || []).length + ' compte(s) pub' : 'Campagnes Meta jamais relues : cliquez pour récupérer celles de vos comptes publicitaires.'; })(),
+      impErr: (() => { const r = SA.metaImport && SA.metaImport(); return !!(r && (r.erreurs || []).length); })(),
+      impErrText: (() => { const r = SA.metaImport && SA.metaImport(); return r && (r.erreurs || []).length ? 'Dernière relecture : ' + r.erreurs.join(' · ') : ''; })(),
+      srcTabs: [['all', 'Toutes (' + ads.length + ')'], ['module', 'Créées ici (' + (ads.length - nMeta) + ')'], ['meta', 'Récupérées de Meta (' + nMeta + ')']].map(([id, label]) => ({ label, bg: src === id ? '#8D1D2C' : '#FFFFFF', fg: src === id ? '#FFFFFF' : '#222222', border: src === id ? '#8D1D2C' : 'rgba(34,34,34,0.18)', pick: () => this.setState({ src: id }) })),
       fixAd: () => { this.upd(a.id, { status: 'En revue', reason: null }, '« ' + a.name + ' » corrigée et resoumise'); this.toast('Publicité resoumise à Meta.'); },
       showComments: () => { if (!a) return; if (s.com && s.com.ad === a.id && s.com.open) this.setState({ com: Object.assign({}, s.com, { open: false }) }); else this.comments(a, false); },
       syncComments: () => a && this.comments(a, true),

@@ -400,6 +400,8 @@ function socMetaObjects(string $kind, string $localId): array
 function socAdHook(?array $avant, array $ad): array
 {
     if ($avant === null) { return socAdCreate($ad); }
+    // Campagne récupérée chez Meta (src/metacampagnes.php) : pilotée au niveau de la campagne.
+    if (($avant['origin'] ?? '') === 'meta') { return socCampagneMetaHook($avant, $ad); }
     // Les champs qui viennent de Meta restent ceux du serveur.
     foreach (['spent', 'reason', 'spec', 'stats'] as $k) { if (array_key_exists($k, $avant)) { $ad[$k] = $avant[$k]; } }
     $objs = array_filter(socMetaObjects('ad', (string) $ad['id']), static fn ($o) => $o['ad_id']);
@@ -472,6 +474,7 @@ function socAdsSync(): int
     if (!Meta::configured()) { return 0; }
     $n = 0;
     foreach (socItems('ads') as $ad) {
+        if (($ad['origin'] ?? '') === 'meta') { continue; }  // relues campagne par campagne (socCampagnesMetaImporter)
         $objs = array_filter(socMetaObjects('ad', (string) $ad['id']), static fn ($o) => $o['ad_id']);
         if (!$objs) { continue; }
         $statuts = []; $motifs = []; $spent = 0.0; $lu = false; $parVariante = [];

@@ -99,6 +99,21 @@ Catégorie spéciale cochée → l'UI force rayon ≥ 15 km, 18–65 ans, tous g
 
 Suivi (tableau Publicités) : statut Meta `IN_PROCESS` → « En revue », `ACTIVE`, `DISAPPROVED` + motif → « Refusée », `PAUSED`, plafond atteint → « Budget épuisé ». Pause / reprise / arrêt = `POST /{ad_id}` avec `status`.
 
+## 5 bis. Écran « Publicités » → récupérer les campagnes existantes (lecture)
+
+Par compte publicitaire (`src/metacampagnes.php`, bouton « Récupérer les campagnes Meta » + cron horaire) :
+
+| Appel | Champs |
+|---|---|
+| `GET /act_{id}` | `name,account_status,currency` |
+| `GET /act_{id}/campaigns` | `id,name,objective,status,effective_status,daily_budget,lifetime_budget,spend_cap,start_time,stop_time,created_time,updated_time` · `effective_status=["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED"]` |
+| `GET /act_{id}/adsets` | `id,campaign_id,name,effective_status,daily_budget,lifetime_budget,start_time,end_time,promoted_object,targeting{geo_locations}` |
+| `GET /act_{id}/ads` | `id,campaign_id,adset_id,name,effective_status,ad_review_feedback,creative{id,actor_id,thumbnail_url,image_url,effective_object_story_id}` |
+| `GET /act_{id}/insights` | `level=campaign`, `date_preset=maximum`, `campaign_id,spend,impressions,reach,clicks,ctr,cpc,cpm,frequency,actions` |
+
+Pilotage d'une campagne récupérée : `POST /{campaign_id}` `status` (ACTIVE / PAUSED / ARCHIVED) ou `spend_cap` (centimes).
+Permission : `ads_read` (lecture) et `ads_management` (pilotage).
+
 ## 6. Écran « Formulaires de leads » — `POST /{page_id}/leadgen_forms`
 
 | Champ UI | Paramètre |

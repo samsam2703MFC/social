@@ -107,6 +107,10 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
     }
     if ($m === 'GET' && preg_match('#^act_\d+$#', $path)) { return [200, ['name' => 'Compte ' . $path, 'account_status' => 1]]; }
     if ($m === 'GET' && $path === 'search') { return [200, ['data' => ($p['type'] ?? '') === 'adlocale' ? [['key' => 9, 'name' => 'French (All)'], ['key' => 14, 'name' => 'Dutch']] : [['id' => '6003107902', 'name' => $p['q']]]]]; }
+    // Campagnes déjà présentes chez Meta (récupération) : seul act_2001 en a.
+    if ($m === 'GET' && preg_match('#^act_\d+/(campaigns|adsets|ads|insights)$#', $path, $mm)) {
+        return [200, ['data' => $path === 'act_2001/' . $mm[1] ? ($GLOBALS['META_EXISTANT'][$mm[1]] ?? []) : []]];
+    }
     if (preg_match('#^act_\d+/(campaigns|adsets|adcreatives|ads)$#', $path)) { return [200, ['id' => $id()]]; }
     if (preg_match('#^act_\d+/adimages$#', $path)) { return [200, ['images' => ['x' => ['hash' => 'HASH1']]]]; }
     if (preg_match('#^(111|222)/leadgen_forms$#', $path)) { return [200, ['id' => 'F' . $id()]]; }
@@ -692,6 +696,56 @@ unset($GLOBALS['SOC_BODY']);
 check('nouveau token enregistré : identifiants relus tout de suite', $code === 200 && ($b['ids']['ok'] ?? false) && socShop('5')['ids']['page_id'] === '222');
 [$code, $b] = socRoute('GET', '/meta/ids/auto');
 check('GET /meta/ids/auto : réglages et dernier passage', $code === 200 && $b['config']['frequence'] === 1 && !empty($b['dernier']['le']));
+
+echo "Campagnes existantes chez Meta : récupération\n";
+$modCid = (string) Db::row("SELECT campaign_id FROM social_meta_objet WHERE kind = 'ad' AND campaign_id IS NOT NULL ORDER BY id LIMIT 1")['campaign_id'];
+$j = static fn (int $d) => date('Y-m-d', strtotime(($d >= 0 ? '+' : '') . $d . ' days')) . 'T08:00:00+0200';
+$GLOBALS['META_EXISTANT'] = [
+    'campaigns' => [
+        ['id' => '7001', 'name' => 'Promo hiver Halle', 'objective' => 'OUTCOME_TRAFFIC', 'effective_status' => 'ACTIVE', 'daily_budget' => '1500', 'spend_cap' => '30000', 'start_time' => $j(-5)],
+        ['id' => '7002', 'name' => 'Notoriété réseau', 'objective' => 'OUTCOME_AWARENESS', 'effective_status' => 'PAUSED', 'lifetime_budget' => '50000', 'start_time' => $j(-30), 'stop_time' => $j(10)],
+        ['id' => $modCid, 'name' => 'Créée par le module', 'objective' => 'OUTCOME_TRAFFIC', 'effective_status' => 'ACTIVE', 'start_time' => $j(-2)],
+    ],
+    'adsets' => [
+        ['id' => '7101', 'campaign_id' => '7001', 'name' => 'Halle 8 km', 'effective_status' => 'ACTIVE', 'start_time' => $j(-5),
+         'targeting' => ['geo_locations' => ['custom_locations' => [['latitude' => 50.7, 'longitude' => 4.2, 'radius' => 8, 'distance_unit' => 'kilometer']]]]],
+        ['id' => '7102', 'campaign_id' => '7002', 'name' => 'Réseau', 'effective_status' => 'PAUSED', 'start_time' => $j(-30), 'end_time' => $j(10)],
+    ],
+    'ads' => [
+        ['id' => '7201', 'campaign_id' => '7001', 'adset_id' => '7101', 'name' => 'Visuel A', 'effective_status' => 'ACTIVE', 'creative' => ['id' => '7301', 'actor_id' => '111', 'thumbnail_url' => 'https://cdn.fb/t7201.jpg']],
+        ['id' => '7202', 'campaign_id' => '7002', 'adset_id' => '7102', 'name' => 'Halle', 'effective_status' => 'CAMPAIGN_PAUSED', 'creative' => ['id' => '7302', 'effective_object_story_id' => '111_55']],
+        ['id' => '7203', 'campaign_id' => '7002', 'adset_id' => '7102', 'name' => 'Wavre', 'effective_status' => 'CAMPAIGN_PAUSED', 'creative' => ['id' => '7303', 'actor_id' => '222']],
+    ],
+    'insights' => [['campaign_id' => '7001', 'spend' => '42.10', 'impressions' => '5000', 'reach' => '3000', 'clicks' => '120', 'ctr' => '2.4', 'cpc' => '0.35', 'cpm' => '8.42',
+        'frequency' => '1.66', 'actions' => [['action_type' => 'post_engagement', 'value' => '300']]]],
+];
+socShopPut('5', ['ids' => array_merge(socShop('5')['ids'], ['page_id' => '222'])]);
+$appels = [];
+[$code, $b] = socRoute('POST', '/meta/campagnes/rafraichir');
+$m1 = socItem('ads', 'meta-7001'); $m2 = socItem('ads', 'meta-7002');
+check('récupération : 2 campagnes importées, celle du module ignorée', $code === 200 && $b['import']['importees'] === 2 && $m1 && $m2 && socItem('ads', 'meta-' . $modCid) === null, json_encode($b['import'] ?? null));
+check('campagne Halle : boutique par la Page, budget quotidien, plafond, dépense, rayon', $m1['origin'] === 'meta' && $m1['shops'] === ['4'] && $m1['scope'] === 'boutique'
+    && $m1['budgetType'] === 'quotidien' && $m1['budget'] == 15 && $m1['cap'] == 300 && $m1['spent'] == 42.1 && $m1['status'] === 'Active' && $m1['radius'] == 8 && $m1['end'] === null, json_encode($m1));
+check('campagne Halle : statistiques et vignette', $m1['insights']['impressions'] === 5000 && $m1['insights']['ctr'] == 0.024 && $m1['insights']['engagement'] === 300 && $m1['thumb'] === 'https://cdn.fb/t7201.jpg'
+    && str_contains($m1['lienMeta'], 'act=2001&selected_campaign_ids=7001'));
+check('campagne réseau : deux boutiques (Page de la créa / du post), budget total, en pause, fin', $m2['scope'] === 'reseau' && count($m2['shops']) === 2 && $m2['budgetType'] === 'total'
+    && $m2['budget'] == 500 && $m2['status'] === 'En pause' && $m2['end'] === date('Y-m-d', strtotime('+10 days')) && $m2['objective'] === 'Notoriété', json_encode($m2));
+$objs = socMetaObjects('ad', 'meta-7002');
+check('objets Meta : une ligne par pub, avec sa boutique (Retour sur campagne)', count($objs) === 2 && array_column($objs, 'shop_id') === ['4', '5'] && $objs[0]['campaign_id'] === '7002');
+check('les pubs importées ne sont pas relues pub par pub', !array_filter($appels, static fn ($a) => $a[0] === 'GET' && in_array($a[1], ['7201', '7201/insights'], true)));
+check('compte rendu gardé et rendu dans l’état', (socStateGet()['metaImport']['importees'] ?? null) === 2);
+$appels = [];
+$r = socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($m1, ['status' => 'En pause', 'name' => 'Renommée', 'campaign' => 'c1', 'budget' => 999])]]]]);
+$m1 = socItem('ads', 'meta-7001');
+check('pause depuis l’écran : appliquée à la campagne Meta', $m1['status'] === 'En pause' && in_array(['POST', '7001', ['status' => 'PAUSED', 'access_token' => 'TOK-NOUVEAU']], $appels, true), json_encode($appels));
+check('champs Meta gardés (nom, budget), rattachement à une campagne du module accepté', $m1['name'] === 'Promo hiver Halle' && $m1['budget'] == 15 && $m1['campaign'] === 'c1');
+socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($m1, ['cap' => 400])]]]]);
+check('plafond relevé : spend_cap de la campagne Meta', in_array(['POST', '7001', ['spend_cap' => 40000, 'access_token' => 'TOK-NOUVEAU']], $appels, true));
+array_pop($GLOBALS['META_EXISTANT']['campaigns']); array_pop($GLOBALS['META_EXISTANT']['campaigns']);
+$r = socCampagnesMetaImporter(false);
+$m1 = socItem('ads', 'meta-7001'); $m2 = socItem('ads', 'meta-7002');
+check('rafraîchissement : mise à jour sans doublon, rattachement conservé', $r['majs'] === 1 && $r['importees'] === 0 && $m1['campaign'] === 'c1' && $m1['status'] === 'Active');
+check('campagne supprimée chez Meta : marquée arrêtée', $r['disparues'] === 1 && $m2['status'] === 'Arrêtée' && $m2['gone'] === true);
 
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');

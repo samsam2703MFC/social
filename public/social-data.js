@@ -151,7 +151,19 @@
     { id: 'a05', name: 'Recrutement Wavre', campaign: null, objective: 'Notoriété locale', shops: ['wavre'], scope: 'boutique', budgetType: 'total', budget: 150, cap: 150, spent: 150, start: '2026-10-02', end: '2026-10-12', status: 'Budget épuisé', radius: 15, post: 'p03' },
     { id: 'a06', name: 'Goûter malin · trafic', campaign: 'c-rentree', objective: 'Trafic en magasin', shops: ALL, scope: 'boutique', budgetType: 'total', budget: 1500, cap: 1500, spent: 1480, start: '2026-08-24', end: '2026-09-13', status: 'Terminée', radius: 8, post: 'p23' },
     { id: 'a07', name: 'Limonade · lancement', campaign: 'c-limonade', objective: 'Visites du webshop', shops: ALL, scope: 'reseau', budgetType: 'total', budget: 1800, cap: 1800, spent: 1760, start: '2026-06-15', end: '2026-07-12', status: 'Terminée', radius: 10, post: 'p26' },
+    // Campagnes créées hors du module (Gestionnaire de publicités) et récupérées chez Meta.
+    { id: 'meta-120211', origin: 'meta', metaId: '120211', account: 'act_1428801', accountName: 'Atelier By Halle', devise: 'EUR', name: 'Boost · Marché de Halle', objective: 'Interactions', metaObjective: 'OUTCOME_ENGAGEMENT',
+      campaign: null, shops: ['halle'], scope: 'boutique', budgetType: 'quotidien', budget: 6, cap: null, spent: 38.4, start: '2026-10-03', end: null, status: 'Active', radius: 10, post: null, nAds: 1, nAdsets: 1,
+      thumb: 'img/illus/seasonal/crepe-festival.png', insights: { impressions: 9200, reach: 6100, clicks: 210, ctr: 0.0228, cpc: 0.18, cpm: 4.17, frequency: 1.51, engagement: 640 },
+      lienMeta: 'https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=1428801&selected_campaign_ids=120211', syncedAt: '2026-10-12 07:37', importedAt: '2026-10-03 09:12' },
+    { id: 'meta-120198', origin: 'meta', metaId: '120198', account: 'act_1428800', accountName: 'Atelier By réseau', devise: 'EUR', name: 'Notoriété réseau · printemps', objective: 'Notoriété', metaObjective: 'OUTCOME_AWARENESS',
+      campaign: null, shops: ALL, scope: 'reseau', budgetType: 'total', budget: 900, cap: 900, spent: 884.2, start: '2026-04-01', end: '2026-05-15', status: 'Terminée', radius: null, post: null, nAds: 4, nAdsets: 2,
+      thumb: 'img/illus/seasonal/autumn-range.png', insights: { impressions: 212000, reach: 98500, clicks: 2140, ctr: 0.0101, cpc: 0.41, cpm: 4.17, frequency: 2.15, engagement: 5300, videoViews: 18400 },
+      lienMeta: 'https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=1428800&selected_campaign_ids=120198', syncedAt: '2026-10-12 07:37', importedAt: '2026-10-01 09:12' },
   ];
+  // Le dernier passage de « Récupérer les campagnes Meta » (en réel : GET /state → metaImport).
+  let IMPORT = { le: '2026-10-12 07:37', comptes: [{ id: 'act_1428800', name: 'Atelier By réseau', devise: 'EUR', statut: 1, campagnes: 1, erreur: null }, { id: 'act_1428801', name: 'Atelier By Halle', devise: 'EUR', statut: 1, campagnes: 1, erreur: null }],
+    importees: 0, majs: 2, disparues: 0, total: 2, erreurs: [] };
 
   const ACTIVITY = [
     { at: '2026-10-10 08:00', who: 'Système', what: 'Publication', detail: '« Le week-end gourmand d\u2019automne » publié sur 6 Pages Facebook et 5 comptes Instagram' },
@@ -372,7 +384,7 @@
   }
   // Applique un état lu au serveur aux constantes que les écrans lisent directement.
   function apply(L) {
-    LIVE = L; TODAY = L.today || TODAY; MARGIN = L.margin != null ? +L.margin : MARGIN;
+    LIVE = L; TODAY = L.today || TODAY; MARGIN = L.margin != null ? +L.margin : MARGIN; IMPORT = L.metaImport || null;
     const swap = (arr, v) => { arr.splice(0, arr.length, ...(v || [])); };
     swap(SHOPS, L.shops); swap(GROUPS, L.groups); swap(TEMPLATES, L.templates); swap(LEADFORMS, L.leadforms); swap(LEADS, L.leads); swap(DARK, L.darkPosts);
     if (L.catalogue && L.catalogue.length) swap(CATALOGUE, L.catalogue);
@@ -426,6 +438,21 @@
     if (!LIVE || pending) return Promise.resolve();
     return api('GET', '/state').then(L => { if (!pending) { apply(L); window.dispatchEvent(new Event('sa-change')); } }).catch(() => {});
   }
+  /**
+   * « Récupérer les campagnes Meta » : relit chez Meta les campagnes de tous les comptes
+   * publicitaires (et l'état des pubs du module), puis relit l'état. Rend le compte rendu.
+   */
+  function importMeta() {
+    if (!LIVE) {
+      const st = state(), add = ADS.filter(a => a.origin === 'meta' && !st.ads.some(x => x.id === a.id)).map(a => JSON.parse(JSON.stringify(a)));
+      if (add.length) save({ ads: st.ads.concat(add) });
+      const n = st.ads.filter(a => a.origin === 'meta').length, now = new Date();
+      IMPORT = Object.assign({}, IMPORT, { le: TODAY + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'), importees: add.length, majs: n, total: add.length + n, erreurs: [], demo: true });
+      window.dispatchEvent(new Event('sa-change'));
+      return Promise.resolve(IMPORT);
+    }
+    return api('POST', '/meta/campagnes/rafraichir').then(r => { IMPORT = r.import || IMPORT; return refresh().then(() => IMPORT); });
+  }
   function retryPost(id) {
     return api('POST', '/posts/' + encodeURIComponent(id) + '/relancer').then(r => {
       cache.posts = cache.posts.map(p => p.id === id ? r.post : p); base.posts[id] = JSON.stringify(r.post);
@@ -462,7 +489,7 @@
   else window.addEventListener('focus', () => { refresh(); });
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
-    api, refresh, retryPost, testConnexions, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
+    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
     TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
     byId, fmt, eur, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param };
 })();

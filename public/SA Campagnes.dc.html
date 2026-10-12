@@ -29,6 +29,7 @@
         <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">CAMPAGNES</h1>
       </div>
       <div style="display:flex;gap:8px;">
+        <a href="{{ metaHref }}" title="Relit chez Meta les campagnes de vos comptes publicitaires (Gestionnaire de publicités, agence…) ; elles arrivent dans Publicités, où vous pouvez les rattacher à une campagne." style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;color:#222222;text-decoration:none;display:inline-flex;align-items:center;">Récupérer les campagnes Meta</a>
         <button onClick="{{ toggleRef }}" style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">Référentiel des types</button>
         <button onClick="{{ openNew }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Nouvelle campagne</button>
       </div>
@@ -273,7 +274,7 @@ class Component extends DCLogic {
       const posts = st.posts.filter(p => p.campaign === c.id).sort((a, b) => a.date.localeCompare(b.date));
       const postMarks = posts.map((p, i) => ({ x: X(p.date), y: (i % 2 ? 30 : 4) + 'px', img: p.img, href: SA.href('post', 'id=' + p.id), tip: SA.dShort(p.date) + ' · ' + p.title + ' · ' + p.status, ring: p.status === 'Publié' ? '#1F8A60' : p.status === 'Programmé' ? '#D97B29' : p.status === 'Échec' ? '#8D1D2C' : '#B8B2A8' }));
       const ads = st.ads.filter(a => a.campaign === c.id);
-      const adBars = ads.map((a, i) => { const sc = SA.AD_STATUS[a.status] || SA.AD_STATUS['Active']; const x0 = SA.daysBetween(start, a.start) / span * 100, x1 = SA.daysBetween(start, a.end) / span * 100;
+      const adBars = ads.map((a, i) => { const sc = SA.AD_STATUS[a.status] || SA.AD_STATUS['Active']; const x0 = SA.daysBetween(start, a.start) / span * 100, x1 = SA.daysBetween(start, a.end || end) / span * 100;
         return { name: a.name + ' · ' + a.status, x: Math.max(0, x0) + '%', w: Math.max(4, Math.min(100, x1) - Math.max(0, x0)) + '%', y: (8 + i * 28) + 'px', bg: a.status === 'Active' ? '#8D1D2C' : sc.bg, fg: a.status === 'Active' ? '#FFFFFF' : sc.fg, href: SA.href('ads', 'ad=' + a.id), tip: a.name + ' — ' + SA.eur(a.spent) + ' dépensés' }; });
       const goalNow = r ? r.total : null;
       f = { name: c.name, typeName: t.name, color: t.color, icon: t.icon, tint: tint(t.color), lev: t.lev, levName: lev.name, kpi: t.kpi, locked: c.status === 'terminée',
@@ -305,6 +306,7 @@ class Component extends DCLogic {
       metric: n.metric, setMetric: (e) => upd({ metric: e.target.value }), goal: n.goal, setGoal: (e) => upd({ goal: +e.target.value }), budget: n.budget, setBudget: (e) => upd({ budget: +e.target.value }),
       hasErr: !!s.err, err: s.err };
     return {
+      metaHref: SA.href('ads', 'src=meta&importer=1'),
       toggleRef: () => this.setState({ refOpen: !s.refOpen }), refOpen: s.refOpen,
       refHead: ['', 'Type', 'Levier', 'KPI attendu', 'Durée'],
       ctypes: SA.CTYPES.map(t => ({ name: t.name, color: t.color, tint: tint(t.color), icon: t.icon, lev: t.lev, levName: SA.LEVERS[t.lev].name, kpi: t.kpi, dur: t.continuous ? 'Continue' : 'Datée' })),
