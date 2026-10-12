@@ -11,7 +11,8 @@ declare(strict_types=1);
  * maintenant » passe par la même file, échue tout de suite, et se publie dans
  * la requête.
  *
- * Variables ({ville}, {adresse}, {horaires}, {prix}, {produit_du_jour}, {webshop}, {webshop_produit}) :
+ * Variables ({ville}, {adresse}, {horaires}, {prix}, {produit_du_jour}, {webshop}, {webshop_produit}, {webshop_categorie},
+ * {webshop_produit:ID}, {webshop_categorie:ID}) :
  * résolues ici, boutique par boutique et dans la langue de la Page, AVANT
  * l'appel Meta. Boutique bilingue : légende NL puis FR dans le même message.
  *
@@ -35,13 +36,15 @@ function socCatalogue(): array
  * Le webshop d'une boutique (https://webshop.atelierby.be/?shop={n° de caisse}), ou la page d'un
  * produit dans ce webshop (&product={id TFBuddy}&open=product). Adresse de base : réglage `webshop_url`.
  */
-function socWebshopUrl(string $shopId, ?array $product = null): string
+function socWebshopUrl(string $shopId, ?array $product = null, int $categorie = 0): string
 {
     $base = rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/';
     if (!preg_match('/^\d+$/', $shopId)) { return $base; }
     $url = $base . '?shop=' . $shopId;
     $pid = (int) ($product['apiId'] ?? 0);
-    if ($pid > 0 && ($product['kind'] ?? 'produit') === 'produit') { $url .= '&product=' . $pid . '&open=product'; }
+    if ($pid > 0 && ($product['kind'] ?? 'produit') === 'produit') { return $url . '&product=' . $pid . '&open=product'; }
+    // Une catégorie du webshop (son id, celui du catalogue de la caisse) : ?category=…
+    if ($categorie > 0) { return $url . '&category=' . $categorie; }
     return $url;
 }
 
@@ -60,10 +63,15 @@ function socFill(string $text, array $shop, ?array $product, string $lang): stri
 {
     $hours = $lang === 'nl' && ($shop['hoursNl'] ?? '') !== '' ? $shop['hoursNl'] : ($shop['hours'] ?? '');
     $pname = $product ? (string) ($lang === 'nl' && !empty($product['nameNl']) ? $product['nameNl'] : ($product['name'] ?? '')) : '';
+    // Un produit ou une catégorie précis du webshop : {webshop_produit:123}, {webshop_categorie:456}.
+    $sid = (string) ($shop['id'] ?? '');
+    $text = preg_replace_callback('/\{webshop_(produit|categorie):(\d+)\}/', static fn ($m) => $m[1] === 'produit'
+        ? socWebshopUrl($sid, ['apiId' => (int) $m[2], 'kind' => 'produit']) : socWebshopUrl($sid, null, (int) $m[2]), $text);
     return strtr($text, [
         '{ville}' => (string) $shop['name'], '{adresse}' => (string) ($shop['address'] ?? ''), '{horaires}' => (string) $hours,
         '{prix}' => (string) ($product['price'] ?? ''), '{produit_du_jour}' => $pname,
-        '{webshop_produit}' => socWebshopUrl((string) ($shop['id'] ?? ''), $product), '{webshop}' => socWebshopUrl((string) ($shop['id'] ?? '')),
+        '{webshop_produit}' => socWebshopUrl($sid, $product), '{webshop_categorie}' => socWebshopUrl($sid, null, (int) ($product['categoryId'] ?? 0)),
+        '{webshop}' => socWebshopUrl($sid),
     ]);
 }
 

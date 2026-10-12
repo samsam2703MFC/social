@@ -441,6 +441,16 @@
                 <span style="font-size:11px;color:#666666;">Lien rapide :</span>
                 <sc-for list="{{ linkChips }}" as="lk" hint-placeholder-count="3"><button onClick="{{ lk.pick }}" title="{{ lk.tip }}" disabled="{{ lk.dis }}" style="border-radius:999px;padding:5px 11px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid {{ lk.border }};background:{{ lk.bg }};color:{{ lk.fg }};opacity:{{ lk.op }};">{{ lk.label }}</button></sc-for>
               </div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <input type="search" value="{{ wsQ }}" onChange="{{ setWsQ }}" disabled="{{ locked }}" placeholder="Chercher un produit ou une catégorie du webshop…" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;outline:none;" style-focus="border-color:#8D1D2C;">
+                <sc-if value="{{ hasWsResults }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;max-height:230px;overflow:auto;background:#FFFFFF;">
+                    <sc-for list="{{ wsResults }}" as="w" hint-placeholder-count="0"><button onClick="{{ w.pick }}" style="text-align:left;display:flex;justify-content:space-between;gap:10px;align-items:baseline;border:none;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ w.bg }};padding:7px 10px;cursor:pointer;font-size:12px;color:#222222;"><span style="font-weight:500;">{{ w.label }}</span><span style="font-size:11px;color:#666666;white-space:nowrap;">{{ w.sub }}</span></button></sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ wsNone }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Aucun produit ni catégorie du webshop ne correspond.</span></sc-if>
+              </div>
+              <sc-if value="{{ hasLinkWhy }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8A4B00;line-height:1.45;">{{ linkWhy }}</span></sc-if>
               <sc-if value="{{ hasLinkResolved }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#444444;line-height:1.45;word-break:break-all;">{{ linkResolved }}</span></sc-if>
             </div>
             <label style="flex:1 1 200px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Opération liée
@@ -504,6 +514,14 @@
             <div style="padding:8px 10px;background:#FAF7F2;display:flex;flex-direction:column;gap:3px;"><sc-for list="{{ apiParams }}" as="ap" hint-placeholder-count="0"><span style="font-family:ui-monospace,monospace;font-size:11px;color:#444444;"><span style="color:#8D1D2C;">{{ ap.k }}</span> = {{ ap.v }}</span></sc-for></div>
             <sc-if value="{{ hasIgCall }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 10px;border-top:0.5px solid rgba(34,34,34,0.08);font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">{{ igCall }}</div></sc-if>
           </div>
+          </sc-if>
+          <!-- Permissions du token Meta : la publication serait refusée, on le dit avant -->
+          <sc-if value="{{ hasPermWarn }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FCE7C8;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;font-size:12px;line-height:1.45;color:#6b3d0a;">
+              <strong style="font-weight:600;">Meta refusera cette publication : il manque des permissions au token</strong>
+              <sc-for list="{{ permWarn }}" as="pw" hint-placeholder-count="0"><span>{{ pw }}</span></sc-for>
+              <span>À ajouter dans le Business Manager (utilisateur système → Générer un nouveau token), puis à coller dans Paramètres → API Meta.</span>
+            </div>
           </sc-if>
           <sc-if value="{{ hasErrors }}" hint-placeholder-val="{{ false }}">
             <div style="background:#F6DCDF;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;"><sc-for list="{{ errors }}" as="er" hint-placeholder-count="0"><span style="font-size:12px;color:#8D1D2C;">{{ er }}</span></sc-for></div>
@@ -1216,14 +1234,34 @@ class Component extends DCLogic {
       lenLabel: len + ' caractères' + (len > 125 ? ' · tronqué après 125 dans le fil' : ''), lenColor: len > 125 ? '#8A4B00' : '#666666',
       link: s.link, setLink: (e) => this.setState({ link: e.target.value }),
       // Liens du webshop : celui de la boutique, ou la page du produit choisi (étape 2), résolus boutique par boutique.
-      ...(() => { const wsProd = !!(cat && cat.kind !== 'gamme' && cat.apiId && cat.webshop !== false);
+      ...(() => {
+        const wsAll = (SA.CATALOGUE || []).filter(c => c.kind !== 'gamme' && c.apiId && c.webshop);
+        const wsProd = !!(cat && cat.kind !== 'gamme' && cat.apiId && cat.webshop !== false), wsCat = !!(cat && cat.categoryId);
         const chip = (val, label, tip, dis) => { const on = s.link === val; return { label, tip, dis: locked || dis, op: dis ? 0.45 : 1, bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)',
           pick: () => { if (!locked && !dis) this.setState({ link: on ? '' : val }); } }; };
+        // Pourquoi le lien produit n'est pas proposé (gamme, produit absent du webshop, rien choisi).
+        const why = !cat ? 'Pour le lien d’un produit : choisissez-le à l’étape 2, ou cherchez-le ci-dessus parmi les ' + wsAll.length + ' produits du webshop.'
+          : cat.kind === 'gamme' ? '« ' + cat.name + ' » est une gamme : le webshop n’a pas de page de gamme. Cherchez ci-dessus un produit ou une catégorie de la gamme.'
+          : !cat.apiId || cat.webshop === false ? '« ' + cat.name + ' » n’est pas vendu sur le webshop' + (wsCat ? ' : sa catégorie l’est peut-être (bouton « Catégorie sur le webshop »).' : '. Cherchez un autre produit ci-dessus.') : '';
+        // Recherche dans le webshop : produits vendus en ligne, puis leurs catégories.
+        const nq = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''), q = nq(s.wsQ).trim();
+        const words = q.split(/\s+/).filter(Boolean), hit = (txt) => words.every(w => nq(txt).includes(w));
+        const cats = {}; wsAll.forEach(c => { if (c.categoryId) { const k = c.categoryId; cats[k] = cats[k] || { id: k, name: c.gamme || ('Catégorie ' + k), n: 0 }; cats[k].n++; } });
+        const prodHits = q.length >= 2 ? wsAll.filter(c => hit(c.name + ' ' + (c.gamme || ''))).slice(0, 8) : [];
+        const catHits = q.length >= 2 ? Object.values(cats).filter(c => hit(c.name)).slice(0, 4) : [];
+        const pickL = (val) => () => { if (!locked) this.setState({ link: val, wsQ: '' }); };
+        const wsResults = catHits.map(c => ({ label: c.name, sub: 'Catégorie · ' + c.n + ' produit' + (c.n > 1 ? 's' : ''), bg: '#FBF8F4', pick: pickL('{webshop_categorie:' + c.id + '}') }))
+          .concat(prodHits.map(c => ({ label: c.name, sub: 'Produit' + (c.price ? ' · ' + c.price + ' €' : ''), bg: '#FFFFFF', pick: pickL('{webshop_produit:' + c.apiId + '}') })));
+        const mP = /\{webshop_produit:(\d+)\}/.exec(s.link || ''), mC = /\{webshop_categorie:(\d+)\}/.exec(s.link || '');
+        const chosen = mP ? (wsAll.find(c => String(c.apiId) === mP[1]) || {}).name : mC ? (cats[mC[1]] || {}).name : '';
         const res = s.link && /\{webshop/.test(s.link) && pvShop ? SA.fill(s.link, pvShop, cat) : '';
         return { linkChips: [chip('{webshop}', 'Webshop de la boutique', 'Le webshop de chaque boutique visée (https://webshop.atelierby.be/?shop=…)', false),
-            chip('{webshop_produit}', 'Produit sur le webshop', wsProd ? 'La page de « ' + cat.name + ' » dans le webshop de chaque boutique' : 'Choisissez d’abord un produit du catalogue (étape 2) vendu sur le webshop', !wsProd),
+            chip('{webshop_produit}', 'Produit sur le webshop', wsProd ? 'La page de « ' + cat.name + ' » dans le webshop de chaque boutique' : why, !wsProd),
+            chip('{webshop_categorie}', 'Catégorie sur le webshop', wsCat ? 'La catégorie de « ' + cat.name + ' » (' + (cat.gamme || '') + ') dans le webshop de chaque boutique' : 'Choisissez d’abord un produit à l’étape 2', !wsCat),
             chip('https://www.latelierby.be', 'Site L’Atelier By', 'www.latelierby.be', false)],
-          hasLinkResolved: !!res, linkResolved: res ? '→ ' + pvShop.name + ' : ' + res + (t.length > 1 ? ' (et l’équivalent pour chacune des ' + t.length + ' boutiques)' : '') : '' }; })(),
+          wsQ: s.wsQ || '', setWsQ: (e) => this.setState({ wsQ: e.target.value }), wsResults, hasWsResults: wsResults.length > 0, wsNone: q.length >= 2 && !wsResults.length,
+          hasLinkWhy: !!why && !wsProd && !mP && !mC, linkWhy: why,
+          hasLinkResolved: !!res, linkResolved: res ? (chosen ? chosen + ' · ' : '') + '→ ' + pvShop.name + ' : ' + res + (t.length > 1 ? ' (et l’équivalent pour chacune des ' + t.length + ' boutiques)' : '') : '' }; })(),
       campaign: s.campaign, setCampaign: (e) => this.setState({ campaign: e.target.value }), campOptions: st.campaigns.filter(c => c.status !== 'terminée').map(c => ({ id: c.id, name: c.name })),
       // médiathèque (comme Posts Facebook) : recherche dans le formulaire, modale à catégories, fiche d'un visuel
       ...(() => {
@@ -1292,6 +1330,13 @@ class Component extends DCLogic {
       date: s.date, time: s.time, setDate: (e) => this.setState({ date: e.target.value }), setTime: (e) => this.setState({ time: e.target.value }),
       spread: s.spread, setSpread: (e) => this.setState({ spread: +e.target.value }), schedule,
       errors: s.errors, hasErrors: s.errors.length > 0,
+      // Les permissions que le token a vraiment (debug_token) : publier sur une Page, sur Instagram.
+      ...(() => { const sc = SA.live && SA.metaStatus && SA.metaStatus.jeton && Array.isArray(SA.metaStatus.jeton.scopes) ? SA.metaStatus.jeton.scopes : null;
+        if (!sc || s.dark) return { hasPermWarn: false, permWarn: [] };
+        const fbOn = t.some(id => s.ch[id] && s.ch[id].fb), igOn = t.some(id => s.ch[id] && s.ch[id].ig), w = [];
+        if (fbOn && !sc.includes('pages_manage_posts')) w.push('• pages_manage_posts — publier sur les Pages Facebook des boutiques');
+        if (igOn && !sc.includes('instagram_content_publish')) w.push('• instagram_content_publish — publier sur Instagram');
+        return { hasPermWarn: w.length > 0, permWarn: w }; })(),
       saveDraft: () => !s.saving && this.persist('Brouillon'), publish: () => !s.saving && (s.dark ? this.persist('Dark post', true) : this.persist(s.when === 'now' ? 'Publié' : 'Programmé')),
       publishLabel: s.saving ? 'Préparation du visuel…' : s.dark ? 'Enregistrer et créer la publicité →' : (s.when === 'now' ? 'Publier maintenant sur ' : 'Programmer sur ') + pages.length + ' Page' + (pages.length > 1 ? 's' : ''),
       // aperçu

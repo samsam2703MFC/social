@@ -870,6 +870,8 @@ check('sans produit (ou gamme) : le webshop de la boutique ; boutique sans n° d
 $appels = [];
 socPublishFb(['id' => 'pw1', 'text' => 'Commandez', 'link' => '{webshop}', 'img' => null], socShop('4'), 'Commandez');
 $feed = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === '111/feed'));
+check('catégorie du produit, produit ou catégorie précis du webshop', socFill('{webshop_categorie} | {webshop_produit:6700092} | {webshop_categorie:32000}', ['id' => '2', 'name' => 'Corbais'], $prodWs + ['categoryId' => 32000], 'fr')
+    === 'https://webshop.atelierby.be/?shop=2&category=32000 | https://webshop.atelierby.be/?shop=2&product=6700092&open=product | https://webshop.atelierby.be/?shop=2&category=32000');
 check('publication : le lien {webshop} devient celui de la boutique visée', ($feed[0][2]['link'] ?? '') === 'https://webshop.atelierby.be/?shop=4', json_encode($feed[0][2] ?? null));
 
 echo "Rattacher posts et publicités aux opérations du Marketing\n";

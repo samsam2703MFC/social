@@ -274,7 +274,7 @@ function sfCatalogueBrut(string $shop): array
     $cle = 'tfb_cache_catalogue_' . preg_replace('/\W/', '', $shop);
     $c = socSetting($cle);
     // v2 : les articles disent s'ils sont vendus sur le webshop (lien produit du webshop).
-    if (is_array($c) && ($c['v'] ?? 1) === 2 && ($c['le'] ?? 0) > time() - 21600 && !empty($c['items'])) { return $c['items']; }
+    if (is_array($c) && ($c['v'] ?? 1) === 3 && ($c['le'] ?? 0) > time() - 21600 && !empty($c['items'])) { return $c['items']; }
     try {
         $fr = Tfb::liste(Tfb::get('/shops/' . rawurlencode($shop) . '/products/available'));
         $nl = [];
@@ -285,10 +285,10 @@ function sfCatalogueBrut(string $shop): array
             $cat = (string) ($p['category_name'] ?? '');
             if (empty($p['is_active']) || preg_match('/^B\.?2\.?B/i', $cat)) { continue; }
             $prix = is_numeric($p['portion_price'] ?? null) ? (float) $p['portion_price'] : (is_numeric($p['suggested_sale_price'] ?? null) ? (float) $p['suggested_sale_price'] : null);
-            $items[] = ['id' => 'p' . $p['id'], 'apiId' => (int) $p['id'], 'webshop' => !empty($p['webshop_active']), 'name' => (string) $p['name'], 'nameNl' => ($nl[(string) $p['id']] ?? '') ?: (string) $p['name'],
+            $items[] = ['id' => 'p' . $p['id'], 'apiId' => (int) $p['id'], 'webshop' => !empty($p['webshop_active']), 'categoryId' => (int) ($p['id_category'] ?? 0), 'name' => (string) $p['name'], 'nameNl' => ($nl[(string) $p['id']] ?? '') ?: (string) $p['name'],
                 'price' => $prix !== null ? number_format($prix, 2, ',', '') : '', 'img' => socIllus($cat, (string) $p['name']), 'gamme' => $cat];
         }
-        if ($items) { socSettingPut($cle, ['v' => 2, 'le' => time(), 'items' => $items], false); return $items; }
+        if ($items) { socSettingPut($cle, ['v' => 3, 'le' => time(), 'items' => $items], false); return $items; }
     } catch (Throwable $e) { /* repli */ }
     if (is_array($c['items'] ?? null) && $c['items']) { return $c['items']; }
     return array_values(array_map(static fn ($p) => array_intersect_key($p, array_flip(['id', 'name', 'nameNl', 'price', 'img', 'gamme'])),

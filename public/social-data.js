@@ -51,7 +51,7 @@
   const POST_TYPES = ['Produit', 'Gamme saisonnière', 'Vidéo / film', 'Événement local', 'Anti-gaspi', 'Recrutement', 'Libre'];
 
   const CATALOGUE = [
-    { id: 'brioche', apiId: 1410006, kind: 'produit', name: 'Brioche croustillante', nameNl: 'Krokante brioche', price: '4,20', img: 'img/products/brioche-croustillante.png', gamme: 'Gamme Automne' },
+    { id: 'brioche', apiId: 1410006, categoryId: 14100, webshop: true, kind: 'produit', name: 'Brioche croustillante', nameNl: 'Krokante brioche', price: '4,20', img: 'img/products/brioche-croustillante.png', gamme: 'Gamme Automne' },
     { id: 'tarte-pomme', kind: 'produit', name: 'Tarte aux pommes', nameNl: 'Appeltaart', price: '18,50', img: 'img/products/sweet-tart-big.png', gamme: 'Gamme Automne' },
     { id: 'tartelette', kind: 'produit', name: 'Tartelette poire-amande', nameNl: 'Peer-amandeltaartje', price: '3,60', img: 'img/products/sweet-tart-small.png', gamme: 'Gamme Automne' },
     { id: 'croissant', kind: 'produit', name: 'Croissant pur beurre', nameNl: 'Botercroissant', price: '1,30', img: 'img/products/croissant.png', gamme: 'Viennoiseries' },
@@ -343,13 +343,17 @@
       .replace(/\{produit_du_jour\}/g, product && product.name ? pname(product, L) : (L === 'nl' ? 'Krokante brioche' : 'Brioche croustillante'))
       .replace(/\{ville\}/g, s ? s.name : '{ville}').replace(/\{adresse\}/g, s ? s.address : '{adresse}').replace(/\{horaires\}/g, s ? s.hours : '{horaires}')
       .replace(/\{prix\}/g, product && product.price ? product.price : '{prix}').replace(/\{produit_du_jour\}/g, product && product.name ? product.name : 'Brioche croustillante')
-      .replace(/\{webshop_produit\}/g, webshopUrl(s ? s.id : '', product)).replace(/\{webshop\}/g, webshopUrl(s ? s.id : ''));
+      .replace(/\{webshop_(produit|categorie):(\d+)\}/g, (m, k, id) => k === 'produit' ? webshopUrl(s ? s.id : '', { apiId: +id, kind: 'produit' }) : webshopUrl(s ? s.id : '', null, +id))
+      .replace(/\{webshop_produit\}/g, webshopUrl(s ? s.id : '', product)).replace(/\{webshop_categorie\}/g, webshopUrl(s ? s.id : '', null, product && product.categoryId))
+      .replace(/\{webshop\}/g, webshopUrl(s ? s.id : ''));
   }
-  /** Le webshop d'une boutique, ou la page d'un produit dans ce webshop (comme le serveur, src/publish.php). */
-  function webshopUrl(shopId, product) {
+  /** Le webshop d'une boutique, la page d'un produit ou une catégorie de ce webshop (comme le serveur, src/publish.php). */
+  function webshopUrl(shopId, product, categoryId) {
     const base = (LIVE && LIVE.webshopUrl) || 'https://webshop.atelierby.be/';
     if (!shopId || !/^\w+$/.test(shopId)) return base;
-    return base + '?shop=' + shopId + (product && product.apiId && product.kind !== 'gamme' ? '&product=' + product.apiId + '&open=product' : '');
+    const u = base + '?shop=' + shopId;
+    if (product && product.apiId && product.kind !== 'gamme') return u + '&product=' + product.apiId + '&open=product';
+    return categoryId ? u + '&category=' + categoryId : u;
   }
   const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', suivi: 'SA Suivi.dc.html', ctrl: 'SA Controle.dc.html', set: 'SA Parametres.dc.html' };
   const href = (k, q) => encodeURI(PAGES[k]) + (q ? '?' + q : '');
