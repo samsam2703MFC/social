@@ -52,6 +52,11 @@ function socCalComptes(): array
     if (($b['page_id'] ?? '') !== '') { $parPage[(string) $b['page_id']] ??= 'marque'; }
     if (($b['instagram_user_id'] ?? '') !== '') { $parIg[(string) $b['instagram_user_id']] ??= 'marque'; }
     $comptes = [];
+    // La Page qui porte l'Instagram du réseau est celle de la marque (même si une autre Page est saisie pour la marque).
+    $igMarque = (string) ($b['instagram_user_id'] ?? '');
+    $pageMarque = null;
+    foreach (Meta::pageTokens() as $pid => $pg) { if ($igMarque !== '' && (string) ($pg['ig'] ?? '') === $igMarque) { $pageMarque = (string) $pid; } }
+    if ($pageMarque !== null) { foreach ($parPage as $k => $v) { if ($v === 'marque') { unset($parPage[$k]); } } $parPage[$pageMarque] = 'marque'; }
     foreach (Meta::pageTokens() as $pid => $pg) {
         $pid = (string) $pid;
         $sid = $parPage[$pid] ?? null;

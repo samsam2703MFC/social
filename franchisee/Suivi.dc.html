@@ -111,7 +111,6 @@ class Component extends DCLogic {
         + (mA != null && mS != null && mA > mS ? ' La publicité vous apporte ' + fmt(mA - mS, 1) + ' abonnés de plus par jour.' : '');
     const kpis = [
       { label: 'Facebook', value: fmt(fb.followers), sub: fb.net == null ? 'abonnés' : 'abonnés · +' + fmt(fb.gagnes) + ' / −' + fmt(fb.perdus) + ' sur ' + r.jours + ' j', color: '#222222' },
-      { label: 'Instagram', value: ig ? fmt(ig.followers) : '—', sub: !ig ? 'compte commun à tout le réseau' : ig.gagnes == null ? 'abonnés' : 'abonnés · +' + fmt(ig.gagnes) + ' nouveaux', color: '#222222' },
       { label: 'Gagnés nets · ' + r.jours + ' j', value: signed(x.abonnesNet), sub: ig ? 'Facebook + Instagram' : 'Page Facebook de la boutique', color: col(x.abonnesNet) },
       { label: 'Budget publicitaire', value: money(x.depense), sub: Object.keys(dep).length + ' jour(s) de diffusion', color: '#222222' },
       { label: 'Coût par abonné', value: x.coutParAbonne == null ? '—' : money(x.coutParAbonne, 2), sub: 'budget ÷ abonnés nets', color: '#222222' },

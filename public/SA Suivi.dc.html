@@ -72,7 +72,7 @@
                   <span style="font-size:10px;color:#666666;">abonnés nets</span>
                 </div>
               </div>
-              <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;">
+              <div style="display:grid;grid-template-columns:repeat({{ c.nFacts }},minmax(0,1fr));gap:6px;">
                 <sc-for list="{{ c.facts }}" as="f" hint-placeholder-count="4">
                   <div style="background:#F7F3EE;border-radius:8px;padding:7px 9px;display:flex;flex-direction:column;gap:1px;min-width:0;">
                     <span style="font-size:10px;color:#666666;">{{ f.k }}</span>
@@ -92,8 +92,8 @@
                 </div>
                 <div style="display:flex;justify-content:space-between;font-size:10px;color:#8A847C;"><span>{{ c.from }}</span><span>{{ c.legend }}</span><span>{{ c.to }}</span></div>
               </div>
-              <span style="font-size:11px;color:#444444;line-height:1.45;">{{ c.insight }}</span>
-              <sc-if value="{{ c.hasMotif }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.45;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:6px 8px;">{{ c.motif }}</span></sc-if>
+              <sc-if value="{{ c.hasInsight }}" hint-placeholder-val="{{ true }}"><span style="font-size:11px;color:#444444;line-height:1.45;">{{ c.insight }}</span></sc-if>
+              <sc-if value="{{ c.hasMotif }}" hint-placeholder-val="{{ false }}"><span title="{{ c.motifTip }}" style="font-size:11px;line-height:1.45;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:6px 8px;">{{ c.motif }}</span></sc-if>
             </div>
           </sc-for>
         </div>
@@ -165,17 +165,22 @@ class Component extends DCLogic {
       const insight = mA == null && mS == null ? 'Abonnés jour par jour non disponibles : seul le total actuel et le budget s’affichent.'
         : 'Jours avec pub : ' + (mA == null ? '—' : (mA >= 0 ? '+' : '') + SA.fmt(mA, 1) + ' abonnés/jour') + ' · sans pub : ' + (mS == null ? '—' : (mS >= 0 ? '+' : '') + SA.fmt(mS, 1) + ' abonnés/jour')
           + (mA != null && mS != null ? (mA > mS ? ' — la pub fait gagner ' + SA.fmt(mA - mS, 1) + ' abonnés de plus par jour.' : ' — pas d’effet visible de la pub sur les abonnés.') : '');
-      const motifs = [fb.motif, ig && ig.motif].filter(Boolean);
+      // Motif court à l'écran (le détail de Meta en info-bulle).
+      const court = (m, net) => /read_insights|séries vides/.test(m) ? net + ' : abonnés jour par jour indisponibles — permission « read_insights » à ajouter au token.'
+        : /instagram_manage_insights|permission/i.test(m) ? net + ' : abonnés jour par jour indisponibles — permission « instagram_manage_insights » à ajouter au token.'
+        : /30 derniers jours/.test(m) ? 'Instagram : 30 derniers jours seulement.' : net + ' : ' + m;
+      const motifs = [fb.motif ? court(fb.motif, 'Facebook') : '', ig && ig.motif ? court(ig.motif, 'Instagram') : ''].filter(Boolean), tips = [fb.motif, ig && ig.motif].filter(Boolean);
       return { pic: x.picture || SA.avatar(x.name, 'facebook'), name: x.name, sub: [x.shopName || 'Page non rattachée à une boutique', ig && ig.username ? '@' + ig.username : ''].filter(Boolean).join(' · '),
         netLabel: signed(x.abonnesNet), netColor: col(x.abonnesNet),
         facts: [
           { k: 'Facebook', v: fb.followers == null ? '—' : SA.fmt(fb.followers), s: fb.net == null ? 'non mesuré' : '+' + SA.fmt(fb.gagnes) + ' / −' + SA.fmt(fb.perdus), c: col(fb.net) },
-          { k: 'Instagram', v: !ig || ig.followers == null ? '—' : SA.fmt(ig.followers), s: !ig ? 'aucun compte' : ig.gagnes == null ? 'non mesuré' : '+' + SA.fmt(ig.gagnes) + ' nouveaux', c: col(ig ? ig.gagnes : null) },
+          // Instagram est unique au réseau : seule la carte de la Page qui le porte l'affiche.
+          ig ? { k: 'Instagram du réseau', v: ig.followers == null ? '—' : SA.fmt(ig.followers), s: ig.gagnes == null ? 'non mesuré' : '+' + SA.fmt(ig.gagnes) + ' nouveaux', c: col(ig.gagnes) } : null,
           { k: 'Budget', v: money(x.depense), s: x.depense ? Object.keys(dep).length + ' jour(s) de diffusion' : 'aucune pub', c: '#666666' },
           { k: 'Coût / abonné', v: x.coutParAbonne == null ? '—' : money(x.coutParAbonne, 2), s: x.coutParAbonne == null ? (x.depense ? 'pas de gain net' : '—') : 'budget ÷ abonnés nets', c: '#666666' },
-        ],
-        days: ds, from: SA.dShort(r.du), to: SA.dShort(r.au), legend: 'bordeaux = budget · vert = abonnés gagnés · rouge = perdus', insight,
-        hasMotif: motifs.length > 0, motif: motifs.join(' · ') };
+        ].filter(Boolean),
+        nFacts: ig ? 4 : 3, days: ds, from: SA.dShort(r.du), to: SA.dShort(r.au), legend: 'bordeaux = budget · vert = abonnés gagnés · rouge = perdus', insight, hasInsight: mA != null || mS != null,
+        hasMotif: motifs.length > 0, motif: motifs.join(' '), motifTip: tips.join('\n') };
     });
     const maxDep = Math.max(1, ...L.map(x => x.depense));
     const ranking = L.slice().sort((a, b) => (a.coutParAbonne == null) - (b.coutParAbonne == null) || (a.coutParAbonne || 0) - (b.coutParAbonne || 0) || b.depense - a.depense)

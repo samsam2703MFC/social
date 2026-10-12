@@ -276,13 +276,28 @@
   // Les écrans écrivent au nom de « Sarah Lambert » (maquette) : en réel, c'est l'utilisateur connecté.
   const who_ = (who) => LIVE && /^Sarah Lambert/.test(who || '') ? LIVE.user.name : who;
   function log(who, what, detail) { const now = new Date(); const at = TODAY + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'); save({ activity: [{ at, who: who_(who), what, detail }].concat(state().activity) }); }
+  /** Ce qui est unique au réseau : Instagram (compte de la marque) et le compte publicitaire, si aucune boutique n'a le sien. */
+  function reseau() {
+    if (LIVE) return LIVE.reseau || { instagram: !!LIVE.instagramUnique, publicite: false };
+    return { instagram: true, publicite: !SHOPS.some(s => (META.ids[s.id] || {}).ad_account_id) };
+  }
+  /** La marque (connexions du réseau) ; en démonstration, tout est connecté. */
+  function marque() {
+    if (LIVE && LIVE.brand) return LIVE.brand;
+    return { id: 'marque', name: 'L’Atelier By', fb: 'connected', igs: 'connected', ads: 'connected', ig: '@latelierby.be',
+      connDetail: { fb: 'L’Atelier By', igs: '@latelierby.be', ads: (META.networkAccount || 'act_1428800') + ' · L’Atelier By réseau' } };
+  }
   function alerts() {
-    const out = [];
+    const out = [], R = reseau();
     state().shops.forEach(s => {
       if (s.fb !== 'connected') out.push({ shop: s.name, what: 'Page Facebook', st: s.fb });
-      if (s.igs !== 'connected') out.push({ shop: s.name, what: 'Instagram', st: s.igs });
-      if (s.ads !== 'connected') out.push({ shop: s.name, what: 'Compte publicitaire', st: s.ads });
+      if (!R.instagram && s.igs !== 'connected') out.push({ shop: s.name, what: 'Instagram', st: s.igs });
+      if (!R.publicite && s.ads !== 'connected') out.push({ shop: s.name, what: 'Compte publicitaire', st: s.ads });
     });
+    // Instagram et compte publicitaire du réseau : suivis une seule fois.
+    const b = marque();
+    if (R.instagram && b.igs !== 'connected') out.push({ shop: 'Réseau', what: 'Instagram', st: b.igs || 'none' });
+    if (R.publicite && b.ads !== 'connected') out.push({ shop: 'Réseau', what: 'Compte publicitaire', st: b.ads || 'none' });
     return out;
   }
   const LANGS = { fr: 'Français', nl: 'Nederlands' };
@@ -552,7 +567,7 @@
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
     api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
-    igUnique: () => LIVE ? !!LIVE.instagramUnique : true, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
+    igUnique: () => LIVE ? !!LIVE.instagramUnique : true, reseau, marque, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
     TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
     byId, fmt, eur, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param };
 })();

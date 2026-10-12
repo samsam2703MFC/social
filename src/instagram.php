@@ -114,6 +114,23 @@ function socIgToken(string $ig, string $pageId): ?string
     } catch (MetaError $e) { return null; }
 }
 
+/**
+ * Compte publicitaire unique : aucune boutique n'a le sien, tout passe par le
+ * compte du réseau (celui de la marque). Les connexions ne se suivent alors
+ * qu'une fois, au niveau du réseau.
+ */
+function socPubReseau(): bool
+{
+    foreach (socShops() as $s) { if (($s['ids']['ad_account_id'] ?? '') !== '') { return false; } }
+    return true;
+}
+
+/** Ce qui se suit boutique par boutique : la Page, plus Instagram et la pub s'ils ne sont pas uniques au réseau. */
+function socConnexionsBoutique(): array
+{
+    return array_values(array_filter(['fb', socIgUnique() ? null : 'igs', socPubReseau() ? null : 'ads']));
+}
+
 /** Est-ce une frise ? (3 tuiles prêtes) */
 function socEstFrise(array $p): bool
 {

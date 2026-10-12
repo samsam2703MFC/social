@@ -45,9 +45,27 @@
         <span style="font-size:12px;color:#666666;">{{ connSummary }}</span>
         <button onClick="{{ testAll }}" style="height:34px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">{{ testLabel }}</button>
       </div>
+      <sc-if value="{{ hasNet }}" hint-placeholder-val="{{ true }}">
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:12px 14px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Réseau · un seul compte pour toutes les boutiques</span><span style="font-size:11px;color:#666666;">{{ netNote }}</span></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;">
+            <sc-for list="{{ netCells }}" as="c" hint-placeholder-count="2">
+              <div style="border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:{{ c.bg }};">
+                <span style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+                  <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ c.title }}</span>
+                  <span style="align-self:flex-start;font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ c.stBg }};color:{{ c.stFg }};">{{ c.label }}</span>
+                  <span style="font-size:11px;color:#666666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.detail }}</span>
+                </span>
+                <sc-if value="{{ c.needsAction }}" hint-placeholder-val="{{ false }}"><button onClick="{{ c.fix }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;">{{ c.action }}</button></sc-if>
+                <sc-if value="{{ c.busy }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Vérification…</span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+      </sc-if>
       <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
-        <div style="display:grid;grid-template-columns:minmax(150px,1.1fr) repeat(3,minmax(200px,1fr));min-width:820px;">
-          <sc-for list="{{ connHead }}" as="h" hint-placeholder-count="4"><span style="padding:10px 14px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;background:#F4EFE8;">{{ h }}</span></sc-for>
+        <div style="display:grid;grid-template-columns:{{ connCols }};min-width:{{ connMin }};">
+          <sc-for list="{{ connHead }}" as="h" hint-placeholder-count="2"><span style="padding:10px 14px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;background:#F4EFE8;">{{ h }}</span></sc-for>
           <sc-for list="{{ connRows }}" as="r" hint-placeholder-count="6">
             <span style="padding:12px 14px;border-top:0.5px solid rgba(34,34,34,0.08);display:flex;flex-direction:column;gap:2px;"><span style="font-size:14px;font-weight:500;">{{ r.name }}</span><span style="font-size:11px;color:#666666;">{{ r.address }}</span></span>
             <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="3">
@@ -335,24 +353,31 @@ class Component extends DCLogic {
         // Business Manager (System User → ressources). L'écran revérifie chez Meta.
         SA.testConnexions(shopId).then(res => {
           const r = (res || [])[0] || {}, b = Object.assign({}, this.state.busy); delete b[k]; this.setState({ busy: b });
-          this.toast(r[key] === 'connected' ? label + ' ' + SA.byId(SA.SHOPS, shopId).name + ' : connecté.' : label + ' : ' + ((r.detail || {})[key] || 'toujours en défaut') + '.');
+          this.toast(r[key] === 'connected' ? label + ' ' + (shopId === 'marque' ? '' : (SA.byId(SA.SHOPS, shopId) || {}).name || '') + ' : connecté.' : label + ' : ' + ((r.detail || {})[key] || 'toujours en défaut') + '.');
         }).catch(e => { const b = Object.assign({}, this.state.busy); delete b[k]; this.setState({ busy: b }); this.toast('Test impossible : ' + e.message); });
         return;
       }
       setTimeout(() => {
         SA.save({ shops: SA.state().shops.map(x => x.id === shopId ? Object.assign({}, x, { [key]: 'connected' }) : x) });
         SA.log('Sarah Lambert (Franchiseur)', 'Connexion', label + ' de ' + SA.byId(SA.SHOPS, shopId).name + ' reconnecté(e)');
-        const b = Object.assign({}, this.state.busy); delete b[k]; this.setState({ busy: b }); this.toast(label + ' ' + SA.byId(SA.SHOPS, shopId).name + ' : connecté.');
+        const b = Object.assign({}, this.state.busy); delete b[k]; this.setState({ busy: b }); this.toast(label + ' ' + ((SA.byId(SA.SHOPS, shopId) || {}).name || '') + ' : connecté.');
       }, 1200);
     };
     const DETAIL = { fb: (sh) => sh.page, igs: (sh) => sh.ig, ads: (sh) => 'act_' + (1000 + sh.name.length * 137) + '…' };
     const EXP = { halle: 48, corbais: 51, gosselies: 0, sombreffe: 39, gembloux: 55, wavre: 60 };
-    const connRows = st.shops.map(sh => ({ name: sh.name, address: sh.address, cells: [['fb', 'Page Facebook'], ['igs', 'Instagram'], ['ads', 'Compte publicitaire']].map(([key, label]) => {
+    // Instagram et compte publicitaire uniques au réseau : suivis une fois (encadré « Réseau »), pas boutique par boutique.
+    const R = SA.reseau(), cols = [['fb', 'Page Facebook']].concat(R.instagram ? [] : [['igs', 'Instagram']]).concat(R.publicite ? [] : [['ads', 'Compte publicitaire']]);
+    const B = SA.marque(), netKeys = [['fb', 'Page de la marque']].concat(R.instagram ? [['igs', 'Instagram du réseau']] : []).concat(R.publicite ? [['ads', 'Compte publicitaire du réseau']] : []);
+    const netCells = netKeys.map(([key, title]) => { const v = B[key] || 'none', c = SA.CONN[v] || SA.CONN.none, busy = !!s.busy['marque' + key];
+      return { title, label: c.label, stBg: c.bg, stFg: c.fg, bg: v === 'connected' ? '#FFFFFF' : '#FFFBF5', detail: (B.connDetail || {})[key] || (B.checkedAt ? '—' : 'Jamais vérifié — « Tester toutes les connexions »'),
+        needsAction: v !== 'connected' && !busy, busy, action: 'Revérifier', fix: () => fixConn('marque', key, title) }; });
+    const connRows = st.shops.map(sh => ({ name: sh.name, address: sh.address, cells: cols.map(([key, label]) => {
       const v = sh[key], c = SA.CONN[v], busy = !!s.busy[sh.id + key];
       return { label: c.label, stBg: c.bg, stFg: c.fg, bg: v === 'connected' ? '#FFFFFF' : '#FFFBF5',
         detail: SA.live ? ((sh.connDetail || {})[key] || (sh.checkedAt ? '—' : 'Jamais vérifié — « Tester toutes les connexions »')) : v === 'connected' ? DETAIL[key](sh) + (key !== 'ads' ? ' · token valide ' + (EXP[sh.id] || 45) + ' j' : '') : v === 'expired' ? 'Expiré le 06/10 · publications Instagram bloquées' : 'Aucun compte lié · publicités impossibles',
         needsAction: v !== 'connected' && !busy, busy, action: SA.live ? 'Revérifier' : v === 'expired' ? 'Reconnecter' : 'Connecter', fix: () => fixConn(sh.id, key, label) }; }) }));
-    const nOk = st.shops.reduce((a, sh) => a + ['fb', 'igs', 'ads'].filter(k => sh[k] === 'connected').length, 0);
+    const nOk = st.shops.reduce((a, sh) => a + cols.filter(([k]) => sh[k] === 'connected').length, 0) + netKeys.filter(([k]) => B[k] === 'connected').length;
+    const nTot = st.shops.length * cols.length + netKeys.length;
     const upTpl = (id, patch) => SA.save({ templates: templates.map(t => t.id === id ? Object.assign({}, t, patch) : t) });
     const upGrp = (id, patch) => SA.save({ groups: groups.map(g => g.id === id ? Object.assign({}, g, patch) : g) });
     const yes = { t: 'Oui', fg: '#0F6B4A', w: 500 }, no = { t: 'Non', fg: '#8A847C', w: 400 }, val = (t) => ({ t, fg: '#222222', w: 400 });
@@ -480,10 +505,11 @@ class Component extends DCLogic {
           idRows: (SA.live ? [{ id: 'marque', name: 'Marque · ' + ((SA.state().brand || {}).name || 'L\u2019Atelier By') }] : []).concat(SA.SHOPS).map(sh => ({ name: sh.name, cells: ['page_id', 'ad_account_id', 'instagram_user_id', 'pixel_id'].map(k => { const v = (meta.ids[sh.id] || {})[k] || ''; return { v, ph: k === 'ad_account_id' ? 'act_… (non connecté)' : '—', bg: v ? '#FFFFFF' : '#FFFBF5',
             set: (e) => setMeta({ ids: Object.assign({}, meta.ids, { [sh.id]: Object.assign({}, meta.ids[sh.id], { [k]: e.target.value.trim() }) }) }) }; }) })) }; })(), isTpl: s.tab === 'tpl', isGrp: s.tab === 'grp', isRights: s.tab === 'rights', isLog: s.tab === 'log',
       hasAlerts: alerts.length > 0, alertText: alerts.length + ' connexion(s) en défaut : ' + alerts.map(a => a.shop + ' · ' + a.what + ' (' + SA.CONN[a.st].label + ')').join(' — ') + '. Les publications concernées échoueront tant qu\u2019elles ne sont pas rétablies.',
-      connSummary: nOk + ' connexions actives sur ' + st.shops.length * 3 + (SA.live ? ((st.meta || {}).lastCheck ? ' · dernier contrôle ' + String(st.meta.lastCheck).slice(8, 10) + '/' + String(st.meta.lastCheck).slice(5, 7) + ' à ' + String(st.meta.lastCheck).slice(11, 16) : ' · jamais contrôlées') : ' · dernier contrôle aujourd\u2019hui à 07:00'),
+      connSummary: nOk + ' connexions actives sur ' + nTot + (SA.live ? ((st.meta || {}).lastCheck ? ' · dernier contrôle ' + String(st.meta.lastCheck).slice(8, 10) + '/' + String(st.meta.lastCheck).slice(5, 7) + ' à ' + String(st.meta.lastCheck).slice(11, 16) : ' · jamais contrôlées') : ' · dernier contrôle aujourd\u2019hui à 07:00'),
       testLabel: s.testing ? 'Test en cours…' : 'Tester toutes les connexions',
-      testAll: () => { this.setState({ testing: true }); if (SA.live) { SA.testConnexions().then(res => { this.setState({ testing: false }); const ko = (res || []).reduce((a, r) => a + ['fb', 'igs', 'ads'].filter(k => r[k] !== 'connected').length, 0); this.toast(ko ? ko + ' connexion(s) toujours en défaut.' : 'Toutes les connexions répondent.'); }).catch(e => { this.setState({ testing: false }); this.toast('Test impossible : ' + e.message); }); return; } setTimeout(() => { this.setState({ testing: false }); this.toast(alerts.length ? alerts.length + ' connexion(s) toujours en défaut.' : 'Toutes les connexions répondent.'); }, 1200); },
-      connHead: ['Boutique', 'Page Facebook', 'Instagram', 'Compte publicitaire'], connRows,
+      testAll: () => { this.setState({ testing: true }); if (SA.live) { SA.testConnexions().then(res => { this.setState({ testing: false }); const ko = (res || []).reduce((a, r) => a + (r.shop === 'marque' ? netKeys.map(([k]) => k) : cols.map(([k]) => k)).filter(k => r[k] !== 'connected').length, 0); this.toast(ko ? ko + ' connexion(s) toujours en défaut.' : 'Toutes les connexions répondent.'); }).catch(e => { this.setState({ testing: false }); this.toast('Test impossible : ' + e.message); }); return; } setTimeout(() => { this.setState({ testing: false }); this.toast(alerts.length ? alerts.length + ' connexion(s) toujours en défaut.' : 'Toutes les connexions répondent.'); }, 1200); },
+      connHead: ['Boutique'].concat(cols.map(([, l]) => l)), connRows, connCols: 'minmax(150px,1.1fr) repeat(' + cols.length + ',minmax(200px,1fr))', connMin: (180 + cols.length * 220) + 'px',
+      hasNet: netCells.length > 0, netCells, netNote: [R.instagram ? 'Instagram unique (compte de la marque)' : '', R.publicite ? 'compte publicitaire réseau' : ''].filter(Boolean).join(' · '),
       postTypes: SA.POST_TYPES,
       templates: templates.map(t => ({ name: t.name, type: t.type, text: t.text, textNl: t.textNl || '', setTextNl: (e) => upTpl(t.id, { textNl: e.target.value }), previewNl: t.textNl ? SA.fill(t.textNl, (SA.SHOPS.find(x => (x.langs || []).includes('nl')) || SA.SHOPS[0] || {}).id, SA.CATALOGUE[0], 'nl') : 'à traduire', preview: SA.fill(t.text, (SA.SHOPS[0] || {}).id, SA.CATALOGUE[0]), useHref: SA.href('post'),
         setName: (e) => upTpl(t.id, { name: e.target.value }), setType: (e) => upTpl(t.id, { type: e.target.value }), setText: (e) => upTpl(t.id, { text: e.target.value }),

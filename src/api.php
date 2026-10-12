@@ -173,7 +173,8 @@ function socRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/connexions/test') {
         $sid = isset(body()['shop']) ? (string) body()['shop'] : null;
         $r = socTestConnexions($sid);
-        $ko = array_filter($r, static fn ($x) => $x['fb'] !== 'connected' || $x['igs'] !== 'connected' || $x['ads'] !== 'connected');
+        $cles = socConnexionsBoutique();
+        $ko = array_filter($r, static fn ($x) => (bool) array_filter($x['shop'] === 'marque' ? ['fb', 'igs', 'ads'] : $cles, static fn ($k) => $x[$k] !== 'connected'));
         socLog(socUser(), 'Connexion', 'Test des connexions Meta' . ($sid ? ' (' . ($r[0]['name'] ?? $sid) . ')' : '') . ' : ' . (count($r) - count($ko)) . ' boutique(s) sur ' . count($r) . ' entièrement connectée(s)');
         return [200, ['resultats' => $r, 'shops' => socShops()]];
     }
