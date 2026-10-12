@@ -482,10 +482,13 @@ class Component extends DCLogic {
         bg: a.id === s.selId ? '#F4EFE8' : '#FFFFFF', pick: () => this.setState({ selId: a.id }) };
     });
     const active = ads.filter(a => a.status === 'Active');
-    const monthSpent = ads.filter(a => endOf(a) >= SA.TODAY.slice(0, 8) + '01').reduce((x, a) => x + a.spent, 0);
+    // Les comptes publicitaires n'ont pas tous la même devise : un total par devise.
+    const sumMoney = (list) => { const by = {}; list.forEach(a => { const k = a.devise || 'EUR'; by[k] = (by[k] || 0) + (a.spent || 0); }); const ks = Object.keys(by).sort((x, y) => (x === 'EUR' ? -1 : y === 'EUR' ? 1 : x.localeCompare(y)));
+      return ks.length ? ks.map(k => k === 'EUR' ? SA.eur(by[k]) : SA.fmt(Math.round(by[k])) + ' ' + k).join(' + ') : SA.eur(0); };
+    const monthAds = ads.filter(a => endOf(a) >= SA.TODAY.slice(0, 8) + '01');
     const kpis = [
-      { label: 'Actives', value: active.length, sub: SA.eur(active.reduce((x, a) => x + a.spent, 0)) + ' dépensés', color: '#0F6B4A', border: 'rgba(34,34,34,0.10)' },
-      { label: 'Dépensé en ' + SA.MONTHS[+SA.TODAY.slice(5, 7) - 1], value: SA.eur(monthSpent), sub: 'tous comptes confondus', color: '#222222', border: 'rgba(34,34,34,0.10)' },
+      { label: 'Actives', value: active.length, sub: sumMoney(active) + ' dépensés', color: '#0F6B4A', border: 'rgba(34,34,34,0.10)' },
+      { label: 'Dépensé · pubs de ' + SA.MONTHS[+SA.TODAY.slice(5, 7) - 1], value: sumMoney(monthAds), sub: 'cumul des pubs en cours ce mois-ci, tous comptes', color: '#222222', border: 'rgba(34,34,34,0.10)' },
       { label: 'En revue Meta', value: ads.filter(a => a.status === 'En revue').length, sub: 'validation en cours', color: '#8A4B00', border: 'rgba(34,34,34,0.10)' },
       { label: 'Refusées', value: ads.filter(a => a.status === 'Refusée').length, sub: 'à corriger', color: '#8D1D2C', border: ads.some(a => a.status === 'Refusée') ? '#8D1D2C' : 'rgba(34,34,34,0.10)' },
       { label: 'Budget épuisé', value: ads.filter(a => a.status === 'Budget épuisé').length, sub: 'diffusion suspendue', color: '#8D1D2C', border: ads.some(a => a.status === 'Budget épuisé') ? '#F2C9A0' : 'rgba(34,34,34,0.10)' },

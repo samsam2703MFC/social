@@ -19,3 +19,4 @@ Relivraison : catalogue de l'espace boutique sans produits à 0 € — 2026-10-
 Relivraison : mise à jour automatique des identifiants Meta par boutique — 2026-10-12T08:59:29Z
 Relivraison : récupération des campagnes Meta existantes (Publicités) — 2026-10-12T09:16:23Z
 Relivraison : campagnes Meta — brouillons sans date, alerte compte impayé dans la liste — 2026-10-12T09:19:10Z
+Relivraison : indicateurs Publicités par devise — 2026-10-12T09:22:07Z
