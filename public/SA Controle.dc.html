@@ -33,9 +33,24 @@
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <div style="display:inline-flex;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:3px;gap:2px;"><sc-for list="{{ periods }}" as="pd" hint-placeholder-count="3"><button onClick="{{ pd.pick }}" style="border:none;border-radius:6px;padding:5px 9px;font-size:12px;font-weight:500;cursor:pointer;background:{{ pd.bg }};color:{{ pd.fg }};">{{ pd.label }}</button></sc-for></div>
         <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.pick }}" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ t.border }};background:{{ t.bg }};color:{{ t.fg }};"><span style="width:7px;height:7px;border-radius:50%;background:{{ t.dot }};"></span>{{ t.label }}</button></sc-for>
-        <select value="{{ fShop }}" onChange="{{ setShop }}" style="font-size:12px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 10px;"><option value="">Toutes les boutiques</option><sc-for list="{{ shopOpts }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></select>
       </div>
     </header>
+
+    <!-- Boutiques : une pastille par boutique (photo de sa Page), filtre à sélection multiple -->
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:10px;padding:8px 12px;">
+      <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;margin-right:2px;">Boutiques</span>
+      <button onClick="{{ allShops.pick }}" style="border-radius:999px;padding:7px 12px;border:1px solid {{ allShops.border }};background:{{ allShops.bg }};color:{{ allShops.fg }};cursor:pointer;font-size:12px;font-weight:500;">Toutes <span style="font-weight:600;color:{{ allShops.countFg }};">{{ allShops.count }}</span></button>
+      <sc-for list="{{ shopChips }}" as="c" hint-placeholder-count="5">
+        <button onClick="{{ c.toggle }}" title="{{ c.tip }}" style="display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:3px 10px 3px 3px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }};cursor:pointer;font-size:12px;font-weight:500;opacity:{{ c.op }};">
+          <span style="position:relative;width:26px;height:26px;flex:0 0 auto;">
+            <img src="{{ c.pic }}" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;background:#F4EFE8;display:block;">
+            <sc-if value="{{ c.hasKo }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:-3px;bottom:-3px;min-width:13px;height:13px;padding:0 2px;box-sizing:border-box;border-radius:999px;background:#C9474F;color:#FFFFFF;font-size:8px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;border:1.5px solid #FFFFFF;">{{ c.ko }}</span></sc-if>
+          </span>
+          <span style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.name }}</span>
+          <span style="font-size:11px;font-weight:600;color:{{ c.countFg }};">{{ c.count }}</span>
+        </button>
+      </sc-for>
+    </div>
 
     <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
       <!-- File des posts à contrôler -->
@@ -184,7 +199,7 @@
 class Component extends DCLogic {
   // Maquette : les vrais posts déjà publiés par les boutiques (lus en direct chez Meta, comme le Calendrier) ;
   // le verdict, les annotations et le « mail » restent dans l'onglet (rien n'est envoyé ni enregistré).
-  state = { jours: 30, posts: null, err: '', verdicts: this.loadVerdicts(), selId: null, tool: 'rect', tab: 'todo', fShop: '', sev: 'majeure', due: '', action: 'corriger', msg: '', to: '', toast: '', pvOpen: false, annotated: '' };
+  state = { jours: 30, posts: null, err: '', verdicts: this.loadVerdicts(), selId: null, tool: 'rect', tab: 'todo', fShops: [], pics: {}, sev: 'majeure', due: '', action: 'corriger', msg: '', to: '', toast: '', pvOpen: false, annotated: '' };
   loadVerdicts() { try { return JSON.parse(sessionStorage.getItem('sa.ctrl.v') || '{}') || {}; } catch (e) { return {}; } }
   componentDidMount() {
     const SA = window.SA;
@@ -210,8 +225,10 @@ class Component extends DCLogic {
         .filter(p => p.shop);
       const posts = meta.concat(fr).sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
       if (this._from && !posts.some(p => p.id === this._from.id)) posts.unshift(this._from);
+      // Photo de profil de la Page de chaque boutique (pastilles).
+      const pics = {}; (r.comptes || []).forEach(c => { if (c.type === 'facebook' && c.shop && c.shop !== 'marque' && c.picture && !pics[c.shop]) pics[c.shop] = c.picture; });
       const errs = (r.erreurs || []).map(String).filter(e => !/programmés/.test(e)).map(e => 'Illisible : ' + e).join(' · ');
-      this.setState(s => ({ posts, err: errs, selId: s.selId && posts.some(p => p.id === s.selId) ? s.selId : (posts.find(p => !(s.verdicts[p.id] || {}).status) || posts[0] || {}).id || null }));
+      this.setState(s => ({ posts, pics, err: errs, selId: s.selId && posts.some(p => p.id === s.selId) ? s.selId : (posts.find(p => !(s.verdicts[p.id] || {}).status) || posts[0] || {}).id || null }));
     }).catch(e => { if (key === this._k) this.setState({ posts: [], err: 'Publications illisibles : ' + (e.message || 'erreur') }); });
   }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 3200); }
@@ -255,12 +272,13 @@ class Component extends DCLogic {
   }
   renderVals() {
     const SA = window.SA, s = this.state;
-    if (!SA) return { items: [], marks: [], sel: {}, tabs: [], tools: [], rules: [], sevs: [], history: [], timeline: [], ruleLines: [], periods: [], shopOpts: [] };
+    if (!SA) return { items: [], marks: [], sel: {}, tabs: [], tools: [], rules: [], sevs: [], history: [], timeline: [], ruleLines: [], periods: [], shopChips: [], allShops: {} };
     const shopName = (id) => (SA.byId(SA.SHOPS, id) || { name: id || '?' }).name;
     const ST = { 'À contrôler': ['#FCE7C8', '#7A4100'], 'Non conforme': ['#F6DCDF', '#8D1D2C'], 'Conforme': ['#E2F0E8', '#0F6B4A'] };
     const posts = s.posts || [], stOf = (p) => this.ver(p.id).status || 'À contrôler';
     const TAB = { todo: 'À contrôler', ko: 'Non conforme', ok: 'Conforme' };
-    const list = posts.filter(x => (!s.fShop || x.shop === s.fShop) && stOf(x) === TAB[s.tab]);
+    const inShops = (x) => !s.fShops.length || s.fShops.includes(x.shop);
+    const list = posts.filter(x => inShops(x) && stOf(x) === TAB[s.tab]);
     const sel = this.sel(), v = sel ? this.ver(sel.id) : {};
     const marks = (v.marks || []).map((m, i) => ({ n: i + 1, kindLabel: m.kind === 'pen' ? 'Stylo' : 'Carré rouge', note: m.note, noteOr: m.note || '(sans commentaire)',
       setNote: (e) => this.upd({ marks: v.marks.map((y, j) => j === i ? Object.assign({}, y, { note: e.target.value }) : y) }), remove: () => this.upd({ marks: v.marks.filter((_, j) => j !== i) }) }));
@@ -268,7 +286,7 @@ class Component extends DCLogic {
     const task = v.task;
     const SEV = { mineure: 'Mineure', majeure: 'Majeure', bloquante: 'Bloquante' };
     const sevs = Object.keys(SEV).map(k => ({ label: SEV[k], bg: s.sev === k ? '#8D1D2C' : 'transparent', fg: s.sev === k ? '#FFFFFF' : '#444444', pick: () => this.setState({ sev: k }) }));
-    const counts = (st) => posts.filter(x => (!s.fShop || x.shop === s.fShop) && stOf(x) === st).length;
+    const counts = (st) => posts.filter(x => inShops(x) && stOf(x) === st).length;
     // Par boutique, sur la période : publiés, contrôlés, non conformes (verdicts de la maquette).
     const parShop = SA.SHOPS.map(sh => { const ps = posts.filter(p => p.shop === sh.id), ko = ps.filter(p => stOf(p) === 'Non conforme').length, ok = ps.filter(p => stOf(p) === 'Conforme').length;
       return { name: sh.name, total: ps.length, ko, ok, todo: ps.length - ko - ok }; }).filter(h => h.total);
@@ -286,7 +304,13 @@ class Component extends DCLogic {
       periodLabel: s.jours + ' derniers jours',
       tabs: [['todo', '#D97B29'], ['ko', '#C9474F'], ['ok', '#1F8A60']].map(([k, dot]) => { const n = counts(TAB[k]), l = k === 'todo' ? 'À contrôler' : k === 'ko' ? 'Non conformes' : 'Conformes';
         return { label: l + ' (' + n + ')', dot: s.tab === k ? '#FFFFFF' : dot, bg: s.tab === k ? '#232220' : '#FFFFFF', fg: s.tab === k ? '#FFFFFF' : '#222222', border: s.tab === k ? '#232220' : 'rgba(34,34,34,0.18)', pick: () => this.setState({ tab: k }) }; }),
-      fShop: s.fShop, setShop: (e) => this.setState({ fShop: e.target.value }), shopOpts: SA.SHOPS.filter(x => shopsIn.includes(x.id)).map(x => ({ id: x.id, name: x.name })),
+      // Pastilles : les boutiques qui ont publié sur la période ; le chiffre = posts de l'onglet affiché, la pastille rouge = non conformes.
+      allShops: (() => { const on = !s.fShops.length; return { count: posts.filter(x => stOf(x) === TAB[s.tab]).length, bg: on ? '#232220' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#232220' : 'rgba(34,34,34,0.14)', countFg: on ? '#F2C9A0' : '#8A847C', pick: () => this.setState({ fShops: [] }) }; })(),
+      shopChips: SA.SHOPS.filter(x => shopsIn.includes(x.id)).map(sh => { const on = s.fShops.includes(sh.id), any = s.fShops.length > 0, mine = posts.filter(p => p.shop === sh.id), ko = mine.filter(p => stOf(p) === 'Non conforme').length;
+        return { name: sh.name, pic: s.pics[sh.id] || SA.avatar(sh.name, 'facebook'), count: mine.filter(p => stOf(p) === TAB[s.tab]).length, hasKo: ko > 0, ko,
+          bg: on ? '#232220' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#232220' : 'rgba(34,34,34,0.14)', op: any && !on ? 0.5 : 1, countFg: on ? '#F2C9A0' : '#8A847C',
+          tip: sh.name + ' · ' + mine.length + ' publication(s) sur la période' + (ko ? ', ' + ko + ' non conforme(s)' : '') + ' — cliquer pour filtrer (plusieurs possibles)',
+          toggle: () => this.setState({ fShops: on ? s.fShops.filter(x => x !== sh.id) : s.fShops.concat(sh.id) }) }; }),
       loading: s.posts === null, hasErr: !!s.err, err: s.err, noItems: s.posts !== null && !list.length,
       emptyLabel: posts.length ? 'Rien dans cet onglet.' : 'Aucune publication des boutiques sur les ' + s.jours + ' derniers jours.',
       srcNote: 'Publications déjà en ligne sur les Pages Facebook des boutiques, lues en direct chez Meta (' + posts.length + ' sur ' + s.jours + ' jours), et posts publiés depuis l’espace franchisé. Aussi depuis le Calendrier : « Contrôler → » dans la fiche d’un post publié.',
