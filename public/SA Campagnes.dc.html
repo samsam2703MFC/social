@@ -26,12 +26,12 @@
     <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
       <div style="display:flex;flex-direction:column;gap:4px;">
         <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Posts organiques + publicités autour d'un objectif</span>
-        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">CAMPAGNES</h1>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">OPERATIONS</h1>
       </div>
       <div style="display:flex;gap:8px;">
-        <a href="{{ metaHref }}" title="Relit chez Meta les campagnes de vos comptes publicitaires (Gestionnaire de publicités, agence…) ; elles arrivent dans Publicités, où vous pouvez les rattacher à une campagne." style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;color:#222222;text-decoration:none;display:inline-flex;align-items:center;">Récupérer les campagnes Meta</a>
+        <a href="{{ metaHref }}" title="Relit chez Meta les campagnes de vos comptes publicitaires (Gestionnaire de publicités, agence…) ; elles arrivent dans Publicités, où vous pouvez les rattacher à une opération." style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;color:#222222;text-decoration:none;display:inline-flex;align-items:center;">Récupérer les campagnes Meta</a>
         <button onClick="{{ toggleRef }}" style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">Référentiel des types</button>
-        <button onClick="{{ openNew }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Nouvelle campagne</button>
+        <button onClick="{{ openNew }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Nouvelle opération</button>
       </div>
     </header>
 
@@ -97,7 +97,7 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <a href="{{ f.postHref }}" style="height:34px;display:inline-flex;align-items:center;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;color:#222222;text-decoration:none;">+ Post</a>
               <a href="{{ f.adHref }}" style="height:34px;display:inline-flex;align-items:center;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;color:#222222;text-decoration:none;">+ Publicité</a>
-              <a href="{{ f.roiHref }}" style="height:34px;display:inline-flex;align-items:center;padding:0 14px;border-radius:8px;background:#8D1D2C;font-size:13px;font-weight:500;color:#FFFFFF;text-decoration:none;">Retour sur campagne →</a>
+              <a href="{{ f.roiHref }}" style="height:34px;display:inline-flex;align-items:center;padding:0 14px;border-radius:8px;background:#8D1D2C;font-size:13px;font-weight:500;color:#FFFFFF;text-decoration:none;">Retour sur opération →</a>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
@@ -177,7 +177,7 @@
   <sc-if value="{{ newOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;background:rgba(35,34,32,0.5);z-index:40;display:flex;align-items:center;justify-content:center;padding:20px;">
       <div style="background:#FFFFFF;border-radius:12px;width:100%;max-width:640px;max-height:92vh;overflow:auto;padding:20px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 80px rgba(35,34,32,0.3);">
-        <span style="font-size:16px;font-weight:500;">Nouvelle campagne</span>
+        <span style="font-size:16px;font-weight:500;">Nouvelle opération</span>
         <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Nom
           <input type="text" value="{{ n.name }}" onChange="{{ n.setName }}" placeholder="ex. Fêtes de fin d'année 2026" style="font-size:14px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
         </label>
@@ -196,7 +196,7 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
           <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Début<input type="date" value="{{ n.start }}" onChange="{{ n.setStart }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;"></label>
           <sc-if value="{{ n.hasEnd }}" hint-placeholder-val="{{ true }}"><label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Fin<input type="date" value="{{ n.end }}" onChange="{{ n.setEnd }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;"></label></sc-if>
-          <sc-if value="{{ n.continuous }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;padding-bottom:9px;">Campagne continue, sans date de fin</span></sc-if>
+          <sc-if value="{{ n.continuous }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;padding-bottom:9px;">Opération continue, sans date de fin</span></sc-if>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;">
           <span style="font-size:12px;color:#666666;">Boutiques</span>
@@ -220,7 +220,7 @@
         <sc-if value="{{ n.hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8D1D2C;">{{ n.err }}</span></sc-if>
         <div style="display:flex;justify-content:flex-end;gap:8px;">
           <button onClick="{{ closeNew }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Annuler</button>
-          <button onClick="{{ createCamp }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Créer la campagne</button>
+          <button onClick="{{ createCamp }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Créer l’opération</button>
         </div>
       </div>
     </div>
@@ -314,12 +314,12 @@ class Component extends DCLogic {
       list, f, n: nv, newOpen: s.newOpen,
       openNew: () => this.setState({ newOpen: true, n: this.blank(), err: '' }), closeNew: () => this.setState({ newOpen: false }),
       createCamp: () => {
-        if (!n.name.trim()) { this.setState({ err: 'Donnez un nom à la campagne.' }); return; }
+        if (!n.name.trim()) { this.setState({ err: 'Donnez un nom à l’opération.' }); return; }
         if (!n.shops.length) { this.setState({ err: 'Choisissez au moins une boutique.' }); return; }
         if (!nt.continuous && n.end < n.start) { this.setState({ err: 'La date de fin précède la date de début.' }); return; }
         const per = Math.floor(n.budget / n.shops.length / 10) * 10, split = {}; n.shops.forEach(id => { split[id] = per; }); split[n.shops[0]] += n.budget - per * n.shops.length;
         const camp = { id: 'c' + Date.now(), name: n.name.trim(), type: n.type, start: n.start, end: nt.continuous ? null : n.end, status: n.start <= SA.TODAY ? 'en cours' : 'à venir', shops: n.shops, products: n.products, goal: { metric: n.metric, value: n.goal }, budget: n.budget, split };
-        SA.save({ campaigns: st.campaigns.concat(camp) }); SA.log('Sarah Lambert (Franchiseur)', 'Campagne', 'Création de « ' + camp.name + ' »');
+        SA.save({ campaigns: st.campaigns.concat(camp) }); SA.log('Sarah Lambert (Franchiseur)', 'Opération', 'Création de « ' + camp.name + ' »');
         this.setState({ newOpen: false, selId: camp.id, tab: 'all' });
       },
     };

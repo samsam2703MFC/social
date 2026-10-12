@@ -155,7 +155,7 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   centimes, position de la boutique (caisse, sinon adresse géocodée).
   Pause / reprise / arrêt / plafond appliqués chez Meta.
 - **Campagnes déjà chez Meta** (`src/metacampagnes.php`) — bouton « Récupérer les
-  campagnes Meta » (Publicités, et depuis Campagnes) et synchro horaire : chaque
+  campagnes Meta » (Publicités Meta, et depuis Opérations) et synchro horaire : chaque
   compte publicitaire du portefeuille (plus ceux de la marque et des boutiques) est
   relu — campagnes non supprimées (archivées : 13 derniers mois), ensembles, pubs,
   statistiques `date_preset=maximum` — et chaque campagne créée hors du module
@@ -165,8 +165,8 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   CTR, CPC, CPM, répétition, vignette, lien vers le Gestionnaire. Boutique déduite
   de la Page de chaque pub (sinon du compte, sinon du nom). Les campagnes créées par
   le module ne sont jamais réimportées. Depuis l'écran : pause, reprise, arrêt et
-  plafond (au niveau de la campagne Meta) et rattachement à une campagne du module
-  (sa dépense et ses résultats comptent alors dans le Retour sur campagne). Une
+  plafond (au niveau de la campagne Meta) et rattachement à une opération du module
+  (sa dépense et ses résultats comptent alors dans le Retour sur opération). Une
   campagne disparue chez Meta passe « Arrêtée ». Les montants restent dans la devise
   du compte (affichée si ce n'est pas l'euro). Compte rendu du dernier passage :
   `social_parametre.meta_campagnes_import`.

@@ -22,11 +22,11 @@
     <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }} <a href="Connexion.dc.html">Se reconnecter</a></div></sc-if>
     <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
     <header style="display:flex;flex-direction:column;gap:4px;">
-      <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Campagnes du réseau où figure L’Atelier By {{ shopName }}</span>
-      <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">CAMPAGNES DU RESEAU</h1>
+      <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Opérations du réseau où figure L’Atelier By {{ shopName }}</span>
+      <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">OPERATIONS DU RESEAU</h1>
     </header>
-    <sc-if value="{{ hidden }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Le réseau ne partage pas les campagnes dans l’espace boutique.</div></sc-if>
-    <sc-if value="{{ none }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Aucune campagne du réseau ne concerne votre boutique pour l’instant.</div></sc-if>
+    <sc-if value="{{ hidden }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Le réseau ne partage pas les opérations dans l’espace boutique.</div></sc-if>
+    <sc-if value="{{ none }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Aucune opération du réseau ne concerne votre boutique pour l’instant.</div></sc-if>
     <sc-for list="{{ camps }}" as="c" hint-placeholder-count="2">
       <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:10px;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
@@ -58,14 +58,14 @@ class Component extends DCLogic {
     const camps = (st.campaigns || []).map(c => {
       const r = c.result, [bg, fg] = ST[c.status] || ST['brouillon'], posts = st.posts.filter(p => p.campaign === c.id);
       const has = !!(r && st.rules.voirResultats !== false);
-      return { name: c.name, period: 'Du ' + SF.dLabel(c.start) + ' au ' + SF.dLabel(c.end), type: c.type || 'campagne', status: c.status, stBg: bg, stFg: fg,
+      return { name: c.name, period: 'Du ' + SF.dLabel(c.start) + ' au ' + SF.dLabel(c.end), type: c.type || 'opération', status: c.status, stBg: bg, stFg: fg,
         hasDesc: !!c.description, description: c.description, products: c.products || [], hasBudget: c.budget != null && c.budget > 0, budget: SF.eur(c.budget),
         hasResult: has, kpis: has ? [
           { label: 'Personnes touchées', value: (r.reach || 0).toLocaleString('fr-BE'), sub: 'par les publicités', color: '#222222' },
           { label: 'Clics', value: (r.clicks || 0).toLocaleString('fr-BE'), sub: 'vers votre boutique', color: '#222222' },
           { label: 'Ventes des produits', value: r.caCamp != null ? SF.eur(r.caCamp) : '—', sub: r.caRef != null ? pct(r.caCamp, r.caRef) + ' vs habituel (estimation)' : 'référence indisponible', color: r.caCamp >= r.caRef ? '#0F6B4A' : '#8A4B00' },
           { label: 'Tickets', value: r.tCamp != null ? r.tCamp : '—', sub: r.tRef != null ? pct(r.tCamp, r.tRef) + ' vs habituel' : '', color: '#222222' }] : [],
-        hasPosts: posts.length > 0, postsLabel: posts.length + ' post(s) de la campagne dans votre calendrier', calHref: SF.href('cal', 'post=' + encodeURIComponent(posts[0] ? posts[0].id : '')) };
+        hasPosts: posts.length > 0, postsLabel: posts.length + ' post(s) de l’opération dans votre calendrier', calHref: SF.href('cal', 'post=' + encodeURIComponent(posts[0] ? posts[0].id : '')) };
     });
     return { ok: true, hasError: false, shopName: st.shop.name, hidden: st.rules.voirCampagnes === false, none: st.rules.voirCampagnes !== false && camps.length === 0, camps };
   }

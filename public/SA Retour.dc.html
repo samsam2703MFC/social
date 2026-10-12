@@ -27,7 +27,7 @@
     <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
       <div style="display:flex;flex-direction:column;gap:4px;">
         <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Données Meta + ventes caisse (API Franchise Buddy)</span>
-        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">RETOUR SUR CAMPAGNE</h1>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">RETOUR SUR OPERATION</h1>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <select value="{{ focus }}" onChange="{{ setFocus }}" style="height:36px;font-size:13px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:0 10px;">
@@ -57,7 +57,7 @@
     <sc-if value="{{ hasCampaign }}" hint-placeholder-val="{{ true }}">
     <div style="display:flex;gap:12px;align-items:flex-start;background:#FFFFFF;border:0.5px solid #E3B155;border-radius:10px;padding:12px 14px;">
       <span style="width:22px;height:22px;border-radius:50%;background:#FAC775;color:#6b3d0a;font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">≈</span>
-      <span style="font-size:12px;line-height:1.55;color:#444444;"><strong style="font-weight:500;color:#222222;">Le CA additionnel est une estimation, pas une attribution exacte.</strong> Il compare le CA des produits de la campagne pendant la période ({{ periodLabel }}) à la moyenne des mêmes jours sur les 6 semaines précédentes. D'autres facteurs (météo, vacances, travaux) peuvent l'influencer. Taux de marge appliqué : {{ marginLabel }}.</span>
+      <span style="font-size:12px;line-height:1.55;color:#444444;"><strong style="font-weight:500;color:#222222;">Le CA additionnel est une estimation, pas une attribution exacte.</strong> Il compare le CA des produits de l’opération pendant la période ({{ periodLabel }}) à la moyenne des mêmes jours sur les 6 semaines précédentes. D'autres facteurs (météo, vacances, travaux) peuvent l'influencer. Taux de marge appliqué : {{ marginLabel }}.</span>
     </div>
     </sc-if>
 
@@ -70,9 +70,9 @@
 
     <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
       <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:28px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
-        <span style="font-size:15px;font-weight:500;">Aucune campagne à mesurer pour l'instant</span>
-        <span style="font-size:13px;color:#444444;line-height:1.5;max-width:720px;">Créez une campagne (dates, boutiques, produits), puis ses publicités. Les résultats Meta et les ventes des produits — lues dans l'API TFBuddy — sont recalculés chaque heure, pour les campagnes en cours ou finies depuis moins de 60 jours.</span>
-        <a href="{{ campHref }}" style="margin-top:6px;background:#8D1D2C;color:#FFFFFF;text-decoration:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;">Créer une campagne</a>
+        <span style="font-size:15px;font-weight:500;">Aucune opération à mesurer pour l'instant</span>
+        <span style="font-size:13px;color:#444444;line-height:1.5;max-width:720px;">Créez une opération (dates, boutiques, produits), puis ses publicités. Les résultats Meta et les ventes des produits — lues dans l'API TFBuddy — sont recalculés chaque heure, pour les opérations en cours ou finies depuis moins de 60 jours.</span>
+        <a href="{{ campHref }}" style="margin-top:6px;background:#8D1D2C;color:#FFFFFF;text-decoration:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;">Créer une opération</a>
       </section>
     </sc-if>
     <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
@@ -117,12 +117,12 @@
         </section>
         <!-- Ventes -->
         <section style="flex:1 1 360px;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
-          <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Ventes des produits de la campagne</span><span style="font-size:11px;color:#666666;">{{ productsLabel }}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Ventes des produits de l’opération</span><span style="font-size:11px;color:#666666;">{{ productsLabel }}</span></div>
           <sc-for list="{{ sales }}" as="v" hint-placeholder-count="3">
             <div style="display:flex;flex-direction:column;gap:5px;">
               <span style="display:flex;justify-content:space-between;font-size:12px;"><span>{{ v.label }}</span><span style="color:{{ v.deltaColor }};font-weight:500;">{{ v.delta }}</span></span>
               <span style="display:grid;grid-template-columns:78px minmax(0,1fr) 80px;gap:8px;align-items:center;font-size:11px;color:#666666;"><span>Référence</span><span style="height:10px;border-radius:3px;background:#EAE4DC;overflow:hidden;"><span style="display:block;height:100%;width:{{ v.refPct }};background:#B8B2A8;"></span></span><span style="text-align:right;">{{ v.ref }}</span></span>
-              <span style="display:grid;grid-template-columns:78px minmax(0,1fr) 80px;gap:8px;align-items:center;font-size:11px;color:#666666;"><span>Campagne</span><span style="height:10px;border-radius:3px;background:#EAE4DC;overflow:hidden;"><span style="display:block;height:100%;width:{{ v.campPct }};background:#8D1D2C;"></span></span><span style="text-align:right;color:#222222;font-weight:500;">{{ v.camp }}</span></span>
+              <span style="display:grid;grid-template-columns:78px minmax(0,1fr) 80px;gap:8px;align-items:center;font-size:11px;color:#666666;"><span>Opération</span><span style="height:10px;border-radius:3px;background:#EAE4DC;overflow:hidden;"><span style="display:block;height:100%;width:{{ v.campPct }};background:#8D1D2C;"></span></span><span style="text-align:right;color:#222222;font-weight:500;">{{ v.camp }}</span></span>
             </div>
           </sc-for>
         </section>
@@ -164,7 +164,7 @@
 
       <!-- Classement des campagnes -->
       <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:10px;">
-        <span style="font-size:13px;font-weight:500;">Classement des campagnes · par ROI</span>
+        <span style="font-size:13px;font-weight:500;">Classement des opérations · par ROI</span>
         <sc-for list="{{ ranking }}" as="k" hint-placeholder-count="3">
           <button onClick="{{ k.pick }}" style="display:grid;grid-template-columns:28px minmax(160px,1.6fr) repeat(4,minmax(90px,1fr)) 130px;gap:10px;align-items:center;border:none;background:{{ k.bg }};border-radius:8px;padding:10px 12px;cursor:pointer;text-align:left;">
             <span style="font-size:18px;font-weight:300;color:#8D1D2C;">{{ k.rank }}</span>
@@ -209,7 +209,7 @@ class Component extends DCLogic {
     const live = c.status === 'en cours';
     const roiColor = (v) => v == null ? '#666666' : v >= 1 ? '#0F6B4A' : v >= 0 ? '#8A4B00' : '#8D1D2C';
     const hero = { caAdd: has ? SA.eur(X.caAdd) : '—', color: has ? rag.fg : '#666666', bar: rag.bar,
-      caDetail: has ? SA.eur(X.caCamp) + ' pendant la campagne vs ' + SA.eur(X.caRef) + ' en référence' : 'Ventes non remontées',
+      caDetail: has ? SA.eur(X.caCamp) + ' pendant l’opération vs ' + SA.eur(X.caRef) + ' en référence' : 'Ventes non remontées',
       goalLabel: 'Objectif ' + SA.eur(X.goal) + (live ? ' (prorata ' + SA.pct(R.total.elapsed) + ' de la période)' : ''),
       att: has ? SA.pct(X.att) : '—', attPct: has ? Math.min(100, X.att * 100) + '%' : '0%', ragLabel: rag.label, ragBg: rag.bg, ragFg: rag.fg };
     const heroKpis = [
@@ -217,7 +217,7 @@ class Component extends DCLogic {
       { label: 'Dépense publicitaire', value: SA.eur(X.spend), sub: live ? 'à date, sur ' + SA.eur(row ? c.split[row.sid] : c.budget) + ' prévus' : 'sur ' + SA.eur(row ? c.split[row.sid] : c.budget) + ' prévus', color: '#222222' },
       { label: 'ROAS', value: has && X.roas != null ? SA.fmt(X.roas, 1) + ' ×' : '—', sub: 'CA additionnel / dépense pub', color: has ? (X.roas >= 3 ? '#0F6B4A' : X.roas >= 1.6 ? '#8A4B00' : '#8D1D2C') : '#666666' },
       { label: 'ROI', value: has && X.roi != null ? (X.roi >= 0 ? '+' : '') + SA.pct(X.roi) : '—', sub: '(marge add. − dépense) / dépense', color: has ? roiColor(X.roi) : '#666666' },
-      { label: 'Coût / ticket add.', value: has && X.cpt != null ? SA.eur(X.cpt, 2) : '—', sub: has ? '+' + SA.fmt(X.tAdd) + ' tickets avec produits campagne' : '', color: '#222222' },
+      { label: 'Coût / ticket add.', value: has && X.cpt != null ? SA.eur(X.cpt, 2) : '—', sub: has ? '+' + SA.fmt(X.tAdd) + ' tickets avec produits de l’opération' : '', color: '#222222' },
     ];
     const meta = [['Dépense', SA.eur(X.spend), 'spend'], ['Portée', SA.fmt(X.reach), 'reach'], ['Impressions', SA.fmt(X.impr), 'impressions'], ['Fréquence', SA.fmt(X.freq, 2), 'frequency'], ['Clics', SA.fmt(X.clicks), 'clicks'], ['CTR', SA.pct(X.ctr, 2), 'ctr'], ['Coût par clic', SA.eur(X.cpc, 2), 'cpc'], ['CPM', SA.eur(X.cpm, 2), 'cpm'], ['Engagement', SA.fmt(X.eng), 'actions · post_engagement'], ['Vues vidéo', SA.fmt(X.vv), 'actions · video_view']].map(([label, value, tech]) => ({ label, value, tech }));
     const salesRow = (label, ref, camp, fmtFn) => { const mx = Math.max(ref || 0, camp || 0, 1); const d = ref ? (camp - ref) / ref : null;
@@ -261,10 +261,10 @@ class Component extends DCLogic {
       tHead, tRows, ranking, insightLevel: s.focus ? 'adset' : 'campaign', timeRange: '{since: ' + c.start + ', until: ' + (live ? SA.TODAY : c.end) + '}',
       exportPdf: () => { this.toast('Préparation du PDF…'); setTimeout(() => window.print(), 300); },
       exportXls: () => {
-        const h = ['Boutique', 'Dépense', 'Portée', 'Impressions', 'Clics', 'CPC', 'Engagement', 'Vues vidéo', 'CA référence', 'CA campagne', 'CA additionnel (estimé)', 'Marge additionnelle', 'ROAS', 'ROI', 'Coût par ticket add.', 'Objectif', 'Atteinte'];
+        const h = ['Boutique', 'Dépense', 'Portée', 'Impressions', 'Clics', 'CPC', 'Engagement', 'Vues vidéo', 'CA référence', 'CA opération', 'CA additionnel (estimé)', 'Marge additionnelle', 'ROAS', 'ROI', 'Coût par ticket add.', 'Objectif', 'Atteinte'];
         const n2 = (v, d) => v == null || !isFinite(v) ? '' : String(Math.round(v * Math.pow(10, d || 0)) / Math.pow(10, d || 0)).replace('.', ',');
         const line = (x, name) => [name, n2(x.spend), n2(x.reach), n2(x.impr), n2(x.clicks), n2(x.cpc, 2), n2(x.eng), n2(x.vv), n2(x.caRef), n2(x.caCamp), n2(x.caAdd), n2(x.mAdd), n2(x.roas, 2), n2(x.roi, 3), n2(x.cpt, 2), n2(x.goal), n2(x.att, 3)];
-        const rows = [['Campagne', c.name], ['Période', c.start + ' → ' + c.end], ['Note', 'CA additionnel estimé par comparaison à la moyenne des mêmes jours des 6 semaines précédentes'], [], h].concat(R.perShop.map(x => line(x, x.name))).concat([line(R.total, 'Réseau')]);
+        const rows = [['Opération', c.name], ['Période', c.start + ' → ' + c.end], ['Note', 'CA additionnel estimé par comparaison à la moyenne des mêmes jours des 6 semaines précédentes'], [], h].concat(R.perShop.map(x => line(x, x.name))).concat([line(R.total, 'Réseau')]);
         const csv = '\ufeff' + rows.map(r => r.map(v => /[;"\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v).join(';')).join('\n');
         const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'retour-' + c.id + '.csv'; document.body.appendChild(a); a.click(); a.remove();
         this.toast('Export Excel (CSV) téléchargé.');

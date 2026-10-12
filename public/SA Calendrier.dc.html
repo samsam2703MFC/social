@@ -87,8 +87,8 @@
         <option value="Dark post">Dark post (pub uniquement)</option>
       </select>
       <select value="{{ fCamp }}" onChange="{{ setFCamp }}" style="font-size:12px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:7px 8px;">
-        <option value="">Toutes campagnes</option>
-        <option value="none">Hors campagne</option>
+        <option value="">Toutes opérations</option>
+        <option value="none">Hors opération</option>
         <sc-for list="{{ campOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.name }}</option></sc-for>
       </select>
       <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}">
@@ -220,7 +220,7 @@
                 <span style="color:#666666;">Boutiques</span><span>{{ sel.shops }}</span>
                 <span style="color:#666666;">Canaux</span><span>{{ sel.channels }}</span>
                 <span style="color:#666666;">Langues</span><span>{{ sel.langs }}</span>
-                <span style="color:#666666;">Campagne</span><span>{{ sel.campName }}</span>
+                <span style="color:#666666;">Opération</span><span>{{ sel.campName }}</span>
                 <sc-if value="{{ sel.hasAuthor }}" hint-placeholder-val="{{ false }}"><span style="color:#666666;">Proposé par</span><span>{{ sel.author }}</span></sc-if>
               </div>
               <sc-if value="{{ sel.hasText }}" hint-placeholder-val="{{ false }}"><p style="font-size:12px;line-height:1.5;color:#444444;margin:0;background:#F4EFE8;border-radius:6px;padding:8px 10px;">{{ sel.textPreview }}</p></sc-if>
@@ -495,7 +495,7 @@ class Component extends DCLogic {
       loading: s.loading, skeleton: new Array(35).fill(0), isEmpty,
       showMonth: !s.loading && !isEmpty && s.view === 'month', showWeek: !s.loading && !isEmpty && s.view === 'week', showList: !s.loading && !isEmpty && s.view === 'list',
       dow: ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'], cells, weekCols,
-      listHead: ['Date', 'Heure', '', 'Post', 'Type', 'Boutiques', 'Canaux', 'Campagne', 'Statut'], listRows,
+      listHead: ['Date', 'Heure', '', 'Post', 'Type', 'Boutiques', 'Canaux', 'Opération', 'Statut'], listRows,
       hasSel: !!sp, sel, closeSel: () => this.setState({ selId: null }), retrying: s.retrying,
       retry: () => {
         if (!sp) return; this.setState({ retrying: true });

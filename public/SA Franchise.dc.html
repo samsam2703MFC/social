@@ -30,7 +30,7 @@
       <div style="display:flex;flex-direction:column;gap:4px;max-width:720px;">
         <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Boutiques · <span style="font-family:ui-monospace,monospace;text-transform:none;letter-spacing:0;">/social_franchisee</span></span>
         <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">ESPACE FRANCHISE</h1>
-        <span style="font-size:13px;color:#4A443E;line-height:1.5;">Chaque boutique y voit son calendrier, les campagnes du réseau et publie ses posts et ses promotions — uniquement avec les modèles, les champs et les règles que vous fixez ici.</span>
+        <span style="font-size:13px;color:#4A443E;line-height:1.5;">Chaque boutique y voit son calendrier, les opérations du réseau et publie ses posts et ses promotions — uniquement avec les modèles, les champs et les règles que vous fixez ici.</span>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <select value="{{ asShop }}" onChange="{{ setAsShop }}" style="font-size:13px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;">
@@ -370,7 +370,7 @@ class Component extends DCLogic {
       numRules: [['quotaSemaine', 'Posts par semaine (par boutique)', 0, 50], ['delaiMinHeures', 'Délai minimum (heures)', 1, 336], ['horizonJours', 'Au plus tard dans (jours)', 1, 90], ['remiseMax', 'Remise maximale (%)', 0, 90], ['promoDureeMax', 'Durée max d’une promotion (jours)', 1, 90]]
         .map(([k, label, min, max]) => ({ label, min, max, value: r[k], set: (ev) => RS(k, +ev.target.value) })),
       days, setHeureMin: (ev) => RS('heureMin', ev.target.value), setHeureMax: (ev) => RS('heureMax', ev.target.value),
-      boolRules: [['fb', 'Facebook autorisé'], ['ig', 'Instagram autorisé'], ['voirReseau', 'Voir les posts du réseau'], ['voirCampagnes', 'Voir les campagnes'], ['voirResultats', 'Voir les résultats de sa boutique']]
+      boolRules: [['fb', 'Facebook autorisé'], ['ig', 'Instagram autorisé'], ['voirReseau', 'Voir les posts du réseau'], ['voirCampagnes', 'Voir les opérations'], ['voirResultats', 'Voir les résultats de sa boutique']]
         .map(([k, label]) => ({ label, on: r[k] !== false, toggle: () => RS(k, r[k] === false) })),
       setMessage: (ev) => RS('message', ev.target.value), saveRules: () => this.saveRules(), rulesLabel: 'Enregistrer les règles',
       accessRows: SA.SHOPS.map(sh => ({ name: sh.name, franchisee: sh.franchisee ? 'Franchisé : ' + sh.franchisee : 'Compte atelierby du gérant, ou code d’accès',
