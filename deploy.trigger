@@ -45,3 +45,4 @@ Relivraison : Suivi, graphique vide expliqué — 2026-10-12T17:28:13Z
 Relivraison : Créer un post, constructeur et médiathèque complète — 2026-10-12T17:41:13Z
 Relivraison : zoom des photos dans les gabarits — 2026-10-12T17:55:36Z
 Relivraison : liens du webshop, pastilles des boutiques — 2026-10-12T18:06:16Z
+Relivraison : catalogue relu (webshop) — 2026-10-12T18:08:39Z
