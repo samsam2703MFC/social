@@ -15,3 +15,4 @@ Relivraison : montages Instagram — carrousel panoramique et collages 4:5 — 2
 Relivraison : frise de grille Instagram et écran Grille Instagram (planificateur) — 2026-10-10T17:00:01Z
 Relivraison : dark posts (pub uniquement), variantes A/B/C, commentaires — 2026-10-12T05:47:57Z
 Relivraison : espace franchisé /social_franchisee, page franchiseur, points d'accroche pour l'ERP — 2026-10-12T06:16:52Z
+Relivraison : catalogue de l'espace boutique sans produits à 0 € — 2026-10-12T06:18:54Z

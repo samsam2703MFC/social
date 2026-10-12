@@ -262,8 +262,14 @@ function sfConnexionTfb(string $phone, string $password): array
 
 /* --- catalogue de la boutique ------------------------------------------------------- */
 
-/** Les produits vendus dans la boutique (API TFBuddy), mémorisés 6 h ; à défaut, le catalogue du réseau. */
+/** Les produits vendus dans la boutique (API TFBuddy), mémorisés 6 h ; à défaut, le catalogue du réseau. Sans prix : écartés. */
 function sfCatalogue(string $shop): array
+{
+    // Un produit sans prix (ou à 0) donnerait « … : 0,00 € » dans un post.
+    return array_values(array_filter(sfCatalogueBrut($shop), static fn ($p) => (float) str_replace(',', '.', (string) ($p['price'] ?? '')) > 0));
+}
+
+function sfCatalogueBrut(string $shop): array
 {
     $cle = 'tfb_cache_catalogue_' . preg_replace('/\W/', '', $shop);
     $c = socSetting($cle);
