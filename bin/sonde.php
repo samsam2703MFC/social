@@ -63,6 +63,11 @@ try {
             $pid = (string) ($r['data'][0]['id'] ?? '');
             if ($pid === '') { echo '  ' . $c['key'] . " : aucune publication\n"; continue; }
             $st = socCalStats(($c['type'] === 'facebook' ? 'mfb-' : 'mig-') . $pid, $c['key']);
+            foreach ($c['type'] === 'facebook' ? [['post_media_view', 'lifetime'], ['post_impressions', 'lifetime'], ['post_reactions_by_type_total', 'lifetime']] : [['views', null], ['reach', null]] as [$m, $per]) {
+                try { $raw = Meta::call('GET', $pid . '/insights', ['metric' => $m] + ($per ? ['period' => $per] : []), $c['token']);
+                    echo '    brut ' . $m . ' : ' . mb_substr(json_encode($raw['data'] ?? $raw, JSON_UNESCAPED_UNICODE), 0, 160) . "\n"; }
+                catch (MetaError $e) { echo '    brut ' . $m . ' : refus (' . $e->metaCode . ') ' . mb_substr($e->getMessage(), 0, 120) . "\n"; }
+            }
             echo '  ' . $c['key'] . ' (' . $c['name'] . ') : vues=' . json_encode($st['vues']) . ' personnes=' . json_encode($st['personnes']) . ' réactions=' . json_encode($st['reactions'])
                 . ($st['motif'] ? ' · ' . mb_substr((string) $st['motif'], 0, 140) : '') . "\n";
         } catch (Throwable $e) { echo '  ' . $c['key'] . ' : ' . mb_substr($e->getMessage(), 0, 140) . "\n"; }

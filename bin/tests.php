@@ -96,6 +96,7 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
     if ($m === 'GET' && $path === '17841/insights') { return [200, ['data' => [['name' => 'follower_count', 'period' => 'day', 'values' => [['value' => 4, 'end_time' => date('Y-m-d') . 'T07:00:00+0000']]]]]]; }
     // Chiffres d'une publication (fiche du calendrier) : la Page 111 a retiré post_clicks (refus du lot), la 222 refuse les insights.
     if ($m === 'GET' && preg_match('#^111_\d+/insights$#', $path)) {
+        if (!empty($GLOBALS['INSIGHTS_VIDES'])) { return [200, ['data' => []]]; }
         $noms = explode(',', (string) ($p['metric'] ?? ''));
         if (array_intersect($noms, ['post_clicks', 'post_impressions', 'post_impressions_unique'])) { return [400, ['error' => ['code' => 100, 'message' => '(#100) The value must be a valid insights metric']]]; }
         $v = ['post_media_view' => 1234, 'post_total_media_view_unique' => 980, 'post_video_views' => 0, 'post_reactions_by_type_total' => ['like' => 30, 'love' => 5]];
@@ -845,6 +846,10 @@ check('permission read_insights manquante : motif clair, pas d’erreur', $code 
 [$c4] = $stat('mfb-222_7001', 'fb:111');
 [$c5] = $stat('mfb-../me', 'fb:111');
 check('publication d’un autre compte ou identifiant invalide : refusé', $c4 === 404 && $c5 === 400);
+$GLOBALS['INSIGHTS_VIDES'] = true;
+[$code, $s6] = $stat('mfb-111_9001', 'fb:111');
+unset($GLOBALS['INSIGHTS_VIDES']);
+check('insights vides (token sans read_insights) : motif clair plutôt que des tirets muets', $code === 200 && $s6['vues'] === null && str_contains((string) $s6['motif'], 'read_insights'), json_encode($s6));
 
 echo "Suivi des boutiques : abonnés face au budget (en direct)\n";
 $GLOBALS['META_DEPENSES'] = [['ad_id' => '7201', 'date_start' => date('Y-m-d', strtotime('-2 days')), 'spend' => '10.00'],

@@ -269,20 +269,25 @@ function socCalStats(string $id, string $compte): array
         return $v;
     };
     // Un seul appel pour les noms actuels ; un nom refusé (métrique retirée, type de média) fait tout refuser : alors un par un.
-    $lu = []; $essayes = [];
+    $lu = []; $essayes = []; $erreur = null;
     try { $tete = array_map(static fn ($n) => $n[0], $metriques); $lu = $lire(array_values($tete)); $essayes = array_flip($tete); }
-    catch (MetaError $e) { if (socSuiviPermission($e)) { $out['motif'] = 'vues indisponibles : ajoutez la permission ' . $perm . ' au token (' . $e->getMessage() . ')'; } }
+    catch (MetaError $e) { $erreur = $e; if (socSuiviPermission($e)) { $out['motif'] = 'vues indisponibles : ajoutez la permission ' . $perm . ' au token (' . $e->getMessage() . ')'; } }
     if ($out['motif'] === null) {
         foreach ($metriques as $cle => $noms) {
             foreach ($noms as $nom) {
                 if (!isset($lu[$nom]) && !isset($essayes[$nom])) {
                     $essayes[$nom] = true;
                     try { $lu += $lire([$nom]); }
-                    catch (MetaError $e) { if (socSuiviPermission($e)) { $out['motif'] = 'vues indisponibles : ajoutez la permission ' . $perm . ' au token (' . $e->getMessage() . ')'; break 2; } }
+                    catch (MetaError $e) { $erreur = $e; if (socSuiviPermission($e)) { $out['motif'] = 'vues indisponibles : ajoutez la permission ' . $perm . ' au token (' . $e->getMessage() . ')'; break 2; } }
                 }
                 if (isset($lu[$nom])) { $out[$cle] = $lu[$nom]; break; }
             }
         }
+    }
+    // Rien de lu et rien de refusé : Meta répond vide quand le token n'a pas la permission (comme pour les abonnés).
+    if ($out['motif'] === null && !array_filter(array_intersect_key($out, $metriques), static fn ($v) => $v !== null)) {
+        $out['motif'] = $erreur !== null ? 'vues illisibles : (' . $erreur->metaCode . ') ' . $erreur->getMessage()
+            : 'vues indisponibles : Meta ne renvoie aucun chiffre, la permission ' . $perm . ' manque au token';
     }
     // Réactions, commentaires, partages : champs du post (Facebook : `pages_read_user_content`), utiles même sans insights.
     try {
