@@ -21,12 +21,13 @@ function socIgMediaSync(?string $shopId = null, int $limite = 30): array
 {
     $out = [];
     if (!Meta::configured()) { return ['erreur' => 'token Meta absent']; }
-    foreach (socShops() as $s) {
+    // Instagram unique : une seule grille, celle de la marque.
+    foreach (socIgUnique() ? [socBrand()] : socShops() as $s) {
         if ($shopId !== null && (string) $s['id'] !== $shopId) { continue; }
         $ig = (string) ($s['ids']['instagram_user_id'] ?? '');
         if ($ig === '') { continue; }
         try {
-            $tok = ($s['ids']['page_id'] ?? '') !== '' ? Meta::pageToken((string) $s['ids']['page_id']) : null;
+            $tok = socIgToken($ig, (string) ($s['ids']['page_id'] ?? ''));
             $r = Meta::call('GET', $ig . '/media', ['fields' => SOC_IG_CHAMPS, 'limit' => $limite], $tok);
             $vus = [];
             foreach ((array) ($r['data'] ?? []) as $m) {
@@ -63,9 +64,54 @@ function socIgGrille(string $shopId): array
     $media = array_map(static fn ($r) => ['id' => (string) $r['media_id'], 'type' => (string) $r['type'],
         'src' => (string) (($r['type'] === 'VIDEO' ? $r['vignette_url'] : $r['media_url']) ?: ($r['media_url'] ?? '')),
         'permalink' => (string) ($r['permalink'] ?? ''), 'at' => substr((string) $r['publie_le'], 0, 16), 'caption' => mb_substr((string) $r['legende'], 0, 140)], $rows);
-    $shop = socShop($shopId);
+    $shop = $shopId === 'marque' ? socBrand() : socShop($shopId);
     return ['shop' => $shopId, 'media' => $media, 'lu_le' => socShopOverrides()[$shopId]['ig_grille_le'] ?? null,
         'instagram' => $shop !== null && (string) ($shop['ids']['instagram_user_id'] ?? '') !== ''];
+}
+
+/**
+ * Instagram unique : un seul compte (celui de la marque) pour tout le réseau.
+ * Réglage `instagram_unique` (oui / non) ; sans réglage : oui dès que la marque
+ * a son Instagram et qu'aucune boutique n'en a un autre.
+ */
+function socIgUnique(): bool
+{
+    $v = socSetting('instagram_unique');
+    if (is_bool($v)) { return $v; }
+    $ig = (string) (socBrand()['ids']['instagram_user_id'] ?? '');
+    if ($ig === '') { return false; }
+    foreach (socShops() as $s) {
+        $x = (string) ($s['ids']['instagram_user_id'] ?? '');
+        if ($x !== '' && $x !== $ig) { return false; }
+    }
+    return true;
+}
+
+/**
+ * Le « compte » sur lequel part un post Instagram en mode unique : la marque,
+ * avec, pour les variables du texte, la boutique visée (une seule) ou la liste
+ * des boutiques ({ville} = « Halle, Corbais et Wavre »).
+ */
+function socIgCompteReseau(array $post): array
+{
+    $b = socBrand();
+    $parId = []; foreach (socShops() as $s) { $parId[(string) $s['id']] = $s; }
+    $cibles = array_values(array_filter(array_map(static fn ($id) => $parId[(string) $id] ?? null, (array) ($post['shops'] ?? []))));
+    if (count($cibles) === 1) { return array_replace($cibles[0], ['id' => 'marque', 'ids' => $b['ids']]); }
+    $noms = array_map(static fn ($s) => (string) $s['name'], $cibles);
+    $ville = count($noms) > 1 ? implode(', ', array_slice($noms, 0, -1)) . ' et ' . end($noms) : ($noms[0] ?? '');
+    $langs = [];
+    foreach ($cibles as $s) { foreach ((array) ($s['langs'] ?: ['fr']) as $L) { if (!in_array($L, $langs, true)) { $langs[] = $L; } } }
+    return array_replace($b, ['name' => $ville !== '' ? $ville : $b['name'], 'langs' => $langs ?: ['fr'], 'address' => '', 'hours' => '', 'hoursNl' => '']);
+}
+
+/** Le token pour un compte Instagram : celui de la Page à laquelle il est rattaché, sinon de la Page donnée. */
+function socIgToken(string $ig, string $pageId): ?string
+{
+    try {
+        foreach (Meta::pageTokens() as $pid => $pg) { if (($pg['ig'] ?? '') === $ig) { return (string) $pg['token']; } }
+        return $pageId !== '' ? Meta::pageToken($pageId) : null;
+    } catch (MetaError $e) { return null; }
 }
 
 /** Est-ce une frise ? (3 tuiles prêtes) */
@@ -74,7 +120,7 @@ function socEstFrise(array $p): bool
     return is_array($p['frise']['tiles'] ?? null) && count($p['frise']['tiles']) === 3;
 }
 
-/** Les boutiques sur lesquelles un post part sur Instagram. */
+/** Les boutiques sur lesquelles un post part sur Instagram (en mode unique : « marque », une fois). */
 function socShopsIg(array $p): array
 {
     $out = [];
@@ -82,7 +128,7 @@ function socShopsIg(array $p): array
         $c = $p['ch'][(string) $sid] ?? null;
         if (is_array($c) ? !empty($c['ig']) : !empty($p['ig'])) { $out[] = (string) $sid; }
     }
-    return $out;
+    return $out && socIgUnique() ? ['marque'] : $out;
 }
 
 /**

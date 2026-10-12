@@ -522,7 +522,7 @@ class Component extends DCLogic {
         hasAuthor: !!sp.author, author: sp.author || '', hasText: !!sp.text, textPreview: SA.fill(sp.text, shopsOf(sp)[0], SA.CATALOGUE.find(x => sp.title.indexOf(x.name) >= 0)),
         isFail: sp.status === 'Échec', error: sp.error || '', isPartial: st.k === 'Partiel',
         partialTitle: st.k === 'Partiel' ? 'Publié sur ' + sp.partial.ok.length + ' Pages sur ' + (sp.partial.ok.length + sp.partial.ko.length) : '',
-        ko: st.k === 'Partiel' ? sp.partial.ko.map(k => Object.assign({ shopName: SA.byId(SA.SHOPS, k.shop).name }, k)) : [],
+        ko: st.k === 'Partiel' ? sp.partial.ko.map(k => Object.assign({ shopName: k.shop === 'marque' ? 'Instagram du réseau' : (SA.byId(SA.SHOPS, k.shop) || { name: k.shop }).name }, k)) : [],
         canRetry: (sp.status === 'Échec' || st.k === 'Partiel') && !s.retrying, canValidate: sp.status === 'À valider',
         editHref: SA.href('post', 'id=' + sp.id), editLabel: sp.status === 'Publié' ? 'Voir' : 'Modifier', target: '_self', canDup: true, isMeta: false, hasStats: false,
         isDark: !!sp.dark, adsHref: SA.href('ads', 'new=1&post=' + encodeURIComponent(sp.id)),

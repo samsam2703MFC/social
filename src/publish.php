@@ -108,14 +108,23 @@ function socQueue(array $post, bool $maintenant = false): int
     $deja = [];
     foreach (Db::rows("SELECT shop_id, canal FROM social_publication WHERE content_id = ?", [$id]) as $r) { $deja[$r['shop_id'] . '|' . $r['canal']] = true; }
     $k = 0;
+    // Instagram unique : le post part une seule fois sur le compte de la marque (dès qu'une boutique visée l'a coché).
+    $unique = socIgUnique();
+    $igReseau = false;
     foreach ($shops as $i => $sid) {
         $off = ($n > 1 && $spread > 0 && !$maintenant) ? (int) round($i * $spread / ($n - 1) * 60) : 0;
         foreach (socCanaux($post, (string) $sid) as $c) {
+            if ($c === 'ig' && $unique) { $igReseau = true; continue; }
             if (isset($deja[$sid . '|' . $c])) { continue; }
             Db::exec('INSERT INTO social_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
                 [$id, (string) $sid, $c, date('Y-m-d H:i:s', $t0 + $off), 'attente', date('Y-m-d H:i:s')]);
             $k++;
         }
+    }
+    if ($igReseau && !isset($deja['marque|ig'])) {
+        Db::exec('INSERT INTO social_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
+            [$id, 'marque', 'ig', date('Y-m-d H:i:s', $t0), 'attente', date('Y-m-d H:i:s')]);
+        $k++;
     }
     return $k;
 }
@@ -161,7 +170,7 @@ function socPublishIg(array $post, array $shop, string $message): string
 {
     $ig = (string) $shop['ids']['instagram_user_id'];
     if ($ig === '') { throw new MetaError('compte Instagram non rattaché à ' . $shop['name'], 100); }
-    $tok = $shop['ids']['page_id'] !== '' ? Meta::pageToken((string) $shop['ids']['page_id']) : null;
+    $tok = socIgToken($ig, (string) $shop['ids']['page_id']);
     // Frise de grille : 3 posts à la suite (Facebook, lui, reçoit le visuel entier — `media`).
     if (socEstFrise($post)) { return socPublishFrise($post, $shop, $ig, $tok, $message); }
     [$imgs, $video] = socMedias($post);
@@ -222,7 +231,7 @@ function socRunQueue(?string $postId = null, int $max = 60): array
         // Réservation : deux crons simultanés ne publient pas deux fois.
         if (Db::exec("UPDATE social_publication SET statut = 'en_cours', essais = essais + 1, maj_le = ? WHERE id = ? AND statut = 'attente'", [$now, $r['id']]) === 0) { continue; }
         $post = socItem('posts', (string) $r['content_id']);
-        $shop = $shops[(string) $r['shop_id']] ?? null;
+        $shop = (string) $r['shop_id'] === 'marque' && $post !== null ? socIgCompteReseau($post) : ($shops[(string) $r['shop_id']] ?? null);
         try {
             if ($post === null) { throw new MetaError('post supprimé', 0); }
             if ($shop === null) { throw new MetaError('boutique inconnue ou fermée', 0); }

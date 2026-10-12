@@ -226,6 +226,7 @@
               </div>
             </sc-for>
           </div>
+          <sc-if value="{{ igUnique }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.45;color:#444444;background:#F4EFE8;border-radius:6px;padding:7px 10px;">{{ igUniqueNote }}</span></sc-if>
         </section>
 
         <!-- 5 Texte du post -->
@@ -671,6 +672,8 @@ class Component extends DCLogic {
     const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
     const cat = s.product ? SA.CATALOGUE.find(x => x.id === s.product) : null;
     const setScope = (scope) => { if (locked) return; if (scope === 'all') this.setState({ scope, sel: SA.SHOPS.map(x => x.id), group: null }); else if (scope === 'group') { const g = SA.GROUPS[0]; this.setState({ scope, group: g.id, sel: g.shops.slice() }); } else this.setState({ scope, group: null }); };
+    // Instagram unique : un seul compte (la marque) pour tout le réseau.
+    const igUnique = SA.igUnique(), igHandle = ((st.brand || {}).ig) || (SA.live ? 'le compte de la marque' : '@latelierby.be');
     const shopRows = SA.SHOPS.map(sh => {
       const live = SA.byId(shopsState, sh.id), on = t.includes(sh.id), c = s.ch[sh.id] || {}, fbOk = live.fb === 'connected', igOk = live.igs === 'connected';
       return { name: sh.name, on, bg: on ? '#FFFFFF' : '#FCFAF7', lockShop: locked || s.scope === 'all',
@@ -818,7 +821,7 @@ class Component extends DCLogic {
       // ciblage
       scopeAll: () => setScope('all'), scopeGroup: () => setScope('group'), scopeShop: () => setScope('shop'), saBg, saFg, sgBg, sgFg, ssBg, ssFg,
       isGroup: s.scope === 'group', groups: (st.groups || SA.GROUPS).map(g => Object.assign(chip(s.group === g.id), { name: g.name, count: g.shops.length, pick: () => this.setState({ group: g.id, sel: g.shops.slice() }) })),
-      shopRows,
+      shopRows, igUnique, igUniqueNote: 'Instagram : un seul compte pour tout le réseau (' + igHandle + '). Cocher Instagram pour une ou plusieurs boutiques publie le post une seule fois sur ce compte ; {ville} y devient la liste des boutiques visées.',
       // texte
       vars: [['{ville}', 'Nom de la boutique'], ['{adresse}', 'Adresse de la boutique'], ['{horaires}', "Horaires d'ouverture"], ['{prix}', 'Prix du produit choisi'], ['{produit_du_jour}', 'Produit du jour (catalogue)']].map(([code, tip]) => ({ code, tip, insert: () => !locked && this.insertVar(code) })),
       taRef: (el) => { this._ta = el; }, text: isNlEd ? s.textNl : s.text, setText: (e) => this.setState({ [isNlEd ? 'textNl' : 'text']: e.target.value }),

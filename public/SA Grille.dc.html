@@ -114,7 +114,7 @@ class Component extends DCLogic {
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
     if (!SA) return;
     const want = SA.param('shop'), first = SA.SHOPS.find(x => x.igs === 'connected') || SA.SHOPS[0];
-    const shop = want && SA.byId(SA.SHOPS, want) ? want : (first ? first.id : null);
+    const shop = SA.igUnique() ? 'marque' : want && SA.byId(SA.SHOPS, want) ? want : (first ? first.id : null);
     this.setState({ shop }, () => this.load(false));
   }
   componentWillUnmount() { clearTimeout(this._tt); window.removeEventListener('sa-change', this._h); }
@@ -145,7 +145,10 @@ class Component extends DCLogic {
     const SA = window.SA, st = SA.state(), now = new Date();
     const at = (d, t) => { const [Y, M, D] = String(d || '').split('-').map(Number), [hh, mm] = String(t || '00:00').split(':').map(Number); return new Date(Y, M - 1, D, hh, mm).getTime(); };
     const nowMs = at(SA.TODAY, String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'));
-    const igOn = (p) => { const shops = p.shops === 'all' ? SA.SHOPS.map(x => x.id) : (p.shops || []); if (!shops.includes(id)) return false; const c = p.ch && p.ch[id]; return c ? !!c.ig : !!p.ig; };
+    const igOn = (p) => { const shops = p.shops === 'all' ? SA.SHOPS.map(x => x.id) : (p.shops || []);
+      // Instagram unique : tout post qui coche Instagram pour une de ses boutiques part sur le compte du réseau.
+      if (id === 'marque') return shops.some(sid => { const c = p.ch && p.ch[sid]; return c ? !!c.ig : !!p.ig; });
+      if (!shops.includes(id)) return false; const c = p.ch && p.ch[id]; return c ? !!c.ig : !!p.ig; };
     const sched = st.posts.filter(p => ['Programmé', 'À valider'].includes(p.status) && igOn(p) && at(p.date, p.time) >= nowMs - 5 * 60000)
       .sort((a, b) => at(b.date, b.time) - at(a.date, a.time) || String(b.id).localeCompare(String(a.id)));
     const thumb = (p) => { const m = (p.media || []).find(x => x.kind !== 'video'); return m ? m.src : (p.img || ''); };
@@ -181,7 +184,7 @@ class Component extends DCLogic {
   lockClash(posts, moved) {
     const SA = window.SA;
     const at = (p) => { const [Y, M, D] = String(p.date).split('-').map(Number), [hh, mm] = String(p.time || '00:00').split(':').map(Number); return new Date(Y, M - 1, D, hh, mm).getTime(); };
-    const igOf = (p) => (p.shops === 'all' ? SA.SHOPS.map(x => x.id) : (p.shops || [])).filter(id => p.ch && p.ch[id] ? p.ch[id].ig : p.ig);
+    const igOf = (p) => { const l = (p.shops === 'all' ? SA.SHOPS.map(x => x.id) : (p.shops || [])).filter(id => p.ch && p.ch[id] ? p.ch[id].ig : p.ig); return l.length && SA.igUnique() ? ['marque'] : l; };
     for (const m of moved) for (const q of posts) {
       if (q.id === m.id || q.status !== 'Programmé' || m.status !== 'Programmé' || (!m.frise && !q.frise)) continue;
       if (!igOf(m).some(id => igOf(q).includes(id)) || Math.abs(at(m) - at(q)) >= 30 * 60000) continue;
@@ -193,7 +196,9 @@ class Component extends DCLogic {
   renderVals() {
     const SA = window.SA, s = this.state;
     if (!SA) return {};
-    const st = SA.state(), id = s.shop, shop = id ? SA.byId(st.shops, id) : null;
+    const st = SA.state(), id = s.shop, b = st.brand || {};
+    const reseau = { id: 'marque', name: 'Instagram du réseau', ig: b.ig || (SA.live ? '' : '@latelierby.be'), igs: SA.live ? (b.igs || 'none') : 'connected' };
+    const shop = id === 'marque' ? reseau : id ? SA.byId(st.shops, id) : null;
     const { cells: raw, sched, ig, at } = id ? this.grid(id) : { cells: [], sched: [], ig: {}, at: () => 0 };
     const fmtWhen = (p) => SA.dShort(p.date) + ' · ' + p.time;
     const pick = (cell) => {
@@ -262,7 +267,7 @@ class Component extends DCLogic {
 
     const igShop = (x) => x.igs === 'connected';
     return {
-      shopChips: SA.SHOPS.map(x => { const on = x.id === id, live = SA.byId(st.shops, x.id) || x; return { name: x.name, noIg: !igShop(live), tip: igShop(live) ? (live.ig || '') : 'Instagram : ' + ((SA.CONN[live.igs] || {}).label || 'non connecté'),
+      shopChips: (SA.igUnique() ? [reseau] : SA.SHOPS).map(x => { const on = x.id === id, live = x.id === 'marque' ? reseau : SA.byId(st.shops, x.id) || x; return { name: x.name, noIg: !igShop(live), tip: igShop(live) ? (live.ig || '') : 'Instagram : ' + ((SA.CONN[live.igs] || {}).label || 'non connecté'),
         bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : '#CFC6BA', pick: () => this.setState({ shop: x.id, sel: null }, () => { if (!this.state.ig[x.id]) this.load(false); }) }; }),
       handle: shop && shop.ig ? (String(shop.ig).startsWith('@') ? shop.ig : '@' + shop.ig) : (shop ? shop.name : '—'),
       refresh: () => this.load(true), loading: s.loading, refreshLabel: s.loading ? 'Lecture…' : 'Relire chez Instagram',

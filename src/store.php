@@ -188,6 +188,7 @@ function socStateGet(): array
         'leads' => socLeads(),
         'darkPosts' => socDarkPosts(),
         'metaImport' => socSetting('meta_campagnes_import'),
+        'instagramUnique' => socIgUnique(),
         'ftemplates' => sfModeles(),
         'franchise' => ['rules' => sfRegles(), 'access' => sfAccesListe(), 'url' => (string) (socSetting('url_franchise') ?? '/social_franchisee/')],
         'activity' => array_map(static fn ($r) => ['at' => substr((string) $r['at'], 0, 16), 'who' => $r['who'], 'what' => $r['what'], 'detail' => $r['detail']],

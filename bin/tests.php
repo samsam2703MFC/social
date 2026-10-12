@@ -836,6 +836,40 @@ $b = sfSuivi('999', 7);
 check('boutique sans Page reliée : message, aucune donnée', $b['lignes'] === [] && str_contains((string) $b['message'], 'Page Facebook'));
 unset($_COOKIE[SF_COOKIE]);
 
+echo "Instagram unique pour tout le réseau\n";
+$marqueIds = socBrand()['ids'];
+socShopPut('marque', ['ids' => array_merge($marqueIds, ['instagram_user_id' => '17841'])]);
+socSettingPut('instagram_unique', true, false);
+$restreinte = [];
+$pu = ['id' => 'pu1', 'date' => date('Y-m-d', strtotime('+1 day')), 'time' => '09:00', 'type' => 'Produit', 'title' => 'Réseau', 'img' => 'uploads/x.png', 'media' => [['src' => 'uploads/x.png', 'kind' => 'img']],
+    'shops' => ['4', '5'], 'ch' => ['4' => ['fb' => true, 'ig' => true], '5' => ['fb' => true, 'ig' => true]], 'fb' => true, 'ig' => true, 'status' => 'Programmé', 'text' => 'Bon appétit à {ville} !', 'spread' => 0];
+socStateSave(['changes' => ['posts' => ['upsert' => [$pu]]]]);
+$rows = Db::rows("SELECT shop_id, canal FROM social_publication WHERE content_id = 'pu1' ORDER BY canal, shop_id");
+check('file : Facebook par boutique, Instagram une seule fois (compte de la marque)', array_map(static fn ($r) => $r['canal'] . ':' . $r['shop_id'], $rows) === ['fb:4', 'fb:5', 'ig:marque'], json_encode($rows));
+Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'pu1'");
+$appels = [];
+socRunQueue('pu1');
+$igPosts = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === '17841/media'));
+check('Instagram : un seul post, légende avec les boutiques visées ({ville})', count($igPosts) === 1 && str_contains((string) ($igPosts[0][2]['caption'] ?? ''), 'Bon appétit à Halle et Wavre !')
+    && ($igPosts[0][2]['access_token'] ?? '') === 'PT111', json_encode($igPosts));
+check('post publié (2 Pages + Instagram du réseau)', socItem('posts', 'pu1')['status'] === 'Publié');
+check('frise et grille : un seul compte, celui de la marque', socShopsIg($pu) === ['marque'] && socIgGrille('marque')['instagram'] === true);
+check('état : mode Instagram unique signalé à l’écran', socStateGet()['instagramUnique'] === true);
+sfSessionOuvrir(['4'], 'Test IG', 'code');
+{
+    [$code, $b] = $fr('POST', '/franchise/posts', ['template' => 'fp-produit', 'product' => 'p1', 'fb' => true, 'ig' => true, 'date' => date('Y-m-d', strtotime('+4 days')), 'time' => '10:30', 'visual' => $vis]);
+    check('franchisé : Instagram du réseau réservé au franchiseur (le post part sur sa Page seulement)', $code === 200 && ($b['post']['ig'] ?? null) === false && ($b['post']['fb'] ?? null) === true, json_encode($b));
+    [$code, $et] = $fr('GET', '/franchise/etat');
+    check('franchisé : la règle Instagram lui est rendue fermée', $code === 200 && $et['rules']['ig'] === false && $et['instagramUnique'] === true);
+    [$code, $vu] = $fr('GET', '/franchise/instagram');
+    check('franchisé : vue en lecture sur l’Instagram du réseau (profil, publications, programmés)', $code === 200 && $vu['username'] === 'latelierby.halle' && count($vu['media']) === 2
+        && $vu['followers'] === 2300, json_encode($vu));
+}
+unset($_COOKIE[SF_COOKIE]);
+socSettingPut('instagram_unique', null, false);
+socShopPut('marque', ['ids' => $marqueIds]);
+check('sans réglage : mode automatique (une boutique a son propre Instagram → non)', socIgUnique() === false);
+
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');
 check('GET /state', $code === 200 && $b['mode'] === 'live' && count($b['shops']) === 2);

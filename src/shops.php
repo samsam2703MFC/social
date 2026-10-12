@@ -189,7 +189,8 @@ function socBrand(): array
     $conn = (array) ($o['conn'] ?? []);
     return ['id' => 'marque', 'name' => (string) ($o['name'] ?? "L'Atelier By"), 'ids' => $ids, 'langs' => ['fr', 'nl'],
         'fb' => (string) ($conn['fb'] ?? 'none'), 'igs' => (string) ($conn['igs'] ?? 'none'), 'ads' => (string) ($conn['ads'] ?? 'none'),
-        'connDetail' => (array) ($conn['detail'] ?? []), 'checkedAt' => $conn['at'] ?? null, 'address' => '', 'hours' => '', 'hoursNl' => '', 'geo' => null];
+        'connDetail' => (array) ($conn['detail'] ?? []), 'checkedAt' => $conn['at'] ?? null, 'address' => '', 'hours' => '', 'hoursNl' => '', 'geo' => null,
+        'ig' => (string) ($o['ig'] ?? '')];
 }
 
 function socShop(string $id): ?array
@@ -216,6 +217,8 @@ function socTestConnexions(?string $seule = null): array
         catch (MetaError $e) { $global = [$e->metaCode === 190 ? 'expired' : 'none', $e->getMessage()]; }
     }
     $out = [];
+    $unique = socIgUnique(); $igMarque = null;
+    if ($unique && $seule !== null && $seule !== 'marque') { $b = socBrand(); $igMarque = [$b['igs'], $b['connDetail']['igs'] ?? '']; }
     foreach ($shops as $s) {
         $c = ['fb' => 'none', 'igs' => 'none', 'ads' => 'none', 'detail' => [], 'at' => $now];
         if ($global !== null) {
@@ -229,16 +232,25 @@ function socTestConnexions(?string $seule = null): array
             else { $c['fb'] = 'connected'; $c['detail']['fb'] = $page['name']; }
 
             $ig = $s['ids']['instagram_user_id'] !== '' ? $s['ids']['instagram_user_id'] : (string) ($page['ig'] ?? '');
-            if ($ig === '') { $c['detail']['igs'] = 'Aucun compte Instagram professionnel rattaché à la Page'; }
+            if ($unique && $s['id'] !== 'marque' && $igMarque !== null) {
+                // Instagram unique : chaque boutique publie sur le compte de la marque.
+                $c['igs'] = $igMarque[0]; $c['detail']['igs'] = 'Instagram du réseau · ' . $igMarque[1];
+            }
+            elseif ($ig === '') { $c['detail']['igs'] = 'Aucun compte Instagram professionnel rattaché à la Page'; }
             else {
                 try {
                     $r = Meta::call('GET', $ig, ['fields' => 'id,username'], $page['token'] ?? null);
                     $c['igs'] = 'connected'; $c['detail']['igs'] = '@' . ($r['username'] ?? $ig);
+                    if ($s['id'] === 'marque') { $igMarque = ['connected', '@' . ($r['username'] ?? $ig)]; }
                     $patch = ['ig' => '@' . ($r['username'] ?? '')];
                     if ($s['ids']['instagram_user_id'] === '') { $patch['ids'] = array_replace($s['ids'], ['instagram_user_id' => $ig]); }
                     if (($r['username'] ?? '') !== '') { socShopPut($s['id'], $patch); }
-                } catch (MetaError $e) { $c['igs'] = $e->metaCode === 190 ? 'expired' : 'none'; $c['detail']['igs'] = $e->getMessage(); }
+                } catch (MetaError $e) {
+                    $c['igs'] = $e->metaCode === 190 ? 'expired' : 'none'; $c['detail']['igs'] = $e->getMessage();
+                    if ($s['id'] === 'marque') { $igMarque = [$c['igs'], $e->getMessage()]; }
+                }
             }
+            if ($unique && $s['id'] === 'marque' && $igMarque === null) { $igMarque = [$c['igs'], $c['detail']['igs'] ?? '']; }
 
             $act = socActId($s['ids']['ad_account_id']);
             if ($act === '') { $c['detail']['ads'] = 'ad_account_id non renseigné'; }

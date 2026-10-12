@@ -147,6 +147,16 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   dans une autre pub (« Sponsoriser un post existant », likes et commentaires
   cumulés), commentaires relus toutes les heures (`social_commentaire`), masquables
   depuis l'écran Publicités.
+- **Instagram unique du réseau** (`socIgUnique()`, src/instagram.php) — un seul
+  compte Instagram (celui de la marque) pour toutes les boutiques : réglage
+  `instagram_unique`, sinon automatique dès que la marque a son Instagram et
+  qu'aucune boutique n'en a un autre. Un post qui coche Instagram pour une ou
+  plusieurs boutiques part **une seule fois** sur ce compte ({ville} devient la
+  liste des boutiques visées), la Grille Instagram n'a qu'une grille, les
+  connexions Instagram des boutiques reprennent celle de la marque. Instagram est
+  **réservé au franchiseur** : l'espace franchisé ne propose pas ce canal et n'en a
+  qu'une vue en lecture (« Instagram du réseau », `GET /franchise/instagram`, en
+  direct chez Meta, avec ce que le réseau y a programmé).
 - **Calendriers des Pages et comptes Instagram** (`src/calendriers.php`, lecture
   directe, rien en base) — le Calendrier montre, à côté des posts du module, ce que
   chaque Page Facebook et chaque compte Instagram visibles du System User ont

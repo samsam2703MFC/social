@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="config.js"></script>
+  <script src="franchise-data.js"></script>
+  <style>html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
+    section{padding-top:0;padding-bottom:0;} a{color:#8D1D2C;} button{font-family:var(--font-ui);}</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="FNav" active="ig" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+    <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }}</div></sc-if>
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Compte unique du réseau · géré par le franchiseur · lecture seule</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">INSTAGRAM DU RESEAU</h1>
+      </div>
+      <span style="font-size:11px;color:#666666;">{{ readLabel }}</span>
+    </header>
+
+    <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:40px 20px;text-align:center;font-size:13px;color:#666666;">Lecture du compte Instagram chez Meta…</div>
+    </sc-if>
+
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="flex:1 1 560px;min-width:0;max-width:760px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <img src="{{ pic }}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:#F4EFE8;border:2px solid #FFFFFF;box-shadow:0 0 0 2px #DD2A7B;">
+            <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+              <span style="font-size:16px;font-weight:600;">{{ handle }}</span>
+              <span style="font-size:13px;color:#444444;">{{ name }}</span>
+              <span style="font-size:12px;color:#666666;"><strong style="font-weight:600;color:#222222;">{{ followers }}</strong> abonnés · <strong style="font-weight:600;color:#222222;">{{ nMedia }}</strong> publications affichées</span>
+            </div>
+            <a href="{{ profileHref }}" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px;font-weight:500;white-space:nowrap;">Ouvrir Instagram ↗</a>
+          </div>
+          <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:8px 10px;">{{ errText }}</span></sc-if>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;">
+            <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="9">
+              <a href="{{ t.href }}" target="{{ t.target }}" rel="noopener" title="{{ t.tip }}" style="position:relative;display:block;aspect-ratio:3 / 4;background:#F4EFE8;overflow:hidden;text-decoration:none;">
+                <img src="{{ t.src }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;opacity:{{ t.op }};">
+                <sc-if value="{{ t.soon }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:6px;top:6px;font-size:10px;font-weight:600;background:#D97B29;color:#FFFFFF;border-radius:999px;padding:2px 7px;">{{ t.badge }}</span></sc-if>
+                <sc-if value="{{ t.video }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:6px;top:6px;font-size:11px;color:#FFFFFF;text-shadow:0 1px 3px rgba(0,0,0,0.5);">▶</span></sc-if>
+                <span style="position:absolute;left:0;right:0;bottom:0;padding:16px 6px 5px;font-size:10px;color:#FFFFFF;background:linear-gradient(transparent,rgba(0,0,0,0.55));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.foot }}</span>
+              </a>
+            </sc-for>
+          </div>
+        </div>
+        <aside style="flex:0 1 300px;min-width:260px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;font-size:12px;line-height:1.5;color:#444444;">
+          <span style="font-size:13px;font-weight:500;color:#222222;">Comment ça marche</span>
+          <span>L’Instagram de L’Atelier By est un compte unique pour tout le réseau. Seul le franchiseur y publie.</span>
+          <span>Vos posts partent sur la Page Facebook de votre boutique (menu « Publier »). Vous voyez ici ce qui est en ligne et, en orange, ce que le réseau a programmé.</span>
+          <span>Une idée pour l’Instagram du réseau ? Proposez-la au franchiseur.</span>
+        </aside>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { data: null, loading: true, err: '' };
+  componentDidMount() {
+    const SF = window.SF; if (!SF || !SF.state()) { this.setState({ loading: false }); return; }
+    SF.instagram().then(r => this.setState({ data: r, loading: false })).catch(e => this.setState({ loading: false, err: e.message || 'erreur' }));
+  }
+  renderVals() {
+    const SF = window.SF, s = this.state, r = s.data;
+    const base = { hasError: !!(SF && SF.error) || !!s.err, error: (SF && SF.error) || ('Lecture impossible : ' + s.err), loading: s.loading };
+    if (!SF || !r) return Object.assign(base, { ready: false, tiles: [], readLabel: '' });
+    const fmt = (n) => n == null ? '—' : Number(n).toLocaleString('fr-BE');
+    const ini = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" rx="32" fill="#C13584"/><text x="32" y="41" font-family="Arial" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">AB</text></svg>');
+    const soon = (r.programmes || []).map(p => ({ src: SF.media(p.src), soon: true, badge: 'Prévu ' + SF.dShort(p.date), video: false, op: 0.92, href: '#', target: '_self', foot: p.title, tip: p.title + ' — programmé le ' + SF.dLabel(p.date) + ' à ' + p.time }));
+    const live = (r.media || []).map(m => ({ src: m.src, soon: false, badge: '', video: !!m.video, op: 1, href: m.permalink || '#', target: '_blank',
+      foot: (m.likes != null ? '♥ ' + fmt(m.likes) : '') + (m.comments != null ? '  💬 ' + fmt(m.comments) : ''), tip: (m.caption || '') + ' — ' + SF.dLabel(String(m.at).slice(0, 10)) }));
+    return Object.assign(base, { ready: true, pic: r.picture || ini, handle: '@' + (r.username || 'instagram'), name: r.name || '', followers: fmt(r.followers), nMedia: (r.media || []).length,
+      profileHref: r.username ? 'https://www.instagram.com/' + r.username + '/' : 'https://www.instagram.com/', hasErr: !!r.erreur, errText: r.erreur || '',
+      tiles: soon.concat(live), readLabel: r.demo ? 'Démonstration' : 'Lu en direct chez Meta' });
+  }
+}
+</script>
+</body>
+</html>

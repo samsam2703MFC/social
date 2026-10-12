@@ -364,8 +364,9 @@ function sfEtat(string $shop, array $session): array
         'me' => ['name' => (string) ($session['name'] ?? ''), 'via' => (string) ($session['via'] ?? ''), 'shops' => array_map(static fn ($b) => ['id' => $b['id'], 'name' => $b['name']], $boutiques)],
         'shop' => ['id' => $s['id'], 'name' => $s['name'], 'langs' => $s['langs'], 'hours' => $s['hours'], 'hoursNl' => $s['hoursNl'], 'address' => $s['address'],
             'page' => $s['page'], 'ig' => $s['ig'], 'fb' => $s['fb'], 'igs' => $s['igs']],
-        'rules' => $r, 'templates' => sfModeles(true), 'posts' => $posts, 'campaigns' => $camps, 'catalogue' => sfCatalogue($shop),
+        'rules' => array_replace($r, ['ig' => $r['ig'] && !socIgUnique()]), 'templates' => sfModeles(true), 'posts' => $posts, 'campaigns' => $camps, 'catalogue' => sfCatalogue($shop),
         'quota' => ['week' => sfLundi(date('Y-m-d')), 'used' => sfQuotaUtilise($shop, date('Y-m-d')), 'max' => $r['quotaSemaine']],
+        'instagramUnique' => socIgUnique(),
         'franchisorUrl' => (string) (socSetting('url_publique') ?? ''),
     ];
 }
@@ -399,7 +400,8 @@ function sfPostCreer(string $shop, array $b, array $session = []): array
 
     // Canaux
     $fb = !empty($b['fb']) && !empty($tpl['fb']) && $r['fb'];
-    $ig = !empty($b['ig']) && !empty($tpl['ig']) && $r['ig'];
+    // Instagram unique du réseau : seul le franchiseur y publie ; le franchisé n'en a qu'une vue.
+    $ig = !empty($b['ig']) && !empty($tpl['ig']) && $r['ig'] && !socIgUnique();
     if (!$fb && !$ig) { $err[] = 'Choisissez au moins un canal autorisé (Facebook ou Instagram).'; }
 
     // Date et heure
@@ -525,6 +527,43 @@ function sfSuivi(string $shop, int $jours): array
         'message' => $r['lignes'] ? null : 'La Page de votre boutique n’est pas accessible au réseau chez Meta.'];
 }
 
+/**
+ * La vue du franchisé sur l'Instagram du réseau (compte unique, géré par le
+ * franchiseur) : le profil et ses dernières publications, lus en direct chez
+ * Meta, plus ce que le réseau y a programmé si la règle « voir les posts du
+ * réseau » le permet. Lecture seule.
+ */
+function sfInstagram(): array
+{
+    if (!socIgUnique()) { throw new HttpError(404, 'Chaque boutique a son propre Instagram : voir « Mon calendrier ».'); }
+    $b = socBrand();
+    $ig = (string) $b['ids']['instagram_user_id'];
+    $tok = socIgToken($ig, (string) $b['ids']['page_id']);
+    $out = ['username' => '', 'name' => '', 'picture' => null, 'followers' => null, 'media' => [], 'programmes' => [], 'erreur' => null, 'le' => date('Y-m-d H:i')];
+    try {
+        $pr = Meta::call('GET', $ig, ['fields' => 'username,name,profile_picture_url,followers_count,media_count'], $tok);
+        $out['username'] = (string) ($pr['username'] ?? ''); $out['name'] = (string) ($pr['name'] ?? '');
+        $out['picture'] = (string) ($pr['profile_picture_url'] ?? '') ?: null; $out['followers'] = isset($pr['followers_count']) ? (int) $pr['followers_count'] : null;
+        $r = Meta::call('GET', $ig . '/media', ['fields' => SOC_CAL_IG, 'limit' => 30], $tok);
+        foreach ((array) ($r['data'] ?? []) as $x) {
+            if (empty($x['id'])) { continue; }
+            $video = strtoupper((string) ($x['media_type'] ?? '')) === 'VIDEO';
+            $out['media'][] = ['id' => (string) $x['id'], 'src' => (string) (($video ? ($x['thumbnail_url'] ?? '') : '') ?: ($x['media_url'] ?? '')), 'video' => $video,
+                'permalink' => (string) ($x['permalink'] ?? ''), 'at' => date('Y-m-d H:i', strtotime((string) ($x['timestamp'] ?? '')) ?: time()),
+                'caption' => mb_substr((string) ($x['caption'] ?? ''), 0, 200), 'likes' => isset($x['like_count']) ? (int) $x['like_count'] : null, 'comments' => isset($x['comments_count']) ? (int) $x['comments_count'] : null];
+        }
+    } catch (MetaError $e) { $out['erreur'] = 'Instagram illisible pour l’instant : ' . $e->getMessage(); }
+    if (sfRegles()['voirReseau']) {
+        foreach (socItems('posts') as $p) {
+            if (($p['status'] ?? '') !== 'Programmé' || !empty($p['dark']) || !socShopsIg($p)) { continue; }
+            $out['programmes'][] = ['title' => (string) ($p['title'] ?? ''), 'date' => (string) ($p['date'] ?? ''), 'time' => (string) ($p['time'] ?? ''),
+                'src' => (string) (((array) ($p['frise']['tiles'] ?? []))[0] ?? ($p['img'] ?? ''))];
+        }
+        usort($out['programmes'], static fn ($a, $c) => strcmp($c['date'] . $c['time'], $a['date'] . $a['time']));
+    }
+    return $out;
+}
+
 /* --- routes ------------------------------------------------------------------------------- */
 
 /** Les routes de l'espace franchisé (session franchisé) — null si la route n'en est pas une. */
@@ -558,6 +597,7 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'POST' && $path === '/franchise/posts') { return [200, ['post' => sfPostCreer($shop, body(), $session), 'quota' => ['used' => sfQuotaUtilise($shop, date('Y-m-d')), 'max' => sfRegles()['quotaSemaine']]]]; }
     if ($method === 'POST' && preg_match('#^/franchise/posts/([\w.\-]{1,64})/annuler$#', $path, $m)) { sfPostAnnuler($shop, $m[1]); return [200, ['ok' => true]]; }
     if ($method === 'GET' && $path === '/franchise/suivi') { return [200, sfSuivi($shop, (int) ($_GET['jours'] ?? 28))]; }
+    if ($method === 'GET' && $path === '/franchise/instagram') { return [200, sfInstagram()]; }
     throw new HttpError(404, 'route inconnue');
 }
 

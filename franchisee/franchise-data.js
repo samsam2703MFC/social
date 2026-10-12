@@ -10,7 +10,7 @@
   const Q = new URLSearchParams(location.search);
   const PAGE = decodeURIComponent(location.pathname.split('/').pop() || '');
   const ON_LOGIN = /^Connexion/.test(PAGE);
-  const PAGES = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', promo: 'Promotions.dc.html', camp: 'Campagnes.dc.html', suivi: 'Suivi.dc.html', login: 'Connexion.dc.html' };
+  const PAGES = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', promo: 'Promotions.dc.html', camp: 'Campagnes.dc.html', suivi: 'Suivi.dc.html', ig: 'Instagram.dc.html', login: 'Connexion.dc.html' };
   let DEMO = Q.has('demo');
   try { if (!DEMO && sessionStorage.getItem('sf.demo') === '1' && !Q.has('live')) DEMO = true; if (DEMO) sessionStorage.setItem('sf.demo', '1'); else sessionStorage.removeItem('sf.demo'); } catch (e) {}
 
@@ -44,7 +44,7 @@
       today, now: pad(new Date().getHours()) + ':' + pad(new Date().getMinutes()), mode: 'demo',
       me: { name: 'Nathan Charlot (démo)', via: 'demo', shops: [{ id: 'halle', name: 'Halle' }, { id: 'wavre', name: 'Wavre' }] },
       shop: { id: 'halle', name: 'Halle', langs: ['nl', 'fr'], hours: '7h00–18h30', hoursNl: '7u00–18u30', address: 'Basiliekstraat 12, 1500 Halle', page: 'L’Atelier By Halle', ig: '@latelierby.halle', fb: 'connected', igs: 'connected' },
-      rules: Object.assign({}, RULES), templates: JSON.parse(JSON.stringify(TEMPLATES)), catalogue: cat,
+      rules: Object.assign({}, RULES, { ig: false }), templates: JSON.parse(JSON.stringify(TEMPLATES)), catalogue: cat,
       posts: [
         P('n1', t(-6), '08:00', 'Gamme automne', 'Publié', false, { img: 'img/illus/seasonal/autumn-range.png', campaign: 'c-automne', text: 'La gamme automne est arrivée chez L’Atelier By {ville}.' }),
         P('n2', t(2), '08:00', 'Brunch du dimanche', 'Programmé', false, { img: 'img/products/cupcake.png' }),
@@ -56,7 +56,7 @@
       campaigns: [{ id: 'c-automne', name: 'Gamme automne', type: 'saison', start: t(-10), end: t(20), status: 'en cours', products: ['Brioche croustillante', 'Tarte aux pommes', 'Tartelette poire-amande'],
         levers: ['Posts', 'Publicité locale'], description: 'Lancement de la gamme automne dans tout le réseau.', budget: 120,
         result: { spend: 64.3, reach: 5200, impr: 11800, clicks: 214, caCamp: 1840, caRef: 1420, tCamp: 512, tRef: 455 } }],
-      quota: { week: today, used: 1, max: RULES.quotaSemaine },
+      quota: { week: today, used: 1, max: RULES.quotaSemaine }, instagramUnique: true,
     };
   }
   function demoLoad() {
@@ -185,10 +185,19 @@
       instagram: null,
       depense: tot, depenseJours: dep, abonnesNet: net, coutParAbonne: net > 0 && tot ? Math.round(tot / net * 100) / 100 : null }] });
   }
+  /** L'Instagram du réseau, en lecture seule (compte unique géré par le franchiseur), lu en direct chez Meta. */
+  function instagram() {
+    if (!DEMO) return api('GET', '/franchise/instagram');
+    const imgs = ['img/products/croissant.png', 'img/products/sweet-tart-big.png', 'img/products/cookies.png', 'img/products/cupcake.png', 'img/products/brioche-croustillante.png', 'img/products/savoury-tart.png', 'img/products/bread-1.png', 'img/illus/seasonal/autumn-range.png', 'img/products/sweet-tart-small.png'];
+    const media = Array.from({ length: 12 }, (_, i) => ({ id: 'm' + i, src: imgs[i % imgs.length], video: i === 4, permalink: 'https://www.instagram.com/', at: addDays(STATE.today, -1 - i * 2) + ' 11:30',
+      caption: ['Ce matin au comptoir', 'La gamme automne est là', 'Merci pour vos avis !', 'Fournée du week-end'][i % 4], likes: 40 + (i * 37) % 120, comments: i % 7 }));
+    return Promise.resolve({ username: 'latelierby.be', name: 'L’Atelier By', picture: null, followers: 9412, media, erreur: null, demo: true,
+      programmes: [{ title: 'Derniers jours de la gamme automne', date: addDays(STATE.today, 3), time: '08:00', src: 'img/illus/seasonal/autumn-range.png' }, { title: 'Halloween : biscuits citrouille', date: addDays(STATE.today, 9), time: '09:00', src: 'img/products/pumpkin.png' }] });
+  }
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, logout, switchShop, reset, emit, suivi,
+  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, logout, switchShop, reset, emit, suivi, instagram,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();

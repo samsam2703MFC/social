@@ -85,11 +85,11 @@ function socRoute(string $method, string $path): array
     }
     if ($method === 'POST' && $path === '/parametres') {
         // Les réglages non secrets modifiables depuis l'écran.
-        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array'];
+        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool'];
         $faits = [];
         foreach (body() as $k => $v) {
             if (!isset($permis[$k])) { continue; }
-            $v = match ($permis[$k]) { 'float' => (float) $v, 'array' => (array) $v, default => trim((string) $v) };
+            $v = match ($permis[$k]) { 'float' => (float) $v, 'array' => (array) $v, 'bool' => (bool) $v, default => trim((string) $v) };
             socSettingPut((string) $k, $v, false); $faits[] = $k;
         }
         if ($faits) { socLog(socUser(), 'Paramètres', 'Modifiés : ' . implode(', ', $faits)); }
@@ -134,13 +134,13 @@ function socRoute(string $method, string $path): array
     }
     if ($method === 'GET' && $path === '/instagram/grille') {
         $sid = (string) ($_GET['shop'] ?? '');
-        if (socShop($sid) === null) { throw new HttpError(404, 'boutique inconnue'); }
+        if (socShop($sid) === null && !($sid === 'marque' && socIgUnique())) { throw new HttpError(404, 'boutique inconnue'); }
         return [200, socIgGrille($sid)];
     }
     if ($method === 'POST' && $path === '/instagram/grille') {
         // Relecture immédiate chez Instagram (le cron le fait toutes les heures).
         $sid = (string) (body()['shop'] ?? '');
-        if (socShop($sid) === null) { throw new HttpError(404, 'boutique inconnue'); }
+        if (socShop($sid) === null && !($sid === 'marque' && socIgUnique())) { throw new HttpError(404, 'boutique inconnue'); }
         $r = socIgMediaSync($sid);
         return [200, socIgGrille($sid) + ['synchro' => $r[$sid] ?? ($r['erreur'] ?? 'aucun compte Instagram rattaché')]];
     }
