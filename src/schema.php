@@ -163,6 +163,7 @@ function socParamsInit(): void
         'meta_compte_reseau'=> ['', false],
         'url_publique'      => [(string) ($c['publicUrl'] ?? ''), false],
         'url_bo'            => [(string) ($c['boUrl'] ?? '/consulant_bo/'), false],
+        'webshop_url'       => ['https://webshop.atelierby.be/', false],
         'marketing_api'     => [(string) ($c['marketingApi'] ?? 'http://127.0.0.1/consulant_bo/api/v1/marketing'), false],
         'url_franchise'     => [(string) ($c['franchiseeUrl'] ?? '/social_franchisee/'), false],
         'utilisateur'       => [(string) ($c['userName'] ?? 'Franchiseur'), false],

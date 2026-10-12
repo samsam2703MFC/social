@@ -381,6 +381,18 @@
               <button onClick="{{ scopeShop }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ ssBg }};color:{{ ssFg }};">Boutique(s)</button>
             </div>
           </div>
+          <!-- Boutiques : une pastille on/off par boutique -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;margin-right:2px;">Boutiques</span>
+            <button onClick="{{ allShopsOn }}" disabled="{{ locked }}" style="border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid {{ allShopsBorder }};background:{{ allShopsBg }};color:{{ allShopsFg }};">Toutes</button>
+            <sc-for list="{{ shopBadges }}" as="b" hint-placeholder-count="6">
+              <button onClick="{{ b.toggle }}" title="{{ b.tip }}" disabled="{{ locked }}" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 11px 3px 3px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid {{ b.border }};background:{{ b.bg }};color:{{ b.fg }};">
+                <span style="width:22px;height:22px;border-radius:50%;background:{{ b.dotBg }};color:#FFFFFF;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">{{ b.mark }}</span>
+                <span style="text-decoration:{{ b.deco }};">{{ b.name }}</span>
+              </button>
+            </sc-for>
+            <span style="font-size:11px;color:#666666;margin-left:4px;">{{ shopCountLabel }}</span>
+          </div>
           <sc-if value="{{ isGroup }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
               <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4"><button onClick="{{ g.pick }}" style="border-radius:999px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ g.border }};background:{{ g.bg }};color:{{ g.fg }};">{{ g.name }} · {{ g.count }}</button></sc-for>
@@ -422,8 +434,15 @@
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <label style="flex:2 1 240px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;"><span>Lien (optionnel) <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">link</span></span>
-              <input type="url" value="{{ link }}" onChange="{{ setLink }}" disabled="{{ locked }}" placeholder="https://www.latelierby.be/…" style="font-size:14px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+              <input type="text" value="{{ link }}" onChange="{{ setLink }}" disabled="{{ locked }}" placeholder="https://www.latelierby.be/…  ou  {webshop} / {webshop_produit}" style="font-size:14px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
             </label>
+            <div style="flex:1 1 100%;display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <span style="font-size:11px;color:#666666;">Lien rapide :</span>
+                <sc-for list="{{ linkChips }}" as="lk" hint-placeholder-count="3"><button onClick="{{ lk.pick }}" title="{{ lk.tip }}" disabled="{{ lk.dis }}" style="border-radius:999px;padding:5px 11px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid {{ lk.border }};background:{{ lk.bg }};color:{{ lk.fg }};opacity:{{ lk.op }};">{{ lk.label }}</button></sc-for>
+              </div>
+              <sc-if value="{{ hasLinkResolved }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#444444;line-height:1.45;word-break:break-all;">{{ linkResolved }}</span></sc-if>
+            </div>
             <label style="flex:1 1 200px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Opération liée
               <select value="{{ campaign }}" onChange="{{ setCampaign }}" disabled="{{ locked }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:9px 10px;">
                 <option value="">Aucune</option>
@@ -1028,10 +1047,13 @@ class Component extends DCLogic {
     const setScope = (scope) => { if (locked) return; if (scope === 'all') this.setState({ scope, sel: SA.SHOPS.map(x => x.id), group: null }); else if (scope === 'group') { const g = SA.GROUPS[0]; this.setState({ scope, group: g.id, sel: g.shops.slice() }); } else this.setState({ scope, group: null }); };
     // Instagram unique : un seul compte (la marque) pour tout le réseau.
     const igUnique = SA.igUnique(), igHandle = ((st.brand || {}).ig) || (SA.live ? 'le compte de la marque' : '@latelierby.be');
+    // Une boutique en plus ou en moins ; toutes cochées = « Tout le réseau ».
+    const toggleShop = (id) => { if (locked) return; const next = t.includes(id) ? t.filter(x => x !== id) : t.concat(id);
+      this.setState({ scope: next.length === SA.SHOPS.length ? 'all' : 'shop', group: null, sel: next }); };
     const shopRows = SA.SHOPS.map(sh => {
       const live = SA.byId(shopsState, sh.id), on = t.includes(sh.id), c = s.ch[sh.id] || {}, fbOk = live.fb === 'connected', igOk = live.igs === 'connected';
-      return { name: sh.name, on, bg: on ? '#FFFFFF' : '#FCFAF7', lockShop: locked || s.scope === 'all',
-        toggle: () => this.setState({ scope: 'shop', group: null, sel: on ? s.sel.filter(x => x !== sh.id) : s.sel.concat(sh.id) }),
+      return { name: sh.name, on, bg: on ? '#FFFFFF' : '#FCFAF7', lockShop: locked,
+        toggle: () => toggleShop(sh.id),
         fb: on && !!c.fb, ig: on && !!c.ig, fbDis: locked || !on || !fbOk, igDis: locked || !on || !igOk, igColor: igOk ? '#444444' : '#B8B2A8',
         toggleFb: () => this.setState({ ch: Object.assign({}, s.ch, { [sh.id]: Object.assign({}, c, { fb: !c.fb }) }) }),
         toggleIg: () => this.setState({ ch: Object.assign({}, s.ch, { [sh.id]: Object.assign({}, c, { ig: !c.ig }) }) }),
@@ -1173,11 +1195,16 @@ class Component extends DCLogic {
       studioControl: Object.assign({}, vL, { photos: s.photos, showPrice: v.showPrice && !!String(v.price || '').trim(), showPromo: v.showPromo && !!String(v.promo || '').trim(), showTitle: v.showTitle && !!String(v.title || '').trim(), showPhrase: v.showPhrase && !!String(v.phrase || '').trim() }),
       onStudioApi: (api) => { this._api = api; },
       // ciblage
+      shopBadges: SA.SHOPS.map(sh => { const on = t.includes(sh.id);
+        return { name: sh.name, mark: on ? '✓' : '', dotBg: on ? '#1F8A60' : '#D8D0C4', bg: on ? '#232220' : '#FFFFFF', fg: on ? '#FFFFFF' : '#8A847C', border: on ? '#232220' : 'rgba(34,34,34,0.18)', deco: on ? 'none' : 'line-through',
+          tip: (on ? 'Publié sur ' : 'Pas publié sur ') + sh.name + ' — cliquer pour ' + (on ? 'retirer' : 'ajouter'), toggle: () => toggleShop(sh.id) }; }),
+      allShopsOn: () => setScope('all'), allShopsBg: t.length === SA.SHOPS.length ? '#8D1D2C' : '#FFFFFF', allShopsFg: t.length === SA.SHOPS.length ? '#FFFFFF' : '#222222', allShopsBorder: t.length === SA.SHOPS.length ? '#8D1D2C' : 'rgba(34,34,34,0.18)',
+      shopCountLabel: t.length + ' / ' + SA.SHOPS.length + ' boutique' + (SA.SHOPS.length > 1 ? 's' : ''),
       scopeAll: () => setScope('all'), scopeGroup: () => setScope('group'), scopeShop: () => setScope('shop'), saBg, saFg, sgBg, sgFg, ssBg, ssFg,
       isGroup: s.scope === 'group', groups: (st.groups || SA.GROUPS).map(g => Object.assign(chip(s.group === g.id), { name: g.name, count: g.shops.length, pick: () => this.setState({ group: g.id, sel: g.shops.slice() }) })),
       shopRows, igUnique, igUniqueNote: 'Instagram : un seul compte pour tout le réseau (' + igHandle + '). Cocher Instagram pour une ou plusieurs boutiques publie le post une seule fois sur ce compte ; {ville} y devient la liste des boutiques visées.',
       // texte
-      vars: [['{ville}', 'Nom de la boutique'], ['{adresse}', 'Adresse de la boutique'], ['{horaires}', "Horaires d'ouverture"], ['{prix}', 'Prix du produit choisi'], ['{produit_du_jour}', 'Produit du jour (catalogue)']].map(([code, tip]) => ({ code, tip, insert: () => !locked && this.insertVar(code) })),
+      vars: [['{webshop}', 'Lien du webshop de la boutique'], ['{webshop_produit}', 'Lien du produit dans le webshop de la boutique'], ['{ville}', 'Nom de la boutique'], ['{adresse}', 'Adresse de la boutique'], ['{horaires}', "Horaires d'ouverture"], ['{prix}', 'Prix du produit choisi'], ['{produit_du_jour}', 'Produit du jour (catalogue)']].map(([code, tip]) => ({ code, tip, insert: () => !locked && this.insertVar(code) })),
       taRef: (el) => { this._ta = el; }, text: isNlEd ? s.textNl : s.text, setText: (e) => this.setState({ [isNlEd ? 'textNl' : 'text']: e.target.value }),
       templates: (st.templates || SA.TEMPLATES).map(tp => ({ name: tp.name, use: () => !locked && this.setState({ text: tp.text, textNl: tp.textNl || s.textNl, type: tp.type }) })),
       langTabs: ['fr', 'nl'].map(L => { const on = s.edLang === L, req = needed.includes(L), done = L === 'nl' ? !!s.textNl.trim() : !!s.text.trim();
@@ -1188,6 +1215,15 @@ class Component extends DCLogic {
       pvBilingual: shopLangs.length > 1, pvLangs: shopLangs.map(L => Object.assign(chip(L === pvLang), { label: L.toUpperCase(), pick: () => this.setState({ pvLang: L }) })),
       lenLabel: len + ' caractères' + (len > 125 ? ' · tronqué après 125 dans le fil' : ''), lenColor: len > 125 ? '#8A4B00' : '#666666',
       link: s.link, setLink: (e) => this.setState({ link: e.target.value }),
+      // Liens du webshop : celui de la boutique, ou la page du produit choisi (étape 2), résolus boutique par boutique.
+      ...(() => { const wsProd = !!(cat && cat.kind !== 'gamme' && cat.apiId && cat.webshop !== false);
+        const chip = (val, label, tip, dis) => { const on = s.link === val; return { label, tip, dis: locked || dis, op: dis ? 0.45 : 1, bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)',
+          pick: () => { if (!locked && !dis) this.setState({ link: on ? '' : val }); } }; };
+        const res = s.link && /\{webshop/.test(s.link) && pvShop ? SA.fill(s.link, pvShop, cat) : '';
+        return { linkChips: [chip('{webshop}', 'Webshop de la boutique', 'Le webshop de chaque boutique visée (https://webshop.atelierby.be/?shop=…)', false),
+            chip('{webshop_produit}', 'Produit sur le webshop', wsProd ? 'La page de « ' + cat.name + ' » dans le webshop de chaque boutique' : 'Choisissez d’abord un produit du catalogue (étape 2) vendu sur le webshop', !wsProd),
+            chip('https://www.latelierby.be', 'Site L’Atelier By', 'www.latelierby.be', false)],
+          hasLinkResolved: !!res, linkResolved: res ? '→ ' + pvShop.name + ' : ' + res + (t.length > 1 ? ' (et l’équivalent pour chacune des ' + t.length + ' boutiques)' : '') : '' }; })(),
       campaign: s.campaign, setCampaign: (e) => this.setState({ campaign: e.target.value }), campOptions: st.campaigns.filter(c => c.status !== 'terminée').map(c => ({ id: c.id, name: c.name })),
       // médiathèque (comme Posts Facebook) : recherche dans le formulaire, modale à catégories, fiche d'un visuel
       ...(() => {

@@ -284,7 +284,7 @@ function sfCatalogueBrut(string $shop): array
             $cat = (string) ($p['category_name'] ?? '');
             if (empty($p['is_active']) || preg_match('/^B\.?2\.?B/i', $cat)) { continue; }
             $prix = is_numeric($p['portion_price'] ?? null) ? (float) $p['portion_price'] : (is_numeric($p['suggested_sale_price'] ?? null) ? (float) $p['suggested_sale_price'] : null);
-            $items[] = ['id' => 'p' . $p['id'], 'name' => (string) $p['name'], 'nameNl' => ($nl[(string) $p['id']] ?? '') ?: (string) $p['name'],
+            $items[] = ['id' => 'p' . $p['id'], 'apiId' => (int) $p['id'], 'webshop' => !empty($p['webshop_active']), 'name' => (string) $p['name'], 'nameNl' => ($nl[(string) $p['id']] ?? '') ?: (string) $p['name'],
                 'price' => $prix !== null ? number_format($prix, 2, ',', '') : '', 'img' => socIllus($cat, (string) $p['name']), 'gamme' => $cat];
         }
         if ($items) { socSettingPut($cle, ['le' => time(), 'items' => $items], false); return $items; }

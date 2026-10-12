@@ -178,6 +178,7 @@ function socStateGet(): array
         'mode' => 'live', 'version' => SOCIAL_VERSION, 'today' => date('Y-m-d'), 'now' => date('Y-m-d H:i'),
         'user' => ['name' => socUser(), 'role' => 'Franchiseur', 'shops' => count($shops)],
         'boUrl' => (string) (socSetting('url_bo') ?? '/consulant_bo/'),
+        'webshopUrl' => rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/',
         'metaStatus' => Meta::statut(),
         'shops' => $shops,
         'brand' => socBrand(),

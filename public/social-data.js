@@ -51,7 +51,7 @@
   const POST_TYPES = ['Produit', 'Gamme saisonnière', 'Vidéo / film', 'Événement local', 'Anti-gaspi', 'Recrutement', 'Libre'];
 
   const CATALOGUE = [
-    { id: 'brioche', kind: 'produit', name: 'Brioche croustillante', nameNl: 'Krokante brioche', price: '4,20', img: 'img/products/brioche-croustillante.png', gamme: 'Gamme Automne' },
+    { id: 'brioche', apiId: 1410006, kind: 'produit', name: 'Brioche croustillante', nameNl: 'Krokante brioche', price: '4,20', img: 'img/products/brioche-croustillante.png', gamme: 'Gamme Automne' },
     { id: 'tarte-pomme', kind: 'produit', name: 'Tarte aux pommes', nameNl: 'Appeltaart', price: '18,50', img: 'img/products/sweet-tart-big.png', gamme: 'Gamme Automne' },
     { id: 'tartelette', kind: 'produit', name: 'Tartelette poire-amande', nameNl: 'Peer-amandeltaartje', price: '3,60', img: 'img/products/sweet-tart-small.png', gamme: 'Gamme Automne' },
     { id: 'croissant', kind: 'produit', name: 'Croissant pur beurre', nameNl: 'Botercroissant', price: '1,30', img: 'img/products/croissant.png', gamme: 'Viennoiseries' },
@@ -342,7 +342,14 @@
       .replace(/\{horaires\}/g, s ? (L === 'nl' && s.hoursNl ? s.hoursNl : s.hours) : '{horaires}')
       .replace(/\{produit_du_jour\}/g, product && product.name ? pname(product, L) : (L === 'nl' ? 'Krokante brioche' : 'Brioche croustillante'))
       .replace(/\{ville\}/g, s ? s.name : '{ville}').replace(/\{adresse\}/g, s ? s.address : '{adresse}').replace(/\{horaires\}/g, s ? s.hours : '{horaires}')
-      .replace(/\{prix\}/g, product && product.price ? product.price : '{prix}').replace(/\{produit_du_jour\}/g, product && product.name ? product.name : 'Brioche croustillante');
+      .replace(/\{prix\}/g, product && product.price ? product.price : '{prix}').replace(/\{produit_du_jour\}/g, product && product.name ? product.name : 'Brioche croustillante')
+      .replace(/\{webshop_produit\}/g, webshopUrl(s ? s.id : '', product)).replace(/\{webshop\}/g, webshopUrl(s ? s.id : ''));
+  }
+  /** Le webshop d'une boutique, ou la page d'un produit dans ce webshop (comme le serveur, src/publish.php). */
+  function webshopUrl(shopId, product) {
+    const base = (LIVE && LIVE.webshopUrl) || 'https://webshop.atelierby.be/';
+    if (!shopId || !/^\w+$/.test(shopId)) return base;
+    return base + '?shop=' + shopId + (product && product.apiId && product.kind !== 'gamme' ? '&product=' + product.apiId + '&open=product' : '');
   }
   const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', suivi: 'SA Suivi.dc.html', ctrl: 'SA Controle.dc.html', set: 'SA Parametres.dc.html' };
   const href = (k, q) => encodeURI(PAGES[k]) + (q ? '?' + q : '');
@@ -612,7 +619,7 @@
     api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.
-    ctype, rattacher, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
+    ctype, rattacher, webshopUrl, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
     igUnique: () => LIVE ? !!LIVE.instagramUnique : true, reseau, marque, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
     TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
     byId, fmt, eur, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param };

@@ -231,6 +231,12 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   (`/social/api/v1/social/webhook`) est prêt, mais l'app Meta n'a qu'une URL de
   webhook par objet Page, déjà utilisée par Brand Guard : le cron fait donc le
   rattrapage toutes les heures.
+- **Liens du webshop** — variables `{webshop}` (le webshop de la boutique :
+  `https://webshop.atelierby.be/?shop={n° de caisse}`) et `{webshop_produit}` (la page
+  du produit choisi : `…&product={id TFBuddy}&open=product`), résolues boutique par
+  boutique dans le lien et dans le texte du post (`socWebshopUrl`, `src/publish.php` ;
+  adresse de base : réglage `webshop_url`). Boutons « Lien rapide » sous le champ Lien.
+- **Ciblage** — une pastille on/off par boutique dans « Créer un post » (Toutes = tout le réseau).
 - **Opérations** (`src/operations.php`) — ce sont les campagnes commerciales du
   Marketing du BO, lues en direct par son API (adresse : Paramètres → API Marketing,
   par défaut `http://127.0.0.1/consulant_bo/api/v1/marketing`). Une boutique du

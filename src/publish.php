@@ -11,7 +11,7 @@ declare(strict_types=1);
  * maintenant » passe par la même file, échue tout de suite, et se publie dans
  * la requête.
  *
- * Variables ({ville}, {adresse}, {horaires}, {prix}, {produit_du_jour}) :
+ * Variables ({ville}, {adresse}, {horaires}, {prix}, {produit_du_jour}, {webshop}, {webshop_produit}) :
  * résolues ici, boutique par boutique et dans la langue de la Page, AVANT
  * l'appel Meta. Boutique bilingue : légende NL puis FR dans le même message.
  *
@@ -31,6 +31,30 @@ function socCatalogue(): array
     return is_array($j) ? $j : [];
 }
 
+/**
+ * Le webshop d'une boutique (https://webshop.atelierby.be/?shop={n° de caisse}), ou la page d'un
+ * produit dans ce webshop (&product={id TFBuddy}&open=product). Adresse de base : réglage `webshop_url`.
+ */
+function socWebshopUrl(string $shopId, ?array $product = null): string
+{
+    $base = rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/';
+    if (!preg_match('/^\d+$/', $shopId)) { return $base; }
+    $url = $base . '?shop=' . $shopId;
+    $pid = (int) ($product['apiId'] ?? 0);
+    if ($pid > 0 && ($product['kind'] ?? 'produit') === 'produit') { $url .= '&product=' . $pid . '&open=product'; }
+    return $url;
+}
+
+/** Le produit du catalogue cité par un post (null s'il n'en cite pas). */
+function socPostProduit(array $post): ?array
+{
+    if (empty($post['product'])) { return null; }
+    // Le catalogue de l'API d'abord ; un post plus ancien peut citer un produit de l'ancien catalogue.
+    $legacy = json_decode((string) @file_get_contents(__DIR__ . '/data/catalogue.json'), true) ?: [];
+    foreach (array_merge(socCatalogue(), (array) (socSetting('catalogue') ?: []), $legacy) as $p) { if (($p['id'] ?? null) === $post['product']) { return $p; } }
+    return null;
+}
+
 /** Résout les variables d'un texte pour une boutique, dans une langue. */
 function socFill(string $text, array $shop, ?array $product, string $lang): string
 {
@@ -39,18 +63,14 @@ function socFill(string $text, array $shop, ?array $product, string $lang): stri
     return strtr($text, [
         '{ville}' => (string) $shop['name'], '{adresse}' => (string) ($shop['address'] ?? ''), '{horaires}' => (string) $hours,
         '{prix}' => (string) ($product['price'] ?? ''), '{produit_du_jour}' => $pname,
+        '{webshop_produit}' => socWebshopUrl((string) ($shop['id'] ?? ''), $product), '{webshop}' => socWebshopUrl((string) ($shop['id'] ?? '')),
     ]);
 }
 
 /** Le message publié sur la Page d'une boutique : NL puis FR si bilingue. */
 function socMessage(array $post, array $shop): string
 {
-    $product = null;
-    if (!empty($post['product'])) {
-        // Le catalogue de l'API d'abord ; un post plus ancien peut citer un produit de l'ancien catalogue.
-        $legacy = json_decode((string) @file_get_contents(__DIR__ . '/data/catalogue.json'), true) ?: [];
-        foreach (array_merge(socCatalogue(), (array) (socSetting('catalogue') ?: []), $legacy) as $p) { if (($p['id'] ?? null) === $post['product']) { $product = $p; break; } }
-    }
+    $product = socPostProduit($post);
     $parts = [];
     foreach ((array) ($shop['langs'] ?: ['fr']) as $L) {
         $t = $L === 'nl' ? (string) ($post['textNl'] ?? '') : (string) ($post['text'] ?? '');
@@ -142,7 +162,8 @@ function socPublishFb(array $post, array $shop, string $message): string
     if ($pid === '') { throw new MetaError('page_id non renseigné pour ' . $shop['name'], 100); }
     $tok = Meta::pageToken($pid);
     [$imgs, $video] = socMedias($post);
-    $link = trim((string) ($post['link'] ?? ''));
+    // Le lien peut citer le webshop de la boutique ou la page du produit : résolu boutique par boutique.
+    $link = socFill(trim((string) ($post['link'] ?? '')), $shop, socPostProduit($post), $shop['langs'][0] ?? 'fr');
     if ($video !== null) {
         $r = Meta::call('POST', $pid . '/videos', ['file_url' => socPublicUrl($video), 'description' => $message,
             'title' => (string) ($post['title'] ?? '')], $tok);

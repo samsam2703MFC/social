@@ -860,6 +860,18 @@ $c400 = (static function () { try { return socRoute('GET', '/meta/calendriers')[
 $_GET = [];
 check('période de plus de 100 jours refusée', $c400 === 400);
 
+echo "Liens du webshop (boutique, produit)\n";
+$prodWs = ['id' => 'p3200006', 'apiId' => 3200006, 'kind' => 'produit', 'name' => 'Amandes', 'price' => '4,90'];
+check('{webshop} et {webshop_produit} résolus pour la boutique', socFill('{webshop} | {webshop_produit}', ['id' => '4', 'name' => 'Halle'], $prodWs, 'fr')
+    === 'https://webshop.atelierby.be/?shop=4 | https://webshop.atelierby.be/?shop=4&product=3200006&open=product');
+check('sans produit (ou gamme) : le webshop de la boutique ; boutique sans n° de caisse : l’accueil du webshop',
+    socFill('{webshop_produit}', ['id' => '5', 'name' => 'Wavre'], null, 'fr') === 'https://webshop.atelierby.be/?shop=5'
+    && socWebshopUrl('5', ['apiId' => 7, 'kind' => 'gamme']) === 'https://webshop.atelierby.be/?shop=5' && socWebshopUrl('ceo:9') === 'https://webshop.atelierby.be/');
+$appels = [];
+socPublishFb(['id' => 'pw1', 'text' => 'Commandez', 'link' => '{webshop}', 'img' => null], socShop('4'), 'Commandez');
+$feed = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === '111/feed'));
+check('publication : le lien {webshop} devient celui de la boutique visée', ($feed[0][2]['link'] ?? '') === 'https://webshop.atelierby.be/?shop=4', json_encode($feed[0][2] ?? null));
+
 echo "Rattacher posts et publicités aux opérations du Marketing\n";
 $ratt = static function (array $b): array { $GLOBALS['SOC_BODY'] = $b; try { return socRoute('POST', '/operations/rattacher'); } catch (HttpError $e) { return [$e->status, ['error' => $e->getMessage()]]; } finally { unset($GLOBALS['SOC_BODY']); } };
 [$code] = $ratt(['kind' => 'post', 'id' => 'mfb-111_9001', 'operation' => 'bo-1']);
