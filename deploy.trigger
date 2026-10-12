@@ -27,3 +27,4 @@ Relivraison : Instagram unique du réseau, réservé au franchiseur, vue franchi
 Relivraison : suivi (métriques d'abonnés), connexion Instagram de la marque — sonde — 2026-10-12T09:57:55Z
 Relivraison : motif du suivi (read_insights) — 2026-10-12T10:00:52Z
 Relivraison : post → modèle franchisé (visuel du réseau) — 2026-10-12T10:07:30Z
+Relivraison : calendriers Facebook, lecture de repli (/posts, /feed) — sonde — 2026-10-12T10:16:37Z

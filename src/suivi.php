@@ -36,7 +36,7 @@ function socSuiviSerie(array $metric): array
 /** Un refus d'insights dû à une permission manquante ? */
 function socSuiviPermission(MetaError $e): bool
 {
-    return in_array($e->getCode(), [10, 200, 190], true) || (bool) preg_match('/permission/i', $e->getMessage());
+    return in_array($e->metaCode, [10, 200, 190], true) || (bool) preg_match('/permission/i', $e->getMessage());
 }
 
 /** Le motif lisible d'un refus d'insights. */

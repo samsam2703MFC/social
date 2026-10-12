@@ -113,12 +113,7 @@ function socCalendriersLire(string $du, string $au): array
                     $ligne['name'] = (string) ($pr['name'] ?? $ligne['name']); $ligne['username'] = (string) ($pr['username'] ?? '');
                     $ligne['picture'] = (string) ($pr['picture']['data']['url'] ?? '') ?: null; $ligne['link'] = (string) ($pr['link'] ?? '') ?: null;
                 } catch (MetaError $e) { /* la photo manque : le nom suffit */ }
-                $q = ['since' => $t0, 'until' => $t1, 'limit' => 100];
-                try { $posts = socGraphTout($c['id'] . '/published_posts', ['fields' => SOC_CAL_FB] + $q, SOC_CAL_MAX, $c['token']); }
-                catch (MetaError $e) {
-                    if ($e->getCode() !== 100) { throw $e; }
-                    $posts = socGraphTout($c['id'] . '/published_posts', ['fields' => SOC_CAL_FB_MIN] + $q, SOC_CAL_MAX, $c['token']);  // champs refusés : l'essentiel
-                }
+                $posts = socCalLireFacebook($c['id'], $c['token'], $t0, $t1);
                 foreach ($posts as $x) {
                     if (empty($x['id']) || isset($duModule[(string) $x['id']])) { continue; }
                     $out['posts'][] = socCalPostFacebook($x, $ligne, 'Publié');
@@ -156,6 +151,30 @@ function socCalendriersLire(string $du, string $au): array
     }
     usort($out['posts'], static fn ($a, $b) => strcmp($a['date'] . $a['time'], $b['date'] . $b['time']));
     return $out;
+}
+
+/**
+ * Les publications d'une Page sur une période. Meta exige `pages_read_user_content`
+ * dès que la réponse peut contenir des contenus d'utilisateurs (réactions,
+ * commentaires…) : on demande d'abord tout, puis l'essentiel seulement, puis par
+ * les autres accès (`/posts`, `/feed` filtré sur la Page). Le premier qui répond gagne.
+ */
+function socCalLireFacebook(string $page, ?string $tok, int $t0, int $t1): array
+{
+    $q = ['since' => $t0, 'until' => $t1, 'limit' => 100];
+    $essais = [['published_posts', SOC_CAL_FB], ['published_posts', SOC_CAL_FB_MIN], ['posts', SOC_CAL_FB_MIN], ['feed', SOC_CAL_FB_MIN . ',from']];
+    $premiere = null;
+    foreach ($essais as [$edge, $champs]) {
+        try {
+            $l = socGraphTout($page . '/' . $edge, ['fields' => $champs] + $q, SOC_CAL_MAX, $tok);
+            if ($edge === 'feed') { $l = array_values(array_filter($l, static fn ($x) => (string) ($x['from']['id'] ?? $page) === $page)); }
+            return $l;
+        } catch (MetaError $e) {
+            $premiere ??= $e;
+            if (!in_array($e->metaCode, [10, 100, 200], true)) { throw $e; }  // permission ou champ refusés : essai suivant
+        }
+    }
+    throw $premiere ?? new MetaError('publications illisibles', 0);
 }
 
 /** Une publication (ou un post programmé) d'une Page → post du calendrier. */

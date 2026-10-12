@@ -23,7 +23,7 @@ try {
             $r = Meta::call('GET', $page . '/insights', ['metric' => $m] + $p0, $tok);
             $v = (array) ($r['data'][0]['values'] ?? []);
             echo "  page $m : OK, " . count($v) . ' valeur(s)' . ($v ? ', dernière = ' . json_encode(end($v)['value'] ?? null) : '') . "\n";
-        } catch (MetaError $e) { echo "  page $m : refus (" . $e->getCode() . ') ' . mb_substr($e->getMessage(), 0, 160) . "\n"; }
+        } catch (MetaError $e) { echo "  page $m : refus (" . $e->metaCode . ') ' . mb_substr($e->getMessage(), 0, 160) . "\n"; }
     }
     $ig = (string) (socBrand()['ids']['instagram_user_id'] ?? '');
     if ($ig !== '') {
@@ -32,7 +32,21 @@ try {
             try {
                 $r = Meta::call('GET', $ig . '/insights', ['metric' => $m, 'period' => 'day', 'since' => strtotime('-8 days'), 'until' => time()], $it);
                 echo "  instagram $m : OK, " . count((array) ($r['data'][0]['values'] ?? [])) . " valeur(s)\n";
-            } catch (MetaError $e) { echo "  instagram $m : refus (" . $e->getCode() . ') ' . mb_substr($e->getMessage(), 0, 160) . "\n"; }
+            } catch (MetaError $e) { echo "  instagram $m : refus (" . $e->metaCode . ') ' . mb_substr($e->getMessage(), 0, 160) . "\n"; }
+        }
+    }
+} catch (Throwable $e) { echo "  Meta : " . $e->getMessage() . "\n"; }
+
+// Meta (lecture seule) : quel accès aux publications des Pages le token permet-il ?
+try {
+    echo "== Meta : publications des Pages ==\n";
+    $q = ['since' => strtotime('-30 days'), 'until' => time(), 'limit' => 5];
+    foreach (Meta::pageTokens() as $pid => $pg) {
+        foreach ([['published_posts', SOC_CAL_FB], ['published_posts', SOC_CAL_FB_MIN], ['posts', SOC_CAL_FB_MIN], ['feed', SOC_CAL_FB_MIN], ['published_posts', 'id,created_time'], ['scheduled_posts', 'id,scheduled_publish_time']] as [$edge, $f]) {
+            try {
+                $r = Meta::call('GET', $pid . '/' . $edge, ['fields' => $f] + ($edge === 'scheduled_posts' ? ['limit' => 5] : $q), $pg['token']);
+                echo '  ' . $pg['name'] . " · $edge (" . (strlen($f) > 30 ? 'champs complets' : $f) . ') : OK, ' . count((array) ($r['data'] ?? [])) . " publication(s)\n";
+            } catch (MetaError $e) { echo '  ' . $pg['name'] . " · $edge (" . (strlen($f) > 30 ? 'champs complets' : $f) . ') : refus (' . $e->metaCode . ') ' . mb_substr($e->getMessage(), 0, 110) . "\n"; }
         }
     }
 } catch (Throwable $e) { echo "  Meta : " . $e->getMessage() . "\n"; }

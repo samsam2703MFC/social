@@ -76,7 +76,7 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
         return [200, ['data' => [['id' => '111', 'name' => 'L\'Atelier By Halle', 'access_token' => 'PT111', 'instagram_business_account' => ['id' => '17841']],
                                  ['id' => '222', 'name' => 'L\'Atelier By Wavre', 'access_token' => 'PT222']]]];
     }
-    if (preg_match('#^(111|222)/(photos|feed|videos)$#', $path, $mm)) {
+    if ($m === 'POST' && preg_match('#^(111|222)/(photos|feed|videos)$#', $path, $mm)) {
         if (isset($restreinte[$mm[1]])) { return [400, ['error' => ['code' => 368, 'message' => 'Page restreinte']]]; }
         return [200, $mm[2] === 'photos' ? ['id' => $id(), 'post_id' => $mm[1] . '_' . $id()] : ['id' => $mm[1] . '_' . $id()]];
     }
@@ -97,6 +97,11 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
     if ($m === 'GET' && $path === '111/published_posts') { return [200, ['data' => $GLOBALS['META_PUBLIES'] ?? []]]; }
     if ($m === 'GET' && $path === '111/scheduled_posts') { return [200, ['data' => $GLOBALS['META_PROGRAMMES'] ?? []]]; }
     if ($m === 'GET' && preg_match('#^222/(published|scheduled)_posts$#', $path)) { return [400, ['error' => ['code' => 10, 'message' => 'Permission manquante : pages_read_engagement']]]; }
+    if ($m === 'GET' && $path === '222/posts') {
+        if (!empty($GLOBALS['POSTS_222_REFUS'])) { return [400, ['error' => ['code' => 10, 'message' => 'Permission manquante : pages_read_engagement']]]; }
+        return [200, ['data' => [['id' => '222_7001', 'message' => 'Publié sur la Page de Wavre', 'created_time' => date('c', strtotime('-1 day 10:00'))]]]];
+    }
+    if ($m === 'GET' && $path === '222/feed') { return [400, ['error' => ['code' => 10, 'message' => 'Permission manquante : pages_read_engagement']]]; }
     if ($m === 'POST' && $path === '17841/media') { return [200, ['id' => 'c' . $id()]]; }
     if ($path === '17841/media_publish') {
         if ($igPanne > 0 && ++$igPub === $igPanne) { return [400, ['error' => ['code' => 9007, 'message' => 'Media ID is not available']]]; }
@@ -793,7 +798,13 @@ check('publication faite par le module : pas montrée deux fois', !isset($cp['mf
 $cpt = array_column($b['comptes'], null, 'key');
 check('comptes et photos de profil (filtres du calendrier)', ($cpt['fb:111']['picture'] ?? '') === 'https://cdn.fb/p111.jpg' && ($cpt['ig:17841']['picture'] ?? '') === 'https://cdn.ig/halle.jpg'
     && $cpt['fb:111']['publies'] === 1 && $cpt['fb:111']['programmes'] === 1, json_encode($cpt));
-check('Page refusée (permission) : signalée, les autres comptes passent ; aucun token rendu', str_contains((string) ($cpt['fb:222']['erreur'] ?? ''), 'pages_read_engagement') && !str_contains(json_encode($b), 'PT111'));
+check('published_posts refusé : repli sur /posts (publications de la Page lues quand même)', isset($cp['mfb-222_7001']) && ($cpt['fb:222']['erreur'] ?? null) === null && !str_contains(json_encode($b), 'PT111'), json_encode($cpt['fb:222'] ?? null));
+$GLOBALS['POSTS_222_REFUS'] = true;
+$_GET = ['du' => date('Y-m-d', strtotime('-7 days')), 'au' => date('Y-m-d', strtotime('+7 days'))];
+[$code, $b2] = socRoute('GET', '/meta/calendriers');
+$_GET = []; unset($GLOBALS['POSTS_222_REFUS']);
+$cpt2 = array_column($b2['comptes'], null, 'key');
+check('tous les accès refusés : Page signalée avec le motif, les autres comptes passent', str_contains((string) ($cpt2['fb:222']['erreur'] ?? ''), 'pages_read_engagement') && ($cpt2['fb:111']['publies'] ?? 0) === 1, json_encode([$cpt2['fb:222'] ?? null, $cpt2['fb:111'] ?? null]));
 check('rien n’est copié en base', (int) Db::row("SELECT COUNT(*) n FROM social_content WHERE id LIKE 'mfb-%' OR id LIKE 'mig-%'")['n'] === 0);
 $r = socStateSave(['changes' => ['posts' => ['upsert' => [$f2]]]]);
 check('publication Meta renvoyée par l’écran : refusée, ni enregistrée ni mise en file', ($r['errors'][0]['error'] ?? '') === 'publication Meta : lecture seule' && socItem('posts', 'mfb-111_9002') === null
