@@ -12,7 +12,9 @@
   <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
   <script src="config.js"></script>
   <script src="franchise-data.js"></script>
-  <style>html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;} a{color:#8D1D2C;} button{font-family:var(--font-ui);}</style>
+  <style>html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
+    section{padding-top:0;padding-bottom:0;} a{color:#8D1D2C;} button{font-family:var(--font-ui);}</style>
 </helmet>
 <div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
   <dc-import name="FNav" active="promo" hint-size="228px,100vh"></dc-import>
