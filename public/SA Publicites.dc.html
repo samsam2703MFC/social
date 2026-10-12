@@ -46,6 +46,8 @@
     </div>
 
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <sc-for list="{{ actTabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.pick }}" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ t.border }};background:{{ t.bg }};color:{{ t.fg }};"><span style="width:7px;height:7px;border-radius:50%;background:{{ t.dot }};"></span>{{ t.label }}</button></sc-for>
+      <span style="width:1px;height:22px;background:rgba(34,34,34,0.14);margin:0 4px;"></span>
       <sc-for list="{{ srcTabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.pick }}" style="border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ t.border }};background:{{ t.bg }};color:{{ t.fg }};">{{ t.label }}</button></sc-for>
       <sc-if value="{{ impErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.4;color:#8D1D2C;">{{ impErrText }}</span></sc-if>
     </div>
@@ -74,6 +76,7 @@
               <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:11px;color:#666666;display:flex;align-items:center;">{{ r.period }}</span>
             </div>
           </sc-for>
+          <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}"><div style="grid-column:1 / -1;padding:28px 16px;text-align:center;font-size:13px;color:#666666;">{{ noRowsText }}</div></sc-if>
         </div>
       </section>
 
@@ -386,10 +389,10 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { selId: null, wizOpen: false, step: 1, w: null, err: '', toast: '', tick: 0, com: null, src: 'all', imp: false };
+  state = { selId: null, wizOpen: false, step: 1, w: null, err: '', toast: '', tick: 0, com: null, src: 'all', act: 'active', imp: false };
   componentDidMount() {
     const SA = window.SA;
-    if (SA) { const ad = SA.param('ad'); if (ad) this.setState({ selId: ad }); if (SA.param('new')) this.openWiz(SA.param('c') || '', SA.param('post')); if (SA.param('src') === 'meta') this.setState({ src: 'meta' }); if (SA.param('importer')) this.importMeta(); }
+    if (SA) { const ad = SA.param('ad'); if (ad) this.setState({ selId: ad, act: 'all' }); if (SA.param('new')) this.openWiz(SA.param('c') || '', SA.param('post')); if (SA.param('src') === 'meta') this.setState({ src: 'meta' }); if (SA.param('importer')) this.importMeta(); }
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
   }
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); clearTimeout(this._rv); }
@@ -470,7 +473,10 @@ class Component extends DCLogic {
     const period = (a) => SA.dShort(a.start) + ' → ' + (a.end ? SA.dShort(a.end) : 'en continu');
     const nMeta = ads.filter(a => a.origin === 'meta').length, src = s.src;
     const order = { 'Refusée': 0, 'Budget épuisé': 1, 'En revue': 2, 'Active': 3, 'En pause': 4, 'Arrêtée': 5, 'Terminée': 6 };
-    const sorted = ads.filter(a => src === 'all' || (src === 'meta') === (a.origin === 'meta')).sort((a, b) => ((order[a.status] ?? 9) - (order[b.status] ?? 9)) || b.start.localeCompare(a.start));
+    // Actives par défaut ; « Non actives » = en pause, en revue, refusées, épuisées, arrêtées, terminées.
+    const act = s.act, isAct = (a) => a.status === 'Active';
+    const bySrc = (a) => src === 'all' || (src === 'meta') === (a.origin === 'meta'), byAct = (a) => act === 'all' || (act === 'active') === isAct(a);
+    const sorted = ads.filter(a => bySrc(a) && byAct(a)).sort((a, b) => ((order[a.status] ?? 9) - (order[b.status] ?? 9)) || b.start.localeCompare(a.start));
     const rows = sorted.map(a => {
       const sc = SA.AD_STATUS[a.status] || SA.AD_STATUS['Active'], tot = Math.min(totalOf(a), a.cap || Infinity), p = postOf(a.post);
       const ratio = tot ? a.spent / tot : 0;
@@ -668,7 +674,12 @@ class Component extends DCLogic {
       impNote: (() => { const r = SA.metaImport && SA.metaImport(); return r && r.le ? 'Dernière relecture Meta : ' + SA.dShort(r.le.slice(0, 10)) + ' à ' + r.le.slice(11, 16) + ' · ' + (r.comptes || []).length + ' compte(s) pub' : 'Campagnes Meta jamais relues : cliquez pour récupérer celles de vos comptes publicitaires.'; })(),
       impErr: (() => { const r = SA.metaImport && SA.metaImport(); return !!(r && (r.erreurs || []).length); })(),
       impErrText: (() => { const r = SA.metaImport && SA.metaImport(); return r && (r.erreurs || []).length ? 'Dernière relecture : ' + r.erreurs.join(' · ') : ''; })(),
-      srcTabs: [['all', 'Toutes (' + ads.length + ')'], ['module', 'Créées ici (' + (ads.length - nMeta) + ')'], ['meta', 'Récupérées de Meta (' + nMeta + ')']].map(([id, label]) => ({ label, bg: src === id ? '#8D1D2C' : '#FFFFFF', fg: src === id ? '#FFFFFF' : '#222222', border: src === id ? '#8D1D2C' : 'rgba(34,34,34,0.18)', pick: () => this.setState({ src: id }) })),
+      actTabs: (() => { const base = ads.filter(bySrc), nA = base.filter(isAct).length;
+        return [['active', 'Actives (' + nA + ')', '#1F8A60'], ['inactive', 'Non actives (' + (base.length - nA) + ')', '#B8B2A8'], ['all', 'Toutes (' + base.length + ')', '#8D1D2C']]
+          .map(([id, label, dot]) => ({ label, dot: act === id ? '#FFFFFF' : dot, bg: act === id ? (id === 'active' ? '#0F6B4A' : '#8D1D2C') : '#FFFFFF', fg: act === id ? '#FFFFFF' : '#222222',
+            border: act === id ? (id === 'active' ? '#0F6B4A' : '#8D1D2C') : 'rgba(34,34,34,0.18)', pick: () => this.setState({ act: id }) })); })(),
+      noRows: !sorted.length, noRowsText: act === 'active' ? 'Aucune publicité active pour l’instant. Voir « Non actives » ou « Toutes ».' : act === 'inactive' ? 'Aucune publicité non active.' : 'Aucune publicité.',
+      srcTabs: (() => { const base = ads.filter(byAct), nM = base.filter(a => a.origin === 'meta').length; return [['all', 'Toutes sources (' + base.length + ')'], ['module', 'Créées ici (' + (base.length - nM) + ')'], ['meta', 'Récupérées de Meta (' + nM + ')']]; })().map(([id, label]) => ({ label, bg: src === id ? '#8D1D2C' : '#FFFFFF', fg: src === id ? '#FFFFFF' : '#222222', border: src === id ? '#8D1D2C' : 'rgba(34,34,34,0.18)', pick: () => this.setState({ src: id }) })),
       fixAd: () => { this.upd(a.id, { status: 'En revue', reason: null }, '« ' + a.name + ' » corrigée et resoumise'); this.toast('Publicité resoumise à Meta.'); },
       showComments: () => { if (!a) return; if (s.com && s.com.ad === a.id && s.com.open) this.setState({ com: Object.assign({}, s.com, { open: false }) }); else this.comments(a, false); },
       syncComments: () => a && this.comments(a, true),
