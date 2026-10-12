@@ -239,7 +239,7 @@ function socTestConnexions(?string $seule = null): array
             elseif ($ig === '') { $c['detail']['igs'] = 'Aucun compte Instagram professionnel rattaché à la Page'; }
             else {
                 try {
-                    $r = Meta::call('GET', $ig, ['fields' => 'id,username'], $page['token'] ?? null);
+                    $r = Meta::call('GET', $ig, ['fields' => 'id,username'], socIgToken($ig, $pid) ?? ($page['token'] ?? null));
                     $c['igs'] = 'connected'; $c['detail']['igs'] = '@' . ($r['username'] ?? $ig);
                     if ($s['id'] === 'marque') { $igMarque = ['connected', '@' . ($r['username'] ?? $ig)]; }
                     $patch = ['ig' => '@' . ($r['username'] ?? '')];

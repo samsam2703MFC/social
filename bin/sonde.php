@@ -11,6 +11,32 @@ declare(strict_types=1);
 require __DIR__ . '/../src/api.php';
 socInstall();
 
+// Meta (lecture seule) : quelles métriques d'abonnés la Page et l'Instagram acceptent-ils aujourd'hui ?
+try {
+    echo "== Meta : métriques d'abonnés ==\n";
+    $toks = Meta::pageTokens();
+    $page = (string) (array_values(array_filter(array_map(static fn ($s) => (string) ($s['ids']['page_id'] ?? ''), socShops())))[0] ?? array_key_first($toks));
+    $tok = $toks[$page]['token'] ?? null;
+    $p0 = ['period' => 'day', 'since' => date('Y-m-d', strtotime('-8 days')), 'until' => date('Y-m-d')];
+    foreach (['page_follows', 'page_daily_follows', 'page_daily_follows_unique', 'page_daily_unfollows_unique', 'page_fan_adds_unique', 'page_fans', 'page_fan_adds', 'page_impressions_unique', 'page_media_view'] as $m) {
+        try {
+            $r = Meta::call('GET', $page . '/insights', ['metric' => $m] + $p0, $tok);
+            $v = (array) ($r['data'][0]['values'] ?? []);
+            echo "  page $m : OK, " . count($v) . ' valeur(s)' . ($v ? ', dernière = ' . json_encode(end($v)['value'] ?? null) : '') . "\n";
+        } catch (MetaError $e) { echo "  page $m : refus (" . $e->getCode() . ') ' . mb_substr($e->getMessage(), 0, 160) . "\n"; }
+    }
+    $ig = (string) (socBrand()['ids']['instagram_user_id'] ?? '');
+    if ($ig !== '') {
+        $it = socIgToken($ig, (string) socBrand()['ids']['page_id']);
+        foreach (['follower_count', 'reach'] as $m) {
+            try {
+                $r = Meta::call('GET', $ig . '/insights', ['metric' => $m, 'period' => 'day', 'since' => strtotime('-8 days'), 'until' => time()], $it);
+                echo "  instagram $m : OK, " . count((array) ($r['data'][0]['values'] ?? [])) . " valeur(s)\n";
+            } catch (MetaError $e) { echo "  instagram $m : refus (" . $e->getCode() . ') ' . mb_substr($e->getMessage(), 0, 160) . "\n"; }
+        }
+    }
+} catch (Throwable $e) { echo "  Meta : " . $e->getMessage() . "\n"; }
+
 $shop = (string) (socApiShops()[0]['id'] ?? '4');
 $jour = date('Y-m-d');
 $j7 = date('Y-m-d', strtotime('-7 days')); $j1 = date('Y-m-d', strtotime('-1 day'));

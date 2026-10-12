@@ -33,11 +33,16 @@ function socSuiviSerie(array $metric): array
     return $out;
 }
 
-/** Le motif lisible d'un refus d'insights (permission manquante le plus souvent). */
+/** Un refus d'insights dû à une permission manquante ? */
+function socSuiviPermission(MetaError $e): bool
+{
+    return in_array($e->getCode(), [10, 200, 190], true) || (bool) preg_match('/permission/i', $e->getMessage());
+}
+
+/** Le motif lisible d'un refus d'insights. */
 function socSuiviMotif(MetaError $e, string $perm): string
 {
-    $m = $e->getMessage();
-    return in_array($e->getCode(), [10, 200, 190], true) || preg_match('/permission|insights/i', $m) ? 'historique indisponible : ajoutez la permission ' . $perm . ' au token (' . $m . ')' : 'historique indisponible : ' . $m;
+    return socSuiviPermission($e) ? 'historique indisponible : ajoutez la permission ' . $perm . ' au token (' . $e->getMessage() . ')' : 'historique indisponible : ' . $e->getMessage();
 }
 
 /** Les abonnés d'une Page : total actuel et, si Meta le permet, gains et pertes par jour. */
@@ -51,36 +56,40 @@ function socSuiviPage(array $c, string $du, string $au): array
         $out['picture'] = (string) ($pr['picture']['data']['url'] ?? '') ?: null; $out['link'] = (string) ($pr['link'] ?? '') ?: null;
     } catch (MetaError $e) { $out['motif'] = 'Page illisible : ' . $e->getMessage(); return $out; }
     $periode = ['period' => 'day', 'since' => $du, 'until' => date('Y-m-d', strtotime($au . ' +1 day'))];
-    // Meta a changé plusieurs fois ces métriques : on essaie dans l'ordre, une réponse vide compte comme un échec.
+    // Meta a changé plusieurs fois ces métriques : on essaie dans l'ordre ; une réponse vide compte comme un échec.
     $essais = [
+        ['page_follows'],                                     // total d'abonnés du jour → variation
         ['page_daily_follows_unique', 'page_daily_unfollows_unique'],
-        ['page_follows'],                                     // total du jour → variation
+        ['page_daily_follows'],                               // gains seuls
         ['page_fan_adds_unique', 'page_fan_removes_unique'],  // anciennes métriques
     ];
-    $premiereErreur = null;
+    $refus = []; $permission = null;
     foreach ($essais as $metriques) {
         try {
             $r = Meta::call('GET', $c['id'] . '/insights', ['metric' => implode(',', $metriques)] + $periode, $c['token']);
-        } catch (MetaError $e) { $premiereErreur ??= $e; continue; }
+        } catch (MetaError $e) {
+            if (socSuiviPermission($e)) { $permission ??= $e; }
+            $refus[] = implode('+', $metriques) . ' : ' . $e->getMessage();
+            continue;
+        }
         $par = [];
-        foreach ((array) ($r['data'] ?? []) as $m) { $s = socSuiviSerie($m); if ($s) { $par[(string) ($m['name'] ?? '')] = $s; } }
-        if (!$par) { continue; }
+        foreach ((array) ($r['data'] ?? []) as $m) { $s2 = socSuiviSerie($m); if ($s2) { $par[(string) ($m['name'] ?? '')] = $s2; } }
         $serie = [];
         if (isset($par['page_follows'])) {
             $prec = null;
             foreach ($par['page_follows'] as $j => $v) { if ($prec !== null) { $d = $v - $prec; $serie[$j] = ['gagnes' => max(0, $d), 'perdus' => max(0, -$d)]; } $prec = $v; }
-        } else {
-            $g = $par[$metriques[0]] ?? []; $p = $par[$metriques[1]] ?? [];
+        } elseif ($par) {
+            $g = $par[$metriques[0]] ?? []; $p = isset($metriques[1]) ? ($par[$metriques[1]] ?? []) : [];
             foreach (array_unique(array_merge(array_keys($g), array_keys($p))) as $j) { $serie[$j] = ['gagnes' => $g[$j] ?? 0, 'perdus' => $p[$j] ?? 0]; }
         }
-        if (!$serie) { continue; }
+        if (!$serie) { $refus[] = implode('+', $metriques) . ' : aucune valeur'; continue; }
         ksort($serie);
         $out['serie'] = $serie;
         break;
     }
     if ($out['serie'] === null) {
-        $out['motif'] = $premiereErreur !== null ? socSuiviMotif($premiereErreur, 'read_insights')
-            : 'historique indisponible : Meta ne renvoie aucun chiffre d’abonnés jour par jour pour cette Page (ajoutez la permission read_insights au token)';
+        $out['motif'] = $permission !== null ? socSuiviMotif($permission, 'read_insights')
+            : 'historique indisponible : Meta ne fournit aucun chiffre d’abonnés jour par jour pour cette Page (' . implode(' · ', $refus) . ')';
     }
     if (is_array($out['serie'])) {
         $out['gagnes'] = array_sum(array_column($out['serie'], 'gagnes')); $out['perdus'] = array_sum(array_column($out['serie'], 'perdus'));
