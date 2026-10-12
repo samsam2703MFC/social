@@ -43,3 +43,4 @@ Relivraison : rattacher posts et pubs aux campagnes du Marketing — 2026-10-12T
 Relivraison : libellé du panneau Rattacher — 2026-10-12T17:18:52Z
 Relivraison : Suivi, graphique vide expliqué — 2026-10-12T17:28:13Z
 Relivraison : Créer un post, constructeur et médiathèque complète — 2026-10-12T17:41:13Z
+Relivraison : zoom des photos dans les gabarits — 2026-10-12T17:55:36Z
