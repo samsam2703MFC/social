@@ -350,9 +350,9 @@ function sfEtat(string $shop, array $session): array
     $camps = [];
     if ($r['voirCampagnes']) {
         $res = $r['voirResultats'] ? socResults() : [];
-        foreach (socItems('campaigns') as $c) {
+        foreach (socOperations() as $c) {
             if (!in_array($shop, array_map('strval', (array) ($c['shops'] ?? [])), true)) { continue; }
-            $camps[] = ['id' => (string) $c['id'], 'name' => (string) ($c['name'] ?? ''), 'type' => (string) ($c['type'] ?? ''), 'start' => (string) ($c['start'] ?? ''),
+            $camps[] = ['id' => (string) $c['id'], 'name' => (string) ($c['name'] ?? ''), 'type' => (string) ($c['typeLabel'] ?? '') ?: (string) ($c['type'] ?? ''), 'start' => (string) ($c['start'] ?? ''),
                 'end' => (string) ($c['end'] ?? ''), 'status' => (string) ($c['status'] ?? ''), 'products' => array_values((array) ($c['products'] ?? [])),
                 'levers' => array_values((array) ($c['levers'] ?? [])), 'description' => (string) ($c['description'] ?? ''),
                 'budget' => isset($c['split'][$shop]) ? (float) $c['split'][$shop] : null, 'result' => $res[(string) $c['id']][$shop] ?? null];

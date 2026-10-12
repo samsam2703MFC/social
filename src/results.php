@@ -82,11 +82,12 @@ function socResultsSync(?string $seule = null): int
     $limite = (new DateTimeImmutable('-60 days'))->format('Y-m-d');
     $ads = socItems('ads');
     $n = 0;
-    foreach (socItems('campaigns') as $c) {
+    foreach (socOperations() as $c) {
         if ($seule !== null && $c['id'] !== $seule) { continue; }
-        if (($c['start'] ?? '9999') > $today || ($c['end'] ?? '0000') < $limite) { continue; }
+        // Une opération sans date de fin (continue) court jusqu'à aujourd'hui.
+        if (($c['start'] ?? null) === null || $c['start'] > $today || ($c['end'] ?? $today) < $limite) { continue; }
         $du = (string) $c['start'];
-        $au = min((string) $c['end'], $today);
+        $au = min((string) ($c['end'] ?? $today), $today);
         $meta = [];
         if (Meta::configured()) {
             foreach ($ads as $ad) {

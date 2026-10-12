@@ -58,7 +58,7 @@ class Component extends DCLogic {
     const camps = (st.campaigns || []).map(c => {
       const r = c.result, [bg, fg] = ST[c.status] || ST['brouillon'], posts = st.posts.filter(p => p.campaign === c.id);
       const has = !!(r && st.rules.voirResultats !== false);
-      return { name: c.name, period: 'Du ' + SF.dLabel(c.start) + ' au ' + SF.dLabel(c.end), type: c.type || 'opération', status: c.status, stBg: bg, stFg: fg,
+      return { name: c.name, period: !c.start ? 'Dates à venir' : c.end ? 'Du ' + SF.dLabel(c.start) + ' au ' + SF.dLabel(c.end) : 'Depuis le ' + SF.dLabel(c.start), type: c.type || 'opération', status: c.status, stBg: bg, stFg: fg,
         hasDesc: !!c.description, description: c.description, products: c.products || [], hasBudget: c.budget != null && c.budget > 0, budget: SF.eur(c.budget),
         hasResult: has, kpis: has ? [
           { label: 'Personnes touchées', value: (r.reach || 0).toLocaleString('fr-BE'), sub: 'par les publicités', color: '#222222' },

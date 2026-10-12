@@ -46,6 +46,9 @@ Autres dépendances, sans adaptation nécessaire :
 - **Ventes** (Retour sur campagne) : d'abord l'API (`/shops/{id}/statistics/sales/…`), puis,
   à défaut, les tables de caisse `transaction`, `transaction_product`, `product` si elles existent.
 - **Meta** : uniquement depuis le serveur (`src/meta.php`), avec le token en base.
+- **Opérations** (`src/operations.php`) : les campagnes commerciales du Marketing, lues par
+  `GET {marketing_api}/campaigns`, `/campaigns/{id}` et `/shops` (lecture seule). Dans l'ERP,
+  pointer `marketing_api` (Paramètres) vers ses routes `/api/v1/marketing`.
 
 ## 3. Monter le module dans l'ERP
 
@@ -78,7 +81,7 @@ Franchiseur (session `auth`) :
 `POST /parametres/cles` · `POST /parametres/tfb` · `GET /meta/portefeuille` ·
 `POST /meta/portefeuille/rafraichir` · `POST /meta/portefeuille/appliquer` ·
 `GET|POST /meta/ids/auto` · `POST /meta/ids/auto/lancer` · `GET /meta/campagnes` ·
-`POST /meta/campagnes/rafraichir` · `GET /meta/calendriers?du=&au=` · `GET /meta/post-stats?id=&compte=` · `GET /suivi/abonnes?jours=7|28|90` ·
+`POST /meta/campagnes/rafraichir` · `GET /operations` · `GET /meta/calendriers?du=&au=` · `GET /meta/post-stats?id=&compte=` · `GET /suivi/abonnes?jours=7|28|90` ·
 `GET|POST /audit/api` · `GET|POST /instagram/grille` · `GET|POST /darkposts/commentaires` ·
 `POST /darkposts/commentaires/{id}/masquer` · `GET /franchise/admin` ·
 `POST /franchise/admin/regles` · `POST /franchise/admin/acces` ·

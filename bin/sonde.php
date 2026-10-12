@@ -51,6 +51,18 @@ try {
     }
 } catch (Throwable $e) { echo "  Meta : " . $e->getMessage() . "\n"; }
 
+// Marketing du BO (lecture seule) : les opérations sont-elles lisibles par son API ?
+try {
+    echo "== Marketing du BO : opérations ==\n";
+    foreach (BoMarketing::candidates() as $b) { echo '  candidate : ' . $b . "\n"; }
+    $ops = socOperations(true);
+    echo '  adresse retenue : ' . BoMarketing::base() . ' · ' . count($ops) . ' opération(s)' . (socOperationsErreur() ? ' · ERREUR ' . socOperationsErreur() : '') . "\n";
+    foreach (array_slice($ops, 0, 8) as $o) {
+        echo '  ' . $o['id'] . ' · ' . $o['name'] . ' · ' . ($o['start'] ?? '?') . ' → ' . ($o['end'] ?? '…') . ' · ' . $o['status'] . ' (' . $o['boStatus'] . ') · boutiques ' . implode(',', $o['shops'])
+            . ' · produits ' . count($o['products']) . ' · budget ' . $o['budget'] . "\n";
+    }
+} catch (Throwable $e) { echo '  Marketing : ' . $e->getMessage() . "\n"; }
+
 // Meta (lecture seule) : les vues d'une publication récente de chaque compte sont-elles lisibles ?
 try {
     echo "== Meta : vues des publications (fiche du calendrier) ==\n";

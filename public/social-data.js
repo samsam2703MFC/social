@@ -67,16 +67,18 @@
 
   let MARGIN = 0.62;
 
+  // Démo : les opérations sont les campagnes commerciales du Marketing du BO (en réel : GET /operations, lecture seule).
+  const BO_OP = (id, typeLabel, boStatus, boStatusCode) => ({ boId: id, source: 'bo', typeLabel, boStatus, boStatusCode, lien: '/consulant_bo/assistant/?id=' + id });
   const CAMPAIGNS = [
-    { id: 'c-automne', name: 'Gamme Automne 2026', type: 'saison', start: '2026-09-28', end: '2026-10-25', status: 'en cours',
+    { id: 'bo-12', ...BO_OP(12, 'Saisonnalité', 'En cours', 'running'), name: 'Gamme Automne 2026', type: 'saison', start: '2026-09-28', end: '2026-10-25', status: 'en cours',
       shops: SHOPS.map(s => s.id), products: ['Brioche croustillante', 'Tarte aux pommes', 'Tartelette poire-amande'],
       goal: { metric: 'CA additionnel', value: 12000 }, budget: 2400,
       split: { halle: 450, corbais: 350, gosselies: 400, sombreffe: 300, gembloux: 400, wavre: 500 } },
-    { id: 'c-rentree', name: 'Rentrée · Goûter malin', type: 'acquisition', start: '2026-08-24', end: '2026-09-13', status: 'terminée',
+    { id: 'bo-11', ...BO_OP(11, 'Acquisition', 'Terminée', 'done'), name: 'Rentrée · Goûter malin', type: 'acquisition', start: '2026-08-24', end: '2026-09-13', status: 'terminée',
       shops: SHOPS.map(s => s.id), products: ['Cookies du goûter', 'Cupcake vanille'],
       goal: { metric: 'CA additionnel', value: 6000 }, budget: 1500,
       split: { halle: 260, corbais: 220, gosselies: 250, sombreffe: 190, gembloux: 260, wavre: 320 } },
-    { id: 'c-limonade', name: 'Lancement Limonade maison', type: 'lancement', start: '2026-06-15', end: '2026-07-12', status: 'terminée',
+    { id: 'bo-10', ...BO_OP(10, 'Lancement / nouveauté', 'Terminée', 'done'), name: 'Lancement Limonade maison', type: 'lancement', start: '2026-06-15', end: '2026-07-12', status: 'terminée',
       shops: SHOPS.map(s => s.id), products: ['Limonade maison'],
       goal: { metric: 'CA additionnel', value: 7000 }, budget: 1800,
       split: { halle: 330, corbais: 280, gosselies: 310, sombreffe: 240, gembloux: 300, wavre: 340 } },
@@ -85,7 +87,7 @@
   // Résultats par campagne × boutique. Meta : spend, reach, impr, clicks, eng, vv. Ventes : CA / tickets / qté — campagne vs référence (moy. mêmes jours des 6 semaines précédentes).
   const R = (spend, reach, impr, clicks, eng, vv, caRef, caCamp, tRef, tCamp, qRef, qCamp) => ({ spend, reach, impr, clicks, eng, vv, caRef, caCamp, tRef, tCamp, qRef, qCamp });
   const RESULTS = {
-    'c-automne': {
+    'bo-12': {
       halle: R(190, 12100, 33800, 720, 1540, 4100, 3520, 4390, 830, 1010, 420, 640),
       corbais: R(150, 9800, 27100, 560, 1190, 3200, 2870, 3420, 690, 800, 340, 500),
       gosselies: R(175, 10200, 28800, 590, 1220, 3300, 3210, 3640, 760, 850, 380, 500),
@@ -93,7 +95,7 @@
       gembloux: R(185, 11800, 32700, 700, 1480, 3900, 3300, 4120, 790, 960, 400, 600),
       wavre: R(230, 14900, 41500, 900, 1910, 5100, 3960, 5020, 940, 1150, 470, 700),
     },
-    'c-rentree': {
+    'bo-11': {
       halle: R(260, 18400, 52100, 1120, 2310, 6400, 4820, 6610, 1140, 1530, 610, 980),
       corbais: R(220, 14900, 41800, 870, 1760, 5100, 3910, 5420, 960, 1290, 480, 790),
       gosselies: R(250, 17100, 49200, 990, 2040, 5900, 4400, 5790, 1050, 1370, 560, 860),
@@ -101,7 +103,7 @@
       gembloux: R(260, 16800, 47700, 1010, 2120, 6100, 4510, 6420, 1080, 1490, 590, 940),
       wavre: R(310, 21400, 60100, 1290, 2650, 7400, 5230, 7330, 1250, 1720, 680, 1090),
     },
-    'c-limonade': {
+    'bo-10': {
       halle: R(330, 21000, 60200, 1310, 2400, 9800, 5100, 5560, 1210, 1290, 300, 520),
       corbais: R(280, 16200, 46000, 990, 1810, 7600, 4020, 4300, 980, 1030, 240, 410),
       gosselies: R(300, 18800, 53500, 1100, 2010, 8400, 4580, 4950, 1090, 1160, 270, 450),
@@ -114,43 +116,43 @@
   const ALL = SHOPS.map(s => s.id);
   const P = (id, date, time, type, title, img, shops, status, extra) => Object.assign({ id, date, time, type, title, img, shops, fb: true, ig: true, status, campaign: null, text: '' }, extra || {});
   const POSTS = [
-    P('p01', '2026-09-28', '08:00', 'Gamme saisonnière', 'La gamme Automne est arrivée', 'img/illus/seasonal/autumn-range.png', ALL, 'Publié', { campaign: 'c-automne', text: "La gamme Automne est arrivée chez L'Atelier By {ville}. Brioche croustillante, tarte aux pommes et tartelette poire-amande, à découvrir dès ce matin." }),
-    P('p02', '2026-10-01', '07:30', 'Produit', 'Brioche croustillante', 'img/products/brioche-croustillante.png', ALL, 'Publié', { campaign: 'c-automne', text: 'Brioche filée, cœur de myrtille et crumble citronné. {prix} € la pièce à {ville}.' }),
+    P('p01', '2026-09-28', '08:00', 'Gamme saisonnière', 'La gamme Automne est arrivée', 'img/illus/seasonal/autumn-range.png', ALL, 'Publié', { campaign: 'bo-12', text: "La gamme Automne est arrivée chez L'Atelier By {ville}. Brioche croustillante, tarte aux pommes et tartelette poire-amande, à découvrir dès ce matin." }),
+    P('p02', '2026-10-01', '07:30', 'Produit', 'Brioche croustillante', 'img/products/brioche-croustillante.png', ALL, 'Publié', { campaign: 'bo-12', text: 'Brioche filée, cœur de myrtille et crumble citronné. {prix} € la pièce à {ville}.' }),
     P('p03', '2026-10-02', '11:00', 'Recrutement', 'On recrute à Wavre', 'img/illus/customer-facing/b2b.png', ['wavre'], 'Publié', { text: "L'Atelier By Wavre recrute un·e vendeur·se à temps partiel. Passez nous voir au {adresse}." }),
     P('p04', '2026-10-03', '16:30', 'Anti-gaspi', 'Panier anti-gaspi du samedi', 'img/products/bread-3.png', ['corbais', 'gembloux'], 'Publié', { text: 'Dès 17h, nos invendus du jour en panier surprise à 5 €.' }),
     P('p05', '2026-10-04', '09:00', 'Événement local', 'Marché de Halle', 'img/illus/seasonal/crepe-festival.png', ['halle'], 'Publié', { text: 'Retrouvez-nous au marché de Halle ce dimanche.' }),
-    P('p06', '2026-10-05', '08:00', 'Produit', 'Tarte aux pommes', 'img/products/sweet-tart-big.png', ALL, 'Publié', { campaign: 'c-automne', partial: { ok: ['halle', 'corbais', 'sombreffe', 'gembloux', 'wavre'], ko: [{ shop: 'gosselies', channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }] } }),
-    P('p07', '2026-10-07', '07:30', 'Vidéo / film', 'Film · le geste du boulanger', 'img/illus/products/bread-2.png', ALL, 'Publié', { campaign: 'c-automne' }),
+    P('p06', '2026-10-05', '08:00', 'Produit', 'Tarte aux pommes', 'img/products/sweet-tart-big.png', ALL, 'Publié', { campaign: 'bo-12', partial: { ok: ['halle', 'corbais', 'sombreffe', 'gembloux', 'wavre'], ko: [{ shop: 'gosselies', channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }] } }),
+    P('p07', '2026-10-07', '07:30', 'Vidéo / film', 'Film · le geste du boulanger', 'img/illus/products/bread-2.png', ALL, 'Publié', { campaign: 'bo-12' }),
     P('p08', '2026-10-08', '12:00', 'Produit', 'Quiche du jour', 'img/products/savoury-tart.png', ['gosselies', 'sombreffe'], 'Échec', { error: 'Meta a refusé la publication : la Page Sombreffe a restreint les publications programmées (code 368).', failedShops: ['sombreffe'] }),
-    P('p09', '2026-10-09', '07:30', 'Produit', 'Tartelette poire-amande', 'img/products/sweet-tart-small.png', ALL, 'Publié', { campaign: 'c-automne', partial: { ok: ['halle', 'corbais', 'gembloux', 'wavre'], ko: [{ shop: 'gosselies', channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }, { shop: 'sombreffe', channel: 'Facebook', reason: 'Délai dépassé côté Graph API (code 2) — relance possible' }] } }),
-    P('p10', '2026-10-10', '08:00', 'Gamme saisonnière', 'Le week-end gourmand d\u2019automne', 'img/illus/fruits/apple.png', ALL, 'Publié', { campaign: 'c-automne' }),
+    P('p09', '2026-10-09', '07:30', 'Produit', 'Tartelette poire-amande', 'img/products/sweet-tart-small.png', ALL, 'Publié', { campaign: 'bo-12', partial: { ok: ['halle', 'corbais', 'gembloux', 'wavre'], ko: [{ shop: 'gosselies', channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }, { shop: 'sombreffe', channel: 'Facebook', reason: 'Délai dépassé côté Graph API (code 2) — relance possible' }] } }),
+    P('p10', '2026-10-10', '08:00', 'Gamme saisonnière', 'Le week-end gourmand d\u2019automne', 'img/illus/fruits/apple.png', ALL, 'Publié', { campaign: 'bo-12' }),
     P('p11', '2026-10-11', '09:30', 'Événement local', 'Brunch du dimanche à Corbais', 'img/illus/products/cake-slice.png', ['corbais'], 'Programmé'),
     P('p12', '2026-10-12', '07:30', 'Produit', 'Croissant pur beurre', 'img/products/croissant.png', ['halle', 'wavre'], 'Programmé'),
     P('p13', '2026-10-13', '16:00', 'Anti-gaspi', 'Panier anti-gaspi', 'img/products/bread-4.png', ['gosselies'], 'À valider', { author: 'Manager Gosselies' }),
     P('p14', '2026-10-14', '11:00', 'Libre', 'Les coulisses de l\u2019atelier', 'img/illus/decorative/artboard-4.png', ['wavre'], 'Brouillon'),
     P('p15', '2026-10-15', '07:30', 'Produit', 'Pain au levain', 'img/products/bread-1.png', ['halle', 'corbais'], 'Programmé'),
     P('p16', '2026-10-16', '12:00', 'Événement local', 'Dégustation au marché de Wavre', 'img/illus/products/rolls.png', ['wavre'], 'À valider', { author: 'Manager Wavre' }),
-    P('p17', '2026-10-18', '08:00', 'Produit', 'Brioche croustillante · J-7', 'img/products/brioche-croustillante.png', ALL, 'Programmé', { campaign: 'c-automne' }),
-    P('p18', '2026-10-20', '07:30', 'Vidéo / film', 'Film · tarte aux pommes', 'img/products/sweet-tart-big.png', ALL, 'Programmé', { campaign: 'c-automne' }),
+    P('p17', '2026-10-18', '08:00', 'Produit', 'Brioche croustillante · J-7', 'img/products/brioche-croustillante.png', ALL, 'Programmé', { campaign: 'bo-12' }),
+    P('p18', '2026-10-20', '07:30', 'Vidéo / film', 'Film · tarte aux pommes', 'img/products/sweet-tart-big.png', ALL, 'Programmé', { campaign: 'bo-12' }),
     P('p19', '2026-10-22', '11:00', 'Recrutement', 'On recrute à Gembloux', 'img/illus/customer-facing/office-delivery.png', ['gembloux'], 'Brouillon'),
-    P('p20', '2026-10-24', '08:00', 'Gamme saisonnière', 'Derniers jours de la gamme Automne', 'img/illus/seasonal/autumn-range.png', ALL, 'Programmé', { campaign: 'c-automne' }),
+    P('p20', '2026-10-24', '08:00', 'Gamme saisonnière', 'Derniers jours de la gamme Automne', 'img/illus/seasonal/autumn-range.png', ALL, 'Programmé', { campaign: 'bo-12' }),
     P('p21', '2026-10-27', '09:00', 'Libre', 'Halloween : biscuits citrouille', 'img/products/pumpkin.png', ALL, 'Brouillon'),
     P('p22', '2026-10-30', '16:30', 'Anti-gaspi', 'Panier anti-gaspi', 'img/products/bread-5.png', ['corbais', 'gembloux', 'sombreffe'], 'Programmé'),
-    P('p23', '2026-08-24', '08:00', 'Gamme saisonnière', 'C\u2019est la rentrée du goûter', 'img/products/cookies.png', ALL, 'Publié', { campaign: 'c-rentree' }),
-    P('p24', '2026-09-01', '15:30', 'Produit', 'Cupcake vanille', 'img/products/cupcake.png', ALL, 'Publié', { campaign: 'c-rentree' }),
-    P('p25', '2026-09-08', '15:30', 'Vidéo / film', 'Film · goûter malin', 'img/products/cookies.png', ALL, 'Publié', { campaign: 'c-rentree' }),
-    P('p26', '2026-06-15', '10:00', 'Produit', 'Nouveau : limonade maison', 'img/products/lemonade-soda.png', ALL, 'Publié', { campaign: 'c-limonade' }),
-    P('p27', '2026-06-29', '12:00', 'Vidéo / film', 'Film · limonade', 'img/products/lemonade-soda.png', ALL, 'Publié', { campaign: 'c-limonade' }),
+    P('p23', '2026-08-24', '08:00', 'Gamme saisonnière', 'C\u2019est la rentrée du goûter', 'img/products/cookies.png', ALL, 'Publié', { campaign: 'bo-11' }),
+    P('p24', '2026-09-01', '15:30', 'Produit', 'Cupcake vanille', 'img/products/cupcake.png', ALL, 'Publié', { campaign: 'bo-11' }),
+    P('p25', '2026-09-08', '15:30', 'Vidéo / film', 'Film · goûter malin', 'img/products/cookies.png', ALL, 'Publié', { campaign: 'bo-11' }),
+    P('p26', '2026-06-15', '10:00', 'Produit', 'Nouveau : limonade maison', 'img/products/lemonade-soda.png', ALL, 'Publié', { campaign: 'bo-10' }),
+    P('p27', '2026-06-29', '12:00', 'Vidéo / film', 'Film · limonade', 'img/products/lemonade-soda.png', ALL, 'Publié', { campaign: 'bo-10' }),
   ];
 
   const ADS = [
-    { id: 'a01', name: 'Automne · trafic magasin', campaign: 'c-automne', objective: 'Trafic en magasin', shops: ALL, scope: 'boutique', budgetType: 'total', budget: 1600, cap: 1800, spent: 760, start: '2026-09-28', end: '2026-10-25', status: 'Active', radius: 8, post: 'p02' },
-    { id: 'a02', name: 'Automne · vidéo notoriété', campaign: 'c-automne', objective: 'Notoriété locale', shops: ALL, scope: 'reseau', budgetType: 'quotidien', budget: 25, cap: 700, spent: 300, start: '2026-10-07', end: '2026-10-25', status: 'Active', radius: 12, post: 'p07' },
-    { id: 'a03', name: 'Automne · relance J-7', campaign: 'c-automne', objective: 'Trafic en magasin', shops: ALL, scope: 'boutique', budgetType: 'total', budget: 400, cap: 400, spent: 0, start: '2026-10-18', end: '2026-10-25', status: 'En revue', radius: 8, post: 'p17' },
+    { id: 'a01', name: 'Automne · trafic magasin', campaign: 'bo-12', objective: 'Trafic en magasin', shops: ALL, scope: 'boutique', budgetType: 'total', budget: 1600, cap: 1800, spent: 760, start: '2026-09-28', end: '2026-10-25', status: 'Active', radius: 8, post: 'p02' },
+    { id: 'a02', name: 'Automne · vidéo notoriété', campaign: 'bo-12', objective: 'Notoriété locale', shops: ALL, scope: 'reseau', budgetType: 'quotidien', budget: 25, cap: 700, spent: 300, start: '2026-10-07', end: '2026-10-25', status: 'Active', radius: 12, post: 'p07' },
+    { id: 'a03', name: 'Automne · relance J-7', campaign: 'bo-12', objective: 'Trafic en magasin', shops: ALL, scope: 'boutique', budgetType: 'total', budget: 400, cap: 400, spent: 0, start: '2026-10-18', end: '2026-10-25', status: 'En revue', radius: 8, post: 'p17' },
     { id: 'a04', name: 'Quiche du jour · midi', campaign: null, objective: 'Messages', shops: ['gosselies'], scope: 'boutique', budgetType: 'quotidien', budget: 8, cap: 120, spent: 0, start: '2026-10-08', end: '2026-10-22', status: 'Refusée', reason: "Texte de l'image supérieur à 20 % et promesse de prix non vérifiable (politique Publicités Meta 4.3).", radius: 5, post: 'p08' },
     { id: 'a05', name: 'Recrutement Wavre', campaign: null, objective: 'Notoriété locale', shops: ['wavre'], scope: 'boutique', budgetType: 'total', budget: 150, cap: 150, spent: 150, start: '2026-10-02', end: '2026-10-12', status: 'Budget épuisé', radius: 15, post: 'p03' },
-    { id: 'a06', name: 'Goûter malin · trafic', campaign: 'c-rentree', objective: 'Trafic en magasin', shops: ALL, scope: 'boutique', budgetType: 'total', budget: 1500, cap: 1500, spent: 1480, start: '2026-08-24', end: '2026-09-13', status: 'Terminée', radius: 8, post: 'p23' },
-    { id: 'a07', name: 'Limonade · lancement', campaign: 'c-limonade', objective: 'Visites du webshop', shops: ALL, scope: 'reseau', budgetType: 'total', budget: 1800, cap: 1800, spent: 1760, start: '2026-06-15', end: '2026-07-12', status: 'Terminée', radius: 10, post: 'p26' },
+    { id: 'a06', name: 'Goûter malin · trafic', campaign: 'bo-11', objective: 'Trafic en magasin', shops: ALL, scope: 'boutique', budgetType: 'total', budget: 1500, cap: 1500, spent: 1480, start: '2026-08-24', end: '2026-09-13', status: 'Terminée', radius: 8, post: 'p23' },
+    { id: 'a07', name: 'Limonade · lancement', campaign: 'bo-10', objective: 'Visites du webshop', shops: ALL, scope: 'reseau', budgetType: 'total', budget: 1800, cap: 1800, spent: 1760, start: '2026-06-15', end: '2026-07-12', status: 'Terminée', radius: 10, post: 'p26' },
     // Campagnes créées hors du module (Gestionnaire de publicités) et récupérées chez Meta.
     { id: 'meta-120211', origin: 'meta', metaId: '120211', account: 'act_1428801', accountName: 'Atelier By Halle', devise: 'EUR', name: 'Boost · Marché de Halle', objective: 'Interactions', metaObjective: 'OUTCOME_ENGAGEMENT',
       campaign: null, shops: ['halle'], scope: 'boutique', budgetType: 'quotidien', budget: 6, cap: null, spent: 38.4, start: '2026-10-03', end: null, status: 'Active', radius: 10, post: null, nAds: 1, nAdsets: 1,
@@ -227,20 +229,27 @@
     return shops.map(id => (byId(SHOPS, id) || {}).name || id).join(', ');
   }
 
+  /** Le type d'une opération : le référentiel s'il le connaît, sinon le libellé du Marketing du BO. */
+  function ctype(c) {
+    return CTYPES.find(t => t.id === (c && c.type)) || { id: c && c.type, name: (c && c.typeLabel) || 'Opération', color: '#666666', icon: 'img/illus/decorative/circle-01.png', lev: 'trafic', kpi: (c && c.goal && c.goal.metric) || '—' };
+  }
+
   // Calcul du retour : renvoie {perShop, total} pour une campagne.
   function roi(cid) {
     const c = byId(state().campaigns, cid); if (!c) return null;
     const res = RESULTS[cid] || {};
-    const elapsed = c.status === 'en cours' ? Math.min(1, (daysBetween(c.start, TODAY) + 1) / (daysBetween(c.start, c.end) + 1)) : 1;
+    // Opération du Marketing du BO : objectif (levier chiffré), budget par boutique et fin peuvent manquer.
+    const gv = c.goal && c.goal.value ? c.goal.value : 0, split = c.split || {};
+    const elapsed = c.status === 'en cours' && c.start && c.end ? Math.min(1, (daysBetween(c.start, TODAY) + 1) / (daysBetween(c.start, c.end) + 1)) : 1;
     const perShop = c.shops.map(sid => {
       const r = res[sid] || null, shop = byId(SHOPS, sid) || { name: sid };
-      const goal = c.goal.value * ((c.split[sid] || 0) / (c.budget || 1)) * elapsed;
+      const goal = gv * (Object.keys(split).length ? (split[sid] || 0) / (c.budget || 1) : 1 / (c.shops.length || 1)) * elapsed;
       if (!r) return { sid, name: shop.name, empty: true };
       const has = r.caRef != null;
       const caAdd = has ? r.caCamp - r.caRef : null, mAdd = has ? caAdd * MARGIN : null, tAdd = has ? r.tCamp - r.tRef : null;
       const o = { sid, name: shop.name, ...r, cpc: r.clicks ? r.spend / r.clicks : null, ctr: r.impr ? r.clicks / r.impr : null, cpm: r.impr ? r.spend / r.impr * 1000 : null, freq: r.reach ? r.impr / r.reach : null, caAdd, mAdd, tAdd, qAdd: has ? r.qCamp - r.qRef : null,
         roas: has && r.spend ? caAdd / r.spend : null, roi: has && r.spend ? (mAdd - r.spend) / r.spend : null, cpt: has && tAdd > 0 ? r.spend / tAdd : null,
-        goal, att: has ? caAdd / goal : null };
+        goal, att: has && goal ? caAdd / goal : null };
       o.rag = ragOf(o.att);
       return o;
     });
@@ -251,7 +260,7 @@
     t.caAdd = t.caCamp - t.caRef; t.mAdd = t.caAdd * MARGIN; t.cpc = t.clicks ? t.spend / t.clicks : null;
     t.ctr = t.impr ? t.clicks / t.impr : null; t.cpm = t.impr ? t.spend / t.impr * 1000 : null; t.freq = t.reach ? t.impr / t.reach : null;
     t.roas = t.spend ? t.caAdd / t.spend : null; t.roi = t.spend ? (t.mAdd - t.spend) / t.spend : null; t.cpt = t.tAdd > 0 ? t.spend / t.tAdd : null;
-    t.goal = c.goal.value * elapsed; t.att = t.caAdd / t.goal; t.rag = ragOf(t.att); t.elapsed = elapsed; t.missing = perShop.filter(x => x.caRef == null).map(x => x.name);
+    t.goal = gv * elapsed; t.att = t.goal ? t.caAdd / t.goal : null; t.rag = ragOf(t.att); t.elapsed = elapsed; t.missing = perShop.filter(x => x.caRef == null).map(x => x.name);
     return { c, perShop, total: t };
   }
 
@@ -579,6 +588,8 @@
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
     api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
+    // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.
+    ctype, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
     igUnique: () => LIVE ? !!LIVE.instagramUnique : true, reseau, marque, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
     TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
     byId, fmt, eur, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param };

@@ -22,6 +22,9 @@ return [
     // cette adresse. Doit être joignable depuis Internet.
     'publicUrl' => getenv('SOCIAL_PUBLIC_URL') ?: 'https://185.180.206.46/social/',
 
+    // API du Marketing du BO (les opérations = ses campagnes commerciales), appelée par le serveur.
+    'marketingApi' => getenv('SOCIAL_MARKETING_API') ?: 'http://127.0.0.1/consulant_bo/api/v1/marketing',
+
     // URL de l'espace franchisé (/social_franchisee), pour les liens de l'écran franchiseur.
     'franchiseeUrl' => getenv('SOCIAL_FRANCHISEE_URL') ?: '/social_franchisee/',
 

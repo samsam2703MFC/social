@@ -183,7 +183,9 @@ function socStateGet(): array
         'brand' => socBrand(),
         'tfb' => Tfb::statut(),
         'tfbAudit' => ['resume' => socSetting('tfb_audit')],
-        'posts' => socItems('posts'), 'ads' => socItems('ads'), 'campaigns' => socItems('campaigns'),
+        // Les opérations sont les campagnes commerciales du Marketing du BO (lecture seule, src/operations.php).
+        'posts' => socItems('posts'), 'ads' => socItems('ads'), 'campaigns' => socOperations(),
+        'operations' => ['erreur' => socOperationsErreur(), 'api' => BoMarketing::base(), 'lien' => rtrim((string) (socSetting('url_bo') ?? '/consulant_bo/'), '/') . '/assistant/'],
         'leadforms' => socItems('leadforms'), 'groups' => socItems('groups'), 'templates' => socItems('templates'),
         'leads' => socLeads(),
         'darkPosts' => socDarkPosts(),
@@ -251,6 +253,8 @@ function socStateSave(array $b): array
     socLotPosts((array) ($b['changes']['posts']['upsert'] ?? []));
     foreach ((array) ($b['changes'] ?? []) as $kind => $ch) {
         if (!in_array($kind, SOC_KINDS, true) || !is_array($ch)) { continue; }
+        // Les opérations se créent et se modifient dans le Marketing du BO, pas ici.
+        if ($kind === 'campaigns') { $out['errors'][] = ['kind' => $kind, 'id' => '', 'error' => 'opérations : gérées dans le Marketing du BO (lecture seule ici)']; continue; }
         foreach ((array) ($ch['delete'] ?? []) as $id) {
             $id = (string) $id;
             if ($kind === 'posts') { socUnqueue($id); }

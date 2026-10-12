@@ -187,7 +187,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { cid: 'c-automne', focus: '', metric: 'caAdd', loading: true, toast: '' };
+  state = { cid: 'bo-12', focus: '', metric: 'caAdd', loading: true, toast: '' };
   componentDidMount() { const SA = window.SA; const c = SA && SA.param('c'); if (c && SA.RESULTS[c]) this.setState({ cid: c }); this.load(); }
   componentWillUnmount() { clearTimeout(this._t); clearTimeout(this._tt); }
   load() { clearTimeout(this._t); this.setState({ loading: true }); this._t = setTimeout(() => this.setState({ loading: false }), 420); }
@@ -202,7 +202,7 @@ class Component extends DCLogic {
     // Aucune campagne avec des résultats (base neuve) : un état vide, pas un écran cassé.
     if (!R) return { loading: false, ready: false, isEmpty: true, hasCampaign: false, nShopsLabel, shopOptions: [], campTabs: [], hero: {}, skeleton: [], marginLabel: '', periodLabel: '',
       focus: '', setFocus: () => {}, exportXls: () => {}, exportPdf: () => {}, campHref: SA.href('camp') };
-    const c = R.c, T = SA.CTYPES.find(t => t.id === c.type);
+    const c = R.c, T = SA.ctype(c);
     const row = s.focus ? R.perShop.find(x => x.sid === s.focus) : null;
     const X = row || R.total, has = row ? row.caRef != null : true;
     const rag = SA.RAG[has ? (row ? row.rag : R.total.rag) : 'grey'];
@@ -210,8 +210,8 @@ class Component extends DCLogic {
     const roiColor = (v) => v == null ? '#666666' : v >= 1 ? '#0F6B4A' : v >= 0 ? '#8A4B00' : '#8D1D2C';
     const hero = { caAdd: has ? SA.eur(X.caAdd) : '—', color: has ? rag.fg : '#666666', bar: rag.bar,
       caDetail: has ? SA.eur(X.caCamp) + ' pendant l’opération vs ' + SA.eur(X.caRef) + ' en référence' : 'Ventes non remontées',
-      goalLabel: 'Objectif ' + SA.eur(X.goal) + (live ? ' (prorata ' + SA.pct(R.total.elapsed) + ' de la période)' : ''),
-      att: has ? SA.pct(X.att) : '—', attPct: has ? Math.min(100, X.att * 100) + '%' : '0%', ragLabel: rag.label, ragBg: rag.bg, ragFg: rag.fg };
+      goalLabel: X.goal ? 'Objectif ' + SA.eur(X.goal) + (live ? ' (prorata ' + SA.pct(R.total.elapsed) + ' de la période)' : '') : 'Pas d’objectif chiffré (levier) dans le Marketing du BO',
+      att: has && X.att != null ? SA.pct(X.att) : '—', attPct: has && X.att != null ? Math.min(100, X.att * 100) + '%' : '0%', ragLabel: rag.label, ragBg: rag.bg, ragFg: rag.fg };
     const heroKpis = [
       { label: 'Marge additionnelle', value: has ? SA.eur(X.mAdd) : '—', sub: 'CA additionnel × ' + SA.pct(SA.MARGIN), color: '#222222' },
       { label: 'Dépense publicitaire', value: SA.eur(X.spend), sub: live ? 'à date, sur ' + SA.eur(row ? c.split[row.sid] : c.budget) + ' prévus' : 'sur ' + SA.eur(row ? c.split[row.sid] : c.budget) + ' prévus', color: '#222222' },
@@ -243,13 +243,13 @@ class Component extends DCLogic {
     const tRows = R.perShop.map(x => ({ bg: x.sid === s.focus ? '#FBF3F4' : x.caRef == null ? '#FCFAF7' : '#FFFFFF', cells: cellsOf(x) })).concat([{ bg: '#F4EFE8', cells: cellsOf(R.total, true) }]);
     // classement
     const ranking = all.slice().sort((a, b) => b.total.roi - a.total.roi).map((x, i) => { const r = SA.RAG[x.total.rag];
-      return { rank: i + 1, name: x.c.name, meta: (SA.CTYPES.find(t => t.id === x.c.type) || {}).name + ' · ' + SA.dShort(x.c.start) + ' → ' + SA.dShort(x.c.end) + (x.c.status === 'en cours' ? ' · en cours' : ''),
+      return { rank: i + 1, name: x.c.name, meta: SA.ctype(x.c).name + ' · ' + SA.dShort(x.c.start) + ' → ' + (x.c.end ? SA.dShort(x.c.end) : 'sans fin') + (x.c.status === 'en cours' ? ' · en cours' : ''),
         spend: SA.eur(x.total.spend), caAdd: SA.eur(x.total.caAdd), roas: SA.fmt(x.total.roas, 1) + ' ×', roi: (x.total.roi >= 0 ? '+' : '') + SA.pct(x.total.roi), roiColor: roiColor(x.total.roi),
         ragLabel: r.label, ragBg: r.bg, ragFg: r.fg, bg: x.c.id === c.id ? '#FBF3F4' : '#F4EFE8', pick: () => { this.setState({ cid: x.c.id, focus: '' }); this.load(); } }; });
     const focusRow = row;
     return { nShopsLabel, hasCampaign: true,
       shopOptions: R.perShop.map(x => ({ id: x.sid, name: x.name })), focus: s.focus, setFocus: (e) => this.setState({ focus: e.target.value }),
-      campTabs: all.map(x => { const t = SA.CTYPES.find(y => y.id === x.c.type), r = SA.RAG[x.total.rag];
+      campTabs: all.map(x => { const t = SA.ctype(x.c), r = SA.RAG[x.total.rag];
         return { name: x.c.name, icon: t.icon, tint: t.color + '22', meta: t.name + ' · ' + SA.dShort(x.c.start) + ' → ' + SA.dShort(x.c.end) + (x.c.status === 'en cours' ? ' · en cours' : ' · terminée'),
           ragLabel: r.label, ragBg: r.bg, ragFg: r.fg, border: x.c.id === c.id ? '1.5px solid #8D1D2C' : '0.5px solid rgba(34,34,34,0.10)', pick: () => { this.setState({ cid: x.c.id, focus: '' }); this.load(); } }; }),
       periodLabel: SA.dShort(c.start) + ' → ' + (live ? SA.dShort(SA.TODAY) + ', à date' : SA.dShort(c.end)), marginLabel: SA.pct(SA.MARGIN),

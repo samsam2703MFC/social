@@ -98,7 +98,8 @@
             </sc-for>
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button onClick="{{ saveKeys }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Enregistrer les clés</button>
-            <label style="font-size:12px;color:#444444;display:flex;gap:6px;align-items:center;">URL publique du module (Meta y télécharge les visuels) <input value="{{ publicUrl }}" onChange="{{ setPublicUrl }}" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 8px;width:260px;"></label></div>
+            <label style="font-size:12px;color:#444444;display:flex;gap:6px;align-items:center;">URL publique du module (Meta y télécharge les visuels) <input value="{{ publicUrl }}" onChange="{{ setPublicUrl }}" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 8px;width:260px;"></label>
+            <label style="font-size:12px;color:#444444;display:flex;gap:6px;align-items:center;">API Marketing du BO (les opérations) <input value="{{ marketingApi }}" onChange="{{ setMarketingApi }}" title="Adresse appelée par le serveur pour lire les campagnes commerciales (GET …/campaigns)" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 8px;width:260px;"></label></div>
         </section>
         <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
           <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
@@ -494,6 +495,8 @@ class Component extends DCLogic {
         });
       })(),
       publicUrl: s.publicUrl != null ? s.publicUrl : ((st.params || {}).url_publique || ''),
+      marketingApi: s.marketingApi != null ? s.marketingApi : ((st.params || {}).marketing_api || ''),
+      setMarketingApi: (e) => { const v = e.target.value; this.setState({ marketingApi: v }); clearTimeout(this._ma); this._ma = setTimeout(() => SA.api('POST', '/parametres', { marketing_api: v }).then(() => { this.toast('API Marketing enregistrée — rechargez pour relire les opérations.'); }).catch(err => this.toast(err.message)), 700); },
       setPublicUrl: (e) => { const v = e.target.value; this.setState({ publicUrl: v }); clearTimeout(this._pu); this._pu = setTimeout(() => SA.api('POST', '/parametres', { url_publique: v }).then(() => this.toast('URL publique enregistrée.')).catch(err => this.toast(err.message)), 700); },
       ...(() => { const M = SA.META, meta = st.meta || { version: M.version, dsa: M.dsa, ids: M.ids }, setMeta = (p) => SA.save({ meta: Object.assign({}, meta, p) });
         return { versions: M.versions.map(v => Object.assign(chip(meta.version === v), { id: v, pick: () => { setMeta({ version: v }); SA.log('Sarah Lambert (Franchiseur)', 'Connexion', 'Version API Meta : ' + v); } })), baseUrl: M.base + meta.version + '/',

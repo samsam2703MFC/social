@@ -22,6 +22,7 @@ partage **tous les accès** du BO consultant :
 | Pages Facebook | Brand Guard (`brand_guard_pages.page_id`) |
 | Adresse, position GPS | caisse du panel (`shops`, via `ceo_shop.pwa_shop_id`) |
 | Ventes (retour sur campagne) | caisse du panel (`transaction`, `transaction_product`, `product`) |
+| Opérations | les campagnes commerciales du **Marketing du BO**, lues par son API (`GET /api/v1/marketing/campaigns`, `/campaigns/{id}`, `/shops`) — jamais créées ni modifiées ici |
 | Clés Meta | celles de Brand Guard, **recopiées une fois** dans `social_parametre` au premier lancement |
 | Journal | chaque geste s'écrit aussi dans `ceo_journal_entry` (écran Journal du cockpit, type « Social & Ads ») |
 
@@ -37,7 +38,7 @@ Toutes les données **et toutes les clés** sont stockées et lues dans la base
 |---|---|
 | `social_parametre` | paramètres et clés : `meta_system_token`, `meta_app_secret`, `meta_verify_token` (marqués `secret`, jamais renvoyés au navigateur), `meta_version`, `meta_dsa`, `meta_compte_reseau`, `url_publique`, `url_bo`, `utilisateur`, `marge`, `catalogue`… |
 | `social_content` | les posts (titre, statut, date, heure, boutiques, canaux, textes FR/NL, image, erreur…) |
-| `social_campagne` | les campagnes (type, dates, budget, objectif, boutiques, produits) |
+| `social_campagne` | ancienne table des opérations locales — plus utilisée (les opérations viennent du Marketing du BO) |
 | `social_publicite` | les publicités (objectif, statut Meta, budget, plafond, dépense, motif de refus) |
 | `social_formulaire` | les formulaires de leads, une ligne par version |
 | `social_lead` | les leads reçus |
@@ -229,6 +230,14 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   (`/social/api/v1/social/webhook`) est prêt, mais l'app Meta n'a qu'une URL de
   webhook par objet Page, déjà utilisée par Brand Guard : le cron fait donc le
   rattrapage toutes les heures.
+- **Opérations** (`src/operations.php`) — ce sont les campagnes commerciales du
+  Marketing du BO, lues en direct par son API (adresse : Paramètres → API Marketing,
+  par défaut `http://127.0.0.1/consulant_bo/api/v1/marketing`). Une boutique du
+  Marketing (code `erp-N`) est la boutique N du module ; une campagne « réseau »
+  sans boutique choisie vise tout le réseau. Produits = articles de l'offre,
+  objectif = premier levier chiffré, budget par boutique = budget local. Le module
+  ne les crée ni ne les modifie (bouton « Créer dans le Marketing du BO ↗ ») : il y
+  rattache ses posts et ses publicités (`bo-{id}`) et en calcule le retour.
 - **Retour sur campagne** — CA additionnel = CA des produits de la campagne
   pendant la période − moyenne des mêmes jours sur les 6 semaines précédentes
   (**estimation**, affichée comme telle).

@@ -26,6 +26,7 @@ require_once __DIR__ . '/franchise.php';
 require_once __DIR__ . '/metacampagnes.php';
 require_once __DIR__ . '/calendriers.php';
 require_once __DIR__ . '/suivi.php';
+require_once __DIR__ . '/operations.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -85,7 +86,7 @@ function socRoute(string $method, string $path): array
     }
     if ($method === 'POST' && $path === '/parametres') {
         // Les réglages non secrets modifiables depuis l'écran.
-        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool'];
+        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'marketing_api' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool'];
         $faits = [];
         foreach (body() as $k => $v) {
             if (!isset($permis[$k])) { continue; }
@@ -109,6 +110,8 @@ function socRoute(string $method, string $path): array
     }
     // Lu en direct chez Meta, rien en base : les publications des Pages et comptes Instagram (src/calendriers.php),
     // les abonnés face au budget (src/suivi.php).
+    // Les opérations = campagnes commerciales du Marketing du BO, lues par son API (src/operations.php).
+    if ($method === 'GET' && $path === '/operations') { $o = socOperations(); return [200, ['operations' => $o, 'erreur' => socOperationsErreur(), 'api' => BoMarketing::base()]]; }
     if ($method === 'GET' && $path === '/meta/calendriers') { return [200, socCalendriersLire((string) ($_GET['du'] ?? ''), (string) ($_GET['au'] ?? ''))]; }
     if ($method === 'GET' && $path === '/meta/post-stats') { return [200, socCalStats((string) ($_GET['id'] ?? ''), (string) ($_GET['compte'] ?? ''))]; }
     if ($method === 'GET' && $path === '/suivi/abonnes') { return [200, socSuiviAbonnes((int) ($_GET['jours'] ?? 28))]; }

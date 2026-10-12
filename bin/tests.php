@@ -419,17 +419,48 @@ unset($GLOBALS['SOC_BODY']);
 check('POST /instagram/grille : relecture immédiate', $code === 200 && $b['synchro'] === 2);
 
 echo "Campagnes, publicités\n";
-$camp = ['id' => 'c1', 'name' => 'Automne', 'type' => 'saison', 'start' => $debutCamp, 'end' => date('Y-m-d', strtotime('+20 days')), 'status' => 'en cours',
-    'shops' => ['4', '5'], 'products' => ['Brioche croustillante'], 'goal' => ['metric' => 'CA additionnel', 'value' => 1000], 'budget' => 400, 'split' => ['4' => 200, '5' => 200]];
-socStateSave(['changes' => ['campaigns' => ['upsert' => [$camp]]]]);
-check('campagne dans social_campagne', Db::row("SELECT nom, budget FROM social_campagne WHERE id = 'c1'") == ['nom' => 'Automne', 'budget' => '400.00']);
+// Les opérations = campagnes commerciales du Marketing du BO, lues par son API (simulée ici).
+$boAppels = [];
+$GLOBALS['BO_CAMPAGNES'] = [['id' => 1, 'name' => 'Automne', 'scope' => 'BOUTIQUES', 'status_code' => 'planned', 'status_label' => 'Planifiée', 'starts_on' => $debutCamp,
+    'ends_on' => date('Y-m-d', strtotime('+20 days')), 'budget_amount' => 400.0, 'spent_amount' => 0.0, 'type_code' => 'saison', 'type_label' => 'Saisonnalité', 'image_url' => './uploads/a.png'],
+    ['id' => 2, 'name' => 'Présence réseau', 'scope' => 'RESEAU', 'status_code' => 'draft', 'status_label' => 'Brouillon', 'starts_on' => null, 'ends_on' => null, 'budget_amount' => 0.0]];
+BoMarketing::$transport = static function (string $url) use (&$boAppels): array {
+    $boAppels[] = $url;
+    if (!empty($GLOBALS['BO_PANNE'])) { return [503, '']; }
+    $p = preg_replace('#^.*/api/v1/marketing/#', '', $url);
+    if ($p === 'campaigns') { return [200, json_encode($GLOBALS['BO_CAMPAGNES'])]; }
+    if ($p === 'shops') { return [200, json_encode([['id' => 10, 'code' => 'erp-4', 'name' => 'Atelier by - Halle'], ['id' => 11, 'code' => 'erp-5', 'name' => 'Atelier Wavre'], ['id' => 12, 'code' => 'manuel']])]; }
+    if ($p === 'campaigns/1') {
+        return [200, json_encode($GLOBALS['BO_CAMPAGNES'][0] + ['shops' => [['shop_id' => 10, 'local_budget_amount' => 200.0], ['shop_id' => 11, 'local_budget_amount' => 200.0], ['shop_id' => 12]],
+            'levers' => [['label' => 'CA additionnel', 'target_value' => 1000, 'target_unit' => 'EUR']], 'channels' => [['label' => 'Meta Ads']],
+            'offer' => ['title' => 'Offre automne', 'mechanic_text' => '-20 % sur la gamme', 'items' => [['label' => 'Brioche croustillante']]]])];
+    }
+    if ($p === 'campaigns/2') { return [200, json_encode($GLOBALS['BO_CAMPAGNES'][1] + ['shops' => [], 'levers' => [], 'offer' => null])]; }
+    return [404, '{}'];
+};
+$ops = array_column(socOperations(true), null, 'id');
+$o1 = $ops['bo-1'] ?? [];
+check('opérations = campagnes du Marketing du BO, lues par son API', count($ops) === 2 && ($o1['name'] ?? '') === 'Automne' && $o1['status'] === 'en cours' && $o1['boStatus'] === 'Planifiée'
+    && (bool) array_filter($boAppels, static fn ($u) => str_ends_with($u, '/api/v1/marketing/campaigns/1')), json_encode($o1));
+check('boutiques du Marketing (erp-N) → boutiques du module, budget par boutique, produits de l’offre, objectif', $o1['shops'] === ['4', '5'] && $o1['split'] === ['4' => 200.0, '5' => 200.0]
+    && $o1['products'] === ['Brioche croustillante'] && $o1['goal'] === ['metric' => 'CA additionnel', 'value' => 1000.0, 'unit' => 'EUR'] && $o1['budget'] == 400
+    && str_ends_with((string) $o1['image'], '/consulant_bo/assistant/uploads/a.png') && str_ends_with((string) $o1['lien'], '/assistant/?id=1'), json_encode($o1));
+check('campagne réseau sans boutique choisie : tout le réseau ; sans date : à venir', count($ops['bo-2']['shops']) === count(socShops()) && $ops['bo-2']['status'] === 'à venir');
+$r = socStateSave(['changes' => ['campaigns' => ['upsert' => [['id' => 'c9', 'name' => 'Locale']]]]]);
+check('une opération ne se crée pas ici : refus, rien en base', str_contains((string) ($r['errors'][0]['error'] ?? ''), 'Marketing du BO') && Db::row("SELECT COUNT(*) n FROM social_campagne")['n'] == 0);
+[$code, $b] = socRoute('GET', '/operations');
+check('GET /operations', $code === 200 && count($b['operations']) === 2 && $b['erreur'] === null);
+$GLOBALS['BO_PANNE'] = true;
+$panne = socOperations(true);
+check('API Marketing injoignable : aucune opération, motif clair', $panne === [] && str_contains((string) socOperationsErreur(), 'HTTP 503'));
+unset($GLOBALS['BO_PANNE']); socOperations(true);
 $spec = ['name' => 'Automne trafic', 'objective' => 'OUTCOME_TRAFFIC', 'status' => 'ACTIVE', 'special' => [], 'bid' => 'LOWEST_COST_WITHOUT_CAP', 'spendCap' => 300,
     'budgetLevel' => 'adset', 'budgetType' => 'daily', 'amount' => 10, 'account' => 'boutique', 'shops' => ['4', '5'], 'radius' => ['4' => 8, '5' => 10],
     'goal' => 'LINK_CLICKS', 'dest' => 'WEBSITE', 'start' => date('Y-m-d'), 'end' => date('Y-m-d', strtotime('+20 days')), 'ageMin' => 18, 'ageMax' => 65, 'gender' => 'all',
     'interests' => ['Boulangerie'], 'platforms' => ['facebook', 'instagram'], 'advantage' => false, 'dsaB' => "L'Atelier By SRL", 'dsaP' => "L'Atelier By SRL",
     'crea' => 'existing', 'post' => 'p1', 'cta' => 'LEARN_MORE', 'link' => 'https://www.latelierby.be', 'adName' => 'Automne', 'adStatus' => 'ACTIVE', 'pixel' => false, 'urlTags' => 'utm_source=meta'];
 $appels = [];
-socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a1', 'name' => 'Automne trafic', 'campaign' => 'c1', 'objective' => 'Trafic', 'shops' => ['4', '5'],
+socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a1', 'name' => 'Automne trafic', 'campaign' => 'bo-1', 'objective' => 'Trafic', 'shops' => ['4', '5'],
     'scope' => 'boutique', 'budgetType' => 'quotidien', 'budget' => 20, 'cap' => 300, 'spent' => 0, 'start' => $spec['start'], 'end' => $spec['end'], 'status' => 'En revue', 'radius' => 9, 'post' => 'p1', 'spec' => $spec]]]]]);
 $a1 = socItem('ads', 'a1');
 check('pub créée chez Meta → En revue', $a1['status'] === 'En revue', (string) ($a1['reason'] ?? ''));
@@ -535,7 +566,7 @@ check('connexion par code : session limitée à Halle', $code === 200 && $b['sho
 [$code, $et] = $fr('GET', '/franchise/etat');
 $ids = array_column($et['posts'] ?? [], 'id');
 check('état : sa boutique, son catalogue (API, sans B2B ni inactif), les campagnes où elle figure', $code === 200 && $et['shop']['name'] === 'Halle'
-    && array_column($et['catalogue'], 'id') === ['p1'] && $et['catalogue'][0]['nameNl'] === 'Krokante brioche' && in_array('c1', array_column($et['campaigns'], 'id'), true), json_encode($et['error'] ?? ''));
+    && array_column($et['catalogue'], 'id') === ['p1'] && $et['catalogue'][0]['nameNl'] === 'Krokante brioche' && in_array('bo-1', array_column($et['campaigns'], 'id'), true), json_encode($et['error'] ?? ''));
 check('état : posts du réseau qui la concernent, jamais les dark posts ni ceux des autres boutiques', in_array('p1', $ids, true) && !in_array('d1', $ids, true) && !in_array('p2', $ids, true));
 [$code] = $fr('GET', '/franchise/etat', [], ['shop' => '5']);
 check('une autre boutique : 403', $code === 403);
@@ -640,12 +671,12 @@ check('archivage → status=ARCHIVED chez Meta', count(array_filter($appels, sta
 echo "Retour sur campagne\n";
 socResultsSync();
 $res = socResults();
-$h = $res['c1']['4'] ?? [];
+$h = $res['bo-1']['4'] ?? [];
 check('dépense Meta par boutique', (float) ($h['spend'] ?? 0) === 81.0, json_encode($h));
 check('CA campagne lu dans la caisse (7 jours × 25 €)', (float) ($h['caCamp'] ?? 0) === 175.0, (string) ($h['caCamp'] ?? 'null'));
 check('référence = moyenne des 6 semaines précédentes (7 × 10 €)', (float) ($h['caRef'] ?? 0) === 70.0, (string) ($h['caRef'] ?? 'null'));
-check('Wavre sans vente : motif affiché', isset($res['c1']['5']['noSales']));
-check('résultat en colonnes', Db::row("SELECT ca_campagne FROM social_resultat WHERE campagne_id = 'c1' AND shop_id = '4'")['ca_campagne'] === '175.00');
+check('Wavre sans vente : motif affiché', isset($res['bo-1']['5']['noSales']));
+check('résultat en colonnes', Db::row("SELECT ca_campagne FROM social_resultat WHERE campagne_id = 'bo-1' AND shop_id = '4'")['ca_campagne'] === '175.00');
 
 echo "Marque et audit de l'API\n";
 socStateSave(['meta' => ['ids' => ['marque' => ['page_id' => '999', 'ad_account_id' => 'act_7777']]]]);
@@ -673,8 +704,8 @@ putenv('SOCIAL_TFB_VENTES=1');
 [$v] = socVentesApi('5', ['Brioche croustillante'], date('Y-m-d', strtotime('-6 days')), date('Y-m-d'));
 check('ventes API : CA campagne / référence (6 semaines)', ($v['caCamp'] ?? 0) == 210.0 && ($v['caRef'] ?? 0) == 126.0 && ($v['qCamp'] ?? 0) == 50.0, json_encode($v));
 check('ventes API : tickets de la boutique', ($v['tCamp'] ?? 0) === 300 && ($v['tRef'] ?? 0) === 200);
-socResultsSync('c1');
-check('retour sur campagne : l’API prime sur la base', (socResults()['c1']['4']['source'] ?? '') === 'API TFBuddy', json_encode(socResults()['c1']['4'] ?? null));
+socResultsSync('bo-1');
+check('retour sur campagne : l’API prime sur la base', (socResults()['bo-1']['4']['source'] ?? '') === 'API TFBuddy', json_encode(socResults()['bo-1']['4'] ?? null));
 putenv('SOCIAL_TFB_VENTES');
 
 echo "Clés Meta : App ID et vérification du token\n";
@@ -775,16 +806,16 @@ check('les pubs importées ne sont pas relues pub par pub', !array_filter($appel
 check('brouillon sans date (1970 chez Meta) : daté de sa création', $m3['start'] === date('Y-m-d', strtotime('-1 day')) && $m3['end'] === null && $m3['budget'] == 0, json_encode($m3));
 check('compte rendu gardé et rendu dans l’état', (socStateGet()['metaImport']['importees'] ?? null) === 3);
 $appels = [];
-$r = socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($m1, ['status' => 'En pause', 'name' => 'Renommée', 'campaign' => 'c1', 'budget' => 999])]]]]);
+$r = socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($m1, ['status' => 'En pause', 'name' => 'Renommée', 'campaign' => 'bo-1', 'budget' => 999])]]]]);
 $m1 = socItem('ads', 'meta-7001');
 check('pause depuis l’écran : appliquée à la campagne Meta', $m1['status'] === 'En pause' && in_array(['POST', '7001', ['status' => 'PAUSED', 'access_token' => 'TOK-NOUVEAU']], $appels, true), json_encode($appels));
-check('champs Meta gardés (nom, budget), rattachement à une campagne du module accepté', $m1['name'] === 'Promo hiver Halle' && $m1['budget'] == 15 && $m1['campaign'] === 'c1');
+check('champs Meta gardés (nom, budget), rattachement à une campagne du module accepté', $m1['name'] === 'Promo hiver Halle' && $m1['budget'] == 15 && $m1['campaign'] === 'bo-1');
 socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($m1, ['cap' => 400])]]]]);
 check('plafond relevé : spend_cap de la campagne Meta', in_array(['POST', '7001', ['spend_cap' => 40000, 'access_token' => 'TOK-NOUVEAU']], $appels, true));
 array_pop($GLOBALS['META_EXISTANT']['campaigns']); array_pop($GLOBALS['META_EXISTANT']['campaigns']); array_pop($GLOBALS['META_EXISTANT']['campaigns']);
 $r = socCampagnesMetaImporter(false);
 $m1 = socItem('ads', 'meta-7001'); $m2 = socItem('ads', 'meta-7002');
-check('rafraîchissement : mise à jour sans doublon, rattachement conservé', $r['majs'] === 1 && $r['importees'] === 0 && $m1['campaign'] === 'c1' && $m1['status'] === 'Active');
+check('rafraîchissement : mise à jour sans doublon, rattachement conservé', $r['majs'] === 1 && $r['importees'] === 0 && $m1['campaign'] === 'bo-1' && $m1['status'] === 'Active');
 check('campagnes supprimées chez Meta : marquées arrêtées', $r['disparues'] === 2 && $m2['status'] === 'Arrêtée' && $m2['gone'] === true);
 
 echo "Calendriers Meta : lecture en direct (rien en base)\n";

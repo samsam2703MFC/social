@@ -25,15 +25,18 @@
 
     <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
       <div style="display:flex;flex-direction:column;gap:4px;">
-        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Posts organiques + publicités autour d'un objectif</span>
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Campagnes commerciales du Marketing du BO · posts et publicités rattachés</span>
         <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">OPERATIONS</h1>
       </div>
       <div style="display:flex;gap:8px;">
         <a href="{{ metaHref }}" title="Relit chez Meta les campagnes de vos comptes publicitaires (Gestionnaire de publicités, agence…) ; elles arrivent dans Publicités, où vous pouvez les rattacher à une opération." style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;color:#222222;text-decoration:none;display:inline-flex;align-items:center;">Récupérer les campagnes Meta</a>
         <button onClick="{{ toggleRef }}" style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">Référentiel des types</button>
-        <button onClick="{{ openNew }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Nouvelle opération</button>
+        <a href="{{ boHref }}" target="_blank" rel="noopener" title="Les opérations se créent dans le Marketing du BO (assistant de campagne) ; elles apparaissent ici d'elles-mêmes." style="height:36px;padding:0 16px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;display:inline-flex;align-items:center;text-decoration:none;">Créer dans le Marketing du BO ↗</a>
       </div>
     </header>
+
+    <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:10px;padding:9px 14px;font-size:12px;line-height:1.5;color:#444444;">Les opérations sont les campagnes commerciales du <strong style="font-weight:600;">Marketing du BO</strong>, lues en direct par son API ({{ nOps }}) : nom, dates, boutiques, produits de l’offre, objectif et budget se modifient là-bas. Ici, on y rattache les posts et les publicités Meta, et on en suit le retour.</div>
+    <sc-if value="{{ hasOpsErr }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.5;color:#8D1D2C;">{{ opsErr }} — Paramètres → adresse de l’API Marketing.</div></sc-if>
 
     <!-- Référentiel -->
     <sc-if value="{{ refOpen }}" hint-placeholder-val="{{ false }}">
@@ -91,12 +94,14 @@
                   <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 9px;background:{{ f.color }};color:#FFFFFF;">{{ f.typeName }}</span>
                   <span class="levier-badge" data-lev="{{ f.lev }}"><span class="levier-dot"></span>{{ f.levName }}</span>
                   <span style="font-size:12px;color:#666666;">KPI attendu : {{ f.kpi }}</span>
+                  <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 9px;background:#F4EFE8;color:#444444;">Marketing du BO · {{ f.boStatus }}</span>
                 </span>
               </div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <a href="{{ f.postHref }}" style="height:34px;display:inline-flex;align-items:center;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;color:#222222;text-decoration:none;">+ Post</a>
               <a href="{{ f.adHref }}" style="height:34px;display:inline-flex;align-items:center;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;color:#222222;text-decoration:none;">+ Publicité</a>
+              <a href="{{ f.boHref }}" target="_blank" rel="noopener" title="La campagne dans le Marketing du BO (assistant)" style="height:34px;display:inline-flex;align-items:center;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;color:#222222;text-decoration:none;">Voir dans le BO ↗</a>
               <a href="{{ f.roiHref }}" style="height:34px;display:inline-flex;align-items:center;padding:0 14px;border-radius:8px;background:#8D1D2C;font-size:13px;font-weight:500;color:#FFFFFF;text-decoration:none;">Retour sur opération →</a>
             </div>
           </div>
@@ -134,7 +139,7 @@
                 <span style="position:absolute;left:0;top:0;bottom:0;width:{{ b.pct }};background:#F2C9A0;"></span>
                 <span style="position:absolute;left:0;top:0;bottom:0;width:{{ b.spentPct }};background:#8D1D2C;"></span>
               </span>
-              <span style="display:flex;align-items:center;gap:4px;"><input type="number" min="0" step="10" value="{{ b.value }}" onChange="{{ b.set }}" disabled="{{ f.locked }}" style="width:64px;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 6px;text-align:right;">€</span>
+              <span style="font-size:12px;font-weight:500;text-align:right;">{{ b.valueLabel }}</span>
               <span style="font-size:11px;color:#666666;text-align:right;">{{ b.spentLabel }}</span>
             </div>
           </sc-for>
@@ -173,84 +178,32 @@
     </div>
   </main>
 
-  <!-- Nouvelle campagne -->
-  <sc-if value="{{ newOpen }}" hint-placeholder-val="{{ false }}">
-    <div style="position:fixed;inset:0;background:rgba(35,34,32,0.5);z-index:40;display:flex;align-items:center;justify-content:center;padding:20px;">
-      <div style="background:#FFFFFF;border-radius:12px;width:100%;max-width:640px;max-height:92vh;overflow:auto;padding:20px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 80px rgba(35,34,32,0.3);">
-        <span style="font-size:16px;font-weight:500;">Nouvelle opération</span>
-        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Nom
-          <input type="text" value="{{ n.name }}" onChange="{{ n.setName }}" placeholder="ex. Fêtes de fin d'année 2026" style="font-size:14px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
-        </label>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <span style="font-size:12px;color:#666666;">Type</span>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;">
-            <sc-for list="{{ n.types }}" as="t" hint-placeholder-count="0">
-              <button onClick="{{ t.pick }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;border:1.5px solid {{ t.ring }};background:#FFFFFF;cursor:pointer;text-align:left;">
-                <span style="width:22px;height:22px;border-radius:6px;background:{{ t.tint }};display:flex;align-items:center;justify-content:center;flex:0 0 auto;"><img src="{{ t.icon }}" alt="" style="width:16px;height:16px;object-fit:contain;"></span>
-                <span style="font-size:12px;font-weight:500;color:#222222;">{{ t.name }}</span>
-              </button>
-            </sc-for>
-          </div>
-          <span style="font-size:11px;color:#666666;">{{ n.typeHint }}</span>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-          <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Début<input type="date" value="{{ n.start }}" onChange="{{ n.setStart }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;"></label>
-          <sc-if value="{{ n.hasEnd }}" hint-placeholder-val="{{ true }}"><label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Fin<input type="date" value="{{ n.end }}" onChange="{{ n.setEnd }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;"></label></sc-if>
-          <sc-if value="{{ n.continuous }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;padding-bottom:9px;">Opération continue, sans date de fin</span></sc-if>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <span style="font-size:12px;color:#666666;">Boutiques</span>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ n.shops }}" as="s" hint-placeholder-count="6"><button onClick="{{ s.toggle }}" style="border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ s.border }};background:{{ s.bg }};color:{{ s.fg }};">{{ s.name }}</button></sc-for></div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <span style="font-size:12px;color:#666666;">Produits ou gammes</span>
-          <input value="{{ n.catQ }}" onChange="{{ n.setCatQ }}" placeholder="{{ n.catPh }}" style="font-family:var(--font-ui);font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 10px;width:100%;box-sizing:border-box;">
-          <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ n.products }}" as="p" hint-placeholder-count="12"><button onClick="{{ p.toggle }}" style="border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid {{ p.border }};background:{{ p.bg }};color:{{ p.fg }};">{{ p.name }}</button></sc-for></div>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <label style="flex:1 1 160px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Objectif
-            <select value="{{ n.metric }}" onChange="{{ n.setMetric }}" style="font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:9px 10px;">
-              <option value="CA additionnel">CA additionnel (€)</option><option value="Tickets additionnels">Tickets additionnels</option><option value="Trafic">Trafic (visites)</option>
-            </select>
-          </label>
-          <label style="flex:1 1 120px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Valeur cible<input type="number" value="{{ n.goal }}" onChange="{{ n.setGoal }}" style="font-size:14px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
-          <label style="flex:1 1 120px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Budget total (€)<input type="number" value="{{ n.budget }}" onChange="{{ n.setBudget }}" style="font-size:14px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
-        </div>
-        <span style="font-size:11px;color:#666666;">Le budget est réparti à parts égales entre les boutiques ; ajustez-le ensuite dans la fiche.</span>
-        <sc-if value="{{ n.hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8D1D2C;">{{ n.err }}</span></sc-if>
-        <div style="display:flex;justify-content:flex-end;gap:8px;">
-          <button onClick="{{ closeNew }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Annuler</button>
-          <button onClick="{{ createCamp }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Créer l’opération</button>
-        </div>
-      </div>
-    </div>
-  </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { selId: null, tab: 'all', refOpen: false, newOpen: false, n: null, err: '', tick: 0 };
+  state = { selId: null, tab: 'all', refOpen: false, tick: 0 };
   componentDidMount() {
     const SA = window.SA; const c = SA && SA.param('c'); if (c) this.setState({ selId: c });
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
   }
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); }
-  blank() { const SA = window.SA; return { name: '', type: 'fetes', start: SA.addDays(SA.TODAY, 30), end: SA.addDays(SA.TODAY, 60), shops: SA.SHOPS.map(s => s.id), products: [], metric: 'CA additionnel', goal: 8000, budget: 1800 }; }
   renderVals() {
     const SA = window.SA, s = this.state;
-    if (!SA) return { f: {}, n: {}, list: [] };
+    if (!SA) return { f: {}, list: [] };
     const st = SA.state(), camps = st.campaigns;
     const tint = (hex) => hex + '22';
-    const T = (id) => SA.CTYPES.find(t => t.id === id) || SA.CTYPES[0];
+    // Le type vient du Marketing du BO : référentiel du module s'il le connaît, sinon son libellé tel quel.
+    const T = SA.ctype;
     const spentOf = (cid) => st.ads.filter(a => a.campaign === cid).reduce((a, x) => a + (x.spent || 0), 0);
     const statusLabel = (c) => c.status === 'en cours' ? ['En cours', '#E2F0E8', '#0F6B4A'] : c.status === 'terminée' ? ['Terminée', '#EAE4DC', '#555555'] : ['À venir', '#F2C9A0', '#6b4420'];
     const tabsDef = [['all', 'Toutes', camps], ['live', 'En cours', camps.filter(c => c.status !== 'terminée')], ['done', 'Terminées', camps.filter(c => c.status === 'terminée')]];
     const shown = (tabsDef.find(t => t[0] === s.tab) || tabsDef[0])[2];
     const selId = camps.some(c => c.id === s.selId) ? s.selId : (camps[0] || {}).id;
     const list = shown.map(c => {
-      const t = T(c.type), [stL, stB, stF] = statusLabel(c), sp = spentOf(c.id), r = SA.RESULTS[c.id] ? SA.roi(c.id) : null;
+      const t = T(c), [stL, stB, stF] = c.boStatusCode === 'draft' ? ['Brouillon', '#EAE4DC', '#666666'] : statusLabel(c), sp = spentOf(c.id), r = SA.RESULTS[c.id] ? SA.roi(c.id) : null;
       const rag = r ? SA.RAG[r.total.rag] : { label: 'Pas encore de résultats', fg: '#666666', bar: '#B8B2A8' };
-      return { name: c.name, typeName: t.name, icon: t.icon, tint: tint(t.color), dates: SA.dShort(c.start) + (c.end ? ' → ' + SA.dShort(c.end) : ' → sans fin'),
+      return { name: c.name, typeName: t.name, icon: t.icon, tint: tint(t.color), dates: c.start ? SA.dShort(c.start) + (c.end ? ' → ' + SA.dShort(c.end) : ' → sans fin') : 'dates à fixer dans le BO',
         stLabel: stL, stBg: stB, stFg: stF, spentLabel: SA.eur(sp) + ' / ' + SA.eur(c.budget), spentPct: Math.min(100, c.budget ? sp / c.budget * 100 : 0) + '%',
         ragLabel: r ? rag.label + ' · ' + SA.pct(r.total.att) + (c.status === 'en cours' ? ' (au prorata)' : '') : rag.label, ragFg: rag.fg || rag.bar, ragBar: rag.bar,
         border: c.id === selId ? '1.5px solid #8D1D2C' : '0.5px solid rgba(34,34,34,0.10)', pick: () => this.setState({ selId: c.id }) };
@@ -259,16 +212,16 @@ class Component extends DCLogic {
     const c = camps.find(x => x.id === selId);
     let f = {};
     if (c) {
-      const t = T(c.type), sp = spentOf(c.id), r = SA.RESULTS[c.id] ? SA.roi(c.id) : null, lev = SA.LEVERS[t.lev];
+      const t = T(c), sp = spentOf(c.id), r = SA.RESULTS[c.id] ? SA.roi(c.id) : null, lev = SA.LEVERS[t.lev] || SA.LEVERS.trafic, split0 = c.split || {};
       const split = c.shops.map(id => {
-        const v = c.split[id] || 0, spent = r ? (r.perShop.find(x => x.sid === id) || {}).spend || 0 : 0;
-        return { name: SA.byId(SA.SHOPS, id).name, value: v, pct: Math.min(100, c.budget ? v / Math.max(...c.shops.map(k => c.split[k] || 0), 1) * 100 : 0) + '%', spentPct: Math.min(100, spent / Math.max(...c.shops.map(k => c.split[k] || 0), 1) * 100) + '%',
-          spentLabel: SA.eur(spent) + ' dépensés',
-          set: (e) => { const val = Math.max(0, +e.target.value || 0); const cs = st.campaigns.map(x => x.id === c.id ? Object.assign({}, x, { split: Object.assign({}, x.split, { [id]: val }) }) : x); SA.save({ campaigns: cs }); } };
+        const v = split0[id] || 0, spent = r ? (r.perShop.find(x => x.sid === id) || {}).spend || 0 : 0;
+        const top = Math.max(...c.shops.map(k => split0[k] || 0), 1);
+        return { name: (SA.byId(SA.SHOPS, id) || { name: id }).name, value: v, valueLabel: v ? SA.eur(v) : '—', pct: Math.min(100, v / top * 100) + '%', spentPct: Math.min(100, spent / top * 100) + '%',
+          spentLabel: SA.eur(spent) + ' dépensés' };
       });
-      const allocated = c.shops.reduce((a, id) => a + (c.split[id] || 0), 0), left = c.budget - allocated;
+      const allocated = c.shops.reduce((a, id) => a + (split0[id] || 0), 0), left = c.budget - allocated;
       // frise
-      const start = c.start, end = c.end || SA.addDays(SA.TODAY, 30), span = Math.max(1, SA.daysBetween(start, end));
+      const start = c.start || SA.TODAY, end = c.end || SA.addDays(start, 30), span = Math.max(1, SA.daysBetween(start, end));
       const X = (d) => Math.max(0, Math.min(100, SA.daysBetween(start, d) / span * 100)) + '%';
       const ticks = []; const step = Math.max(1, Math.round(span / 5)); for (let i = 0; i <= span; i += step) ticks.push({ x: X(SA.addDays(start, i)), label: SA.dShort(SA.addDays(start, i)) });
       const posts = st.posts.filter(p => p.campaign === c.id).sort((a, b) => a.date.localeCompare(b.date));
@@ -278,50 +231,28 @@ class Component extends DCLogic {
         return { name: a.name + ' · ' + a.status, x: Math.max(0, x0) + '%', w: Math.max(4, Math.min(100, x1) - Math.max(0, x0)) + '%', y: (8 + i * 28) + 'px', bg: a.status === 'Active' ? '#8D1D2C' : sc.bg, fg: a.status === 'Active' ? '#FFFFFF' : sc.fg, href: SA.href('ads', 'ad=' + a.id), tip: a.name + ' — ' + SA.eur(a.spent) + ' dépensés' }; });
       const goalNow = r ? r.total : null;
       f = { name: c.name, typeName: t.name, color: t.color, icon: t.icon, tint: tint(t.color), lev: t.lev, levName: lev.name, kpi: t.kpi, locked: c.status === 'terminée',
+        boStatus: c.boStatus || '—', boHref: c.lien || SA.opsLink(),
         postHref: SA.href('post'), adHref: SA.href('ads', 'new=1&c=' + c.id), roiHref: SA.href('roi', 'c=' + c.id),
         facts: [
-          { label: 'Période', value: SA.dShort(c.start) + (c.end ? ' → ' + SA.dShort(c.end) : ''), sub: c.end ? SA.daysBetween(c.start, c.end) + 1 + ' jours' : 'Continue', color: '#222222' },
-          { label: 'Objectif', value: c.goal.metric === 'CA additionnel' ? SA.eur(c.goal.value) : SA.fmt(c.goal.value), sub: c.goal.metric, color: '#222222' },
+          { label: 'Période', value: c.start ? SA.dShort(c.start) + (c.end ? ' → ' + SA.dShort(c.end) : '') : '—', sub: !c.start ? 'à fixer dans le BO' : c.end ? SA.daysBetween(c.start, c.end) + 1 + ' jours' : 'Continue', color: '#222222' },
+          { label: 'Objectif', value: !c.goal ? '—' : c.goal.unit === 'EUR' || c.goal.metric === 'CA additionnel' ? SA.eur(c.goal.value) : SA.fmt(c.goal.value), sub: c.goal ? c.goal.metric : 'aucun levier chiffré dans le BO', color: '#222222' },
           { label: 'Réalisé (estimé)', value: goalNow ? SA.eur(goalNow.caAdd) : '—', sub: goalNow ? SA.pct(goalNow.att) + ' de l\u2019objectif' + (c.status === 'en cours' ? ' au prorata' : '') : 'Pas encore de données', color: goalNow ? SA.RAG[goalNow.rag].fg : '#666666' },
           { label: 'Budget total', value: SA.eur(c.budget), sub: SA.eur(sp) + ' dépensés · ' + SA.pct(c.budget ? sp / c.budget : 0), color: '#222222' },
           { label: 'ROAS', value: goalNow && goalNow.roas != null ? SA.fmt(goalNow.roas, 1) + ' ×' : '—', sub: 'CA additionnel / dépense', color: goalNow ? (goalNow.roas >= 3 ? '#0F6B4A' : goalNow.roas >= 1.6 ? '#8A4B00' : '#8D1D2C') : '#666666' },
         ],
-        shopCount: c.shops.length, shops: c.shops.map(id => SA.byId(SA.SHOPS, id).name), products: c.products,
-        split, splitLabel: left === 0 ? 'Budget entièrement réparti · ' + SA.eur(allocated) : left > 0 ? SA.eur(left) + ' restant à répartir' : 'Dépassement de ' + SA.eur(-left) + ' sur le budget total', splitColor: left === 0 ? '#0F6B4A' : left > 0 ? '#8A4B00' : '#8D1D2C',
+        shopCount: c.shops.length, shops: c.shops.map(id => (SA.byId(SA.SHOPS, id) || { name: id }).name), products: (c.products || []).length ? c.products : ['aucun produit dans l’offre du BO'],
+        split, splitLabel: !allocated ? 'Pas de budget par boutique dans le BO' : left === 0 ? 'Budget entièrement réparti · ' + SA.eur(allocated) : left > 0 ? SA.eur(left) + ' non réparti (BO)' : 'Dépassement de ' + SA.eur(-left) + ' sur le budget total (BO)', splitColor: !allocated ? '#666666' : left === 0 ? '#0F6B4A' : left > 0 ? '#8A4B00' : '#8D1D2C',
         ticks, postMarks, adBars, adH: Math.max(44, ads.length * 28 + 16) + 'px', noAds: ads.length === 0, postN: posts.length, adN: ads.length,
         showToday: SA.TODAY >= start && SA.TODAY <= end, todayX: X(SA.TODAY) };
     }
-    // nouvelle campagne
-    const n = s.n || this.blank(), nt = T(n.type);
-    const upd = (patch) => this.setState({ n: Object.assign({}, n, patch), err: '' });
-    const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
-    const nv = { name: n.name, setName: (e) => upd({ name: e.target.value }),
-      types: SA.CTYPES.map(t => ({ name: t.name, icon: t.icon, tint: tint(t.color), ring: n.type === t.id ? t.color : 'rgba(34,34,34,0.10)', pick: () => upd({ type: t.id }) })),
-      typeHint: 'Levier : ' + SA.LEVERS[nt.lev].name + ' · KPI attendu : ' + nt.kpi,
-      start: n.start, end: n.end, setStart: (e) => upd({ start: e.target.value }), setEnd: (e) => upd({ end: e.target.value }), hasEnd: !nt.continuous, continuous: !!nt.continuous,
-      shops: SA.SHOPS.map(sh => Object.assign(chip(n.shops.includes(sh.id)), { name: sh.name, toggle: () => upd({ shops: n.shops.includes(sh.id) ? n.shops.filter(x => x !== sh.id) : n.shops.concat(sh.id) }) })),
-      catQ: this.state.catQ || '', setCatQ: (e) => this.setState({ catQ: e.target.value }), catPh: 'Rechercher parmi ' + SA.CATALOGUE.length + ' produits et gammes…',
-      // Les produits choisis d'abord, puis 30 résultats de la recherche.
-      products: SA.CATALOGUE.filter(p => n.products.includes(p.name)).concat(SA.CATALOGUE.filter(p => !n.products.includes(p.name) && (!this.state.catQ || (p.name + ' ' + (p.gamme || '')).toLowerCase().includes(String(this.state.catQ).toLowerCase()))).slice(0, 30)).map(p => Object.assign(chip(n.products.includes(p.name)), { name: p.name, toggle: () => upd({ products: n.products.includes(p.name) ? n.products.filter(x => x !== p.name) : n.products.concat(p.name) }) })),
-      metric: n.metric, setMetric: (e) => upd({ metric: e.target.value }), goal: n.goal, setGoal: (e) => upd({ goal: +e.target.value }), budget: n.budget, setBudget: (e) => upd({ budget: +e.target.value }),
-      hasErr: !!s.err, err: s.err };
     return {
       metaHref: SA.href('ads', 'src=meta&importer=1'),
       toggleRef: () => this.setState({ refOpen: !s.refOpen }), refOpen: s.refOpen,
       refHead: ['', 'Type', 'Levier', 'KPI attendu', 'Durée'],
       ctypes: SA.CTYPES.map(t => ({ name: t.name, color: t.color, tint: tint(t.color), icon: t.icon, lev: t.lev, levName: SA.LEVERS[t.lev].name, kpi: t.kpi, dur: t.continuous ? 'Continue' : 'Datée' })),
       tabs: tabsDef.map(([k, label, arr]) => ({ label, n: arr.length, bg: s.tab === k ? '#8D1D2C' : 'transparent', fg: s.tab === k ? '#FFFFFF' : '#444444', pick: () => this.setState({ tab: k }) })),
-      list, f, n: nv, newOpen: s.newOpen,
-      openNew: () => this.setState({ newOpen: true, n: this.blank(), err: '' }), closeNew: () => this.setState({ newOpen: false }),
-      createCamp: () => {
-        if (!n.name.trim()) { this.setState({ err: 'Donnez un nom à l’opération.' }); return; }
-        if (!n.shops.length) { this.setState({ err: 'Choisissez au moins une boutique.' }); return; }
-        if (!nt.continuous && n.end < n.start) { this.setState({ err: 'La date de fin précède la date de début.' }); return; }
-        const per = Math.floor(n.budget / n.shops.length / 10) * 10, split = {}; n.shops.forEach(id => { split[id] = per; }); split[n.shops[0]] += n.budget - per * n.shops.length;
-        const camp = { id: 'c' + Date.now(), name: n.name.trim(), type: n.type, start: n.start, end: nt.continuous ? null : n.end, status: n.start <= SA.TODAY ? 'en cours' : 'à venir', shops: n.shops, products: n.products, goal: { metric: n.metric, value: n.goal }, budget: n.budget, split };
-        SA.save({ campaigns: st.campaigns.concat(camp) }); SA.log('Sarah Lambert (Franchiseur)', 'Opération', 'Création de « ' + camp.name + ' »');
-        this.setState({ newOpen: false, selId: camp.id, tab: 'all' });
-      },
+      list, f, boHref: SA.opsLink(), nOps: camps.length + ' opération' + (camps.length > 1 ? 's' : ''),
+      hasOpsErr: !!SA.opsErreur(), opsErr: SA.opsErreur() || '',
     };
   }
 }
