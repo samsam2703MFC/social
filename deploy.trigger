@@ -31,3 +31,4 @@ Relivraison : calendriers Facebook, lecture de repli (/posts, /feed) — sonde �
 Relivraison : connexions et suivi au niveau du réseau (Instagram, compte pub) — 2026-10-12T10:23:24Z
 Relivraison : compte publicitaire du réseau repris du portefeuille — 2026-10-12T10:25:20Z
 Relivraison : statut du compte publicitaire en clair — 2026-10-12T10:28:02Z
+Relivraison : vues des publications au calendrier, maquette Contrôle — sonde — 2026-10-12T10:54:19Z
