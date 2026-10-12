@@ -96,9 +96,9 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
     if ($m === 'GET' && $path === '17841/insights') { return [200, ['data' => [['name' => 'follower_count', 'period' => 'day', 'values' => [['value' => 4, 'end_time' => date('Y-m-d') . 'T07:00:00+0000']]]]]]; }
     // Chiffres d'une publication (fiche du calendrier) : la Page 111 a retiré post_clicks (refus du lot), la 222 refuse les insights.
     if ($m === 'GET' && preg_match('#^111_\d+/insights$#', $path)) {
-        if (!empty($GLOBALS['INSIGHTS_VIDES'])) { return [200, ['data' => []]]; }
         $noms = explode(',', (string) ($p['metric'] ?? ''));
         if (array_intersect($noms, ['post_clicks', 'post_impressions', 'post_impressions_unique'])) { return [400, ['error' => ['code' => 100, 'message' => '(#100) The value must be a valid insights metric']]]; }
+        if (!empty($GLOBALS['INSIGHTS_VIDES'])) { return [200, ['data' => []]]; }  // token sans read_insights (prod) : métriques acceptées, aucune valeur
         $v = ['post_media_view' => 1234, 'post_total_media_view_unique' => 980, 'post_video_views' => 0, 'post_reactions_by_type_total' => ['like' => 30, 'love' => 5]];
         return [200, ['data' => array_values(array_map(static fn ($n) => ['name' => $n, 'period' => 'lifetime', 'values' => [['value' => $v[$n]]]], array_intersect($noms, array_keys($v))))]];
     }

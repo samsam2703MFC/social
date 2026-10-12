@@ -259,8 +259,10 @@ function socCalStats(string $id, string $compte): array
     if ($tok === null) { $out['motif'] = 'compte non accessible au token (Page non partagée avec l’utilisateur système)'; return $out; }
     $perm = $fb ? 'read_insights' : 'instagram_manage_insights';
     $metriques = $fb ? SOC_STATS_FB : SOC_STATS_IG;
-    $lire = static function (array $noms) use ($mid, $tok, $fb): array {
+    $repondu = false;  // au moins une métrique acceptée par Meta (même sans valeur)
+    $lire = static function (array $noms) use ($mid, $tok, $fb, &$repondu): array {
         $r = Meta::call('GET', $mid . '/insights', ['metric' => implode(',', $noms)] + ($fb ? ['period' => 'lifetime'] : []), $tok);
+        $repondu = true;
         $v = [];
         foreach ((array) ($r['data'] ?? []) as $d) {
             $x = socCalValeur($d['values'][0]['value'] ?? ($d['total_value']['value'] ?? null));
@@ -284,10 +286,11 @@ function socCalStats(string $id, string $compte): array
             }
         }
     }
-    // Rien de lu et rien de refusé : Meta répond vide quand le token n'a pas la permission (comme pour les abonnés).
+    // Rien de lu : une métrique acceptée mais vide = le token n'a pas la permission (Meta répond vide, comme pour les
+    // abonnés) ; les anciens noms refusés (#100, métrique retirée) ne sont alors pas la cause.
     if ($out['motif'] === null && !array_filter(array_intersect_key($out, $metriques), static fn ($v) => $v !== null)) {
-        $out['motif'] = $erreur !== null ? 'vues illisibles : (' . $erreur->metaCode . ') ' . $erreur->getMessage()
-            : 'vues indisponibles : Meta ne renvoie aucun chiffre, la permission ' . $perm . ' manque au token';
+        $out['motif'] = $repondu || $erreur === null ? 'vues indisponibles : Meta ne renvoie aucun chiffre, la permission ' . $perm . ' manque au token'
+            : 'vues illisibles : (' . $erreur->metaCode . ') ' . $erreur->getMessage();
     }
     // Réactions, commentaires, partages : champs du post (Facebook : `pages_read_user_content`), utiles même sans insights.
     try {
