@@ -273,7 +273,8 @@ function sfCatalogueBrut(string $shop): array
 {
     $cle = 'tfb_cache_catalogue_' . preg_replace('/\W/', '', $shop);
     $c = socSetting($cle);
-    if (is_array($c) && ($c['le'] ?? 0) > time() - 21600 && !empty($c['items'])) { return $c['items']; }
+    // v2 : les articles disent s'ils sont vendus sur le webshop (lien produit du webshop).
+    if (is_array($c) && ($c['v'] ?? 1) === 2 && ($c['le'] ?? 0) > time() - 21600 && !empty($c['items'])) { return $c['items']; }
     try {
         $fr = Tfb::liste(Tfb::get('/shops/' . rawurlencode($shop) . '/products/available'));
         $nl = [];
@@ -287,7 +288,7 @@ function sfCatalogueBrut(string $shop): array
             $items[] = ['id' => 'p' . $p['id'], 'apiId' => (int) $p['id'], 'webshop' => !empty($p['webshop_active']), 'name' => (string) $p['name'], 'nameNl' => ($nl[(string) $p['id']] ?? '') ?: (string) $p['name'],
                 'price' => $prix !== null ? number_format($prix, 2, ',', '') : '', 'img' => socIllus($cat, (string) $p['name']), 'gamme' => $cat];
         }
-        if ($items) { socSettingPut($cle, ['le' => time(), 'items' => $items], false); return $items; }
+        if ($items) { socSettingPut($cle, ['v' => 2, 'le' => time(), 'items' => $items], false); return $items; }
     } catch (Throwable $e) { /* repli */ }
     if (is_array($c['items'] ?? null) && $c['items']) { return $c['items']; }
     return array_values(array_map(static fn ($p) => array_intersect_key($p, array_flip(['id', 'name', 'nameNl', 'price', 'img', 'gamme'])),
