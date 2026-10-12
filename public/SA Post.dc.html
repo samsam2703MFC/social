@@ -110,6 +110,7 @@
                 <label style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Importer<span style="font-size:10px;color:#666666;font-weight:400;">photos</span>
                   <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ onFiles }}" style="display:none;">
                 </label>
+                <button onClick="{{ clearPhotos }}" title="Retirer toutes les photos du post" style="height:68px;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;">Vider</button>
                 <sc-if value="{{ isBrut }}" hint-placeholder-val="{{ false }}">
                   <label style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Vidéo<span style="font-size:10px;color:#666666;font-weight:400;">MP4 · 60 s</span>
                     <input type="file" accept="video/*" onChange="{{ onVideo }}" style="display:none;">
@@ -118,6 +119,53 @@
               </sc-if>
             </div>
           </div>
+
+          <sc-if value="{{ notLocked }}" hint-placeholder-val="{{ true }}">
+      <!-- Recherche médiathèque -->
+      <div style="background:#FBF8F4;border:0.5px solid rgba(34,34,34,0.10);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;margin:0;">Rechercher dans la médiathèque</p>
+          <button onClick="{{ openLib }}" style="background:transparent;border:none;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;padding:4px 0;">Gérer</button>
+        </div>
+        <input type="search" value="{{ query }}" onChange="{{ setQuery }}" placeholder="Nom, catégorie, saison…" style="width:100%;box-sizing:border-box;font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+        <div style="display:flex;gap:8px;">
+          <select value="{{ fCat }}" onChange="{{ setFCat }}" style="flex:1;min-width:0;font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;">
+            <option value="">Toutes catégories</option>
+            <option value="Viennoiseries">Viennoiseries</option>
+            <option value="Pains">Pains</option>
+            <option value="Pâtisseries">Pâtisseries</option>
+            <option value="Tartes">Tartes</option>
+            <option value="Sandwichs &amp; salés">Sandwichs &amp; salés</option>
+            <option value="Boissons">Boissons</option>
+            <option value="Ambiance &amp; boutique">Ambiance &amp; boutique</option>
+            <option value="Illustrations">Illustrations</option>
+          </select>
+          <select value="{{ fSeason }}" onChange="{{ setFSeason }}" style="flex:1;min-width:0;font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;">
+            <option value="">Toutes saisons</option>
+            <option value="Toute l'année">Toute l'année</option>
+            <option value="Printemps">Printemps</option>
+            <option value="Été">Été</option>
+            <option value="Automne">Automne</option>
+            <option value="Hiver">Hiver</option>
+            <option value="Noël &amp; Nouvel An">Noël &amp; Nouvel An</option>
+            <option value="Épiphanie">Épiphanie</option>
+            <option value="Saint-Valentin">Saint-Valentin</option>
+            <option value="Pâques">Pâques</option>
+            <option value="Fête des mères">Fête des mères</option>
+            <option value="Saint-Nicolas">Saint-Nicolas</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;max-height:212px;overflow:auto;">
+          <sc-for list="{{ results }}" as="r" hint-placeholder-count="0">
+            <button onClick="{{ r.toggle }}" title="{{ r.tip }}" style="position:relative;aspect-ratio:1/1;border-radius:8px;background:#F4EFE8;border:2px solid {{ r.ring }};box-sizing:border-box;cursor:pointer;overflow:hidden;padding:0;">
+              <img src="{{ r.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;">
+              <sc-if value="{{ r.inPost }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:#8D1D2C;color:#FFFFFF;font-size:10px;line-height:16px;text-align:center;display:block;">✓</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+        <p style="font-size:12px;color:#666666;margin:0;">{{ resultLabel }} · cliquez pour ajouter ou retirer du post</p>
+      </div>
+          </sc-if>
 
           <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
             <!-- Style -->
@@ -128,13 +176,116 @@
                   <sc-for list="{{ cutModes }}" as="cm" hint-placeholder-count="3"><button onClick="{{ cm.pick }}" style="border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:500;cursor:pointer;background:{{ cm.bg }};color:{{ cm.fg }};">{{ cm.label }}</button></sc-for>
                 </div>
               </div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                <sc-for list="{{ stylesSingle }}" as="st" hint-placeholder-count="6"><button onClick="{{ st.pick }}" style="border-radius:8px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ st.border }};background:{{ st.bg }};color:{{ st.fg }};display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:{{ st.sw }};box-shadow:inset 0 0 0 0.5px rgba(34,34,34,0.25);"></span>{{ st.name }}</button></sc-for>
-              </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:10px;">
+          <button onClick="{{ pickEpure }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selEpure }};background:#F5EFE4;padding:12px;display:flex;flex-direction:column;align-items:center;gap:5px;box-sizing:border-box;">
+              <div style="width:22px;height:3px;background:#8D1D2C;"></div>
+              <div style="width:46px;height:7px;background:#232220;"></div>
+              <div style="width:30px;height:30px;border-radius:50%;background:#8A847C;opacity:0.5;margin-top:2px;"></div>
+              <div style="width:20px;height:6px;background:#8D1D2C;margin-top:auto;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Épuré</span>
+          </button>
+          <button onClick="{{ pickAbricot }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selAbricot }};background:#F2C9A0;padding:12px;position:relative;box-sizing:border-box;overflow:hidden;">
+              <div style="width:50px;height:9px;background:#232220;"></div>
+              <div style="width:34px;height:9px;background:#232220;margin-top:3px;"></div>
+              <div style="position:absolute;right:8px;bottom:8px;width:40px;height:40px;border-radius:50%;background:#8A847C;opacity:0.6;"></div>
+              <div style="position:absolute;left:12px;bottom:12px;width:18px;height:7px;background:#8D1D2C;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Abricot</span>
+          </button>
+          <button onClick="{{ pickRuby }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selRuby }};background:#8D1D2C;padding:12px;display:flex;flex-direction:column;align-items:center;gap:5px;box-sizing:border-box;">
+              <div style="width:32px;height:32px;border-radius:50%;background:#F2C9A0;opacity:0.85;"></div>
+              <div style="width:46px;height:7px;background:#FFFFFF;margin-top:2px;"></div>
+              <div style="width:20px;height:6px;background:#FFFFFF;margin-top:auto;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Ruby</span>
+          </button>
+          <button onClick="{{ pickNoir }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selNoir }};background:#232220;padding:12px;display:flex;flex-direction:column;align-items:center;gap:5px;box-sizing:border-box;">
+              <div style="width:22px;height:3px;background:#F2C9A0;"></div>
+              <div style="width:46px;height:7px;background:#FFFFFF;"></div>
+              <div style="width:30px;height:30px;border-radius:50%;background:#8A847C;opacity:0.6;margin-top:2px;"></div>
+              <div style="width:20px;height:6px;background:#F2C9A0;margin-top:auto;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Noir</span>
+          </button>
+          <button onClick="{{ pickPlein }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPlein }};background:linear-gradient(180deg,#A39D94 0%,#8A847C 45%,#2E2C2A 100%);padding:12px;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;box-sizing:border-box;">
+              <div style="width:48px;height:8px;background:#FFFFFF;"></div>
+              <div style="width:20px;height:6px;background:#F2C9A0;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Plein cadre</span>
+          </button>
+          <button onClick="{{ pickDuo }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selDuo }};background:linear-gradient(90deg,#8A847C 0%,#8A847C 44%,#F5EFE4 44%,#F5EFE4 100%);padding:12px 10px 12px 0;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;box-sizing:border-box;">
+              <div style="width:34px;height:7px;background:#232220;"></div>
+              <div style="width:24px;height:7px;background:#232220;"></div>
+              <div style="width:16px;height:6px;background:#8D1D2C;margin-top:8px;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Duo</span>
+          </button>
+        </div>
               <span style="font-size:12px;color:#666666;margin-top:4px;">Style · montage (photo 1 → case 1, photo 2 → case 2…)</span>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                <sc-for list="{{ stylesMontage }}" as="st" hint-placeholder-count="16"><button onClick="{{ st.pick }}" style="border-radius:8px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ st.border }};background:{{ st.bg }};color:{{ st.fg }};">{{ st.name }} <span style="font-size:10px;opacity:0.7;">· {{ st.slots }}</span></button></sc-for>
-              </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:10px;">
+          <button onClick="{{ pickMosaique }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selMosaique }};background:#F5EFE4;padding:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;box-sizing:border-box;overflow:hidden;">
+              <div style="display:flex;flex-direction:column;gap:4px;margin-top:-6px;"><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div><div style="height:28px;border-radius:4px;background:#D9D2C7;"></div><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div></div>
+              <div style="display:flex;flex-direction:column;gap:4px;margin-top:-16px;"><div style="height:28px;border-radius:4px;background:#D9D2C7;"></div><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div><div style="height:28px;border-radius:4px;background:#D9D2C7;"></div></div>
+              <div style="display:flex;flex-direction:column;gap:4px;margin-top:-10px;"><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div><div style="height:28px;border-radius:4px;background:#D9D2C7;"></div><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Mosaïque</span>
+          </button>
+          <button onClick="{{ pickGrille }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selGrille }};background:#F5EFE4;padding:10px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr auto;gap:4px;box-sizing:border-box;">
+              <div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+              <div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+              <div style="height:6px;width:70%;background:#232220;margin-top:3px;"></div><div style="height:6px;width:40%;background:#8D1D2C;margin-top:3px;justify-self:end;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Grille 2×2</span>
+          </button>
+          <button onClick="{{ pickTrio }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selTrio }};background:#F5EFE4;padding:10px;display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr auto;gap:4px;box-sizing:border-box;">
+              <div style="border-radius:4px;background:#D9D2C7;grid-row:1 / span 2;"></div><div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+              <div style="height:6px;width:70%;background:#232220;margin-top:3px;"></div><div style="height:6px;width:60%;background:#8D1D2C;margin-top:3px;justify-self:end;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Trio</span>
+          </button>
+          <button onClick="{{ pickCollage }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selCollage }};background:#F5EFE4;padding:6px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:4px;box-sizing:border-box;">
+              <div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+              <div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;"><div style="width:60%;height:4px;background:#232220;"></div><div style="width:35%;height:4px;background:#8D1D2C;"></div></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Collage</span>
+          </button>
+          <button onClick="{{ pickBandes }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selBandes }};background:#F5EFE4;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr auto;gap:2px;box-sizing:border-box;overflow:hidden;">
+              <div style="background:#D9D2C7;"></div><div style="background:#D9D2C7;"></div><div style="background:#D9D2C7;"></div>
+              <div style="grid-column:1 / span 3;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;"><div style="height:6px;width:40%;background:#232220;"></div><div style="height:6px;width:22%;background:#8D1D2C;"></div></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Bandes</span>
+          </button>
+          <button onClick="{{ pickGalerie }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selGalerie }};background:#F5EFE4;padding:10px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:3px;box-sizing:border-box;">
+              <div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div>
+              <div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div>
+              <div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Galerie 3×3</span>
+          </button>
+          <button onClick="{{ pickFrise }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selFrise }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:25%;top:14%;width:50%;height:8%;background:#232220;border-radius:1px;"></div><div style="position:absolute;left:6%;top:36%;width:19%;height:19%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:29%;top:36%;width:19%;height:19%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:52%;top:36%;width:19%;height:19%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:75%;top:36%;width:19%;height:19%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:38%;top:72%;width:24%;height:6%;background:#8D1D2C;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Frise</span></button>
+          <button onClick="{{ pickPuzzle }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPuzzle }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:6%;top:6%;width:56%;height:56%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:6%;width:28%;height:26%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:36%;width:28%;height:26%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:6%;top:66%;width:28%;height:28%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:37%;top:66%;width:28%;height:28%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:66%;width:28%;height:28%;background:#FFFFFF;border-radius:4px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Puzzle</span></button>
+          <button onClick="{{ pickPastilles }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPastilles }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:18%;top:14%;width:28%;height:28%;background:#D9D2C7;border-radius:999px;"></div><div style="position:absolute;left:54%;top:14%;width:28%;height:28%;background:#D9D2C7;border-radius:999px;"></div><div style="position:absolute;left:18%;top:48%;width:28%;height:28%;background:#D9D2C7;border-radius:999px;"></div><div style="position:absolute;left:54%;top:48%;width:28%;height:28%;background:#D9D2C7;border-radius:999px;"></div><div style="position:absolute;left:10%;top:84%;width:40%;height:6%;background:#232220;border-radius:1px;"></div><div style="position:absolute;left:66%;top:84%;width:24%;height:6%;background:#8D1D2C;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Pastilles</span></button>
+          <button onClick="{{ pickEpinglees }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selEpinglees }};background:#EAE4DC;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:10%;top:12%;width:40%;height:46%;background:#FFFFFF;border-radius:3px;transform:rotate(-6deg);"></div><div style="position:absolute;left:50%;top:8%;width:40%;height:48%;background:#FFFFFF;border-radius:3px;transform:rotate(4deg);"></div><div style="position:absolute;left:28%;top:46%;width:44%;height:40%;background:#FFFFFF;border-radius:3px;transform:rotate(-2deg);"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Épinglées</span></button>
+          <button onClick="{{ pickEtagere }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selEtagere }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:6%;top:44%;width:88%;height:3%;background:#8D1D2C;border-radius:0px;"></div><div style="position:absolute;left:6%;top:84%;width:88%;height:3%;background:#8D1D2C;border-radius:0px;"></div><div style="position:absolute;left:10%;top:22%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:38%;top:22%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:22%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:10%;top:62%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:38%;top:62%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:62%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Étagère</span></button>
+          <button onClick="{{ pickDiagonale }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selDiagonale }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:6%;top:12%;width:50%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:25%;top:40%;width:50%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:44%;top:68%;width:50%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:6%;top:74%;width:28%;height:6%;background:#232220;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Diagonale</span></button>
+          <button onClick="{{ pickVedette }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selVedette }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:6%;top:14%;width:88%;height:40%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:6%;top:60%;width:46%;height:6%;background:#232220;border-radius:1px;"></div><div style="position:absolute;left:70%;top:60%;width:24%;height:6%;background:#8D1D2C;border-radius:1px;"></div><div style="position:absolute;left:6%;top:74%;width:19%;height:18%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:29%;top:74%;width:19%;height:18%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:52%;top:74%;width:19%;height:18%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:75%;top:74%;width:19%;height:18%;background:#D9D2C7;border-radius:4px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Vedette</span></button>
+          <button onClick="{{ pickDamier }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selDamier }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:8%;top:8%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:29.5%;top:8%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:51%;top:8%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:72.5%;top:8%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:8%;top:25%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:29.5%;top:25%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:51%;top:25%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:72.5%;top:25%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:8%;top:42%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:29.5%;top:42%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:51%;top:42%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:72.5%;top:42%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:8%;top:59%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:29.5%;top:59%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:51%;top:59%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:72.5%;top:59%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:8%;top:80%;width:50%;height:6%;background:#232220;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Damier</span></button>
+          <button onClick="{{ pickEncadre }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selEncadre }};background:#8D1D2C;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:8%;top:16%;width:40%;height:32%;background:#F5EFE4;border-radius:4px;border:2px solid #FFFFFF;box-sizing:border-box;"></div><div style="position:absolute;left:52%;top:16%;width:40%;height:32%;background:#F5EFE4;border-radius:4px;border:2px solid #FFFFFF;box-sizing:border-box;"></div><div style="position:absolute;left:8%;top:52%;width:40%;height:32%;background:#F5EFE4;border-radius:4px;border:2px solid #FFFFFF;box-sizing:border-box;"></div><div style="position:absolute;left:52%;top:52%;width:40%;height:32%;background:#F5EFE4;border-radius:4px;border:2px solid #FFFFFF;box-sizing:border-box;"></div><div style="position:absolute;left:8%;top:88%;width:50%;height:5%;background:#FFFFFF;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Encadré</span></button>
+          <button onClick="{{ pickNuit }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selNuit }};background:#232220;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:8%;top:16%;width:26%;height:50%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:37%;top:16%;width:26%;height:50%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:16%;width:26%;height:50%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:8%;top:76%;width:50%;height:8%;background:#FFFFFF;border-radius:1px;"></div><div style="position:absolute;left:66%;top:76%;width:26%;height:8%;background:#F2C9A0;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Nuit</span></button>
+        </div>
             </div>
 
             <!-- Textes sur le visuel -->
@@ -433,40 +584,124 @@
     </div>
   </main>
 
-  <!-- ===== Médiathèque ===== -->
+  <!-- ===== Médiathèque (celle de Posts Facebook : catégories, illustrations, saisons, classement) ===== -->
+  <!-- ================= MÉDIATHÈQUE (modale) ================= -->
   <sc-if value="{{ libOpen }}" hint-placeholder-val="{{ false }}">
-    <div style="position:fixed;inset:0;background:rgba(35,34,32,0.55);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;">
-      <div style="background:#FFFFFF;border-radius:12px;width:100%;max-width:1000px;height:min(780px,92vh);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(35,34,32,0.3);">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:0.5px solid rgba(34,34,34,0.10);flex-wrap:wrap;">
-          <div style="display:flex;flex-direction:column;gap:2px;">
-            <span style="font-family:var(--font-display);font-size:20px;">MEDIATHEQUE</span>
-            <span style="font-size:12px;color:#666666;">Stockage Cloudflare R2 · {{ libCount }} visuels · recherche par produit et par gamme</span>
+    <div style="position:fixed;inset:0;background:rgba(35,34,32,0.55);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;">
+      <div onDragOver="{{ onDragOver }}" onDrop="{{ onDropLib }}" style="background:#FFFFFF;border-radius:12px;width:100%;max-width:1240px;height:min(900px,94vh);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(35,34,32,0.3);">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;border-bottom:0.5px solid rgba(34,34,34,0.10);flex-wrap:wrap;">
+          <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+            <span style="font-family:'Vank','Gotham';font-size:20px;color:#232220;">MÉDIATHÈQUE</span>
+            <span style="font-size:13px;color:#666666;">{{ libCount }} visuels · {{ selCount }} dans le post</span>
           </div>
-          <div style="display:flex;gap:8px;">
-            <button onClick="{{ closeLib }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Annuler</button>
-            <button onClick="{{ confirmLib }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Ajouter {{ libPickCount }} visuel(s)</button>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <label style="background:transparent;border:0.5px solid rgba(34,34,34,0.18);color:#222222;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;" style-hover="border-color:#222222;">
+              Importer des photos
+              <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ onFileLib }}" style="display:none;">
+            </label>
+            <button onClick="{{ closeLib }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Terminer</button>
           </div>
         </div>
-        <div style="display:flex;gap:8px;padding:12px 18px;border-bottom:0.5px solid rgba(34,34,34,0.10);flex-wrap:wrap;">
-          <input type="search" value="{{ lq }}" onChange="{{ setLq }}" placeholder="Produit, gamme, saison…" style="flex:2 1 220px;font-size:14px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
-          <select value="{{ lcat }}" onChange="{{ setLcat }}" style="flex:1 1 160px;font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;">
-            <option value="">Toutes catégories</option>
-            <sc-for list="{{ libCats }}" as="o" hint-placeholder-count="0"><option value="{{ o }}">{{ o }}</option></sc-for>
-          </select>
-        </div>
-        <div style="flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));grid-auto-rows:max-content;gap:12px;align-content:start;">
-          <sc-for list="{{ libItems }}" as="it" hint-placeholder-count="0">
-            <button onClick="{{ it.toggle }}" style="display:block;padding:0;border-radius:10px;border:2px solid {{ it.ring }};background:#FFFFFF;cursor:pointer;overflow:clip;text-align:left;">
-              <span style="display:block;position:relative;width:100%;height:0;padding-bottom:100%;background:#F4EFE8;">
-                <img src="{{ it.src }}" alt="" style="position:absolute;left:8px;top:8px;width:calc(100% - 16px);height:calc(100% - 16px);object-fit:contain;">
-                <sc-if value="{{ it.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:6px;right:6px;min-width:22px;height:22px;border-radius:999px;background:#8D1D2C;color:#FFFFFF;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;padding:0 6px;box-sizing:border-box;">{{ it.order }}</span></sc-if>
-              </span>
-              <span style="display:block;padding:6px 8px 8px;">
-                <span style="display:block;font-size:11px;font-weight:500;color:#222222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ it.name }}</span>
-                <span style="display:block;font-size:10px;color:#666666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ it.tags }}</span>
-              </span>
-            </button>
-          </sc-for>
+
+        <div style="flex:1 1 auto;min-height:0;display:flex;">
+
+          <nav style="width:216px;flex:0 0 216px;border-right:0.5px solid rgba(34,34,34,0.10);padding:14px 10px;overflow:auto;display:flex;flex-direction:column;gap:2px;box-sizing:border-box;background:#FAF7F2;">
+            <button onClick="{{ navAll }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;border-radius:8px;padding:9px 10px;font-size:13px;cursor:pointer;box-sizing:border-box;background:{{ navAllBg }};color:{{ navAllFg }};font-weight:500;"><span>Tous les visuels</span><span style="font-size:11px;color:#8A847C;flex:0 0 auto;">{{ libCount }}</span></button>
+            <button onClick="{{ navInPost }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;border-radius:8px;padding:9px 10px;font-size:13px;cursor:pointer;box-sizing:border-box;background:{{ navPostBg }};color:{{ navPostFg }};font-weight:500;"><span>Dans le post</span><span style="font-size:11px;color:#8A847C;flex:0 0 auto;">{{ selCount }}</span></button>
+            <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#8A847C;margin:14px 10px 6px;">Catégories</p>
+            <sc-for list="{{ navCats }}" as="c" hint-placeholder-count="0">
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                <button onClick="{{ c.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;border-radius:8px;padding:9px 10px;font-size:13px;cursor:pointer;box-sizing:border-box;background:{{ c.bg }};color:{{ c.fg }};font-weight:{{ c.w }};"><span>{{ c.name }}</span><span style="font-size:11px;color:#8A847C;flex:0 0 auto;">{{ c.count }}</span></button>
+                <sc-if value="{{ c.open }}" hint-placeholder-val="{{ false }}">
+                  <sc-for list="{{ c.subs }}" as="sb" hint-placeholder-count="0">
+                    <button onClick="{{ sb.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;border-radius:8px;padding:9px 10px;font-size:13px;cursor:pointer;box-sizing:border-box;padding-left:24px;background:{{ sb.bg }};color:{{ sb.fg }};font-weight:{{ sb.w }};font-size:12px;"><span>{{ sb.name }}</span><span style="font-size:11px;color:#8A847C;flex:0 0 auto;">{{ sb.count }}</span></button>
+                  </sc-for>
+                </sc-if>
+              </div>
+            </sc-for>
+            <button onClick="{{ navUnclassified }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;border-radius:8px;padding:9px 10px;font-size:13px;cursor:pointer;box-sizing:border-box;margin-top:6px;background:{{ navUncBg }};color:{{ navUncFg }};"><span>Non classés</span><span style="font-size:11px;color:#8A847C;flex:0 0 auto;">{{ unclassifiedCount }}</span></button>
+            <div style="margin-top:auto;padding:12px 10px 0;">
+              <button onClick="{{ restoreDs }}" title="Ré-importe les illustrations du design system supprimées" style="background:transparent;border:none;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;padding:4px 0;text-align:left;">Restaurer les illustrations</button>
+            </div>
+          </nav>
+
+          <div style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;">
+            <div style="display:flex;gap:8px;align-items:center;padding:12px 16px;border-bottom:0.5px solid rgba(34,34,34,0.10);flex-wrap:wrap;">
+              <input type="search" value="{{ mQuery }}" onChange="{{ setMQuery }}" placeholder="Rechercher un visuel…" style="flex:1 1 220px;min-width:0;font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+              <select value="{{ mSeason }}" onChange="{{ setMSeason }}" style="flex:0 1 190px;min-width:0;font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;text-transform:none;letter-spacing:0;font-weight:400;">
+                <option value="">Toutes saisons</option><option value="Toute l'année">Toute l'année</option><option value="Printemps">Printemps</option><option value="Été">Été</option><option value="Automne">Automne</option><option value="Hiver">Hiver</option><option value="Noël &amp; Nouvel An">Noël &amp; Nouvel An</option><option value="Épiphanie">Épiphanie</option><option value="Saint-Valentin">Saint-Valentin</option><option value="Pâques">Pâques</option><option value="Fête des mères">Fête des mères</option><option value="Saint-Nicolas">Saint-Nicolas</option>
+              </select>
+              <sc-if value="{{ hasFilter }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ clearFilters }}" style="background:transparent;border:none;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;padding:8px 4px;">Effacer les filtres</button>
+              </sc-if>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px 4px;">
+              <span style="font-size:12px;color:#666666;">{{ mLabel }}</span>
+              <sc-if value="{{ mSelNotAll }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ addResultsToPost }}" style="background:transparent;border:0.5px solid rgba(34,34,34,0.18);color:#222222;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;" style-hover="border-color:#222222;">Tout ajouter au post · {{ mCount }}</button>
+              </sc-if>
+            </div>
+            <div style="flex:1 1 auto;min-height:0;overflow:auto;padding:8px 16px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));grid-auto-rows:max-content;gap:14px;align-content:start;">
+              <sc-for list="{{ mResults }}" as="m" hint-placeholder-count="0">
+                <div onClick="{{ m.select }}" style="display:block;border:2px solid {{ m.ring }};border-radius:10px;background:#FFFFFF;cursor:pointer;overflow:clip;box-sizing:border-box;">
+                  <div style="position:relative;width:100%;height:0;padding-bottom:100%;background:#F4EFE8;">
+                    <img src="{{ m.src }}" alt="" style="position:absolute;left:10px;top:10px;width:calc(100% - 20px);height:calc(100% - 20px);object-fit:contain;display:block;">
+                    <sc-if value="{{ m.inPost }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:8px;left:8px;height:20px;padding:0 8px;border-radius:999px;background:#8D1D2C;color:#FFFFFF;font-size:11px;font-weight:500;line-height:20px;display:block;">Dans le post</span></sc-if>
+                    <button onClick="{{ m.toggle }}" style="position:absolute;bottom:8px;right:8px;border:none;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ m.btnBg }};color:{{ m.btnFg }};">{{ m.btn }}</button>
+                  </div>
+                  <div style="padding:8px 10px 10px;">
+                    <div style="font-size:12px;font-weight:500;color:#222222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.name }}</div>
+                    <div style="font-size:11px;color:#666666;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ m.tags }}</div>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ mEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="grid-column:1 / -1;padding:48px 24px;text-align:center;color:#666666;font-size:14px;line-height:1.6;display:flex;flex-direction:column;align-items:center;gap:10px;">
+                  <span>Aucun visuel ne correspond à ces filtres.</span>
+                  <button onClick="{{ clearFilters }}" style="background:transparent;border:0.5px solid rgba(34,34,34,0.18);color:#222222;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Effacer les filtres</button>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+
+          <sc-if value="{{ hasEdit }}" hint-placeholder-val="{{ false }}">
+            <div style="width:292px;flex:0 0 292px;border-left:0.5px solid rgba(34,34,34,0.10);padding:18px;overflow:auto;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;">
+              <div style="position:relative;width:100%;height:0;padding-bottom:100%;background:#F4EFE8;border-radius:10px;overflow:hidden;">
+                <img src="{{ editSrc }}" alt="" style="position:absolute;left:14px;top:14px;width:calc(100% - 28px);height:calc(100% - 28px);object-fit:contain;display:block;">
+                <sc-if value="{{ editInPost }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:10px;left:10px;height:20px;padding:0 8px;border-radius:999px;background:#8D1D2C;color:#FFFFFF;font-size:11px;font-weight:500;line-height:20px;display:block;">Dans le post</span></sc-if>
+              </div>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Nom
+                <input type="text" value="{{ editName }}" onChange="{{ setEditName }}" style="font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;text-transform:none;letter-spacing:0;font-weight:400;" style-focus="border-color:#8D1D2C;">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Catégorie
+                <select value="{{ editCat }}" onChange="{{ setEditCat }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;text-transform:none;letter-spacing:0;font-weight:400;">
+                  <option value="">Non classée</option><option value="Viennoiseries">Viennoiseries</option><option value="Pains">Pains</option><option value="Pâtisseries">Pâtisseries</option><option value="Tartes">Tartes</option><option value="Sandwichs &amp; salés">Sandwichs &amp; salés</option><option value="Boissons">Boissons</option><option value="Ambiance &amp; boutique">Ambiance &amp; boutique</option><option value="Illustrations">Illustrations</option>
+                </select>
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Sous-catégorie
+                <select value="{{ editSub }}" onChange="{{ setEditSub }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;text-transform:none;letter-spacing:0;font-weight:400;">
+                  <option value="">—</option>
+                  <sc-for list="{{ editSubOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o }}">{{ o }}</option></sc-for>
+                </select>
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Saisonnalité
+                <select value="{{ editSeason }}" onChange="{{ setEditSeason }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;text-transform:none;letter-spacing:0;font-weight:400;"><option value="Toute l'année">Toute l'année</option><option value="Printemps">Printemps</option><option value="Été">Été</option><option value="Automne">Automne</option><option value="Hiver">Hiver</option><option value="Noël &amp; Nouvel An">Noël &amp; Nouvel An</option><option value="Épiphanie">Épiphanie</option><option value="Saint-Valentin">Saint-Valentin</option><option value="Pâques">Pâques</option><option value="Fête des mères">Fête des mères</option><option value="Saint-Nicolas">Saint-Nicolas</option></select>
+              </label>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Rendu</span>
+                <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;">
+                  <button onClick="{{ editCutOn }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ ecBg }};color:{{ ecFg }};">Détourée</button>
+                  <button onClick="{{ editCutOff }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ efBg }};color:{{ efFg }};">Pleine</button>
+                </div>
+              </div>
+              <button onClick="{{ editToggle }}" style="margin-top:6px;background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:11px 16px;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">{{ editToggleLabel }}</button>
+              <button onClick="{{ editDelete }}" style="background:transparent;border:none;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;padding:8px 0;">Supprimer de la médiathèque</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ noEdit }}" hint-placeholder-val="{{ false }}">
+            <div style="width:292px;flex:0 0 292px;border-left:0.5px solid rgba(34,34,34,0.10);padding:24px;display:flex;align-items:center;justify-content:center;text-align:center;color:#666666;font-size:13px;line-height:1.6;box-sizing:border-box;">Cliquez un visuel pour le renommer, le classer et le mettre dans le post.</div>
+          </sc-if>
         </div>
       </div>
     </div>
@@ -511,7 +746,7 @@ class Component extends DCLogic {
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', campaign: '',
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
-      libOpen: false, lib: [], libPick: [], lq: '', lcat: '', toast: '', errors: [], saving: false };
+      libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false };
     if (!SA) return base;
     SA.SHOPS.forEach(s => { base.ch[s.id] = { fb: s.fb === 'connected', ig: s.igs === 'connected' }; });
     const id = SA.param('id'), p = id && SA.state().posts.find(x => x.id === id);
@@ -539,8 +774,46 @@ class Component extends DCLogic {
         r.onsuccess = () => { const db = r.result, tx = db.transaction('kv', 'readonly'), q = tx.objectStore('kv').get('library'); tx.oncomplete = () => { res(q.result); db.close(); }; tx.onerror = () => { rej(tx.error); db.close(); }; };
       });
     } catch (e) {}
-    if (!Array.isArray(lib) || !lib.length) lib = window.DS_ILLUS || [];
+    if (!Array.isArray(lib)) lib = [];
+    let removed = []; try { removed = JSON.parse(localStorage.getItem('latelier.fbpost.dsRemoved') || '[]'); } catch (e) {}
+    const have = new Set(lib.map(x => x.id)), rm = new Set(removed);
+    const fresh = (window.DS_ILLUS || []).filter(x => !have.has(x.id) && !rm.has(x.id));
+    if (fresh.length) { lib = lib.concat(fresh); this.saveLib(lib); }
     this.setState({ lib });
+  }
+  // ── Médiathèque (la même que Posts Facebook : IndexedDB « latelier-fbpost » + illustrations du design system) ──
+  CATS = {
+    'Viennoiseries': ['Croissants', 'Pains au chocolat', 'Brioches', 'Chaussons'],
+    'Pains': ['Baguettes', 'Pains spéciaux', 'Pains de mie', 'Petits pains'],
+    'Pâtisseries': ['Gâteaux', 'Entremets', 'Cupcakes', 'Biscuits & cookies'],
+    'Tartes': ['Tartes sucrées', 'Tartes salées', 'Quiches'],
+    'Sandwichs & salés': ['Sandwichs', 'Salades', 'Plateaux'],
+    'Boissons': ['Chaudes', 'Froides', 'Limonades'],
+    'Ambiance & boutique': ['Vitrine', 'Équipe', 'Atelier'],
+    'Illustrations': ['Produits', 'Fruits', 'Légumes', 'Saisonnier', 'Pictos', 'Services', 'Décoratif'],
+  };
+  saveLib(list) {
+    try { const r = indexedDB.open('latelier-fbpost', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => { const db = r.result, tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(list, 'library'); tx.oncomplete = () => db.close(); tx.onerror = () => db.close(); }; } catch (e) {}
+  }
+  updateLib(fn) { const lib = fn(this.state.lib.slice()); this.setState({ lib }); this.saveLib(lib); }
+  editItem(patch) { const id = this.state.editId; this.updateLib(l => l.map(x => x.id === id ? Object.assign({}, x, patch) : x)); }
+  norm(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+  matches(it, q, cat, sub, season) {
+    if (cat === '—') { if (it.cat) return false; } else if (cat && it.cat !== cat) return false;
+    if (sub && it.sub !== sub) return false;
+    if (season && it.season !== season) return false;
+    if (q) { const hay = this.norm([it.name, it.cat, it.sub, it.season].join(' ')); for (const w of this.norm(q).split(/\s+/).filter(Boolean)) if (!hay.includes(w)) return false; }
+    return true;
+  }
+  /** Des fichiers → la médiathèque (et le post, si demandé). */
+  async addFilesLib(files, toPost) {
+    const arr = Array.from(files || []).filter(f => /^image\//.test(f.type)).slice(0, 30); if (!arr.length) return;
+    const read = (await Promise.all(arr.map(f => this.readFile(f)))).filter(Boolean);
+    const added = read.map((x, i) => ({ id: 'u' + Date.now() + '-' + i + Math.random().toString(36).slice(2, 6), src: x.src, name: String(x.name || 'Photo').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '), cat: '', sub: '', season: "Toute l'année", cut: !!x.cut }));
+    if (!added.length) return;
+    const lib = this.state.lib.concat(added); this.saveLib(lib);
+    this.setState(st => ({ lib, photos: toPost ? st.photos.concat(added.map(x => ({ src: x.src, cut: x.cut, name: x.name }))) : st.photos, editId: toPost ? st.editId : added[0].id }));
   }
   componentDidUpdate() { this.montagePreview(); }
   componentWillUnmount() { clearTimeout(this._tt); clearTimeout(this._mT); this._dead = true; }
@@ -891,7 +1164,57 @@ class Component extends DCLogic {
       lenLabel: len + ' caractères' + (len > 125 ? ' · tronqué après 125 dans le fil' : ''), lenColor: len > 125 ? '#8A4B00' : '#666666',
       link: s.link, setLink: (e) => this.setState({ link: e.target.value }),
       campaign: s.campaign, setCampaign: (e) => this.setState({ campaign: e.target.value }), campOptions: st.campaigns.filter(c => c.status !== 'terminée').map(c => ({ id: c.id, name: c.name })),
-      // médiathèque
+      // médiathèque (comme Posts Facebook) : recherche dans le formulaire, modale à catégories, fiche d'un visuel
+      ...(() => {
+        const libAll = s.lib, inPost = (it) => s.photos.some(p => p.src === it.src);
+        const togglePost = (it) => { if (locked) return; this.setState(st => ({ photos: st.photos.some(p => p.src === it.src) ? st.photos.filter(p => p.src !== it.src) : st.photos.concat({ src: it.src, cut: it.cut !== false, name: it.name }) })); };
+        const tags = (it) => [it.cat || 'Non classée', it.sub, it.season].filter(Boolean).join(' · ');
+        const set = (k) => (e) => this.setState({ [k]: e.target.value });
+        const found = libAll.filter(it => this.matches(it, s.query, s.fCat, '', s.fSeason));
+        const mFound = libAll.filter(it => this.matches(it, s.mQuery, s.mCat, s.mSub, s.mSeason) && (!s.mOnlyPost || inPost(it)));
+        const navBg = (a) => a ? '#EAE4DC' : 'transparent', navFg = (a) => a ? '#8D1D2C' : '#222222', navW = (a) => a ? 500 : 400;
+        const allActive = !s.mCat && !s.mOnlyPost, postActive = !!s.mOnlyPost, uncActive = s.mCat === '—' && !s.mOnlyPost;
+        const ctx = s.mOnlyPost ? 'dans le post' : s.mCat === '—' ? 'non classés' : s.mSub ? s.mCat + ' › ' + s.mSub : s.mCat ? s.mCat : 'au total';
+        const ed = libAll.find(x => x.id === s.editId) || null;
+        const segL = (on) => on ? ['#FFFFFF', '#222222'] : ['transparent', '#666666'];
+        const [ecBg, ecFg] = segL(!!(ed && ed.cut)), [efBg, efFg] = segL(!!(ed && !ed.cut));
+        // Styles en cartes (celles de Posts Facebook) : selXxx = bordure, pickXxx = choix.
+        const cards = {};
+        this.STYLES1.concat(this.STYLES2).forEach(([k]) => { const C = k.charAt(0).toUpperCase() + k.slice(1); cards['sel' + C] = v.style === k ? '#8D1D2C' : 'transparent'; cards['pick' + C] = () => !locked && this.V({ style: k }); });
+        return Object.assign(cards, {
+          query: s.query, fCat: s.fCat, fSeason: s.fSeason, setQuery: set('query'), setFCat: set('fCat'), setFSeason: set('fSeason'),
+          results: found.slice(0, 40).map(it => ({ src: it.src, inPost: inPost(it), ring: inPost(it) ? '#8D1D2C' : 'transparent', tip: it.name + ' · ' + tags(it), toggle: () => togglePost(it) })),
+          resultLabel: found.length + (found.length > 1 ? ' visuels' : ' visuel'),
+          selCount: s.photos.length,
+          onDragOver: (e) => e.preventDefault(), onDropLib: (e) => { e.preventDefault(); e.stopPropagation(); this.addFilesLib(e.dataTransfer.files, false); },
+          onFileLib: (e) => { this.addFilesLib(e.target.files, false); e.target.value = ''; },
+          navAll: () => this.setState({ mCat: '', mSub: '', mOnlyPost: false }), navInPost: () => this.setState({ mOnlyPost: true, mCat: '', mSub: '' }),
+          navUnclassified: () => this.setState({ mCat: '—', mSub: '', mOnlyPost: false }),
+          navAllBg: navBg(allActive), navAllFg: navFg(allActive), navPostBg: navBg(postActive), navPostFg: navFg(postActive), navUncBg: navBg(uncActive), navUncFg: navFg(uncActive),
+          navCats: Object.keys(this.CATS).map(cat => { const items = libAll.filter(it => it.cat === cat), active = s.mCat === cat && !s.mOnlyPost;
+            return { name: cat, count: items.length, bg: navBg(active && !s.mSub), fg: navFg(active), w: navW(active), open: active, pick: () => this.setState({ mCat: cat, mSub: '', mOnlyPost: false }),
+              subs: (this.CATS[cat] || []).map(sub => { const on = active && s.mSub === sub; return { name: sub, count: items.filter(it => it.sub === sub).length, bg: navBg(on), fg: navFg(on), w: navW(on), pick: (e) => { e.stopPropagation(); this.setState({ mCat: cat, mSub: sub, mOnlyPost: false }); } }; }).filter(x => x.count > 0) }; }),
+          unclassifiedCount: libAll.filter(it => !it.cat).length,
+          restoreDs: () => { try { localStorage.removeItem('latelier.fbpost.dsRemoved'); } catch (e) {} const have = new Set(s.lib.map(x => x.id)); const fresh = (window.DS_ILLUS || []).filter(x => !have.has(x.id)); if (fresh.length) this.updateLib(l => l.concat(fresh)); },
+          mQuery: s.mQuery, setMQuery: set('mQuery'), mSeason: s.mSeason, setMSeason: set('mSeason'),
+          hasFilter: !!(s.mQuery || s.mCat || s.mSub || s.mSeason || s.mOnlyPost), clearFilters: () => this.setState({ mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false }),
+          mLabel: mFound.length + (mFound.length > 1 ? ' visuels ' : ' visuel ') + ctx, mCount: mFound.length, mEmpty: mFound.length === 0,
+          mSelNotAll: !locked && mFound.some(x => !inPost(x)),
+          addResultsToPost: () => { if (locked) return; this.setState(st => ({ photos: st.photos.concat(mFound.filter(x => !st.photos.some(p => p.src === x.src)).map(x => ({ src: x.src, cut: x.cut !== false, name: x.name }))) })); },
+          mResults: mFound.slice(0, 160).map(it => ({ src: it.src, name: it.name, tags: tags(it), inPost: inPost(it), ring: s.editId === it.id ? '#8D1D2C' : 'transparent',
+            btn: inPost(it) ? 'Retirer' : '+ Post', btnBg: inPost(it) ? '#232220' : '#8D1D2C', btnFg: '#FFFFFF',
+            select: () => this.setState({ editId: it.id }), toggle: (e) => { e.stopPropagation(); togglePost(it); } })),
+          hasEdit: !!ed, noEdit: !ed, editSrc: ed ? ed.src : '', editInPost: !!(ed && inPost(ed)), editName: ed ? ed.name : '', editCat: ed ? ed.cat : '', editSub: ed ? ed.sub : '', editSeason: ed ? ed.season : "Toute l'année",
+          editSubOptions: ed ? (this.CATS[ed.cat] || []) : [],
+          setEditName: (e) => this.editItem({ name: e.target.value }), setEditCat: (e) => this.editItem({ cat: e.target.value, sub: '' }), setEditSub: (e) => this.editItem({ sub: e.target.value }), setEditSeason: (e) => this.editItem({ season: e.target.value }),
+          ecBg, ecFg, efBg, efFg, editCutOn: () => this.editItem({ cut: true }), editCutOff: () => this.editItem({ cut: false }),
+          editToggleLabel: ed && inPost(ed) ? 'Retirer du post' : 'Ajouter au post', editToggle: () => { if (ed) togglePost(ed); },
+          editDelete: () => { if (!ed) return; const id = ed.id;
+            if (ed.ds) { try { const r = JSON.parse(localStorage.getItem('latelier.fbpost.dsRemoved') || '[]'); if (!r.includes(id)) r.push(id); localStorage.setItem('latelier.fbpost.dsRemoved', JSON.stringify(r)); } catch (e) {} }
+            this.setState({ editId: null }); this.updateLib(l => l.filter(x => x.id !== id)); },
+          clearPhotos: () => { if (!locked) this.setState({ photos: [] }); },
+        });
+      })(),
       libCount: s.lib.length, openLib: () => this.setState({ libOpen: true, libPick: [] }), closeLib: () => this.setState({ libOpen: false }),
       confirmLib: () => { const add = s.libPick.map(id => s.lib.find(x => x.id === id)).filter(Boolean).map(x => ({ src: x.src, cut: x.cut !== false, name: x.name })); this.setState({ photos: s.photos.concat(add), libOpen: false }); },
       libPickCount: s.libPick.length, lq: s.lq, setLq: (e) => this.setState({ lq: e.target.value }), lcat: s.lcat, setLcat: (e) => this.setState({ lcat: e.target.value }), libItems, libCats: [...new Set(s.lib.map(x => x.cat).filter(Boolean))], libOpen: s.libOpen,
