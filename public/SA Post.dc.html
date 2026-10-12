@@ -120,6 +120,31 @@
             </div>
           </div>
 
+          <!-- Zoom et cadrage de chaque photo dans sa case du gabarit -->
+          <sc-if value="{{ hasAdj }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F4;border:0.5px solid rgba(34,34,34,0.10);border-radius:10px;padding:12px 14px;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Ajuster les photos dans le gabarit</span>
+                <span style="font-size:11px;color:#666666;">zoom 50 – 300 % · ↔ ↕ cadrage · photo par photo</span>
+              </div>
+              <sc-for list="{{ adjRows }}" as="a" hint-placeholder-count="0">
+                <div style="display:grid;grid-template-columns:18px 40px minmax(150px,1.5fr) minmax(80px,1fr) minmax(80px,1fr) 28px;gap:10px;align-items:center;font-size:11px;color:#444444;">
+                  <span style="font-weight:600;color:#222222;">{{ a.n }}</span>
+                  <img src="{{ a.src }}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px;background:#F4EFE8;display:block;">
+                  <span style="display:flex;align-items:center;gap:5px;min-width:0;">
+                    <button onClick="{{ a.minus }}" title="Dézoomer" style="width:24px;height:24px;border-radius:6px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:14px;line-height:1;padding:0;flex:0 0 auto;">−</button>
+                    <input type="range" min="50" max="300" step="5" value="{{ a.zoom }}" onChange="{{ a.setZoom }}" title="Zoom" style="flex:1 1 auto;min-width:0;accent-color:#8D1D2C;">
+                    <button onClick="{{ a.plus }}" title="Zoomer" style="width:24px;height:24px;border-radius:6px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:14px;line-height:1;padding:0;flex:0 0 auto;">+</button>
+                    <span style="width:38px;text-align:right;font-weight:600;color:#222222;flex:0 0 auto;">{{ a.zoomLabel }}</span>
+                  </span>
+                  <label title="Cadrage horizontal" style="display:flex;align-items:center;gap:4px;min-width:0;">↔<input type="range" min="0" max="100" value="{{ a.x }}" onChange="{{ a.setX }}" style="flex:1 1 auto;min-width:0;accent-color:#8D1D2C;"></label>
+                  <label title="Cadrage vertical" style="display:flex;align-items:center;gap:4px;min-width:0;">↕<input type="range" min="0" max="100" value="{{ a.y }}" onChange="{{ a.setY }}" style="flex:1 1 auto;min-width:0;accent-color:#8D1D2C;"></label>
+                  <button onClick="{{ a.reset }}" title="Revenir à 100 %, centré" style="width:26px;height:26px;border-radius:6px;border:none;background:transparent;color:#8D1D2C;cursor:pointer;font-size:15px;padding:0;">⟲</button>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
           <sc-if value="{{ notLocked }}" hint-placeholder-val="{{ true }}">
       <!-- Recherche médiathèque -->
       <div style="background:#FBF8F4;border:0.5px solid rgba(34,34,34,0.10);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;">
@@ -1213,6 +1238,14 @@ class Component extends DCLogic {
             if (ed.ds) { try { const r = JSON.parse(localStorage.getItem('latelier.fbpost.dsRemoved') || '[]'); if (!r.includes(id)) r.push(id); localStorage.setItem('latelier.fbpost.dsRemoved', JSON.stringify(r)); } catch (e) {} }
             this.setState({ editId: null }); this.updateLib(l => l.filter(x => x.id !== id)); },
           clearPhotos: () => { if (!locked) this.setState({ photos: [] }); },
+          // Zoom (50–300 %) et cadrage (0–100 %) de chaque photo, gardés avec la photo dans le post.
+          hasAdj: s.mode === 'studio' && !locked && s.photos.length > 0,
+          adjRows: s.photos.map((ph, i) => { const z = Math.round((ph.zoom || 1) * 100), x = ph.x != null ? ph.x : 50, y = ph.y != null ? ph.y : 50;
+            const put = (patch) => this.setState(st => ({ photos: st.photos.map((q, j) => j === i ? Object.assign({}, q, patch) : q) }));
+            const zoomTo = (pc) => put({ zoom: Math.min(300, Math.max(50, pc)) / 100 });
+            return { n: i + 1, src: ph.src, zoom: z, zoomLabel: z + ' %', x, y,
+              setZoom: (e) => zoomTo(+e.target.value), minus: () => zoomTo(z - 10), plus: () => zoomTo(z + 10),
+              setX: (e) => put({ x: +e.target.value }), setY: (e) => put({ y: +e.target.value }), reset: () => put({ zoom: 1, x: 50, y: 50 }) }; }),
         });
       })(),
       libCount: s.lib.length, openLib: () => this.setState({ libOpen: true, libPick: [] }), closeLib: () => this.setState({ libOpen: false }),
