@@ -550,8 +550,8 @@ class Component extends DCLogic {
         canRetry: (sp.status === 'Échec' || st.k === 'Partiel') && !s.retrying, canValidate: sp.status === 'À valider',
         editHref: SA.href('post', 'id=' + sp.id), editLabel: sp.status === 'Publié' ? 'Voir' : 'Modifier', target: '_self', canDup: true, isMeta: false, hasStats: false,
         isDark: !!sp.dark, adsHref: SA.href('ads', 'new=1&post=' + encodeURIComponent(sp.id)),
-        // Contrôle : posts d'une boutique (publiés sur sa Page hors module, ou proposés depuis l'espace franchisé).
-        canCtrl: (sp.origin === 'meta' ? !sp.marque && (sp.shops || []).length === 1 : sp.origin === 'franchise') && !sp.dark,
+        // Contrôle : posts déjà publiés par une boutique (sur sa Page hors module, ou depuis l'espace franchisé).
+        canCtrl: sp.status === 'Publié' && (sp.origin === 'meta' ? !sp.marque && (sp.shops || []).length === 1 : sp.origin === 'franchise') && !sp.dark,
       });
       if (sp.origin === 'meta') {
         const stt = sp.stats || {}, parts = [stt.reactions != null ? SA.fmt(stt.reactions) + (sp.ig ? ' j’aime' : ' réactions') : '', stt.comments != null ? SA.fmt(stt.comments) + ' commentaires' : '', stt.shares != null ? SA.fmt(stt.shares) + ' partages' : ''].filter(Boolean);
@@ -652,8 +652,8 @@ class Component extends DCLogic {
         this.updatePost(sp.id, { status: 'Brouillon' }); SA.log('Sarah Lambert (Franchiseur)', 'Refus', '« ' + sp.title + ' » renvoyé en brouillon'); this.toast('Post renvoyé en brouillon à la boutique.');
       },
       toCtrl: () => { if (!sp) return; const meta = sp.origin === 'meta';
-        try { sessionStorage.setItem('sa.ctrl', JSON.stringify({ id: 'cal-' + sp.id, shop: shopsOf(sp)[0], title: sp.title || (sp.text || '').slice(0, 40) || 'Publication', img: sp.img || 'img/products/croissant.png',
-          date: sp.date, time: sp.time || '', channel: meta ? sp.channel : (sp.fb ? 'Facebook' : 'Instagram'), text: sp.text || '', link: sp.permalink || '', origin: meta ? 'Publié hors module' : 'Espace franchisé' })); } catch (e) {}
+        try { sessionStorage.setItem('sa.ctrl', JSON.stringify({ id: sp.id, shop: shopsOf(sp)[0], title: sp.title || (sp.text || '').slice(0, 40) || 'Publication', img: sp.img || '',
+          date: sp.date, time: sp.time || '', channel: meta ? sp.channel : (sp.fb ? 'Facebook' : 'Instagram'), text: sp.text || '', link: sp.permalink || '', account: sp.accountName || '', origin: meta ? 'Publié sur la Page' : 'Espace franchisé' })); } catch (e) {}
         location.href = SA.href('ctrl'); },
       openDup: () => { if (!sp) return; this.setState({ dupOpen: true, dupDates: [SA.addDays(sp.date < SA.TODAY ? SA.TODAY : sp.date, 7)], dupShops: shopsOf(sp).slice(), dupDateInput: '' }); },
       closeDup: () => this.setState({ dupOpen: false }), dupOpen: s.dupOpen,
