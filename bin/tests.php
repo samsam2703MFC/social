@@ -846,8 +846,9 @@ check('permission read_insights manquante : motif clair, pas d’erreur', $code 
 [$c4] = $stat('mfb-222_7001', 'fb:111');
 [$c5] = $stat('mfb-../me', 'fb:111');
 check('publication d’un autre compte ou identifiant invalide : refusé', $c4 === 404 && $c5 === 400);
-$GLOBALS['INSIGHTS_VIDES'] = true;
+$GLOBALS['INSIGHTS_VIDES'] = true; $appels = [];
 [$code, $s6] = $stat('mfb-111_9001', 'fb:111');
+check('vues acceptées mais vides : un seul appel d’insights, pas une dizaine', count(array_filter($appels, static fn ($a) => $a[1] === '111_9001/insights')) === 1);
 unset($GLOBALS['INSIGHTS_VIDES']);
 check('insights vides (token sans read_insights) : motif clair plutôt que des tirets muets', $code === 200 && $s6['vues'] === null && str_contains((string) $s6['motif'], 'read_insights'), json_encode($s6));
 

@@ -270,22 +270,30 @@ function socCalStats(string $id, string $compte): array
         }
         return $v;
     };
-    // Un seul appel pour les noms actuels ; un nom refusé (métrique retirée, type de média) fait tout refuser : alors un par un.
-    $lu = []; $essayes = []; $erreur = null;
-    try { $tete = array_map(static fn ($n) => $n[0], $metriques); $lu = $lire(array_values($tete)); $essayes = array_flip($tete); }
-    catch (MetaError $e) { $erreur = $e; if (socSuiviPermission($e)) { $out['motif'] = 'vues indisponibles : ajoutez la permission ' . $perm . ' au token (' . $e->getMessage() . ')'; } }
-    if ($out['motif'] === null) {
-        foreach ($metriques as $cle => $noms) {
+    // D'abord les vues seules : refusées (permission) ou acceptées mais vides (Meta répond vide sans la permission),
+    // les autres chiffres le seront aussi — on s'arrête là (un appel au lieu d'une dizaine).
+    $lu = []; $essayes = []; $erreur = null; $refus = null;
+    $vues = $metriques['vues'][0];
+    $essayes[$vues] = true;
+    try { $lu = $lire([$vues]); } catch (MetaError $e) { $erreur = $e; if (socSuiviPermission($e)) { $refus = $e; } }
+    $sansPermission = $refus !== null || ($repondu && !isset($lu[$vues]));
+    if (!$sansPermission) {
+        // Le reste en un appel ; un nom refusé (métrique retirée, type de média) fait tout refuser : alors un par un.
+        $tete = array_diff(array_map(static fn ($n) => $n[0], $metriques), [$vues]);
+        try { $lu += $lire(array_values($tete)); $essayes += array_flip($tete); }
+        catch (MetaError $e) { $erreur = $e; if (socSuiviPermission($e)) { $refus = $e; } }
+        foreach ($refus === null ? $metriques : [] as $cle => $noms) {
             foreach ($noms as $nom) {
                 if (!isset($lu[$nom]) && !isset($essayes[$nom])) {
                     $essayes[$nom] = true;
                     try { $lu += $lire([$nom]); }
-                    catch (MetaError $e) { $erreur = $e; if (socSuiviPermission($e)) { $out['motif'] = 'vues indisponibles : ajoutez la permission ' . $perm . ' au token (' . $e->getMessage() . ')'; break 2; } }
+                    catch (MetaError $e) { $erreur = $e; if (socSuiviPermission($e)) { $refus = $e; break 2; } }
                 }
                 if (isset($lu[$nom])) { $out[$cle] = $lu[$nom]; break; }
             }
         }
     }
+    if ($refus !== null) { $out['motif'] = 'vues indisponibles : ajoutez la permission ' . $perm . ' au token (' . $refus->getMessage() . ')'; }
     // Rien de lu : une métrique acceptée mais vide = le token n'a pas la permission (Meta répond vide, comme pour les
     // abonnés) ; les anciens noms refusés (#100, métrique retirée) ne sont alors pas la cause.
     if ($out['motif'] === null && !array_filter(array_intersect_key($out, $metriques), static fn ($v) => $v !== null)) {
