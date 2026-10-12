@@ -259,7 +259,8 @@ function socTestConnexions(?string $seule = null): array
                     $r = Meta::call('GET', $act, ['fields' => 'name,account_status']);
                     $ok = (int) ($r['account_status'] ?? 0) === 1;
                     $c['ads'] = $ok ? 'connected' : 'none';
-                    $c['detail']['ads'] = ($r['name'] ?? $act) . ($ok ? '' : ' · compte inactif (statut ' . ($r['account_status'] ?? '?') . ')');
+                    $st = (int) ($r['account_status'] ?? 0);
+                    $c['detail']['ads'] = ($r['name'] ?? $act) . ($ok ? '' : ' · compte ' . (defined('SOC_COMPTE_STATUTS') && isset(SOC_COMPTE_STATUTS[$st]) ? SOC_COMPTE_STATUTS[$st] : 'inactif') . ' chez Meta (statut ' . $st . ')');
                 } catch (MetaError $e) { $c['ads'] = $e->metaCode === 190 ? 'expired' : 'none'; $c['detail']['ads'] = $e->getMessage(); }
             }
         }
