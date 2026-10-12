@@ -45,8 +45,9 @@ jobs:
         run: |
           fail=0
           for f in $(find src public bin config -name '*.php'); do php -l "$f" >/dev/null || { echo "::error file=$f::syntaxe PHP"; fail=1; }; done
-          node --check public/social-data.js || fail=1
+          for f in public/social-data.js public/montage.js public/franchise-visuel.js franchisee/franchise-data.js franchisee/config.js; do node --check "$f" || fail=1; done
           bash -n bin/deploy.sh || fail=1
+          bash -n bin/franchisee-build.sh || fail=1
           exit $fail
       - name: Recette (MySQL, Graph Meta simulé)
         env:

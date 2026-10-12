@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <script src="ds-catalogue.js"></script>
+  <script src="franchise-visuel.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button,textarea{font-family:var(--font-ui);}
+    input::placeholder,textarea::placeholder{color:#9A948C;}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="fr" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;max-width:720px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Boutiques · <span style="font-family:ui-monospace,monospace;text-transform:none;letter-spacing:0;">/social_franchisee</span></span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">ESPACE FRANCHISE</h1>
+        <span style="font-size:13px;color:#4A443E;line-height:1.5;">Chaque boutique y voit son calendrier, les campagnes du réseau et publie ses posts et ses promotions — uniquement avec les modèles, les champs et les règles que vous fixez ici.</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select value="{{ asShop }}" onChange="{{ setAsShop }}" style="font-size:13px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;">
+          <sc-for list="{{ shopOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.name }}</option></sc-for>
+        </select>
+        <button onClick="{{ viewAs }}" style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">Voir comme cette boutique ↗</button>
+        <a href="{{ spaceUrl }}" target="_blank" rel="noopener" style="height:36px;padding:0 14px;border-radius:8px;background:#8D1D2C;color:#FFFFFF;font-size:13px;font-weight:500;display:flex;align-items:center;text-decoration:none;">Ouvrir l’espace franchisé ↗</a>
+      </div>
+    </header>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+        <a href="{{ k.href }}" style="background:#FFFFFF;border:0.5px solid {{ k.border }};border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;text-decoration:none;color:#222222;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ k.label }}</span>
+          <span style="font-size:22px;font-weight:300;line-height:1.1;color:{{ k.color }};">{{ k.value }}</span>
+          <span style="font-size:11px;color:#666666;">{{ k.sub }}</span>
+        </a>
+      </sc-for>
+    </div>
+
+    <!-- ============ MODÈLES ============ -->
+    <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">1 · Modèles ouverts aux boutiques</span>
+          <span style="font-size:12px;color:#666666;">Le texte, le titre et le visuel sont figés ; la boutique ne remplit que les champs que vous ouvrez.</span>
+        </div>
+        <button onClick="{{ newTpl }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Nouveau modèle</button>
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="flex:1 1 300px;min-width:260px;display:flex;flex-direction:column;gap:8px;">
+          <sc-for list="{{ tpls }}" as="t" hint-placeholder-count="5">
+            <button onClick="{{ t.pick }}" style="text-align:left;border-radius:10px;border:1.5px solid {{ t.ring }};background:{{ t.bg }};padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:4px;">
+              <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:14px;font-weight:500;color:#222222;">{{ t.name }}</span>
+                <span style="display:flex;gap:4px;">
+                  <span style="font-size:10px;font-weight:600;border-radius:999px;padding:2px 7px;background:{{ t.stBg }};color:{{ t.stFg }};">{{ t.state }}</span>
+                  <sc-if value="{{ t.validation }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:600;border-radius:999px;padding:2px 7px;background:#FCE7C8;color:#7A4100;">à valider</span></sc-if>
+                </span>
+              </span>
+              <span style="font-size:11px;color:#666666;line-height:1.4;">{{ t.resume }}</span>
+            </button>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ hasEd }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:2 1 560px;min-width:300px;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+            <div style="flex:1 1 320px;min-width:280px;display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <label style="flex:2 1 200px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Nom du modèle<input type="text" value="{{ ed.name }}" onChange="{{ setName }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+                <label style="flex:1 1 140px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Type<select value="{{ ed.type }}" onChange="{{ setType }}" style="font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><sc-for list="{{ typeOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o }}">{{ o }}</option></sc-for></select></label>
+              </div>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Description (vue par la boutique)<input type="text" value="{{ ed.description }}" onChange="{{ setDescription }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+              <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked="{{ ed.active }}" onChange="{{ toggleActive }}" style="accent-color:#8D1D2C;margin:0;">Ouvert aux boutiques</label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked="{{ ed.validation }}" onChange="{{ toggleValidation }}" disabled="{{ valLocked }}" style="accent-color:#8D1D2C;margin:0;">À valider par le franchiseur</label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked="{{ ed.fb }}" onChange="{{ toggleFb }}" style="accent-color:#8D1D2C;margin:0;">Facebook</label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked="{{ ed.ig }}" onChange="{{ toggleIg }}" style="accent-color:#8D1D2C;margin:0;">Instagram</label>
+              </div>
+              <span style="font-size:11px;color:#666666;">{{ valNote }}</span>
+
+              <div style="border-top:0.5px solid rgba(34,34,34,0.08);padding-top:10px;display:flex;flex-direction:column;gap:8px;">
+                <span style="font-size:12px;font-weight:500;">Texte figé · variables : <span style="font-family:ui-monospace,monospace;font-size:11px;color:#8D1D2C;font-weight:400;">{{ varsHelp }}</span></span>
+                <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Titre (calendrier)<input type="text" value="{{ ed.title }}" onChange="{{ setTitle }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+                <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Texte FR<textarea value="{{ ed.text }}" onChange="{{ setText }}" rows="3" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;resize:vertical;line-height:1.5;"></textarea></label>
+                <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Texte NL (boutiques néerlandophones)<textarea value="{{ ed.textNl }}" onChange="{{ setTextNl }}" rows="3" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;resize:vertical;line-height:1.5;"></textarea></label>
+              </div>
+
+              <div style="border-top:0.5px solid rgba(34,34,34,0.08);padding-top:10px;display:flex;flex-direction:column;gap:8px;">
+                <span style="font-size:12px;font-weight:500;">Ce que la boutique peut remplir</span>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                  <label style="flex:1 1 150px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Produit<select value="{{ ed.product }}" onChange="{{ setProduct }}" style="font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="aucun">Aucun</option><option value="choix">Un produit de son catalogue</option></select></label>
+                  <label style="flex:1 1 150px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Promotion<select value="{{ promoKind }}" onChange="{{ setPromoKind }}" style="font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><sc-for list="{{ promoOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.label }}</option></sc-for></select></label>
+                  <label style="flex:1 1 150px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Photo<select value="{{ ed.photo }}" onChange="{{ setPhoto }}" style="font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="catalogue">Celle du catalogue</option><option value="choix">Sa photo ou celle du catalogue</option><option value="upload">Sa photo (obligatoire)</option></select></label>
+                </div>
+                <sc-if value="{{ isRemise }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:#444444;">Remise de <input type="number" min="1" max="90" value="{{ promoMin }}" onChange="{{ setPromoMin }}" style="width:70px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;"> à <input type="number" min="1" max="90" value="{{ promoMax }}" onChange="{{ setPromoMax }}" style="width:70px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;"> % <span style="color:#666666;">(plafond du réseau : {{ remiseMax }} %)</span></div>
+                </sc-if>
+                <sc-if value="{{ isOffre }}" hint-placeholder-val="{{ false }}">
+                  <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Offres proposées (séparées par des virgules)<input type="text" value="{{ offresTxt }}" onChange="{{ setOffres }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+                </sc-if>
+                <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:13px;">
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked="{{ ed.period }}" onChange="{{ togglePeriod }}" style="accent-color:#8D1D2C;margin:0;">Période (du … au …)</label>
+                  <span style="display:flex;align-items:center;gap:6px;">Phrase libre <input type="number" min="0" max="200" value="{{ ed.free }}" onChange="{{ setFree }}" style="width:70px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;"> caractères max <span style="font-size:11px;color:#666666;">(0 = aucune · ni lien, ni @, ni #)</span></span>
+                </div>
+              </div>
+
+              <div style="border-top:0.5px solid rgba(34,34,34,0.08);padding-top:10px;display:flex;flex-direction:column;gap:8px;">
+                <span style="font-size:12px;font-weight:500;">Visuel figé</span>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                  <sc-for list="{{ styles }}" as="st" hint-placeholder-count="6"><button onClick="{{ st.pick }}" style="border-radius:8px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ st.border }};background:{{ st.bg }};color:{{ st.fg }};">{{ st.label }}</button></sc-for>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                  <label style="flex:1 1 160px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Mention FR<input type="text" value="{{ eyebrow }}" onChange="{{ setEyebrow }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+                  <label style="flex:1 1 160px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Mention NL<input type="text" value="{{ eyebrowNl }}" onChange="{{ setEyebrowNl }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+                </div>
+              </div>
+
+              <sc-if value="{{ hasEdErr }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:8px;padding:8px 10px;font-size:12px;">{{ edErr }}</div></sc-if>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:10px;">
+                <button onClick="{{ delTpl }}" style="border:none;background:transparent;color:#8D1D2C;font-size:13px;font-weight:500;cursor:pointer;margin-right:auto;">Supprimer</button>
+                <button onClick="{{ dupTpl }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Dupliquer</button>
+                <button onClick="{{ saveTpl }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">{{ saveLabel }}</button>
+              </div>
+            </div>
+
+            <div style="flex:0 1 340px;min-width:280px;display:flex;flex-direction:column;gap:8px;position:sticky;top:16px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Ce que la boutique obtient</span>
+                <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;"><sc-for list="{{ pvLangs }}" as="l" hint-placeholder-count="2"><button onClick="{{ l.pick }}" style="border:none;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:500;cursor:pointer;background:{{ l.bg }};color:{{ l.fg }};">{{ l.label }}</button></sc-for></div>
+              </div>
+              <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.12);overflow:hidden;">
+                <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" hint-size="100%,340px"></dc-import>
+                <p style="margin:0;padding:10px 12px;font-size:13px;line-height:1.45;color:#1c1e21;white-space:pre-wrap;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">{{ pvText }}</p>
+              </div>
+              <span style="font-size:11px;color:#666666;line-height:1.5;">Exemple avec {{ pvSample }}. Les variables de la boutique ({ville}, {horaires}…) sont remplies à la publication.</span>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </section>
+
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+      <!-- ============ RÈGLES ============ -->
+      <section style="flex:1 1 420px;min-width:300px;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">2 · Règles du réseau <span style="font-family:ui-monospace,monospace;font-size:10px;text-transform:none;letter-spacing:0;color:#8A847C;">vérifiées par le serveur</span></span>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer;"><input type="checkbox" checked="{{ r.actif }}" onChange="{{ toggleRule.actif }}" style="accent-color:#8D1D2C;margin:0;width:16px;height:16px;">Espace franchisé ouvert</label>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <span style="font-size:12px;color:#444444;">Validation par le franchiseur</span>
+          <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;flex-wrap:wrap;"><sc-for list="{{ valModes }}" as="v" hint-placeholder-count="3"><button onClick="{{ v.pick }}" style="border:none;border-radius:6px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;background:{{ v.bg }};color:{{ v.fg }};">{{ v.label }}</button></sc-for></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+          <sc-for list="{{ numRules }}" as="n" hint-placeholder-count="5">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">{{ n.label }}<input type="number" min="{{ n.min }}" max="{{ n.max }}" value="{{ n.value }}" onChange="{{ n.set }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 9px;"></label>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <span style="font-size:12px;color:#444444;">Jours de publication</span>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;"><sc-for list="{{ days }}" as="d" hint-placeholder-count="7"><button onClick="{{ d.toggle }}" style="border-radius:999px;padding:5px 10px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ d.border }};background:{{ d.bg }};color:{{ d.fg }};">{{ d.label }}</button></sc-for></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:#444444;">Heures de publication de <input type="time" value="{{ r.heureMin }}" onChange="{{ setHeureMin }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;"> à <input type="time" value="{{ r.heureMax }}" onChange="{{ setHeureMax }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;"></div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;">
+          <sc-for list="{{ boolRules }}" as="b" hint-placeholder-count="5"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked="{{ b.on }}" onChange="{{ b.toggle }}" style="accent-color:#8D1D2C;margin:0;">{{ b.label }}</label></sc-for>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Message d’accueil des boutiques<textarea value="{{ r.message }}" onChange="{{ setMessage }}" rows="3" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;resize:vertical;line-height:1.5;"></textarea></label>
+        <div style="display:flex;justify-content:flex-end;"><button onClick="{{ saveRules }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">{{ rulesLabel }}</button></div>
+      </section>
+
+      <!-- ============ ACCÈS ============ -->
+      <section style="flex:1 1 420px;min-width:300px;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">3 · Accès des boutiques</span>
+        <span style="font-size:12px;color:#444444;line-height:1.55;">Les gérants se connectent avec <strong style="font-weight:600;">leur compte atelierby</strong> (téléphone et mot de passe, espace « owner » de l’API) : ils n’accèdent qu’aux boutiques de ce compte. À défaut, créez un <strong style="font-weight:600;">code d’accès</strong> par boutique — il n’est affiché qu’une fois.</span>
+        <sc-if value="{{ hasNewCode }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#232220;color:#F5EFE4;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;">
+            <span style="font-size:12px;color:#F2C9A0;">Code d’accès de {{ newCode.shop }} — à transmettre au gérant, il ne sera plus affiché</span>
+            <span style="font-family:ui-monospace,monospace;font-size:20px;letter-spacing:0.08em;">{{ newCode.code }}</span>
+            <span style="font-size:11px;color:#CFC6BA;">Adresse : {{ spaceUrl }} → « Code d’accès »</span>
+            <button onClick="{{ hideCode }}" style="align-self:flex-end;border:none;background:#F2C9A0;color:#232220;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:500;cursor:pointer;">C’est noté</button>
+          </div>
+        </sc-if>
+        <div style="border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;overflow:hidden;">
+          <sc-for list="{{ accessRows }}" as="a" hint-placeholder-count="4">
+            <div style="padding:10px 12px;border-top:0.5px solid rgba(34,34,34,0.08);display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <span style="display:flex;flex-direction:column;"><span style="font-size:13px;font-weight:500;">{{ a.name }}</span><span style="font-size:11px;color:#666666;">{{ a.franchisee }}</span></span>
+                <span style="display:flex;gap:6px;align-items:center;">
+                  <input type="text" value="{{ a.label }}" onChange="{{ a.setLabel }}" placeholder="Gérant" style="width:110px;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 8px;">
+                  <button onClick="{{ a.create }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:5px 9px;font-size:12px;font-weight:500;cursor:pointer;">Créer un code</button>
+                  <button onClick="{{ a.view }}" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;">Voir ↗</button>
+                </span>
+              </div>
+              <sc-for list="{{ a.codes }}" as="c" hint-placeholder-count="0">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:{{ c.fg }};">
+                  <span>Code « {{ c.label }} » · créé le {{ c.created }} · {{ c.use }}</span>
+                  <sc-if value="{{ c.active }}" hint-placeholder-val="{{ false }}"><button onClick="{{ c.revoke }}" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;">Révoquer</button></sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;max-width:min(640px,92vw);box-shadow:0 12px 30px rgba(35,34,32,0.3);">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { sel: null, ed: null, rules: null, labels: {}, newCode: null, asShop: '', pvLang: 'fr', toast: '', tick: 0, err: '' };
+  componentDidMount() {
+    this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
+    const SA = window.SA; if (!SA) return;
+    const first = (SA.state().ftemplates || [])[0];
+    this.setState({ rules: Object.assign({}, (SA.state().franchise || {}).rules || {}), asShop: (SA.SHOPS[0] || {}).id || '' });
+    if (first) this.pick(first);
+  }
+  componentWillUnmount() { clearTimeout(this._tt); window.removeEventListener('sa-change', this._h); }
+  toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 4500); }
+  pick(t) { this.setState({ sel: t.id, ed: JSON.parse(JSON.stringify(t)), err: '' }); }
+  E(patch) { this.setState({ ed: Object.assign({}, this.state.ed, patch), err: '' }); }
+  R(patch) { this.setState({ rules: Object.assign({}, this.state.rules, patch) }); }
+  franchise() { return Object.assign({ rules: {}, access: [], url: '/social_franchisee/' }, window.SA.state().franchise || {}); }
+
+  saveTpl() {
+    const SA = window.SA, e = this.state.ed, rules = this.state.rules || {};
+    const errs = [];
+    if (!String(e.name || '').trim()) errs.push('Nommez le modèle.');
+    if (!String(e.text || '').trim()) errs.push('Le texte FR est obligatoire.');
+    if (e.product === 'choix' && !/\{produit\}/.test(e.text + e.title)) errs.push('Le modèle ouvre un produit : utilisez {produit} dans le titre ou le texte.');
+    if (+e.free > 0 && !/\{libre\}/.test(e.text)) errs.push('Le modèle ouvre une phrase libre : placez {libre} dans le texte.');
+    if (e.period && !/\{du\}/.test(e.text)) errs.push('Le modèle a une période : placez {du} et {au} dans le texte.');
+    const p = e.promo || { kind: 'aucune' };
+    if (p.kind === 'remise' && (+p.min < 1 || +p.max < +p.min || +p.max > (+rules.remiseMax || 90))) errs.push('Remise : minimum ≥ 1, maximum ≥ minimum et ≤ ' + (rules.remiseMax || 90) + ' % (plafond du réseau).');
+    if (p.kind === 'offre' && !(p.offres || []).length) errs.push('Indiquez au moins une offre.');
+    if (!e.fb && !e.ig) errs.push('Ouvrez au moins un canal.');
+    if (errs.length) { this.setState({ err: errs.join(' ') }); return; }
+    const list = SA.state().ftemplates || [], out = list.some(x => x.id === e.id) ? list.map(x => x.id === e.id ? e : x) : list.concat(e);
+    SA.save({ ftemplates: out });
+    SA.log('Sarah Lambert (Franchiseur)', 'Espace franchisé', 'Modèle « ' + e.name + ' » enregistré' + (e.active ? '' : ' (fermé)'));
+    this.setState({ sel: e.id });
+    this.toast('Modèle enregistré : les boutiques le voient ' + (e.active ? 'dès maintenant.' : 'quand il sera ouvert.'));
+  }
+  async saveRules() {
+    const SA = window.SA, r = this.state.rules;
+    if (!(r.jours || []).length) { this.toast('Ouvrez au moins un jour de publication.'); return; }
+    if (String(r.heureMax) <= String(r.heureMin)) { this.toast('L’heure de fin doit suivre l’heure de début.'); return; }
+    try {
+      let rules = r;
+      if (SA.live) rules = (await SA.api('POST', '/franchise/admin/regles', { rules: r })).rules;
+      SA.save({ franchise: Object.assign({}, this.franchise(), { rules }) });
+      this.setState({ rules: Object.assign({}, rules) });
+      this.toast('Règles enregistrées : elles s’appliquent aux prochaines publications des boutiques.');
+    } catch (e) { this.toast('Enregistrement impossible : ' + e.message); }
+  }
+  async createCode(shop) {
+    const SA = window.SA, label = (this.state.labels[shop.id] || '').trim() || 'Gérant';
+    try {
+      let code, access;
+      if (SA.live) { const r = await SA.api('POST', '/franchise/admin/acces', { shop: shop.id, label }); code = r.code; access = r.acces; }
+      else {
+        const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', rnd = (n) => Array.from({ length: n }, () => A[Math.floor(Math.random() * A.length)]).join('');
+        code = 'ATB-' + rnd(5) + '-' + rnd(5);
+        access = this.franchise().access.concat({ id: Date.now(), shop: shop.id, shopName: shop.name, label, active: true, created: SA.TODAY + ' ' + new Date().toTimeString().slice(0, 5), lastUse: null });
+      }
+      SA.save({ franchise: Object.assign({}, this.franchise(), { access }) });
+      this.setState({ newCode: { shop: shop.name, code } });
+    } catch (e) { this.toast('Création impossible : ' + e.message); }
+  }
+  async revoke(c) {
+    const SA = window.SA;
+    if (!window.confirm('Révoquer le code « ' + c.label + ' » ? La boutique ne pourra plus l’utiliser.')) return;
+    try {
+      const access = SA.live ? (await SA.api('POST', '/franchise/admin/acces/' + c.id + '/revoquer', {})).access : this.franchise().access.map(x => x.id === c.id ? Object.assign({}, x, { active: false }) : x);
+      SA.save({ franchise: Object.assign({}, this.franchise(), { access }) });
+      this.toast('Code révoqué.');
+    } catch (e) { this.toast('Révocation impossible : ' + e.message); }
+  }
+  async viewAs(shopId) {
+    const SA = window.SA, url = this.franchise().url || '/social_franchisee/';
+    if (!shopId) return;
+    if (!SA.live) { window.open(url + '?demo=1&shop=' + encodeURIComponent(shopId), '_blank'); return; }
+    // Le navigateur bloque une fenêtre ouverte après un appel réseau : on l'ouvre d'abord.
+    const w = window.open('about:blank', '_blank');
+    try { await SA.api('POST', '/franchise/admin/apercu', { shop: shopId }); if (w) w.location = url + '?shop=' + encodeURIComponent(shopId); }
+    catch (e) { if (w) w.close(); this.toast('Aperçu impossible : ' + e.message); }
+  }
+
+  renderVals() {
+    const SA = window.SA, s = this.state, V = window.SFVisuel;
+    if (!SA || !V) return {};
+    const st = SA.state(), fr = this.franchise(), rules = s.rules || fr.rules || {}, tpls = st.ftemplates || [], e = s.ed;
+    const seg = (on) => on ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
+    const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
+    const pending = st.posts.filter(p => p.origin === 'franchise' && p.status === 'À valider');
+    const access = fr.access || [];
+    const kpis = [
+      { label: 'Espace', value: rules.actif === false ? 'Fermé' : 'Ouvert', sub: (rules.validation === 'toujours' ? 'tout est validé par vous' : rules.validation === 'jamais' ? 'publication directe' : 'validation selon le modèle'), color: rules.actif === false ? '#8D1D2C' : '#0F6B4A', border: 'rgba(34,34,34,0.10)', href: '#regles' },
+      { label: 'Modèles ouverts', value: tpls.filter(t => t.active).length + ' / ' + tpls.length, sub: 'textes et visuels figés', color: '#222222', border: 'rgba(34,34,34,0.10)', href: '#' },
+      { label: 'À valider', value: pending.length, sub: 'propositions des boutiques', color: pending.length ? '#8A4B00' : '#222222', border: pending.length ? '#E3B155' : 'rgba(34,34,34,0.10)', href: SA.href('cal', 'status=' + encodeURIComponent('À valider')) },
+      { label: 'Codes d’accès actifs', value: access.filter(a => a.active).length, sub: 'en plus des comptes atelierby', color: '#222222', border: 'rgba(34,34,34,0.10)', href: '#acces' },
+    ];
+    const list = tpls.slice().sort((a, b) => (+a.order || 99) - (+b.order || 99)).map(t => ({ name: t.name, resume: (t.description ? t.description + ' — ' : '') + V.resume(t),
+      state: t.active ? 'ouvert' : 'fermé', stBg: t.active ? '#E2F0E8' : '#F4EFE8', stFg: t.active ? '#0F6B4A' : '#666666',
+      validation: rules.validation === 'toujours' || (rules.validation === 'modele' && !!t.validation),
+      ring: s.sel === t.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)', bg: s.sel === t.id ? '#FBF3F4' : '#FFFFFF', pick: () => this.pick(t) }));
+    // Aperçu : un produit du catalogue, des valeurs d'exemple.
+    let edVals = {};
+    if (e) {
+      const prod = (SA.CATALOGUE || []).find(c => c.kind === 'produit' && c.price) || null, p = e.promo || { kind: 'aucune' };
+      const sample = { product: e.product === 'choix' ? prod : null, discount: p.kind === 'remise' ? Math.round(((+p.min || 10) + (+p.max || 30)) / 2) : '', offer: p.kind === 'offre' ? (p.offres || [])[0] : '',
+        promoPrice: p.kind === 'prix' && prod ? (Math.round(parseFloat(String(prod.price).replace(',', '.')) * 80) / 100).toFixed(2).replace('.', ',') : '',
+        from: e.period ? SA.addDays(SA.TODAY, 3) : '', to: e.period ? SA.addDays(SA.TODAY, 8) : '', free: +e.free > 0 ? 'Dégustation de brioche samedi de 10 h à 12 h'.slice(0, +e.free) : '', photo: null };
+      const L = s.pvLang, vars = V.vars(e, sample, L), shop0 = (SA.SHOPS.find(x => SA.langsOf(x.id).includes(L)) || SA.SHOPS[0] || {}).id;
+      const text = SA.fill(V.fill(L === 'nl' ? (e.textNl || e.text) : e.text, vars), shop0, null, L);
+      const valLocked = rules.validation !== 'modele';
+      const S = (k) => (v) => this.E({ [k]: v });
+      edVals = {
+        ed: e, typeOptions: SA.POST_TYPES, varsHelp: '{produit} {prix} {remise} {offre} {prix_promo} {du} {au} {libre} · {ville} {adresse} {horaires}',
+        setName: (ev) => this.E({ name: ev.target.value }), setType: (ev) => this.E({ type: ev.target.value }), setDescription: (ev) => this.E({ description: ev.target.value }),
+        toggleActive: () => this.E({ active: !e.active }), toggleValidation: () => !valLocked && this.E({ validation: !e.validation }), valLocked,
+        valNote: rules.validation === 'toujours' ? 'Règle du réseau : tout post de boutique est validé par vous.' : rules.validation === 'jamais' ? 'Règle du réseau : publication directe, sans validation.' : (e.validation ? 'Les posts de ce modèle vous sont soumis avant publication.' : 'Les posts de ce modèle partent directement, dans les règles du réseau.'),
+        toggleFb: () => this.E({ fb: !e.fb }), toggleIg: () => this.E({ ig: !e.ig }),
+        setTitle: (ev) => this.E({ title: ev.target.value }), setText: (ev) => this.E({ text: ev.target.value }), setTextNl: (ev) => this.E({ textNl: ev.target.value }),
+        setProduct: (ev) => this.E({ product: ev.target.value }), setPhoto: (ev) => this.E({ photo: ev.target.value }),
+        promoKind: (e.promo || {}).kind || 'aucune', promoOptions: V.PROMOS.map(([id, label]) => ({ id, label })),
+        setPromoKind: (ev) => { const k = ev.target.value; this.E({ promo: k === 'remise' ? { kind: k, min: 10, max: Math.min(30, +rules.remiseMax || 30) } : k === 'offre' ? { kind: k, offres: ['4+1', '2+1'] } : { kind: k } }); },
+        isRemise: (e.promo || {}).kind === 'remise', isOffre: (e.promo || {}).kind === 'offre', remiseMax: rules.remiseMax || 30,
+        promoMin: (e.promo || {}).min || 10, promoMax: (e.promo || {}).max || 30,
+        setPromoMin: (ev) => this.E({ promo: Object.assign({}, e.promo, { min: +ev.target.value }) }), setPromoMax: (ev) => this.E({ promo: Object.assign({}, e.promo, { max: +ev.target.value }) }),
+        offresTxt: ((e.promo || {}).offres || []).join(', '), setOffres: (ev) => this.E({ promo: Object.assign({}, e.promo, { offres: ev.target.value.split(',').map(x => x.trim()).filter(Boolean).slice(0, 8) }) }),
+        togglePeriod: () => this.E({ period: !e.period }), setFree: (ev) => this.E({ free: Math.max(0, Math.min(200, +ev.target.value || 0)) }),
+        styles: V.STYLES.map(([k, label]) => Object.assign(chip((e.visual || {}).style === k), { label, pick: () => this.E({ visual: Object.assign({}, e.visual, { style: k }) }) })),
+        eyebrow: (e.visual || {}).eyebrow || '', eyebrowNl: (e.visual || {}).eyebrowNl || '',
+        setEyebrow: (ev) => this.E({ visual: Object.assign({}, e.visual, { eyebrow: ev.target.value }) }), setEyebrowNl: (ev) => this.E({ visual: Object.assign({}, e.visual, { eyebrowNl: ev.target.value }) }),
+        studioControl: V.control(e, sample, L), pvText: text || '—',
+        pvSample: [sample.product ? sample.product.name + ' (' + sample.product.price + ' €)' : '', sample.discount ? '-' + sample.discount + ' %' : '', sample.offer || '', sample.from ? 'du ' + SA.dShort(sample.from) + ' au ' + SA.dShort(sample.to) : '', sample.free ? '« ' + sample.free + ' »' : ''].filter(Boolean).join(', ') || 'les textes du modèle',
+        pvLangs: ['fr', 'nl'].map(k => { const [bg, fg] = seg(s.pvLang === k); return { label: k.toUpperCase(), bg, fg, pick: () => this.setState({ pvLang: k }) }; }),
+        hasEdErr: !!s.err, edErr: s.err, saveLabel: tpls.some(x => x.id === e.id) ? 'Enregistrer le modèle' : 'Créer le modèle',
+        saveTpl: () => this.saveTpl(),
+        dupTpl: () => this.setState({ ed: Object.assign(JSON.parse(JSON.stringify(e)), { id: 'ft' + Date.now(), name: e.name + ' (copie)', order: tpls.length + 1 }), sel: null }),
+        delTpl: () => { if (!tpls.some(x => x.id === e.id)) { this.setState({ ed: null, sel: null }); return; } if (!window.confirm('Supprimer le modèle « ' + e.name + ' » ? Les posts déjà créés restent.')) return;
+          SA.save({ ftemplates: tpls.filter(x => x.id !== e.id) }); SA.log('Sarah Lambert (Franchiseur)', 'Espace franchisé', 'Modèle « ' + e.name + ' » supprimé'); this.setState({ ed: null, sel: null }); this.toast('Modèle supprimé.'); },
+      };
+    }
+    const r = rules, RS = (k, v) => this.R({ [k]: v });
+    const days = [[1, 'lun.'], [2, 'mar.'], [3, 'mer.'], [4, 'jeu.'], [5, 'ven.'], [6, 'sam.'], [0, 'dim.']].map(([j, label]) => { const on = (r.jours || []).includes(j);
+      return Object.assign(chip(on), { label, toggle: () => RS('jours', on ? r.jours.filter(x => x !== j) : (r.jours || []).concat(j)) }); });
+    const byShop = {}; access.forEach(a => { (byShop[a.shop] = byShop[a.shop] || []).push(a); });
+    return Object.assign({
+      kpis, tpls: list, hasEd: !!e, newTpl: () => this.setState({ sel: null, err: '', ed: { id: 'ft' + Date.now(), order: tpls.length + 1, name: 'Nouveau modèle', description: '', active: false, type: 'Produit', fb: true, ig: true, validation: true,
+        title: '{produit}', text: '{produit} chez L’Atelier By {ville}.', textNl: '{produit} bij L’Atelier By {ville}.', product: 'choix', promo: { kind: 'aucune' }, period: false, free: 0, photo: 'choix', visual: { style: 'epure', eyebrow: '', eyebrowNl: '' } } }),
+      r, toggleRule: { actif: () => RS('actif', r.actif === false) },
+      valModes: [['toujours', 'Toujours'], ['modele', 'Selon le modèle'], ['jamais', 'Jamais']].map(([k, label]) => { const [bg, fg] = seg(r.validation === k); return { label, bg, fg, pick: () => RS('validation', k) }; }),
+      numRules: [['quotaSemaine', 'Posts par semaine (par boutique)', 0, 50], ['delaiMinHeures', 'Délai minimum (heures)', 1, 336], ['horizonJours', 'Au plus tard dans (jours)', 1, 90], ['remiseMax', 'Remise maximale (%)', 0, 90], ['promoDureeMax', 'Durée max d’une promotion (jours)', 1, 90]]
+        .map(([k, label, min, max]) => ({ label, min, max, value: r[k], set: (ev) => RS(k, +ev.target.value) })),
+      days, setHeureMin: (ev) => RS('heureMin', ev.target.value), setHeureMax: (ev) => RS('heureMax', ev.target.value),
+      boolRules: [['fb', 'Facebook autorisé'], ['ig', 'Instagram autorisé'], ['voirReseau', 'Voir les posts du réseau'], ['voirCampagnes', 'Voir les campagnes'], ['voirResultats', 'Voir les résultats de sa boutique']]
+        .map(([k, label]) => ({ label, on: r[k] !== false, toggle: () => RS(k, r[k] === false) })),
+      setMessage: (ev) => RS('message', ev.target.value), saveRules: () => this.saveRules(), rulesLabel: 'Enregistrer les règles',
+      accessRows: SA.SHOPS.map(sh => ({ name: sh.name, franchisee: sh.franchisee ? 'Franchisé : ' + sh.franchisee : 'Compte atelierby du gérant, ou code d’accès',
+        label: s.labels[sh.id] || '', setLabel: (ev) => this.setState({ labels: Object.assign({}, s.labels, { [sh.id]: ev.target.value }) }),
+        create: () => this.createCode(sh), view: () => this.viewAs(sh.id),
+        codes: (byShop[sh.id] || []).map(c => ({ label: c.label, created: SA.dShort(String(c.created).slice(0, 10)), use: !c.active ? 'révoqué' : c.lastUse ? 'dernière connexion ' + SA.dShort(String(c.lastUse).slice(0, 10)) + ' ' + String(c.lastUse).slice(11, 16) : 'jamais utilisé',
+          active: !!c.active, fg: c.active ? '#222222' : '#9A948C', revoke: () => this.revoke(c) })) })),
+      hasNewCode: !!s.newCode, newCode: s.newCode || {}, hideCode: () => this.setState({ newCode: null }),
+      spaceUrl: fr.url || '/social_franchisee/', shopOptions: SA.SHOPS.map(x => ({ id: x.id, name: x.name })), asShop: s.asShop, setAsShop: (ev) => this.setState({ asShop: ev.target.value }),
+      viewAs: () => this.viewAs(s.asShop || (SA.SHOPS[0] || {}).id),
+      hasToast: !!s.toast, toast: s.toast,
+    }, edVals);
+  }
+}
+</script>
+</body>
+</html>

@@ -244,11 +244,11 @@
   }
 
   // ---------- état persistant (localStorage) ----------
-  function fresh() { return { posts: JSON.parse(JSON.stringify(POSTS)), ads: JSON.parse(JSON.stringify(ADS)), campaigns: JSON.parse(JSON.stringify(CAMPAIGNS)), shops: JSON.parse(JSON.stringify(SHOPS)), activity: ACTIVITY.slice(), leadforms: JSON.parse(JSON.stringify(LEADFORMS)), meta: { version: META.version, dsa: Object.assign({}, META.dsa), ids: JSON.parse(JSON.stringify(META.ids)) } }; }
+  function fresh() { return { posts: JSON.parse(JSON.stringify(POSTS)), ads: JSON.parse(JSON.stringify(ADS)), campaigns: JSON.parse(JSON.stringify(CAMPAIGNS)), shops: JSON.parse(JSON.stringify(SHOPS)), activity: ACTIVITY.slice(), leadforms: JSON.parse(JSON.stringify(LEADFORMS)), ftemplates: JSON.parse(JSON.stringify(FTEMPLATES)), franchise: { rules: Object.assign({}, FRULES), access: [], url: '../social_franchisee/' }, meta: { version: META.version, dsa: Object.assign({}, META.dsa), ids: JSON.parse(JSON.stringify(META.ids)) } }; }
   let cache = null;
   function state() {
     if (cache) return cache;
-    try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.posts && s.ads && s.campaigns && s.shops) { s.shops.forEach(x => { if (!x.langs) { const b = SHOPS.find(y => y.id === x.id); x.langs = b ? b.langs.slice() : ['fr']; if (b && b.hoursNl) x.hoursNl = b.hoursNl; } }); if (!s.leadforms) s.leadforms = JSON.parse(JSON.stringify(LEADFORMS)); if (!s.meta) s.meta = { version: META.version, dsa: Object.assign({}, META.dsa), ids: JSON.parse(JSON.stringify(META.ids)) }; cache = s; return s; } } catch (e) {}
+    try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.posts && s.ads && s.campaigns && s.shops) { s.shops.forEach(x => { if (!x.langs) { const b = SHOPS.find(y => y.id === x.id); x.langs = b ? b.langs.slice() : ['fr']; if (b && b.hoursNl) x.hoursNl = b.hoursNl; } }); if (!s.leadforms) s.leadforms = JSON.parse(JSON.stringify(LEADFORMS)); if (!s.ftemplates) s.ftemplates = JSON.parse(JSON.stringify(FTEMPLATES)); if (!s.franchise) s.franchise = { rules: Object.assign({}, FRULES), access: [], url: '../social_franchisee/' }; if (!s.meta) s.meta = { version: META.version, dsa: Object.assign({}, META.dsa), ids: JSON.parse(JSON.stringify(META.ids)) }; cache = s; return s; } } catch (e) {}
     cache = fresh(); return cache;
   }
   function save(patch) {
@@ -286,7 +286,7 @@
       .replace(/\{ville\}/g, s ? s.name : '{ville}').replace(/\{adresse\}/g, s ? s.address : '{adresse}').replace(/\{horaires\}/g, s ? s.hours : '{horaires}')
       .replace(/\{prix\}/g, product && product.price ? product.price : '{prix}').replace(/\{produit_du_jour\}/g, product && product.name ? product.name : 'Brioche croustillante');
   }
-  const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', set: 'SA Parametres.dc.html' };
+  const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', set: 'SA Parametres.dc.html' };
   const href = (k, q) => encodeURI(PAGES[k]) + (q ? '?' + q : '');
   const param = (k) => { try { return new URLSearchParams(location.search).get(k); } catch (e) { return null; } };
 
@@ -335,6 +335,9 @@
       context: { title: 'Rejoignez l\u2019équipe', style: 'PARAGRAPH_STYLE', content: ['Nous cherchons des vendeur·ses souriant·es pour nos boutiques de Wavre et Gembloux.'], button_text: 'Postuler' },
       thanks: { title: 'Candidature envoyée', body: 'Le manager de la boutique vous contacte rapidement.', button_type: 'VIEW_WEBSITE', button_text: 'Découvrir la marque', website_url: 'https://www.latelierby.be' }, quality: true, followUp: 'https://www.latelierby.be' },
   ];
+  // Espace franchisé : les modèles et les règles livrés (le serveur fait foi en réel).
+  const FTEMPLATES = [{"id": "fp-produit", "order": 1, "name": "Produit du jour", "description": "Mettre un produit de votre vitrine en avant, à son prix.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "{produit}", "text": "{produit} : {prix} € chez L’Atelier By {ville}. Ouvert {horaires}.", "textNl": "{produit}: {prix} € bij L’Atelier By {ville}. Open {horaires}.", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "choix", "visual": {"style": "epure", "eyebrow": "Aujourd’hui en vitrine", "eyebrowNl": "Vandaag in de etalage"}}, {"id": "fp-remise", "order": 2, "name": "Promotion en %", "description": "Une remise sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{produit} -{remise} %", "text": "-{remise} % sur {produit} chez L’Atelier By {ville}, du {du} au {au}. Ouvert {horaires}.", "textNl": "-{remise} % op {produit} bij L’Atelier By {ville}, van {du} tot {au}. Open {horaires}.", "product": "choix", "promo": {"kind": "remise", "min": 10, "max": 30}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "ruby", "eyebrow": "Promotion", "eyebrowNl": "Promotie"}}, {"id": "fp-offre", "order": 3, "name": "Offre spéciale", "description": "4+1, 2+1… sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{offre} · {produit}", "text": "{offre} sur {produit} chez L’Atelier By {ville}, du {du} au {au} !", "textNl": "{offre} op {produit} bij L’Atelier By {ville}, van {du} tot {au}!", "product": "choix", "promo": {"kind": "offre", "offres": ["4+1", "2+1", "1 acheté = 1 offert"]}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "abricot", "eyebrow": "Offre spéciale", "eyebrowNl": "Speciale actie"}}, {"id": "fp-evenement", "order": 4, "name": "Événement en boutique", "description": "Une dégustation, une animation, un horaire spécial.", "active": true, "type": "Événement local", "fb": true, "ig": true, "validation": true, "title": "Événement à {ville}", "text": "Chez L’Atelier By {ville} : {libre}", "textNl": "Bij L’Atelier By {ville}: {libre}", "product": "aucun", "promo": {"kind": "aucune"}, "period": false, "free": 90, "photo": "upload", "visual": {"style": "noir", "eyebrow": "En boutique", "eyebrowNl": "In de winkel"}}, {"id": "fp-vitrine", "order": 5, "name": "Nouveau en vitrine", "description": "Votre photo d’un produit qui arrive.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "Nouveau : {produit}", "text": "Nouveau dans notre vitrine à {ville} : {produit}. À découvrir {horaires} !", "textNl": "Nieuw in onze etalage in {ville}: {produit}. Te ontdekken {horaires}!", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "upload", "visual": {"style": "plein", "eyebrow": "Nouveau", "eyebrowNl": "Nieuw"}}];
+  const FRULES = {"actif": true, "validation": "modele", "quotaSemaine": 3, "delaiMinHeures": 24, "horizonJours": 30, "jours": [1, 2, 3, 4, 5, 6, 0], "heureMin": "07:00", "heureMax": "20:00", "fb": true, "ig": true, "remiseMax": 30, "promoDureeMax": 14, "voirReseau": true, "voirCampagnes": true, "voirResultats": true, "message": "Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By."};
   // Les dark posts créés par les pubs (relus chez Meta par le serveur) : pub, post, boutique, langue, variante, liens, commentaires.
   const DARK = [];
   const LEADS = [
@@ -348,7 +351,7 @@
   const cents = (eurV) => Math.round((+eurV || 0) * 100);
 
   // ---------- mode réel : l'API du module ----------
-  const KINDS = ['posts', 'ads', 'campaigns', 'leadforms', 'groups', 'templates'];
+  const KINDS = ['posts', 'ads', 'campaigns', 'leadforms', 'groups', 'templates', 'ftemplates'];
   const API = String(window.SOCIAL_API_BASE || 'api/v1/social').replace(/\/$/, '');
   let LIVE = null, base = {}, known = new WeakSet(), queue = Promise.resolve(), pending = 0, why = '';
   const snap = (arr) => { const m = {}; (arr || []).forEach(x => { if (x && x.id != null) m[x.id] = JSON.stringify(x); }); return m; };
@@ -381,7 +384,7 @@
     // le serveur, lui, refuse de créer une pub sans la vraie position (ou l'adresse géocodée).
     META.geo = {}; SHOPS.forEach(s => { META.geo[s.id] = (m.geo && m.geo[s.id]) || [50.8466, 4.3528]; });
     cache = { posts: L.posts || [], ads: L.ads || [], campaigns: L.campaigns || [], shops: L.shops || [], activity: L.activity || [], leadforms: L.leadforms || [],
-      groups: L.groups || [], templates: L.templates || [], leads: L.leads || [], params: L.params || {}, tfb: L.tfb || {}, tfbAudit: L.tfbAudit || {}, brand: L.brand || null, meta: { version: META.version, dsa: META.dsa, ids: META.ids, networkAccount: META.networkAccount, lastCheck: m.lastCheck } };
+      groups: L.groups || [], templates: L.templates || [], leads: L.leads || [], ftemplates: L.ftemplates || [], franchise: L.franchise || { rules: {}, access: [] }, params: L.params || {}, tfb: L.tfb || {}, tfbAudit: L.tfbAudit || {}, brand: L.brand || null, meta: { version: META.version, dsa: META.dsa, ids: META.ids, networkAccount: META.networkAccount, lastCheck: m.lastCheck } };
     base = {}; KINDS.forEach(k => { base[k] = snap(cache[k]); }); base.shops = snap(cache.shops); base.meta = JSON.stringify(cache.meta);
     known = new WeakSet(); cache.activity.forEach(a => known.add(a));
     if (window.SA) Object.assign(window.SA, { TODAY, MARGIN, user: L.user, live: true, metaStatus: L.metaStatus });

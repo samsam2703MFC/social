@@ -516,8 +516,20 @@ class Component extends DCLogic {
           this.toast(left ? 'Relance effectuée. Gosselies échoue encore : reconnectez le compte Instagram.' : 'Publication relancée avec succès.');
         }, 1300);
       },
-      approve: () => { if (!sp) return; this.updatePost(sp.id, { status: 'Programmé' }); SA.log('Sarah Lambert (Franchiseur)', 'Validation', '« ' + sp.title + ' » approuvé'); this.toast('Post approuvé et programmé.'); },
-      reject: () => { if (!sp) return; this.updatePost(sp.id, { status: 'Brouillon' }); SA.log('Sarah Lambert (Franchiseur)', 'Refus', '« ' + sp.title + ' » renvoyé en brouillon'); this.toast('Post renvoyé en brouillon à la boutique.'); },
+      approve: () => { if (!sp) return; this.updatePost(sp.id, { status: 'Programmé', refus: null }); SA.log('Sarah Lambert (Franchiseur)', 'Validation', '« ' + sp.title + ' » approuvé'); this.toast('Post approuvé et programmé.'); },
+      reject: () => {
+        if (!sp) return;
+        // Un post proposé depuis l'espace franchisé : la boutique voit le motif du refus.
+        if (sp.origin === 'franchise') {
+          const motif = window.prompt('Motif du refus, visible par la boutique dans son espace :', '');
+          if (motif === null) return;
+          this.updatePost(sp.id, { status: 'Brouillon', refus: motif.trim() || 'Refusé par le franchiseur' });
+          SA.log('Sarah Lambert (Franchiseur)', 'Refus', '« ' + sp.title + ' » (' + (sp.author || 'boutique') + ') refusé' + (motif.trim() ? ' : ' + motif.trim() : ''));
+          this.toast('Refusé : la boutique voit le motif dans son espace.');
+          return;
+        }
+        this.updatePost(sp.id, { status: 'Brouillon' }); SA.log('Sarah Lambert (Franchiseur)', 'Refus', '« ' + sp.title + ' » renvoyé en brouillon'); this.toast('Post renvoyé en brouillon à la boutique.');
+      },
       openDup: () => { if (!sp) return; this.setState({ dupOpen: true, dupDates: [SA.addDays(sp.date < SA.TODAY ? SA.TODAY : sp.date, 7)], dupShops: shopsOf(sp).slice(), dupDateInput: '' }); },
       closeDup: () => this.setState({ dupOpen: false }), dupOpen: s.dupOpen,
       dupDates: s.dupDates.map(d => ({ label: SA.dLabel(d), remove: () => this.setState({ dupDates: s.dupDates.filter(x => x !== d) }) })),

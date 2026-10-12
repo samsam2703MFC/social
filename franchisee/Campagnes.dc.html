@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="config.js"></script>
+  <script src="franchise-data.js"></script>
+  <style>html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;} a{color:#8D1D2C;}</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="FNav" active="camp" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+    <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }} <a href="Connexion.dc.html">Se reconnecter</a></div></sc-if>
+    <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
+    <header style="display:flex;flex-direction:column;gap:4px;">
+      <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Campagnes du réseau où figure L’Atelier By {{ shopName }}</span>
+      <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">CAMPAGNES DU RESEAU</h1>
+    </header>
+    <sc-if value="{{ hidden }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Le réseau ne partage pas les campagnes dans l’espace boutique.</div></sc-if>
+    <sc-if value="{{ none }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Aucune campagne du réseau ne concerne votre boutique pour l’instant.</div></sc-if>
+    <sc-for list="{{ camps }}" as="c" hint-placeholder-count="2">
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:3px;"><span style="font-size:17px;font-weight:500;">{{ c.name }}</span><span style="font-size:12px;color:#666666;">{{ c.period }} · {{ c.type }}</span></div>
+          <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 9px;background:{{ c.stBg }};color:{{ c.stFg }};">{{ c.status }}</span>
+        </div>
+        <sc-if value="{{ c.hasDesc }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#3A3530;line-height:1.5;">{{ c.description }}</span></sc-if>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ c.products }}" as="p" hint-placeholder-count="0"><span style="font-size:12px;border-radius:999px;padding:4px 10px;background:#F4EFE8;">{{ p }}</span></sc-for></div>
+        <sc-if value="{{ c.hasBudget }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#444444;">Budget publicitaire pour votre boutique : <strong style="font-weight:600;">{{ c.budget }}</strong> (financé et piloté par le réseau)</span></sc-if>
+        <sc-if value="{{ c.hasResult }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;">
+            <sc-for list="{{ c.kpis }}" as="k" hint-placeholder-count="4"><div style="background:#F4EFE8;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:2px;"><span style="font-size:11px;color:#666666;">{{ k.label }}</span><span style="font-size:18px;font-weight:300;color:{{ k.color }};">{{ k.value }}</span><span style="font-size:10px;color:#666666;">{{ k.sub }}</span></div></sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ c.hasPosts }}" hint-placeholder-val="{{ false }}"><a href="{{ c.calHref }}" style="font-size:12px;font-weight:500;">{{ c.postsLabel }} →</a></sc-if>
+      </section>
+    </sc-for>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const SF = window.SF, st = SF && SF.state();
+    if (!st) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', camps: [] };
+    const ST = { 'en cours': ['#E2F0E8', '#0F6B4A'], 'planifiée': ['#F2C9A0', '#6b4420'], 'terminée': ['#EAE4DC', '#555555'], 'brouillon': ['#F4EFE8', '#555555'] };
+    const pct = (a, b) => b ? (a >= b ? '+' : '') + Math.round((a / b - 1) * 100) + ' %' : '—';
+    const camps = (st.campaigns || []).map(c => {
+      const r = c.result, [bg, fg] = ST[c.status] || ST['brouillon'], posts = st.posts.filter(p => p.campaign === c.id);
+      const has = !!(r && st.rules.voirResultats !== false);
+      return { name: c.name, period: 'Du ' + SF.dLabel(c.start) + ' au ' + SF.dLabel(c.end), type: c.type || 'campagne', status: c.status, stBg: bg, stFg: fg,
+        hasDesc: !!c.description, description: c.description, products: c.products || [], hasBudget: c.budget != null && c.budget > 0, budget: SF.eur(c.budget),
+        hasResult: has, kpis: has ? [
+          { label: 'Personnes touchées', value: (r.reach || 0).toLocaleString('fr-BE'), sub: 'par les publicités', color: '#222222' },
+          { label: 'Clics', value: (r.clicks || 0).toLocaleString('fr-BE'), sub: 'vers votre boutique', color: '#222222' },
+          { label: 'Ventes des produits', value: r.caCamp != null ? SF.eur(r.caCamp) : '—', sub: r.caRef != null ? pct(r.caCamp, r.caRef) + ' vs habituel (estimation)' : 'référence indisponible', color: r.caCamp >= r.caRef ? '#0F6B4A' : '#8A4B00' },
+          { label: 'Tickets', value: r.tCamp != null ? r.tCamp : '—', sub: r.tRef != null ? pct(r.tCamp, r.tRef) + ' vs habituel' : '', color: '#222222' }] : [],
+        hasPosts: posts.length > 0, postsLabel: posts.length + ' post(s) de la campagne dans votre calendrier', calHref: SF.href('cal', 'post=' + encodeURIComponent(posts[0] ? posts[0].id : '')) };
+    });
+    return { ok: true, hasError: false, shopName: st.shop.name, hidden: st.rules.voirCampagnes === false, none: st.rules.voirCampagnes !== false && camps.length === 0, camps };
+  }
+}
+</script>
+</body>
+</html>

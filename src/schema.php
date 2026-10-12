@@ -23,6 +23,8 @@ declare(strict_types=1);
  *                        et pour chaque pub le post qu'elle diffuse (dark post : `story_id`,
  *                        `ig_media_id`, liens) ;
  *  - social_commentaire : les commentaires reçus sur les dark posts (Facebook et Instagram) ;
+ *  - social_modele_franchise : les modèles de post ouverts aux franchisés (espace /social_franchisee) ;
+ *  - social_acces_franchise : les codes d'accès des boutiques à leur espace (empreinte seulement) ;
  *  - social_resultat   : résultats Meta + ventes par campagne et boutique ;
  *  - social_instagram_media : les dernières publications de chaque compte
  *                        Instagram, relues chez Meta (grille du profil) ;
@@ -108,6 +110,13 @@ function socInstall(): void
         . 'shop_id VARCHAR(16) NULL, post_id VARCHAR(64) NULL, pub_id VARCHAR(64) NULL, auteur VARCHAR(160) NULL, message TEXT NULL,'
         . 'cree_le DATETIME NOT NULL, masque TINYINT NOT NULL DEFAULT 0, maj_le DATETIME NOT NULL, KEY idx_objet (objet_id), KEY idx_pub (pub_id, cree_le))' . $t);
 
+    Db::exec('CREATE TABLE IF NOT EXISTS social_modele_franchise (id VARCHAR(64) PRIMARY KEY, nom VARCHAR(160) NULL, type VARCHAR(60) NULL,'
+        . 'actif TINYINT NOT NULL DEFAULT 1, ordre INT NULL, validation TINYINT NULL, texte_fr TEXT NULL, texte_nl TEXT NULL, data LONGTEXT NOT NULL, ' . $maj . ')' . $t);
+
+    Db::exec('CREATE TABLE IF NOT EXISTS social_acces_franchise (id INT AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL, libelle VARCHAR(120) NOT NULL,'
+        . 'code_hash VARCHAR(255) NOT NULL, empreinte CHAR(16) NOT NULL, actif TINYINT NOT NULL DEFAULT 1, cree_le DATETIME NOT NULL, dernier_acces DATETIME NULL,'
+        . 'KEY idx_empreinte (empreinte), KEY idx_shop (shop_id))' . $t);
+
     Db::exec('CREATE TABLE IF NOT EXISTS social_instagram_media (media_id VARCHAR(40) PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
         . 'type VARCHAR(20) NULL, media_url VARCHAR(1000) NULL, vignette_url VARCHAR(1000) NULL, permalink VARCHAR(300) NULL,'
         . 'publie_le DATETIME NOT NULL, legende TEXT NULL, maj_le DATETIME NOT NULL, KEY idx_shop (shop_id, publie_le))' . $t);
@@ -149,6 +158,7 @@ function socParamsInit(): void
         'meta_compte_reseau'=> ['', false],
         'url_publique'      => [(string) ($c['publicUrl'] ?? ''), false],
         'url_bo'            => [(string) ($c['boUrl'] ?? '/consulant_bo/'), false],
+        'url_franchise'     => [(string) ($c['franchiseeUrl'] ?? '/social_franchisee/'), false],
         'utilisateur'       => [(string) ($c['userName'] ?? 'Franchiseur'), false],
         'marge'             => [(float) ($d['margin'] ?? 0.62), false],
         'catalogue'         => [json_decode((string) @file_get_contents(__DIR__ . '/data/catalogue.json'), true) ?: [], false],

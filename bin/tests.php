@@ -154,6 +154,16 @@ Tfb::$transport = static function (string $m, string $url, array $h, ?string $bo
         $b = json_decode((string) $body, true);
         return ($b['password'] ?? '') === 'pw' ? [200, json_encode(['access_token' => 'JWT-' . $mm[1]])] : [401, '{"message":"bad"}'];
     }
+    if ($p === '/api/v1/owner/auth/login') {
+        $b = json_decode((string) $body, true);
+        if (($b['password'] ?? '') !== 'ok') { return [401, '{"status":"error","description":"Invalid credentials"}']; }
+        $claims = rtrim(strtr(base64_encode(json_encode(['name' => 'Nathan Charlot', 'scope_type' => 'shop', 'scope_id' => 4])), '+/', '-_'), '=');
+        return [200, json_encode(['access_token' => 'h.' . $claims . '.s', 'refresh_token' => 'r', 'token_type' => 'Bearer', 'session_id' => 1, 'expires_in' => 1800])];
+    }
+    if ($p === '/api/v1/owner/shops') {
+        $ok = (bool) array_filter($h, static fn ($x) => str_starts_with($x, 'Authorization: Bearer h.'));
+        return $ok ? [200, json_encode(['data' => [['id' => 4, 'name' => 'Atelier by - Halle'], ['id' => 99, 'name' => 'Hors réseau']]])] : [401, '{}'];
+    }
     if ($p === '/api/swagger/openapi.json') {
         return [200, json_encode(['openapi' => '3.0.0', 'paths' => [
             '/api/v1/public/shops' => ['get' => []], '/api/v1/shops' => ['get' => ['tags' => ['Franchise shop']]],
@@ -462,6 +472,112 @@ check('masquer un commentaire : appel Meta et état en base', $code === 200 && $
 check('GET /darkposts/commentaires?ad=a3', $code === 200 && count($b['comments']) === 8);
 $dp = array_values(array_filter(socStateGet()['darkPosts'], static fn ($x) => $x['ad'] === 'a3'));
 check('état : dark posts de la pub avec liens et nombre de commentaires', count($dp) === 4 && $dp[0]['comments'] === 2 && $dp[0]['link'] !== '' && array_sum(array_column($dp, 'hidden')) === 1);
+
+echo "Espace franchisé : accès et cloisonnement\n";
+$fr = static function (string $m, string $path, array $body = [], array $get = []) {
+    $GLOBALS['SOC_BODY'] = $body; $_GET = $get;
+    try { return socRoute($m, $path); } catch (HttpError $e) { return [$e->status, ['error' => $e->getMessage()]]; }
+    finally { unset($GLOBALS['SOC_BODY']); $_GET = []; }
+};
+unset($_COOKIE[SF_COOKIE]);
+[$code, $b] = $fr('GET', '/franchise/admin');
+check('modèles franchisé livrés (5), règles par défaut', $code === 200 && count($b['templates']) === 5 && $b['rules']['quotaSemaine'] === 3 && $b['rules']['validation'] === 'modele');
+[$code] = $fr('GET', '/franchise/etat');
+check('sans session : 401', $code === 401);
+[$code, $acc] = $fr('POST', '/franchise/admin/acces', ['shop' => '4', 'label' => 'Nathan']);
+check('code d’accès créé (rendu une fois, empreinte seule en base)', $code === 200 && preg_match('/^ATB-[A-Z0-9]{5}-[A-Z0-9]{5}$/', $acc['code']) === 1
+    && !str_contains(json_encode(Db::rows('SELECT * FROM social_acces_franchise')), $acc['code']));
+[$code] = $fr('POST', '/franchise/connexion', ['code' => 'ATB-AAAAA-BBBBB']);
+check('code inconnu : 401', $code === 401);
+[$code, $b] = $fr('POST', '/franchise/connexion', ['code' => strtolower($acc['code'])]);
+check('connexion par code : session limitée à Halle', $code === 200 && $b['shops'] === ['4']);
+[$code, $et] = $fr('GET', '/franchise/etat');
+$ids = array_column($et['posts'] ?? [], 'id');
+check('état : sa boutique, son catalogue (API, sans B2B ni inactif), les campagnes où elle figure', $code === 200 && $et['shop']['name'] === 'Halle'
+    && array_column($et['catalogue'], 'id') === ['p1'] && $et['catalogue'][0]['nameNl'] === 'Krokante brioche' && in_array('c1', array_column($et['campaigns'], 'id'), true), json_encode($et['error'] ?? ''));
+check('état : posts du réseau qui la concernent, jamais les dark posts ni ceux des autres boutiques', in_array('p1', $ids, true) && !in_array('d1', $ids, true) && !in_array('p2', $ids, true));
+[$code] = $fr('GET', '/franchise/etat', [], ['shop' => '5']);
+check('une autre boutique : 403', $code === 403);
+
+echo "Espace franchisé : publier depuis un modèle\n";
+$vis = 'data:image/png;base64,' . base64_encode(str_repeat("\x89PNGvisuel", 60));
+$j3 = date('Y-m-d', strtotime('+3 days')); $j8 = date('Y-m-d', strtotime('+8 days'));
+$promoOk = ['template' => 'fp-remise', 'product' => 'p1', 'discount' => 20, 'from' => $j3, 'to' => $j8, 'fb' => true, 'ig' => true, 'date' => $j3, 'time' => '10:00', 'visual' => $vis];
+[$code, $b] = $fr('POST', '/franchise/posts', $promoOk);
+$pf = socItem('posts', (string) ($b['post']['id'] ?? ''));
+check('promotion -20 % : créée « à valider », texte du modèle rempli, rien en file', $code === 200 && $pf['status'] === 'À valider' && $pf['origin'] === 'franchise'
+    && str_starts_with($pf['text'], '-20 % sur Brioche croustillante chez L’Atelier By {ville}, du ' . date('d/m', strtotime($j3)))
+    && str_contains($pf['textNl'], 'Krokante brioche') && (int) Db::row('SELECT COUNT(*) n FROM social_publication WHERE content_id = ?', [$pf['id']])['n'] === 0, json_encode($b));
+check('visuel écrit en fichier, promo notée', str_starts_with((string) $pf['img'], 'uploads/') && ($pf['promo']['label'] ?? '') === '-20 %' && ($pf['promo']['to'] ?? '') === $j8);
+$refus = static function (array $patch, string $attendu) use ($fr, $promoOk) {
+    [$code, $b] = $fr('POST', '/franchise/posts', array_merge($promoOk, $patch));
+    return $code === 422 && str_contains((string) ($b['error'] ?? ''), $attendu);
+};
+check('remise hors bornes refusée', $refus(['discount' => 50], 'Remise entre 10 et 30 %'));
+check('moins de 24 h à l’avance refusé', $refus(['date' => date('Y-m-d', strtotime('+1 hour')), 'time' => date('H:i', strtotime('+1 hour'))], 'à l’avance'));
+check('heure hors plage refusée', $refus(['time' => '22:30'], 'entre 07:00 et 20:00'));
+check('produit hors catalogue refusé', $refus(['product' => 'p2'], 'votre catalogue'));
+check('promotion trop longue refusée', $refus(['to' => date('Y-m-d', strtotime('+30 days'))], 'au plus 14 jours'));
+check('modèle inconnu refusé', $refus(['template' => 'fp-inexistant'], 'pas (ou plus) ouvert'));
+[$code, $b] = $fr('POST', '/franchise/posts', ['template' => 'fp-evenement', 'free' => 'Dégustation samedi, infos sur www.exemple.be', 'fb' => true, 'date' => $j3, 'time' => '11:00', 'visual' => $vis, 'photo' => $vis]);
+check('phrase libre : pas de lien', $code === 422 && str_contains($b['error'], 'Pas de lien'));
+[$code, $b] = $fr('POST', '/franchise/posts', ['template' => 'fp-produit', 'product' => 'p1', 'fb' => true, 'ig' => false, 'date' => $j3, 'time' => '09:00', 'visual' => $vis]);
+$pp = socItem('posts', (string) ($b['post']['id'] ?? ''));
+check('produit du jour (sans validation) : programmé et en file, Facebook seul', $code === 200 && $pp['status'] === 'Programmé'
+    && Db::rows('SELECT canal FROM social_publication WHERE content_id = ?', [$pp['id']]) === [['canal' => 'fb']] && $b['quota']['used'] === 2);
+socStateSave(['changes' => ['posts' => ['upsert' => [array_merge(socItem('posts', $pf['id']), ['status' => 'Brouillon', 'refus' => 'Remise trop forte pour cette période'])]]]]);
+[$code, $et] = $fr('GET', '/franchise/etat');
+$vue = array_values(array_filter($et['posts'], static fn ($x) => $x['id'] === $pf['id']))[0] ?? [];
+check('refusé par le franchiseur : vu « Refusé » avec le motif, hors quota', ($vue['status'] ?? '') === 'Refusé' && ($vue['refus'] ?? '') === 'Remise trop forte pour cette période' && $et['quota']['used'] <= 2);
+$fr('POST', '/franchise/admin/regles', ['rules' => array_merge(sfRegles(), ['quotaSemaine' => 1, 'validation' => 'toujours'])]);
+check('quota de la semaine atteint : refusé', $refus(['date' => $j3, 'time' => '15:00'], 'Quota atteint'));
+$fr('POST', '/franchise/admin/regles', ['rules' => array_merge(sfRegles(), ['quotaSemaine' => 5])]);
+[$code, $b] = $fr('POST', '/franchise/posts', ['template' => 'fp-produit', 'product' => 'p1', 'fb' => true, 'date' => $j3, 'time' => '16:00', 'visual' => $vis]);
+check('règle « toujours valider » : même un modèle sans validation part « à valider »', $code === 200 && socItem('posts', $b['post']['id'])['status'] === 'À valider');
+[$code] = $fr('POST', '/franchise/posts/' . $b['post']['id'] . '/annuler', ['shop' => '4']);
+check('annuler son post non publié', $code === 200 && socItem('posts', $b['post']['id']) === null);
+[$code] = $fr('POST', '/franchise/posts/p1/annuler', ['shop' => '4']);
+check('annuler un post du réseau : impossible', $code === 404);
+
+echo "Espace franchisé : compte atelierby, aperçu, fermeture\n";
+unset($_COOKIE[SF_COOKIE]);
+[$code] = $fr('POST', '/franchise/connexion', ['phone' => '0499', 'password' => 'faux']);
+check('compte atelierby refusé : 401', $code === 401);
+[$code, $b] = $fr('POST', '/franchise/connexion', ['phone' => '0499', 'password' => 'ok']);
+check('compte atelierby (owner) : ses boutiques du réseau seulement', $code === 200 && $b['shops'] === ['4'] && $b['name'] === 'Nathan Charlot', json_encode($b));
+[$code, $b] = $fr('POST', '/franchise/admin/apercu', ['shop' => '5']);
+check('aperçu franchiseur : session sur la boutique choisie', $code === 200 && sfSession()['shops'] === ['5'] && sfSession()['via'] === 'apercu');
+$fr('POST', '/franchise/admin/regles', ['rules' => array_merge(sfRegles(), ['actif' => false])]);
+unset($_COOKIE[SF_COOKIE]);
+[$code] = $fr('POST', '/franchise/connexion', ['code' => $acc['code']]);
+check('espace fermé par le franchiseur : connexion refusée', $code === 403);
+$fr('POST', '/franchise/admin/regles', ['rules' => array_merge(sfRegles(), ['actif' => true, 'validation' => 'modele', 'quotaSemaine' => 3])]);
+[$code, $b] = $fr('POST', '/franchise/admin/acces/' . $fr('GET', '/franchise/admin')[1]['access'][0]['id'] . '/revoquer');
+[$code2] = $fr('POST', '/franchise/connexion', ['code' => $acc['code']]);
+check('code révoqué : refusé', $code === 200 && $code2 === 401);
+unset($_COOKIE[SF_COOKIE]);
+
+echo "Transport dans l'ERP : points d'accroche de l'hôte\n";
+$journalHote = [];
+$GLOBALS['SOCIAL_HOTE'] = [
+    'utilisateur' => static fn (): string => 'ERP · Marie Dupont',
+    'auth' => static fn (): bool => true,
+    'journal' => static function (string $at, string $qui, string $quoi, string $d) use (&$journalHote): void { $journalHote[] = [$qui, $quoi]; },
+    'boutiques' => static fn (array $l): array => array_map(static fn ($s) => $s + ['erp' => true], $l),
+    'franchise_session' => static fn (): ?array => ['shops' => ['5', '999'], 'name' => 'Julie (ERP)'],
+];
+$avantBo = (int) Db::row("SELECT COUNT(*) n FROM ceo_journal_entry")['n'];
+socLog(socUser(), 'Test', 'journal de l’hôte');
+check('hôte : utilisateur et journal de l’ERP (plus de miroir dans le BO)', socUser() === 'ERP · Marie Dupont' && $journalHote === [['ERP · Marie Dupont', 'Test']]
+    && (int) Db::row("SELECT COUNT(*) n FROM ceo_journal_entry")['n'] === $avantBo);
+check('hôte : boutiques complétées par l’ERP', !empty(socShop('4')['erp']));
+unset($_COOKIE[SF_COOKIE]);
+[$code, $b] = $fr('GET', '/franchise/etat');
+check('hôte : franchisé connecté à l’ERP → son espace, ses boutiques du réseau seulement', $code === 200 && $b['shop']['id'] === '5' && $b['me']['via'] === 'hote'
+    && array_column($b['me']['shops'], 'id') === ['5']);
+unset($GLOBALS['SOCIAL_HOTE']);
+[$code] = $fr('GET', '/franchise/etat');
+check('sans hôte : retour au comportement du BO (401 sans session)', $code === 401 && socUser() !== 'ERP · Marie Dupont');
 
 echo "Formulaires de leads\n";
 $lf = ['id' => 'lf1', 'family' => 'b2b', 'version' => 1, 'status' => 'Actif', 'name' => 'Plateaux', 'locale' => 'fr_FR', 'created' => date('Y-m-d'), 'shops' => ['4', '5'],

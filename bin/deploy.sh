@@ -18,6 +18,10 @@ BO_DIR="${BO_DIR:-/var/www/consulant_bo}"              # installation du BO cons
 BO_URL="${BO_URL:-/consulant_bo/}"
 PUBLIC_URL="${PUBLIC_URL:-https://185.180.206.46${ALIAS_PATH}/}"
 LOCAL_BASE="http://127.0.0.1${ALIAS_PATH}"
+# Espace franchisé : pages statiques dans leur propre dossier, servies à leur propre
+# adresse ; elles appellent l'API du module (même hôte, donc même session).
+FR_DIR="${FR_DIR:-/var/www/social_franchisee}"
+FR_ALIAS="${FR_ALIAS:-/social_franchisee}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_SRC="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -41,17 +45,22 @@ for f in "$REPO_SRC"/src/*.php "$REPO_SRC"/public/api/*.php "$REPO_SRC"/bin/*.ph
   php -l "$f" >/dev/null || { warn "SYNTAXE PHP : $f"; exit 1; }
 done
 if command -v node >/dev/null 2>&1; then
-  node --check "$REPO_SRC/public/social-data.js" || { warn "SYNTAXE JS : social-data.js"; exit 1; }
+  for f in "$REPO_SRC/public/social-data.js" "$REPO_SRC/public/montage.js" "$REPO_SRC/public/franchise-visuel.js" "$REPO_SRC/franchisee/franchise-data.js"; do
+    node --check "$f" || { warn "SYNTAXE JS : $f"; exit 1; }
+  done
 fi
 
 # --- 3. Fichiers -----------------------------------------------------------------
 log "Copie vers $TARGET_DIR (les visuels déposés, public/uploads, sont conservés)…"
 mkdir -p "$TARGET_DIR"
-rsync -a --delete --exclude '.git' --exclude 'config/config.php' --exclude 'public/uploads' --exclude '.deployenv' \
+rsync -a --delete --exclude '.git' --exclude 'config/config.php' --exclude 'config/hote.php' --exclude 'public/uploads' --exclude '.deployenv' \
   "$REPO_SRC/" "$TARGET_DIR/"
 mkdir -p "$TARGET_DIR/public/uploads"
 chown -R www-data:www-data "$TARGET_DIR/public/uploads"
 chmod -R u+rwX,g+rX "$TARGET_DIR/public/uploads"
+
+log "Espace franchisé → $FR_DIR ($FR_ALIAS)…"
+bash "$REPO_SRC/bin/franchisee-build.sh" "$FR_DIR" "${ALIAS_PATH}/api/v1/social" "${ALIAS_PATH}/"
 
 # --- 4. config/config.php : où trouver le BO (aucun secret) ------------------------
 CFG="$TARGET_DIR/config/config.php"
@@ -67,6 +76,12 @@ log "Apache : alias $ALIAS_PATH → $TARGET_DIR/public"
 cat > /etc/apache2/conf-available/social.conf <<APACHE
 Alias ${ALIAS_PATH} ${TARGET_DIR}/public
 <Directory ${TARGET_DIR}/public>
+    AllowOverride All
+    Require all granted
+</Directory>
+# Espace franchisé
+Alias ${FR_ALIAS} ${FR_DIR}
+<Directory ${FR_DIR}>
     AllowOverride All
     Require all granted
 </Directory>
@@ -102,4 +117,8 @@ code=$(curl -s -o /dev/null -w '%{http_code}' "$LOCAL_BASE/SA%20Calendrier.dc.ht
 [[ "$code" == "200" ]] && log "OK  calendrier servi" || { warn "calendrier → HTTP $code"; fail=1; }
 code=$(curl -s -o /dev/null -w '%{http_code}' "$LOCAL_BASE/uploads/__absent__.png")
 [[ "$code" == "404" ]] && log "OK  un visuel absent rend 404" || warn "uploads absent → HTTP $code (404 attendu)"
+code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1${FR_ALIAS}/Connexion.dc.html")
+[[ "$code" == "200" ]] && log "OK  espace franchisé servi ($FR_ALIAS)" || { warn "$FR_ALIAS → HTTP $code"; fail=1; }
+st=$(curl -s --max-time 20 "$LOCAL_BASE/api/v1/social/franchise/session" || echo '{}')
+grep -q '"authed":false' <<<"$st" && log "OK  API de l'espace franchisé (sans session : non connecté)" || { warn "franchise/session : $st"; fail=1; }
 [[ "$fail" == "0" ]] && log "Module en ligne : http://185.180.206.46${ALIAS_PATH}/" || { warn "Recette en échec."; exit 1; }

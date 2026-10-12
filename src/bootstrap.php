@@ -39,6 +39,31 @@ function socialConfig(): array
     return $cfg;
 }
 
+/**
+ * Les points d'accroche de l'hôte. Le module vit aujourd'hui à côté du BO consultant ;
+ * pour le transporter (ERP…), l'hôte fournit `config/hote.php` (hors Git) qui rend
+ * un tableau de fonctions — chacune remplace le comportement « BO » d'un seul point :
+ *   pdo()                       → PDO          la base (sinon : identifiants du BO)
+ *   auth()                      → bool         la session franchiseur (sinon : cookie du cockpit)
+ *   utilisateur()               → string       le nom affiché dans le journal
+ *   journal($at,$qui,$quoi,$d)  → void         le journal de l'hôte (sinon : ceo_journal_entry)
+ *   boutiques(array $liste)     → array        les boutiques (reçoit la liste calculée, la rend)
+ *   franchise_session()         → ?array       le franchisé déjà connecté à l'hôte :
+ *                                              ['shops' => [ids], 'name' => '…'] ou null
+ * Voir config/hote.example.php et docs/INTEGRATION-ERP.md.
+ */
+function socHote(string $point): ?callable
+{
+    static $fichier = null;
+    if ($fichier === null) {
+        $fichier = [];
+        $f = __DIR__ . '/../config/hote.php';
+        if (is_file($f)) { $x = require $f; if (is_array($x)) { $fichier = $x; } }
+    }
+    $h = (isset($GLOBALS['SOCIAL_HOTE']) && is_array($GLOBALS['SOCIAL_HOTE']) ? $GLOBALS['SOCIAL_HOTE'] : []) + $fichier;
+    return isset($h[$point]) && is_callable($h[$point]) ? $h[$point] : null;
+}
+
 /** Le dossier du BO consultant. */
 function boDir(): string
 {
@@ -87,6 +112,7 @@ final class Db
     public static function pdo(): PDO
     {
         if (self::$pdo !== null) { return self::$pdo; }
+        if (($f = socHote('pdo')) !== null) { return self::$pdo = $f(); }
         $p = self::params();
         $dsn = "mysql:host={$p['host']};port={$p['port']};dbname={$p['name']};charset={$p['charset']}";
         self::$pdo = new PDO($dsn, $p['user'], $p['password'], [
@@ -189,7 +215,11 @@ function authEnabled(): bool
  * La session du cockpit est-elle valable ? Même algorithme que le BO
  * (src/auth.php) : `expiration.hmac_sha256(expiration, authSecret)`.
  */
-function authOk(): bool { return socAuthCheck(authEnabled()); }
+function authOk(): bool
+{
+    if (($f = socHote('auth')) !== null) { return (bool) $f(); }
+    return socAuthCheck(authEnabled());
+}
 
 function socAuthCheck(bool $enabled): bool
 {
@@ -206,6 +236,7 @@ function socAuthCheck(bool $enabled): bool
 /** Le nom affiché pour les gestes de l'écran. */
 function socUser(): string
 {
+    if (($f = socHote('utilisateur')) !== null) { return (string) $f(); }
     $n = trim((string) (socSetting('utilisateur') ?? ''));
     return $n !== '' ? $n : (string) (socialConfig()['userName'] ?? 'Franchiseur');
 }
@@ -222,6 +253,10 @@ function socLog(string $who, string $what, string $detail, ?string $at = null): 
     $at = $at ?? date('Y-m-d H:i:s');
     Db::exec('INSERT INTO social_activite (le, qui, quoi, detail) VALUES (?,?,?,?)',
         [$at, mb_substr($who, 0, 120), mb_substr($what, 0, 60), mb_substr($detail, 0, 1000)]);
+    if (($f = socHote('journal')) !== null) {
+        try { $f($at, $who, $what, $detail); } catch (Throwable $e) { /* miroir best-effort */ }
+        return;
+    }
     if (Db::hasTable('ceo_journal_entry')) {
         try {
             Db::exec('INSERT INTO ceo_journal_entry (happened_at, actor, kind, project, message) VALUES (?,?,?,?,?)',

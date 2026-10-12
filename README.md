@@ -48,6 +48,8 @@ Toutes les données **et toutes les clés** sont stockées et lues dans la base
 | `social_resultat` | résultats Meta + ventes caisse par campagne et boutique |
 | `social_instagram_media` | les 30 dernières publications de chaque compte Instagram (grille du profil) |
 | `social_commentaire` | les commentaires reçus sur les dark posts (Facebook et Instagram), masqués ou non |
+| `social_modele_franchise` | les modèles de post ouverts aux boutiques (espace franchisé) |
+| `social_acces_franchise` | les codes d'accès des boutiques à leur espace (empreinte seulement) |
 | `social_activite` | le journal d'activité |
 
 Chaque table a des colonnes typées (lisibles en SQL) et une colonne `data` qui
@@ -155,6 +157,39 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   pendant la période − moyenne des mêmes jours sur les 6 semaines précédentes
   (**estimation**, affichée comme telle).
 
+## Espace franchisé (`/social_franchisee`)
+
+Un outil de communication et de marketing pour chaque boutique, entièrement cadré
+par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
+
+- **La boutique voit** son calendrier (ses posts et ceux du réseau qui la
+  concernent), ses promotions, les campagnes du réseau où elle figure et leurs
+  résultats pour elle — jamais les autres boutiques.
+- **Elle publie uniquement depuis les modèles ouverts** : texte FR/NL, titre et
+  visuel figés (style du studio, mention) ; elle ne remplit que les champs que le
+  modèle ouvre — un produit de *son* catalogue (API TFBuddy), une remise bornée,
+  une offre d'une liste, un prix promotionnel, une période, une phrase courte (sans
+  lien, @ ni #), sa photo. L'écran franchiseur montre le visuel exact obtenu.
+- **Règles du réseau**, vérifiées par le serveur : espace ouvert ou fermé, validation
+  (toujours / selon le modèle / jamais), posts par semaine, délai minimum, horizon,
+  jours et heures de publication, canaux, remise maximale, durée maximale d'une
+  promotion, ce que la boutique peut voir. Les posts « à valider » arrivent dans le
+  calendrier du franchiseur ; un refus est motivé et la boutique voit le motif.
+- **Connexion** : le compte atelierby du gérant (API TFBuddy, espace « owner » :
+  `POST /owner/auth/login` puis `GET /owner/shops` — le mot de passe n'est pas
+  conservé) ou un code d'accès par boutique créé par le franchiseur. Session dans un
+  cookie signé, limitée aux boutiques du compte. « Voir comme cette boutique » ouvre
+  l'espace d'une boutique depuis l'écran franchiseur.
+- Démonstration : `/social_franchisee/?demo=1`.
+
+## Transport dans l'ERP
+
+Le module se déplace d'un bloc (tables `social_*`, `src/`, `public/`, `franchisee/`,
+`bin/`). Ses six liens à l'hôte — base, session, utilisateur, journal, boutiques,
+session des franchisés — se remplacent dans un seul fichier, `config/hote.php`
+(modèle : `config/hote.example.php`), sans toucher au code. Mode d'emploi complet :
+**`docs/INTEGRATION-ERP.md`**.
+
 ## Mode démonstration
 
 Si l'API ne répond pas (ou avec `?demo=1`), les écrans tournent sur les données
@@ -199,6 +234,9 @@ session du cockpit.
 ```
 public/            écrans de la maquette (SA *.dc.html) + social-data.js (couche de données)
   montage.js       montages Instagram (carrousel panoramique, frise, collages 4:5) dessinés sur canvas
+  franchise-visuel.js  visuel figé d'un modèle franchisé (partagé avec l'espace franchisé)
+franchisee/        espace boutique /social_franchisee (connexion, calendrier, publier, promotions, campagnes)
+config/            config.example.php (premier lancement), hote.example.php (points d'accroche de l'hôte)
   api/index.php    contrôleur frontal de l'API
   vendor/          React, ReactDOM, Babel, html-to-image (embarqués, aucun CDN)
 src/
@@ -213,6 +251,7 @@ src/
   results.php      insights Meta + ventes caisse
   instagram.php    grille du profil (lecture des publications), frise (publication, verrou)
   darkposts.php    dark posts : relecture chez Meta, réutilisation, commentaires (lecture, masquage)
+  franchise.php    espace franchisé : règles, modèles, accès, sessions, publication depuis un modèle
   api.php          routes
-bin/               cron.php, deploy.sh, tests.php
+bin/               cron.php, deploy.sh, franchisee-build.sh, tests.php
 ```

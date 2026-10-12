@@ -1,0 +1,7 @@
+# Espace franchisé (/social_franchisee) : pages statiques ; l'API est celle de /social.
+DirectoryIndex index.html
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>

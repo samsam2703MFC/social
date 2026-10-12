@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="config.js"></script>
+  <script src="franchise-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    a{color:#8D1D2C;} input,button{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <div style="width:100%;max-width:420px;background:#FFFFFF;border-radius:14px;border:0.5px solid rgba(34,34,34,0.10);padding:28px;display:flex;flex-direction:column;gap:16px;box-shadow:0 18px 50px rgba(35,34,32,0.12);">
+    <img src="img/logo.png" alt="L'Atelier By" style="height:24px;width:auto;align-self:flex-start;">
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8D1D2C;">Espace boutique</span>
+      <h1 style="font-family:var(--font-display);font-weight:400;font-size:28px;line-height:1.1;margin:0;color:#232220;">VOTRE COMMUNICATION</h1>
+      <span style="font-size:13px;color:#4A443E;line-height:1.5;">Votre calendrier de posts, vos promotions et les campagnes du réseau — dans la charte de L’Atelier By.</span>
+    </div>
+    <sc-if value="{{ closed }}" hint-placeholder-val="{{ false }}"><div style="background:#FCE7C8;color:#7A4100;border-radius:8px;padding:10px 12px;font-size:13px;">L’espace boutique est momentanément fermé par le franchiseur.</div></sc-if>
+    <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;">
+      <button onClick="{{ modeAccount }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ maBg }};color:{{ maFg }};">Compte atelierby</button>
+      <button onClick="{{ modeCode }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ mcBg }};color:{{ mcFg }};">Code d’accès</button>
+    </div>
+    <sc-if value="{{ isAccount }}" hint-placeholder-val="{{ true }}">
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Téléphone<input type="tel" value="{{ phone }}" onChange="{{ setPhone }}" autocomplete="username" placeholder="04xx xx xx xx" style="font-size:15px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:10px 12px;"></label>
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Mot de passe<input type="password" value="{{ password }}" onChange="{{ setPassword }}" onKeyDown="{{ onKey }}" autocomplete="current-password" style="font-size:15px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:10px 12px;"></label>
+      <span style="font-size:11px;color:#666666;line-height:1.5;">Le compte que vous utilisez pour atelierby (gérant de boutique). Votre mot de passe n’est pas conservé.</span>
+    </sc-if>
+    <sc-if value="{{ isCode }}" hint-placeholder-val="{{ false }}">
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Code d’accès de la boutique<input type="text" value="{{ code }}" onChange="{{ setCode }}" onKeyDown="{{ onKey }}" placeholder="ATB-XXXXX-XXXXX" style="font-size:17px;letter-spacing:0.06em;font-family:ui-monospace,monospace;text-transform:uppercase;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:10px 12px;"></label>
+      <span style="font-size:11px;color:#666666;line-height:1.5;">Remis par le franchiseur. Il ouvre l’espace de votre boutique seulement.</span>
+    </sc-if>
+    <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:8px;padding:10px 12px;font-size:13px;">{{ err }}</div></sc-if>
+    <button onClick="{{ submit }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:12px 16px;font-size:15px;font-weight:500;cursor:pointer;">{{ submitLabel }}</button>
+    <a href="{{ demoHref }}" style="font-size:12px;align-self:center;">Découvrir l’espace en démonstration</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { mode: 'account', phone: '', password: '', code: '', err: '', busy: false, closed: false };
+  async componentDidMount() {
+    const SF = window.SF;
+    if (!SF || SF.demo) return;
+    try { const r = await SF.api('GET', '/franchise/session'); if (r.authed) location.replace(SF.href('cal')); else if (r.open === false) this.setState({ closed: true }); } catch (e) {}
+  }
+  async submit() {
+    const SF = window.SF, s = this.state;
+    if (s.busy) return;
+    if (SF.demo) { location.href = SF.href('cal'); return; }
+    const body = s.mode === 'code' ? { code: s.code.trim() } : { phone: s.phone.trim(), password: s.password };
+    if (s.mode === 'code' ? !body.code : (!body.phone || !body.password)) { this.setState({ err: s.mode === 'code' ? 'Saisissez le code d’accès.' : 'Saisissez votre téléphone et votre mot de passe.' }); return; }
+    this.setState({ busy: true, err: '' });
+    try {
+      const r = await SF.api('POST', '/franchise/connexion', body);
+      try { localStorage.setItem('sf.shop', r.shops[0]); } catch (e) {}
+      location.href = SF.href('cal', 'shop=' + encodeURIComponent(r.shops[0]));
+    } catch (e) { this.setState({ busy: false, err: e.message, password: '' }); }
+  }
+  renderVals() {
+    const s = this.state, SF = window.SF;
+    const seg = (on) => on ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
+    const [maBg, maFg] = seg(s.mode === 'account'), [mcBg, mcFg] = seg(s.mode === 'code');
+    return {
+      closed: s.closed, isAccount: s.mode === 'account', isCode: s.mode === 'code', maBg, maFg, mcBg, mcFg,
+      modeAccount: () => this.setState({ mode: 'account', err: '' }), modeCode: () => this.setState({ mode: 'code', err: '' }),
+      phone: s.phone, password: s.password, code: s.code,
+      setPhone: (e) => this.setState({ phone: e.target.value }), setPassword: (e) => this.setState({ password: e.target.value }), setCode: (e) => this.setState({ code: e.target.value.toUpperCase() }),
+      onKey: (e) => { if (e.key === 'Enter') this.submit(); },
+      hasErr: !!s.err, err: s.err, submit: () => this.submit(), submitLabel: s.busy ? 'Connexion…' : 'Se connecter',
+      demoHref: SF ? 'Calendrier.dc.html?demo=1' : '#',
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -22,6 +22,7 @@ require_once __DIR__ . '/audit.php';
 require_once __DIR__ . '/portefeuille.php';
 require_once __DIR__ . '/instagram.php';
 require_once __DIR__ . '/darkposts.php';
+require_once __DIR__ . '/franchise.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -42,6 +43,9 @@ function socRoute(string $method, string $path): array
         return [200, socWebhook((string) file_get_contents('php://input'), $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? null)];
     }
 
+    // Espace franchisé : sa propre session (compte atelierby du gérant ou code d'accès), pas celle du cockpit.
+    if (($r = sfRoute($method, $path)) !== null) { return $r; }
+
     socInstall();
     if ($method === 'GET' && $path === '/auth') {
         return [200, ['enabled' => authEnabled(), 'authed' => authOk(), 'login' => (string) (socSetting('url_bo') ?? '/consulant_bo/')]];
@@ -51,6 +55,7 @@ function socRoute(string $method, string $path): array
             'login' => (string) (socSetting('url_bo') ?? '/consulant_bo/')]];
     }
 
+    if (($r = sfAdminRoute($method, $path)) !== null) { return $r; }
     if ($method === 'GET' && $path === '/state') { return [200, socStateGet()]; }
     if ($method === 'POST' && $path === '/state') { return [200, socStateSave(body())]; }
     if ($method === 'GET' && $path === '/shops') { return [200, ['shops' => socShops()]]; }

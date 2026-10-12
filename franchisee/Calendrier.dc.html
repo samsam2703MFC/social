@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="config.js"></script>
+  <script src="franchise-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    a{color:#8D1D2C;} a:hover{color:#232220;} button{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="FNav" active="cal" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+    <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }} <a href="Connexion.dc.html">Se reconnecter</a></div></sc-if>
+    <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">L’Atelier By {{ shopName }} · Facebook et Instagram</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">{{ monthTitle }}</h1>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button onClick="{{ prev }}" aria-label="Mois précédent" style="width:36px;height:36px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:16px;">‹</button>
+        <button onClick="{{ today }}" style="height:36px;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:13px;font-weight:500;">Aujourd’hui</button>
+        <button onClick="{{ next }}" aria-label="Mois suivant" style="width:36px;height:36px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:16px;">›</button>
+        <a href="{{ pubHref }}" style="height:36px;padding:0 16px;border-radius:8px;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;display:flex;align-items:center;text-decoration:none;">Publier un post</a>
+      </div>
+    </header>
+    <sc-if value="{{ hasMessage }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-left:3px solid #8D1D2C;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.55;color:#3A3530;">{{ message }}</div></sc-if>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+        <div style="background:#FFFFFF;border:0.5px solid {{ k.border }};border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ k.label }}</span>
+          <span style="font-size:24px;font-weight:300;line-height:1.1;color:{{ k.color }};">{{ k.value }}</span>
+          <span style="font-size:11px;color:#666666;">{{ k.sub }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+      <section style="flex:1 1 620px;min-width:0;padding:0;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;">
+        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));background:#F4EFE8;"><sc-for list="{{ dows }}" as="d" hint-placeholder-count="7"><span style="padding:8px 10px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ d }}</span></sc-for></div>
+        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));">
+          <sc-for list="{{ cells }}" as="c" hint-placeholder-count="35">
+            <div style="min-height:104px;border-top:0.5px solid rgba(34,34,34,0.08);border-left:0.5px solid rgba(34,34,34,0.06);padding:6px;display:flex;flex-direction:column;gap:4px;background:{{ c.bg }};box-sizing:border-box;">
+              <span style="font-size:12px;font-weight:{{ c.w }};color:{{ c.fg }};">{{ c.day }}</span>
+              <sc-for list="{{ c.posts }}" as="p" hint-placeholder-count="0">
+                <button onClick="{{ p.open }}" title="{{ p.tip }}" style="text-align:left;border:none;border-left:3px solid {{ p.bar }};border-radius:5px;padding:4px 6px;background:{{ p.bg }};cursor:pointer;display:flex;flex-direction:column;gap:1px;min-width:0;">
+                  <span style="font-size:10px;color:#666666;">{{ p.time }} · {{ p.who }}</span>
+                  <span style="font-size:11px;font-weight:500;color:#222222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.title }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+      <aside style="flex:0 1 340px;min-width:280px;display:flex;flex-direction:column;gap:12px;">
+        <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;display:flex;flex-direction:column;">
+            <div style="position:relative;height:0;padding-bottom:70%;background:#F5EFE4;"><img src="{{ sel.img }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;"></div>
+            <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+                <span style="font-size:15px;font-weight:500;">{{ sel.title }}</span>
+                <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ sel.stBg }};color:{{ sel.stFg }};white-space:nowrap;">{{ sel.status }}</span>
+              </div>
+              <span style="font-size:12px;color:#666666;">{{ sel.when }} · {{ sel.channels }} · {{ sel.origin }}</span>
+              <sc-if value="{{ sel.hasPromo }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;font-size:12px;font-weight:600;border-radius:6px;padding:3px 8px;background:#8D1D2C;color:#FFFFFF;">{{ sel.promo }}</span></sc-if>
+              <sc-if value="{{ sel.hasRefus }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5;"><strong style="font-weight:600;">Refusé par le réseau :</strong> {{ sel.refus }}</div></sc-if>
+              <sc-if value="{{ sel.hasReason }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5;">{{ sel.reason }}</div></sc-if>
+              <sc-if value="{{ sel.pending }}" hint-placeholder-val="{{ false }}"><div style="background:#FCE7C8;color:#7A4100;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5;">En attente de validation par le réseau. S’il est validé, il part à l’heure prévue.</div></sc-if>
+              <p style="margin:0;font-size:13px;line-height:1.5;color:#1c1e21;white-space:pre-wrap;">{{ sel.text }}</p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <sc-if value="{{ sel.canCancel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ cancel }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">{{ sel.cancelLabel }}</button></sc-if>
+                <sc-if value="{{ sel.canRedo }}" hint-placeholder-val="{{ false }}"><a href="{{ sel.redoHref }}" style="border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;background:#8D1D2C;color:#FFFFFF;text-decoration:none;">Refaire avec ce modèle</a></sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+          <span style="font-size:13px;font-weight:500;">À venir</span>
+          <sc-if value="{{ noNext }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Rien de prévu. Lancez-vous : « Publier un post ».</span></sc-if>
+          <sc-for list="{{ upcoming }}" as="u" hint-placeholder-count="0">
+            <button onClick="{{ u.open }}" style="text-align:left;border:none;background:transparent;padding:6px 0;border-top:0.5px solid rgba(34,34,34,0.06);cursor:pointer;display:flex;gap:10px;align-items:center;">
+              <img src="{{ u.img }}" alt="" style="width:36px;height:36px;border-radius:6px;object-fit:contain;background:#F5EFE4;flex:0 0 auto;">
+              <span style="display:flex;flex-direction:column;gap:1px;min-width:0;flex:1 1 auto;"><span style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ u.title }}</span><span style="font-size:11px;color:#666666;">{{ u.when }} · {{ u.who }}</span></span>
+              <span style="font-size:10px;font-weight:500;border-radius:999px;padding:2px 7px;background:{{ u.stBg }};color:{{ u.stFg }};white-space:nowrap;">{{ u.status }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:#666666;padding:0 4px;">
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#8D1D2C;"></span>Mes posts</span>
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#B8B2A8;"></span>Posts du réseau pour ma boutique</span>
+        </div>
+      </aside>
+    </div>
+    </sc-if>
+  </main>
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;max-width:min(640px,92vw);">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { month: null, selId: null, toast: '', tick: 0 };
+  componentDidMount() {
+    this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sf-change', this._h);
+    const SF = window.SF, st = SF && SF.state(); if (!st) return;
+    const q = new URLSearchParams(location.search);
+    if (q.get('post')) this.setState({ selId: q.get('post') });
+    if (q.get('ok')) this.toast(q.get('ok') === 'valider' ? 'Envoyé : le réseau valide votre post avant publication.' : 'Programmé : il partira à l’heure prévue.');
+  }
+  componentWillUnmount() { clearTimeout(this._tt); window.removeEventListener('sf-change', this._h); }
+  toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 5000); }
+  renderVals() {
+    const SF = window.SF, st = SF && SF.state(), s = this.state;
+    if (!st) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', cells: [], dows: [], kpis: [], upcoming: [] };
+    const month = s.month || st.today.slice(0, 7) + '-01', m0 = SF.d2(month);
+    const first = new Date(m0.getFullYear(), m0.getMonth(), 1), start = new Date(first); start.setDate(1 - ((first.getDay() + 6) % 7));
+    const nowMs = SF.at(st.today, st.now);
+    const own = st.posts.filter(p => p.own), mOf = (p) => p.date.slice(0, 7) === month.slice(0, 7);
+    const chip = (p) => { const c = SF.STATUS[p.status] || SF.STATUS['Brouillon'];
+      return { title: p.title, time: p.time, who: p.own ? p.status : 'Réseau', bar: p.own ? (p.status === 'Refusé' || p.status === 'Échec' ? '#8D1D2C' : p.status === 'À valider' ? '#E3B155' : p.status === 'Publié' ? '#1F8A60' : '#D97B29') : '#B8B2A8',
+        bg: p.own ? '#FBF7F2' : '#F7F5F2', tip: p.title + ' — ' + (p.own ? p.status : 'post du réseau'), open: () => this.setState({ selId: p.id }), stBg: c.bg, stFg: c.fg }; };
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i); const iso = SF.iso(d), inMonth = d.getMonth() === m0.getMonth();
+      if (i >= 35 && !inMonth) break;
+      cells.push({ day: d.getDate(), bg: iso === st.today ? '#FBF3F4' : inMonth ? '#FFFFFF' : '#FAF8F5', fg: inMonth ? '#222222' : '#B8B2A8', w: iso === st.today ? 700 : 400,
+        posts: st.posts.filter(p => p.date === iso).sort((a, b) => a.time.localeCompare(b.time)).map(chip) });
+    }
+    const sp = st.posts.find(p => p.id === s.selId);
+    let sel = {};
+    if (sp) {
+      const c = SF.STATUS[sp.status] || SF.STATUS['Brouillon'], L = (st.shop.langs || ['fr'])[0];
+      const tpl = st.templates.find(t => t.id === sp.template);
+      sel = { title: sp.title, status: sp.own ? sp.status : 'Réseau · ' + sp.status, stBg: c.bg, stFg: c.fg, img: SF.media(sp.img), when: SF.dLabel(sp.date) + ' à ' + sp.time,
+        channels: [sp.fb ? 'Facebook' : '', sp.ig ? 'Instagram' : ''].filter(Boolean).join(' + ') || '—', origin: sp.own ? 'votre post' : 'post du réseau',
+        hasPromo: !!sp.promo, promo: sp.promo ? sp.promo.label + (sp.promo.from ? ' · du ' + SF.dShort(sp.promo.from) + ' au ' + SF.dShort(sp.promo.to) : '') : '',
+        hasRefus: !!sp.refus, refus: sp.refus || '', hasReason: !!sp.reason, reason: sp.reason ? 'Publication en échec : ' + sp.reason : '', pending: sp.own && sp.status === 'À valider',
+        text: [L === 'nl' && sp.textNl ? sp.textNl : sp.text].map(t => SF.fill(t, L))[0] || '',
+        canCancel: sp.own && ['À valider', 'Programmé', 'Refusé'].includes(sp.status) && SF.at(sp.date, sp.time) > nowMs, cancelLabel: sp.status === 'Refusé' ? 'Retirer' : 'Annuler ce post',
+        canRedo: sp.own && !!tpl, redoHref: SF.href('pub', 'template=' + encodeURIComponent(sp.template)) };
+    }
+    const upcoming = st.posts.filter(p => SF.at(p.date, p.time) >= nowMs && p.status !== 'Refusé').sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 8)
+      .map(p => { const c = SF.STATUS[p.status] || SF.STATUS['Brouillon']; return { title: p.title, img: SF.media(p.img), when: SF.dShort(p.date) + ' ' + p.time, who: p.own ? 'mon post' : 'réseau', status: p.status, stBg: c.bg, stFg: c.fg, open: () => this.setState({ selId: p.id }) }; });
+    const label = SF.MONTHS[m0.getMonth()].toUpperCase() + ' ' + m0.getFullYear();
+    const shift = (n) => { const d = new Date(m0.getFullYear(), m0.getMonth() + n, 1); this.setState({ month: SF.iso(d) }); };
+    return {
+      ok: true, hasError: false, shopName: st.shop.name, monthTitle: label, prev: () => shift(-1), next: () => shift(1), today: () => this.setState({ month: null }),
+      pubHref: SF.href('pub'), hasMessage: !!(st.rules.message || '').trim(), message: st.rules.message,
+      kpis: [
+        { label: 'À valider', value: own.filter(p => p.status === 'À valider').length, sub: 'en attente du réseau', color: '#8A4B00', border: 'rgba(34,34,34,0.10)' },
+        { label: 'Programmés', value: own.filter(p => p.status === 'Programmé').length, sub: 'partiront à l’heure prévue', color: '#6b4420', border: 'rgba(34,34,34,0.10)' },
+        { label: 'Publiés ce mois', value: own.filter(p => p.status === 'Publié' && mOf(p)).length, sub: 'sur votre Page et Instagram', color: '#0F6B4A', border: 'rgba(34,34,34,0.10)' },
+        { label: 'Refusés', value: own.filter(p => p.status === 'Refusé').length, sub: 'voir le motif', color: '#8D1D2C', border: own.some(p => p.status === 'Refusé') ? '#8D1D2C' : 'rgba(34,34,34,0.10)' },
+      ],
+      dows: ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'], cells, hasSel: !!sp, sel,
+      cancel: async () => { if (!sp || !window.confirm('Annuler « ' + sp.title + ' » ?')) return; try { await SF.cancelPost(sp.id); this.setState({ selId: null }); this.toast('Post retiré de votre calendrier.'); } catch (e) { this.toast(e.message); } },
+      upcoming, noNext: upcoming.length === 0, hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

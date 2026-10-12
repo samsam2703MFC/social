@@ -15,7 +15,7 @@ declare(strict_types=1);
  * « Publié » ce que Meta n'a pas publié.
  */
 
-const SOC_KINDS = ['posts', 'ads', 'campaigns', 'leadforms', 'groups', 'templates'];
+const SOC_KINDS = ['posts', 'ads', 'campaigns', 'leadforms', 'groups', 'templates', 'ftemplates'];
 /** Champs d'un post que seul le serveur écrit (ils viennent de Meta). */
 const SOC_POST_SERVEUR = ['partial', 'error', 'failedShops', 'publishedAt'];
 
@@ -58,6 +58,11 @@ function socTables(): array
             'nom' => socTxt($g['name'] ?? null, 160), 'langue' => socTxt($g['lang'] ?? null, 10), 'boutiques' => socCsv($g['shops'] ?? null)]],
         'templates' => ['social_modele', static fn (array $t) => [
             'nom' => socTxt($t['name'] ?? null, 160), 'type' => socTxt($t['type'] ?? null, 60), 'texte_fr' => socTxt($t['text'] ?? null), 'texte_nl' => socTxt($t['textNl'] ?? null)]],
+        // Les modèles de l'espace franchisé (src/franchise.php).
+        'ftemplates' => ['social_modele_franchise', static fn (array $t) => [
+            'nom' => socTxt($t['name'] ?? null, 160), 'type' => socTxt($t['type'] ?? null, 60), 'actif' => !empty($t['active']) ? 1 : 0,
+            'ordre' => isset($t['order']) ? (int) $t['order'] : null, 'validation' => !empty($t['validation']) ? 1 : 0,
+            'texte_fr' => socTxt($t['text'] ?? null), 'texte_nl' => socTxt($t['textNl'] ?? null)]],
     ];
 }
 
@@ -182,6 +187,8 @@ function socStateGet(): array
         'leadforms' => socItems('leadforms'), 'groups' => socItems('groups'), 'templates' => socItems('templates'),
         'leads' => socLeads(),
         'darkPosts' => socDarkPosts(),
+        'ftemplates' => sfModeles(),
+        'franchise' => ['rules' => sfRegles(), 'access' => sfAccesListe(), 'url' => (string) (socSetting('url_franchise') ?? '/social_franchisee/')],
         'activity' => array_map(static fn ($r) => ['at' => substr((string) $r['at'], 0, 16), 'who' => $r['who'], 'what' => $r['what'], 'detail' => $r['detail']],
             Db::rows('SELECT le AS at, qui AS who, quoi AS what, detail FROM social_activite ORDER BY le DESC, id DESC LIMIT 400')),
         'meta' => ['version' => Meta::config()['version'], 'dsa' => (array) (socSetting('meta_dsa') ?? ($d['dsa'] ?? [])),

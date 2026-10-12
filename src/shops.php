@@ -169,6 +169,8 @@ function socShops(): array
             'ids' => $ids, 'geo' => $geo, 'sources' => $sources,
         ];
     }
+    // L'hôte (ERP…) peut compléter ou remplacer la liste (config/hote.php).
+    if (($f = socHote('boutiques')) !== null) { $out = array_values((array) $f($out)); }
     return $out;
 }
 

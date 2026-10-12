@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="config.js"></script>
+  <script src="franchise-data.js"></script>
+  <script src="franchise-visuel.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    a{color:#8D1D2C;} a:hover{color:#232220;} select,input,button,textarea{font-family:var(--font-ui);}
+    input::placeholder,textarea::placeholder{color:#9A948C;}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="FNav" active="pub" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+    <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }} <a href="Connexion.dc.html">Se reconnecter</a></div></sc-if>
+    <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">{{ eyebrow }}</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">{{ title }}</h1>
+      </div>
+      <sc-if value="{{ hasTpl }}" hint-placeholder-val="{{ false }}"><button onClick="{{ back }}" style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">← Changer de modèle</button></sc-if>
+    </header>
+
+    <sc-if value="{{ quotaFull }}" hint-placeholder-val="{{ false }}"><div style="background:#FCE7C8;color:#7A4100;border-radius:10px;padding:12px 14px;font-size:13px;">Vous avez atteint le quota de la semaine ({{ quotaMax }} posts). Vous pourrez de nouveau publier la semaine prochaine — ou annuler un post prévu.</div></sc-if>
+
+    <!-- Étape 1 : le modèle -->
+    <sc-if value="{{ noTpl }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ filters }}" as="f" hint-placeholder-count="2"><button onClick="{{ f.pick }}" style="border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};">{{ f.label }}</button></sc-for></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;">
+        <sc-for list="{{ tpls }}" as="t" hint-placeholder-count="5">
+          <button onClick="{{ t.pick }}" style="text-align:left;background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:0;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;">
+            <span style="display:block;height:8px;background:{{ t.sw }};"></span>
+            <span style="padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:16px;font-weight:500;color:#222222;">{{ t.name }}</span>
+              <span style="font-size:12px;color:#4A443E;line-height:1.5;">{{ t.description }}</span>
+              <span style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;"><sc-for list="{{ t.badges }}" as="b" hint-placeholder-count="2"><span style="font-size:10px;font-weight:600;border-radius:999px;padding:2px 8px;background:{{ b.bg }};color:{{ b.fg }};">{{ b.t }}</span></sc-for></span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+      <sc-if value="{{ noTpls }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:20px;font-size:13px;color:#666666;text-align:center;">Aucun modèle ouvert pour l’instant : le réseau n’a pas encore ouvert de modèle de ce type.</div></sc-if>
+    </sc-if>
+
+    <!-- Étape 2 : les champs ouverts par le modèle -->
+    <sc-if value="{{ hasTpl }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="flex:1 1 440px;min-width:300px;display:flex;flex-direction:column;gap:12px;">
+          <span style="font-size:13px;color:#4A443E;line-height:1.5;">{{ tplDescription }}</span>
+
+          <sc-if value="{{ needProduct }}" hint-placeholder-val="{{ false }}">
+            <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:10px;">
+              <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Produit · votre catalogue</span>
+              <input type="search" value="{{ q }}" onChange="{{ setQ }}" placeholder="{{ qPh }}" style="font-size:14px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:9px 12px;">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:300px;overflow:auto;">
+                <sc-for list="{{ products }}" as="p" hint-placeholder-count="6">
+                  <button onClick="{{ p.pick }}" style="padding:0;border-radius:8px;border:2px solid {{ p.ring }};background:#FFFFFF;cursor:pointer;overflow:hidden;text-align:left;display:flex;flex-direction:column;">
+                    <span style="display:block;height:58px;background:#F4EFE8;position:relative;"><img src="{{ p.img }}" alt="" style="position:absolute;left:8px;top:5px;width:calc(100% - 16px);height:48px;object-fit:contain;"></span>
+                    <span style="padding:6px 8px;display:flex;flex-direction:column;gap:1px;"><span style="font-size:11px;font-weight:500;line-height:1.25;color:#222222;">{{ p.name }}</span><span style="font-size:10px;color:#666666;">{{ p.price }}</span></span>
+                  </button>
+                </sc-for>
+              </div>
+            </section>
+          </sc-if>
+
+          <sc-if value="{{ hasPromo }}" hint-placeholder-val="{{ false }}">
+            <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:10px;">
+              <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Votre promotion</span>
+              <sc-if value="{{ isRemise }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                  <span style="font-family:var(--font-display);font-size:30px;color:#8D1D2C;min-width:80px;">-{{ discount }} %</span>
+                  <input type="range" min="{{ dMin }}" max="{{ dMax }}" step="1" value="{{ discount }}" onChange="{{ setDiscount }}" style="flex:1 1 200px;accent-color:#8D1D2C;">
+                  <span style="font-size:11px;color:#666666;">de {{ dMin }} à {{ dMax }} % (fixé par le réseau)</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isOffre }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ offers }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" style="border-radius:8px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;border:0.5px solid {{ o.border }};background:{{ o.bg }};color:{{ o.fg }};">{{ o.label }}</button></sc-for></div>
+              </sc-if>
+              <sc-if value="{{ isPrix }}" hint-placeholder-val="{{ false }}">
+                <label style="display:flex;align-items:center;gap:10px;font-size:13px;flex-wrap:wrap;">Prix promotionnel <input type="text" inputmode="decimal" value="{{ promoPrice }}" onChange="{{ setPromoPrice }}" placeholder="0,00" style="width:90px;font-size:15px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 9px;"> € <span style="color:#666666;">au lieu de {{ basePrice }}</span></label>
+              </sc-if>
+              <sc-if value="{{ needPeriod }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;">Du <input type="date" value="{{ from }}" min="{{ minDate }}" onChange="{{ setFrom }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;"> au <input type="date" value="{{ to }}" min="{{ from }}" max="{{ maxTo }}" onChange="{{ setTo }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;"> <span style="font-size:11px;color:#666666;">{{ periodNote }}</span></div>
+              </sc-if>
+            </section>
+          </sc-if>
+
+          <sc-if value="{{ needFree }}" hint-placeholder-val="{{ false }}">
+            <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:8px;">
+              <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Votre phrase</span>
+              <input type="text" value="{{ free }}" onChange="{{ setFree }}" maxlength="{{ freeMax }}" placeholder="Ex. : dégustation de brioche samedi de 10 h à 12 h" style="font-size:14px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:9px 12px;">
+              <span style="font-size:11px;color:#666666;">{{ freeCount }} · sans lien, sans @ ni # (le réseau gère les liens et les comptes)</span>
+            </section>
+          </sc-if>
+
+          <sc-if value="{{ needPhoto }}" hint-placeholder-val="{{ false }}">
+            <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:8px;">
+              <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">{{ photoTitle }}</span>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <sc-if value="{{ hasPhoto }}" hint-placeholder-val="{{ false }}"><img src="{{ photo }}" alt="Votre photo" style="width:72px;height:72px;object-fit:cover;border-radius:8px;"></sc-if>
+                <label style="height:44px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:13px;font-weight:500;display:flex;align-items:center;">{{ photoBtn }}<input type="file" accept="image/*" onChange="{{ onPhoto }}" style="display:none;"></label>
+                <sc-if value="{{ canDropPhoto }}" hint-placeholder-val="{{ false }}"><button onClick="{{ dropPhoto }}" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;">Utiliser l’image du catalogue</button></sc-if>
+              </div>
+            </section>
+          </sc-if>
+
+          <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:10px;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Quand et où</span>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <input type="date" value="{{ date }}" min="{{ minDate }}" max="{{ maxDate }}" onChange="{{ setDate }}" style="font-size:14px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;">
+              <input type="time" value="{{ time }}" min="{{ hMin }}" max="{{ hMax }}" step="900" onChange="{{ setTime }}" style="font-size:14px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;">
+              <sc-for list="{{ channels }}" as="c" hint-placeholder-count="2"><label style="display:flex;align-items:center;gap:6px;font-size:13px;color:{{ c.fg }};cursor:pointer;"><input type="checkbox" checked="{{ c.on }}" onChange="{{ c.toggle }}" disabled="{{ c.dis }}" style="accent-color:#8D1D2C;margin:0;">{{ c.label }}</label></sc-for>
+            </div>
+            <span style="font-size:11px;color:#666666;line-height:1.5;">{{ rulesNote }}</span>
+          </section>
+
+          <sc-if value="{{ hasErrors }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;"><sc-for list="{{ errors }}" as="er" hint-placeholder-count="0"><span style="font-size:12px;color:#8D1D2C;">{{ er }}</span></sc-for></div></sc-if>
+          <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:12px;color:#666666;">{{ submitNote }}</span>
+            <button onClick="{{ submit }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:11px 18px;font-size:14px;font-weight:500;cursor:pointer;">{{ submitLabel }}</button>
+          </div>
+        </div>
+
+        <aside style="flex:0 1 380px;min-width:300px;display:flex;flex-direction:column;gap:8px;position:sticky;top:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Aperçu · charte du réseau</span>
+            <sc-if value="{{ bilingual }}" hint-placeholder-val="{{ false }}"><div style="display:inline-flex;background:#FFFFFF;border-radius:8px;padding:3px;gap:2px;border:0.5px solid rgba(34,34,34,0.10);"><sc-for list="{{ langs }}" as="l" hint-placeholder-count="2"><button onClick="{{ l.pick }}" style="border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ l.bg }};color:{{ l.fg }};">Visuel {{ l.label }}</button></sc-for></div></sc-if>
+          </div>
+          <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.12);overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 14px 8px;">
+              <span style="width:36px;height:36px;border-radius:50%;background:#8D1D2C;display:flex;align-items:center;justify-content:center;"><img src="img/logo-white.png" alt="" style="width:26px;height:auto;"></span>
+              <span style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;color:#1c1e21;">{{ pageName }}</span><span style="font-size:12px;color:#65676b;">{{ whenLabel }} · Public</span></span>
+            </div>
+            <p style="margin:0;padding:0 14px 10px;font-size:13px;line-height:1.45;color:#1c1e21;white-space:pre-wrap;">{{ pvText }}</p>
+            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" hint-size="100%,380px"></dc-import>
+          </div>
+          <span style="font-size:11px;color:#666666;line-height:1.5;">Le texte, le titre et la mise en page sont ceux du réseau ; seuls vos choix changent. {{ langNote }}</span>
+        </aside>
+      </div>
+    </sc-if>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = this.init();
+  init() {
+    const SF = window.SF, st = SF && SF.state(), q = new URLSearchParams(location.search);
+    const base = { tpl: null, filter: q.get('promo') ? 'promo' : 'all', q: '', product: null, discount: 0, offer: '', promoPrice: '', from: '', to: '', free: '', photo: null,
+      fb: true, ig: true, date: '', time: '', lang: 'fr', errors: [], busy: false };
+    if (!st) return base;
+    base.lang = (st.shop.langs || ['fr'])[0];
+    const slot = this.firstSlot(st);
+    Object.assign(base, slot, { from: slot.date, to: SF.addDays(slot.date, Math.min(6, st.rules.promoDureeMax - 1)) });
+    const t = q.get('template') && st.templates.find(x => x.id === q.get('template'));
+    if (t) Object.assign(base, this.forTpl(t, st));
+    return base;
+  }
+  /** Le premier créneau permis par les règles du réseau. */
+  firstSlot(st) {
+    const SF = window.SF, r = st.rules, start = new Date(Date.now() + r.delaiMinHeures * 3600000 + 5 * 60000);
+    for (let i = 0; i <= r.horizonJours; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      if (!(r.jours || []).includes(d.getDay())) continue;
+      let t = i === 0 ? SF.pad(d.getHours()) + ':' + SF.pad(Math.ceil(d.getMinutes() / 15) * 15 % 60) : '';
+      if (i === 0 && d.getMinutes() > 45) t = SF.pad(d.getHours() + 1) + ':00';
+      if (!t || t < r.heureMin) t = r.heureMin < '09:00' && r.heureMax >= '09:00' ? '09:00' : r.heureMin;
+      if (t > r.heureMax) continue;
+      return { date: SF.iso(d), time: t };
+    }
+    return { date: SF.iso(start), time: r.heureMin };
+  }
+  forTpl(t, st) {
+    const p = t.promo || {}, r = st.rules;
+    return { tpl: t.id, product: null, discount: p.kind === 'remise' ? Math.min(p.max, r.remiseMax, Math.max(p.min, 20)) : 0, offer: p.kind === 'offre' ? (p.offres || [])[0] || '' : '',
+      promoPrice: '', free: '', photo: null, fb: !!(t.fb && r.fb && st.shop.fb === 'connected'), ig: !!(t.ig && r.ig && st.shop.igs === 'connected'), errors: [] };
+  }
+  componentWillUnmount() {}
+  readPhoto(file) {
+    return new Promise((res) => {
+      if (!file || !/^image\//.test(file.type)) return res(null);
+      const rd = new FileReader(); rd.onerror = () => res(null);
+      rd.onload = () => { const img = new Image(); img.onerror = () => res(null);
+        img.onload = () => { const big = Math.max(img.width, img.height), k = big > 2048 ? 2048 / big : 1, c = document.createElement('canvas');
+          c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', 0.88)); };
+        img.src = rd.result; };
+      rd.readAsDataURL(file);
+    });
+  }
+  body() {
+    const s = this.state;
+    return { template: s.tpl, product: s.product, discount: s.discount, offer: s.offer, promoPrice: s.promoPrice, from: s.from, to: s.to, free: s.free.trim(), photo: s.photo, fb: s.fb, ig: s.ig, date: s.date, time: s.time };
+  }
+  async submit() {
+    const SF = window.SF, s = this.state;
+    if (s.busy) return;
+    const b = this.body(), errs = SF.check(b);
+    if (errs.length) { this.setState({ errors: errs }); return; }
+    this.setState({ busy: true, errors: [] });
+    try {
+      if (!this._api) throw new Error('Le visuel n’est pas prêt : patientez une seconde et recommencez.');
+      b.visual = await this._api.toImage({ jpeg: true, pixelRatio: SF.live ? 1 : 0.5, quality: 0.9 });
+      const p = await SF.createPost(b);
+      location.href = SF.href('cal', 'post=' + encodeURIComponent(p.id) + '&ok=' + (p.status === 'À valider' ? 'valider' : 'prog'));
+    } catch (e) { this.setState({ busy: false, errors: [e.message] }); }
+  }
+  renderVals() {
+    const SF = window.SF, V = window.SFVisuel, st = SF && SF.state(), s = this.state;
+    if (!st || !V) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', tpls: [], filters: [] };
+    const r = st.rules, seg = (on) => on ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
+    const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
+    const SW = { epure: '#F5EFE4', abricot: '#F2C9A0', ruby: '#8D1D2C', noir: '#232220', plein: '#8A847C', duo: '#EAE4DC' };
+    const q = st.quota || { used: 0, max: r.quotaSemaine }, quotaFull = q.used >= q.max;
+    const t = s.tpl ? st.templates.find(x => x.id === s.tpl) : null;
+    const isPromo = (x) => ((x.promo || {}).kind || 'aucune') !== 'aucune';
+    const valOf = (x) => r.validation === 'toujours' || (r.validation === 'modele' && x.validation);
+    const common = { ok: true, hasError: false, quotaFull, quotaMax: q.max, hasTpl: !!t, noTpl: !t };
+    if (!t) {
+      const list = st.templates.filter(x => s.filter === 'all' || isPromo(x));
+      return Object.assign(common, {
+        eyebrow: 'Publier · L’Atelier By ' + st.shop.name, title: s.filter === 'promo' ? 'NOUVELLE PROMOTION' : 'CHOISIR UN MODELE',
+        filters: [['all', 'Tous les modèles'], ['promo', 'Promotions']].map(([k, label]) => Object.assign(chip(s.filter === k), { label, pick: () => this.setState({ filter: k }) })),
+        tpls: list.map(x => ({ name: x.name, description: x.description || '', sw: SW[(x.visual || {}).style] || '#EAE4DC',
+          badges: [isPromo(x) ? { t: ((V.PROMOS.find(p => p[0] === x.promo.kind) || [])[1] || 'Promotion'), bg: '#8D1D2C', fg: '#FFFFFF' } : null,
+            valOf(x) ? { t: 'validé par le réseau', bg: '#FCE7C8', fg: '#7A4100' } : { t: 'publication directe', bg: '#E2F0E8', fg: '#0F6B4A' },
+            { t: [x.fb && r.fb ? 'Facebook' : '', x.ig && r.ig ? 'Instagram' : ''].filter(Boolean).join(' + '), bg: '#F4EFE8', fg: '#444444' }].filter(Boolean),
+          pick: () => this.setState(this.forTpl(x, st)) })),
+        noTpls: list.length === 0,
+      });
+    }
+    // Étape 2
+    const S = (patch) => this.setState(Object.assign({ errors: [] }, patch));
+    const prod = s.product ? st.catalogue.find(p => p.id === s.product) : null, p = t.promo || {}, kind = p.kind || 'aucune';
+    const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const products = st.catalogue.filter(c => !s.q || norm(c.name + ' ' + (c.gamme || '')).includes(norm(s.q)));
+    const fields = { product: prod, discount: s.discount, offer: s.offer, promoPrice: s.promoPrice, from: t.period ? s.from : '', to: t.period ? s.to : '', free: s.free, photo: s.photo };
+    const L = s.lang, vars = V.vars(t, fields, L);
+    const langs = st.shop.langs || ['fr'];
+    const text = langs.map(l => SF.fill(V.fill(l === 'nl' ? (t.textNl || t.text) : t.text, V.vars(t, fields, l)), l)).filter(x => x.trim()).join('\n\n— — —\n\n');
+    const dMax = Math.min(+p.max || 0, +r.remiseMax || 0), minDate = SF.iso(new Date(Date.now() + r.delaiMinHeures * 3600000)), maxDate = SF.addDays(st.today, r.horizonJours);
+    const jours = [1, 2, 3, 4, 5, 6, 0].filter(j => (r.jours || []).includes(j)).map(j => SF.DAYS[j]);
+    const val = valOf(t);
+    const chans = [['fb', 'Facebook', t.fb && r.fb, st.shop.fb === 'connected'], ['ig', 'Instagram', t.ig && r.ig, st.shop.igs === 'connected']]
+      .filter(([, , allowed]) => allowed).map(([k, label, , conn]) => ({ label: label + (conn ? '' : ' (non connecté)'), on: !!s[k] && conn, dis: !conn, fg: conn ? '#222222' : '#9A948C', toggle: () => S({ [k]: !s[k] }) }));
+    return Object.assign(common, {
+      eyebrow: 'Publier · modèle du réseau', title: t.name.toUpperCase(), back: () => this.setState({ tpl: null, errors: [] }), tplDescription: t.description || '',
+      needProduct: t.product === 'choix', q: s.q, setQ: (e) => this.setState({ q: e.target.value }), qPh: 'Rechercher parmi vos ' + st.catalogue.length + ' produits…',
+      products: products.slice(0, 60).map(c => ({ name: c.name, price: c.price ? c.price + ' €' : '', img: SF.media(c.img), ring: s.product === c.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)', pick: () => S({ product: c.id }) })),
+      hasPromo: kind !== 'aucune' || !!t.period, isRemise: kind === 'remise', isOffre: kind === 'offre', isPrix: kind === 'prix',
+      discount: s.discount, dMin: p.min || 1, dMax, setDiscount: (e) => S({ discount: +e.target.value }),
+      offers: (p.offres || []).map(o => Object.assign(chip(s.offer === o), { label: o, pick: () => S({ offer: o }) })),
+      promoPrice: s.promoPrice, setPromoPrice: (e) => S({ promoPrice: e.target.value.replace(/[^\d,\.]/g, '') }), basePrice: prod && prod.price ? prod.price + ' €' : '— (choisissez un produit)',
+      needPeriod: !!t.period, from: s.from, to: s.to, maxTo: s.from ? SF.addDays(s.from, r.promoDureeMax - 1) : '', setFrom: (e) => S({ from: e.target.value }), setTo: (e) => S({ to: e.target.value }),
+      periodNote: 'au plus ' + r.promoDureeMax + ' jours', minDate, maxDate,
+      needFree: +t.free > 0, free: s.free, freeMax: +t.free, setFree: (e) => S({ free: e.target.value.slice(0, +t.free) }), freeCount: s.free.length + ' / ' + t.free + ' caractères',
+      needPhoto: t.photo === 'upload' || t.photo === 'choix', photoTitle: t.photo === 'upload' ? 'Votre photo (obligatoire)' : 'Votre photo (facultatif)',
+      hasPhoto: !!s.photo, photo: s.photo || '', photoBtn: s.photo ? 'Changer de photo' : 'Importer une photo', canDropPhoto: !!s.photo && t.photo === 'choix',
+      onPhoto: async (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; const d = await this.readPhoto(f); if (d) S({ photo: d }); },
+      dropPhoto: () => S({ photo: null }),
+      date: s.date, time: s.time, hMin: r.heureMin, hMax: r.heureMax, setDate: (e) => S({ date: e.target.value }), setTime: (e) => S({ time: e.target.value }), channels: chans,
+      rulesNote: 'Règles du réseau : ' + (jours.length === 7 ? 'tous les jours' : jours.join(', ')) + ', entre ' + r.heureMin + ' et ' + r.heureMax + ', au moins ' + r.delaiMinHeures + ' h à l’avance et au plus ' + r.horizonJours + ' jours · ' + q.used + ' / ' + q.max + ' posts cette semaine.',
+      errors: s.errors, hasErrors: s.errors.length > 0,
+      submitNote: val ? 'Le réseau valide avant publication.' : 'Publication à l’heure prévue.', submitLabel: s.busy ? 'Préparation du visuel…' : (val ? 'Envoyer au réseau' : 'Programmer'),
+      submit: () => this.submit(),
+      bilingual: langs.length > 1, langs: langs.map(l => { const [bg, fg] = seg(s.lang === l); return { label: l.toUpperCase(), bg, fg, pick: () => this.setState({ lang: l }) }; }),
+      langNote: langs.length > 1 ? 'Boutique bilingue : la légende part en ' + langs.map(x => x.toUpperCase()).join(' et ') + ' ; le visuel est dans la langue choisie.' : '',
+      pageName: st.shop.page || ('L’Atelier By ' + st.shop.name), whenLabel: s.date ? SF.dLabel(s.date) + ' à ' + s.time : '', pvText: text || '—',
+      studioControl: V.control(t, fields, L), onStudioApi: (api) => { this._api = api; },
+    });
+  }
+}
+</script>
+</body>
+</html>

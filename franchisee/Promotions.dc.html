@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="config.js"></script>
+  <script src="franchise-data.js"></script>
+  <style>html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;} a{color:#8D1D2C;} button{font-family:var(--font-ui);}</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="FNav" active="promo" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+    <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }} <a href="Connexion.dc.html">Se reconnecter</a></div></sc-if>
+    <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">L’Atelier By {{ shopName }} · vos offres, dans les limites du réseau</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">MES PROMOTIONS</h1>
+      </div>
+      <a href="{{ newHref }}" style="height:36px;padding:0 16px;border-radius:8px;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;display:flex;align-items:center;text-decoration:none;">Nouvelle promotion</a>
+    </header>
+    <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:12px 14px;font-size:12px;color:#4A443E;line-height:1.55;">{{ limits }}</div>
+    <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+      <section style="display:flex;flex-direction:column;gap:8px;padding:0;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">{{ g.title }} · {{ g.count }}</span>
+        <sc-if value="{{ g.empty }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A847C;">{{ g.emptyText }}</span></sc-if>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
+          <sc-for list="{{ g.items }}" as="p" hint-placeholder-count="0">
+            <a href="{{ p.href }}" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:10px;display:flex;gap:10px;text-decoration:none;color:#222222;opacity:{{ p.op }};">
+              <span style="position:relative;width:76px;height:76px;flex:0 0 auto;border-radius:8px;overflow:hidden;background:#F5EFE4;"><img src="{{ p.img }}" alt="" style="width:100%;height:100%;object-fit:contain;"><span style="position:absolute;left:4px;bottom:4px;font-size:11px;font-weight:700;border-radius:5px;padding:2px 6px;background:#8D1D2C;color:#FFFFFF;">{{ p.label }}</span></span>
+              <span style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+                <span style="font-size:13px;font-weight:500;">{{ p.title }}</span>
+                <span style="font-size:12px;color:#4A443E;">{{ p.period }}</span>
+                <span style="font-size:11px;color:#666666;">Post du {{ p.when }}</span>
+                <span style="align-self:flex-start;font-size:10px;font-weight:500;border-radius:999px;padding:2px 7px;background:{{ p.stBg }};color:{{ p.stFg }};">{{ p.status }}</span>
+              </span>
+            </a>
+          </sc-for>
+        </div>
+      </section>
+    </sc-for>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() { this._h = () => this.forceUpdate(); window.addEventListener('sf-change', this._h); }
+  componentWillUnmount() { window.removeEventListener('sf-change', this._h); }
+  renderVals() {
+    const SF = window.SF, st = SF && SF.state();
+    if (!st) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', groups: [] };
+    const r = st.rules, today = st.today;
+    const promos = st.posts.filter(p => p.own && p.promo).sort((a, b) => String(a.promo.from || a.date).localeCompare(String(b.promo.from || b.date)));
+    const item = (p) => { const c = SF.STATUS[p.status] || SF.STATUS['Brouillon'];
+      return { title: p.title, label: p.promo.label, img: SF.media(p.img), when: SF.dShort(p.date) + ' à ' + p.time, status: p.status, stBg: c.bg, stFg: c.fg, op: p.status === 'Refusé' ? 0.7 : 1,
+        period: p.promo.from ? 'Du ' + SF.dLabel(p.promo.from) + ' au ' + SF.dLabel(p.promo.to) : 'Le ' + SF.dLabel(p.date), href: SF.href('cal', 'post=' + encodeURIComponent(p.id)) }; };
+    const end = (p) => p.promo.to || p.date, start = (p) => p.promo.from || p.date;
+    const live = promos.filter(p => p.status !== 'Refusé' && start(p) <= today && end(p) >= today);
+    const next = promos.filter(p => p.status !== 'Refusé' && start(p) > today);
+    const past = promos.filter(p => p.status === 'Refusé' || end(p) < today).reverse();
+    const promoTpls = st.templates.filter(t => ((t.promo || {}).kind || 'aucune') !== 'aucune').map(t => t.name);
+    const G = (title, l, emptyText) => ({ title, count: l.length, items: l.map(item), empty: !l.length, emptyText });
+    return {
+      ok: true, hasError: false, shopName: st.shop.name, newHref: SF.href('pub', 'promo=1'),
+      limits: 'Cadre du réseau : remise jusqu’à ' + r.remiseMax + ' %, promotion de ' + r.promoDureeMax + ' jours au plus' + (promoTpls.length ? ', modèles ouverts : ' + promoTpls.join(', ') : ', aucun modèle de promotion ouvert pour l’instant') + '. ' + (r.validation === 'jamais' ? 'Vos promotions partent sans validation.' : 'Le réseau valide les promotions avant publication.'),
+      groups: [G('En cours', live, 'Aucune promotion en cours.'), G('À venir', next, 'Rien de prévu : lancez une promotion.'), G('Terminées ou refusées', past, 'Aucune promotion passée.')],
+    };
+  }
+}
+</script>
+</body>
+</html>

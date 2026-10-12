@@ -22,6 +22,9 @@ return [
     // cette adresse. Doit être joignable depuis Internet.
     'publicUrl' => getenv('SOCIAL_PUBLIC_URL') ?: 'https://185.180.206.46/social/',
 
+    // URL de l'espace franchisé (/social_franchisee), pour les liens de l'écran franchiseur.
+    'franchiseeUrl' => getenv('SOCIAL_FRANCHISEE_URL') ?: '/social_franchisee/',
+
     // Surcharges optionnelles — null : la valeur du BO s'applique.
     'db'   => null,        // ['host'=>…, 'port'=>…, 'name'=>…, 'user'=>…, 'password'=>…, 'charset'=>'utf8mb4']
     'auth' => null,        // true / false — null : comme le BO

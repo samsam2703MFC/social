@@ -1,0 +1,176 @@
+// Espace franchisé — couche de données.
+//
+// En réel : l'état de la boutique est lu à l'API du module Social & Ads
+// (GET {api}/franchise/etat?shop=…), avec la session du franchisé (cookie signé
+// posé à la connexion). Sans session → page de connexion.
+// En démonstration (?demo=1) : des données d'exemple, gardées dans ce navigateur.
+(function () {
+  if (window.SF) return;
+  const CFG = Object.assign({ api: '/social/api/v1/social', media: '/social/' }, window.SF_CONFIG || {});
+  const Q = new URLSearchParams(location.search);
+  const PAGE = decodeURIComponent(location.pathname.split('/').pop() || '');
+  const ON_LOGIN = /^Connexion/.test(PAGE);
+  const PAGES = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', promo: 'Promotions.dc.html', camp: 'Campagnes.dc.html', login: 'Connexion.dc.html' };
+  let DEMO = Q.has('demo');
+  try { if (!DEMO && sessionStorage.getItem('sf.demo') === '1' && !Q.has('live')) DEMO = true; if (DEMO) sessionStorage.setItem('sf.demo', '1'); else sessionStorage.removeItem('sf.demo'); } catch (e) {}
+
+  // ---------- dates ----------
+  const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  const DAYS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+  const pad = (n) => String(n).padStart(2, '0');
+  const iso = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const d2 = (s) => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(NaN); };
+  const addDays = (s, n) => { const d = d2(s); d.setDate(d.getDate() + n); return iso(d); };
+  const dLabel = (s) => { const d = d2(s); return isNaN(d) ? '' : DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 4) + (MONTHS[d.getMonth()].length > 4 ? '.' : ''); };
+  const dShort = (s) => { const d = d2(s); return isNaN(d) ? '' : pad(d.getDate()) + '/' + pad(d.getMonth() + 1); };
+  const at = (date, time) => { const d = d2(date); const [h, m] = String(time || '00:00').split(':').map(Number); d.setHours(h || 0, m || 0, 0, 0); return d.getTime(); };
+  const eur = (n) => n == null || isNaN(n) ? '—' : Math.round(n).toLocaleString('fr-BE') + ' €';
+
+  // ---------- démonstration ----------
+  const TEMPLATES = [{"id": "fp-produit", "order": 1, "name": "Produit du jour", "description": "Mettre un produit de votre vitrine en avant, à son prix.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "{produit}", "text": "{produit} : {prix} € chez L’Atelier By {ville}. Ouvert {horaires}.", "textNl": "{produit}: {prix} € bij L’Atelier By {ville}. Open {horaires}.", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "choix", "visual": {"style": "epure", "eyebrow": "Aujourd’hui en vitrine", "eyebrowNl": "Vandaag in de etalage"}}, {"id": "fp-remise", "order": 2, "name": "Promotion en %", "description": "Une remise sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{produit} -{remise} %", "text": "-{remise} % sur {produit} chez L’Atelier By {ville}, du {du} au {au}. Ouvert {horaires}.", "textNl": "-{remise} % op {produit} bij L’Atelier By {ville}, van {du} tot {au}. Open {horaires}.", "product": "choix", "promo": {"kind": "remise", "min": 10, "max": 30}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "ruby", "eyebrow": "Promotion", "eyebrowNl": "Promotie"}}, {"id": "fp-offre", "order": 3, "name": "Offre spéciale", "description": "4+1, 2+1… sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{offre} · {produit}", "text": "{offre} sur {produit} chez L’Atelier By {ville}, du {du} au {au} !", "textNl": "{offre} op {produit} bij L’Atelier By {ville}, van {du} tot {au}!", "product": "choix", "promo": {"kind": "offre", "offres": ["4+1", "2+1", "1 acheté = 1 offert"]}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "abricot", "eyebrow": "Offre spéciale", "eyebrowNl": "Speciale actie"}}, {"id": "fp-evenement", "order": 4, "name": "Événement en boutique", "description": "Une dégustation, une animation, un horaire spécial.", "active": true, "type": "Événement local", "fb": true, "ig": true, "validation": true, "title": "Événement à {ville}", "text": "Chez L’Atelier By {ville} : {libre}", "textNl": "Bij L’Atelier By {ville}: {libre}", "product": "aucun", "promo": {"kind": "aucune"}, "period": false, "free": 90, "photo": "upload", "visual": {"style": "noir", "eyebrow": "En boutique", "eyebrowNl": "In de winkel"}}, {"id": "fp-vitrine", "order": 5, "name": "Nouveau en vitrine", "description": "Votre photo d’un produit qui arrive.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "Nouveau : {produit}", "text": "Nouveau dans notre vitrine à {ville} : {produit}. À découvrir {horaires} !", "textNl": "Nieuw in onze etalage in {ville}: {produit}. Te ontdekken {horaires}!", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "upload", "visual": {"style": "plein", "eyebrow": "Nouveau", "eyebrowNl": "Nieuw"}}];
+  const RULES = {"actif": true, "validation": "modele", "quotaSemaine": 3, "delaiMinHeures": 24, "horizonJours": 30, "jours": [1, 2, 3, 4, 5, 6, 0], "heureMin": "07:00", "heureMax": "20:00", "fb": true, "ig": true, "remiseMax": 30, "promoDureeMax": 14, "voirReseau": true, "voirCampagnes": true, "voirResultats": true, "message": "Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By."};
+  function demoState() {
+    const today = iso(new Date()), t = (n) => addDays(today, n);
+    const cat = [
+      { id: 'p1', name: 'Brioche croustillante', nameNl: 'Krokante brioche', price: '4,20', img: 'img/products/brioche-croustillante.png', gamme: 'Viennoiseries' },
+      { id: 'p2', name: 'Tarte aux pommes', nameNl: 'Appeltaart', price: '18,50', img: 'img/products/sweet-tart-big.png', gamme: 'Pâtisseries' },
+      { id: 'p3', name: 'Croissant pur beurre', nameNl: 'Botercroissant', price: '1,30', img: 'img/products/croissant.png', gamme: 'Viennoiseries' },
+      { id: 'p4', name: 'Cookies du goûter', nameNl: 'Vieruurtjescookies', price: '2,20', img: 'img/products/cookies.png', gamme: 'Goûter' },
+      { id: 'p5', name: 'Cupcake vanille', nameNl: 'Vanillecupcake', price: '3,40', img: 'img/products/cupcake.png', gamme: 'Goûter' },
+      { id: 'p6', name: 'Quiche du jour', nameNl: 'Quiche van de dag', price: '5,90', img: 'img/products/savoury-tart.png', gamme: 'Salé' },
+    ];
+    const P = (id, date, time, title, status, own, extra) => Object.assign({ id, date, time, title, status, own, type: 'Produit', img: 'img/products/brioche-croustillante.png', text: '', textNl: '', fb: true, ig: true, template: '', promo: null, refus: null, reason: null, campaign: null }, extra || {});
+    return {
+      today, now: pad(new Date().getHours()) + ':' + pad(new Date().getMinutes()), mode: 'demo',
+      me: { name: 'Nathan Charlot (démo)', via: 'demo', shops: [{ id: 'halle', name: 'Halle' }, { id: 'wavre', name: 'Wavre' }] },
+      shop: { id: 'halle', name: 'Halle', langs: ['nl', 'fr'], hours: '7h00–18h30', hoursNl: '7u00–18u30', address: 'Basiliekstraat 12, 1500 Halle', page: 'L’Atelier By Halle', ig: '@latelierby.halle', fb: 'connected', igs: 'connected' },
+      rules: Object.assign({}, RULES), templates: JSON.parse(JSON.stringify(TEMPLATES)), catalogue: cat,
+      posts: [
+        P('n1', t(-6), '08:00', 'Gamme automne', 'Publié', false, { img: 'img/illus/seasonal/autumn-range.png', campaign: 'c-automne', text: 'La gamme automne est arrivée chez L’Atelier By {ville}.' }),
+        P('n2', t(2), '08:00', 'Brunch du dimanche', 'Programmé', false, { img: 'img/products/cupcake.png' }),
+        P('n3', t(9), '09:30', 'Halloween : biscuits citrouille', 'Programmé', false, { img: 'img/products/cookies.png' }),
+        P('f1', t(-3), '10:00', 'Croissant pur beurre', 'Publié', true, { template: 'fp-produit', img: 'img/products/croissant.png' }),
+        P('f2', t(4), '10:00', 'Brioche croustillante -20 %', 'À valider', true, { template: 'fp-remise', promo: { kind: 'remise', value: 20, label: '-20 %', from: t(4), to: t(10) } }),
+        P('f3', t(1), '11:00', '4+1 · Cookies du goûter', 'Refusé', true, { template: 'fp-offre', img: 'img/products/cookies.png', refus: 'Le 4+1 sur les cookies est déjà prévu par le réseau la semaine prochaine.', promo: { kind: 'offre', value: '4+1', label: '4+1', from: t(1), to: t(5) } }),
+      ],
+      campaigns: [{ id: 'c-automne', name: 'Gamme automne', type: 'saison', start: t(-10), end: t(20), status: 'en cours', products: ['Brioche croustillante', 'Tarte aux pommes', 'Tartelette poire-amande'],
+        levers: ['Posts', 'Publicité locale'], description: 'Lancement de la gamme automne dans tout le réseau.', budget: 120,
+        result: { spend: 64.3, reach: 5200, impr: 11800, clicks: 214, caCamp: 1840, caRef: 1420, tCamp: 512, tRef: 455 } }],
+      quota: { week: today, used: 1, max: RULES.quotaSemaine },
+    };
+  }
+  function demoLoad() {
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem('sf.demo.state') || 'null'); } catch (e) {}
+    if (!s || s.today !== iso(new Date())) s = demoState();
+    return s;
+  }
+  function demoSave(s) { try { localStorage.setItem('sf.demo.state', JSON.stringify(s)); } catch (e) {} }
+
+  // ---------- réel ----------
+  function xhr(method, path) {
+    const x = new XMLHttpRequest();
+    x.open(method, CFG.api + path, false);
+    x.withCredentials = true;
+    x.setRequestHeader('Accept', 'application/json');
+    try { x.send(); } catch (e) { return { status: 0, json: null }; }
+    let j = null; try { j = JSON.parse(x.responseText); } catch (e) {}
+    return { status: x.status, json: j };
+  }
+  async function api(method, path, body) {
+    const r = await fetch(CFG.api + path, { method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+    let j = null; try { j = await r.json(); } catch (e) {}
+    if (r.status === 401 && !ON_LOGIN) { location.href = href('login'); throw new Error('Session expirée.'); }
+    if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
+    return j;
+  }
+  function href(k, q) { const extra = [DEMO ? 'demo=1' : '', q || ''].filter(Boolean).join('&'); return encodeURI(PAGES[k]) + (extra ? '?' + extra : ''); }
+
+  let STATE = null, ERR = '';
+  let SHOP = Q.get('shop') || '';
+  try { if (!SHOP) SHOP = localStorage.getItem('sf.shop') || ''; } catch (e) {}
+  function load() {
+    if (DEMO) { STATE = demoLoad(); if (SHOP && STATE.me.shops.some(x => x.id === SHOP) && SHOP !== STATE.shop.id) { const x = STATE.me.shops.find(y => y.id === SHOP); STATE.shop = Object.assign({}, STATE.shop, { id: x.id, name: x.name, langs: x.id === 'halle' ? ['nl', 'fr'] : ['fr'] }); } return; }
+    if (ON_LOGIN) return;
+    const r = xhr('GET', '/franchise/etat' + (SHOP ? '?shop=' + encodeURIComponent(SHOP) : ''));
+    if (r.status === 401) { location.replace(href('login')); return; }
+    if (r.status === 403 && SHOP) { try { localStorage.removeItem('sf.shop'); } catch (e) {} const r2 = xhr('GET', '/franchise/etat'); if (r2.status === 200) { STATE = r2.json; return; } ERR = (r2.json && r2.json.error) || 'Accès refusé.'; return; }
+    if (r.status !== 200 || !r.json) { ERR = (r.json && r.json.error) || 'Espace indisponible (HTTP ' + r.status + ').'; return; }
+    STATE = r.json;
+  }
+  load();
+  if (STATE) { try { localStorage.setItem('sf.shop', STATE.shop.id); } catch (e) {} }
+
+  const media = (src) => !src ? '' : /^(https?:|data:|\/)/.test(src) ? src : /^uploads\//.test(src) ? CFG.media + src : src;
+  const fill = (text, lang) => {
+    const s = STATE ? STATE.shop : {};
+    return String(text || '').replace(/\{ville\}/g, s.name || '').replace(/\{adresse\}/g, s.address || '').replace(/\{horaires\}/g, lang === 'nl' ? (s.hoursNl || s.hours || '') : (s.hours || ''));
+  };
+  function emit() { window.dispatchEvent(new Event('sf-change')); }
+
+  /** Publier depuis un modèle : le serveur vérifie tout ; en démonstration, les mêmes règles ici. */
+  async function createPost(body) {
+    if (!DEMO) { const r = await api('POST', '/franchise/posts', Object.assign({ shop: STATE.shop.id }, body)); STATE.posts = STATE.posts.concat(r.post); STATE.quota = Object.assign({}, STATE.quota, r.quota); emit(); return r.post; }
+    const err = check(body); if (err.length) throw new Error(err.join(' '));
+    const tpl = STATE.templates.find(t => t.id === body.template), v = window.SFVisuel.vars(tpl, Object.assign({}, body, { product: STATE.catalogue.find(p => p.id === body.product) }), 'fr');
+    const r = STATE.rules, statut = r.validation === 'toujours' || (r.validation === 'modele' && tpl.validation) ? 'À valider' : 'Programmé';
+    const k = (tpl.promo || {}).kind || 'aucune';
+    const post = { id: 'demo' + Date.now(), date: body.date, time: body.time, title: window.SFVisuel.fill(tpl.title || tpl.name, v), status: statut, own: true, type: tpl.type, img: body.visual, text: window.SFVisuel.fill(tpl.text, v), textNl: window.SFVisuel.fill(tpl.textNl, v),
+      fb: !!body.fb, ig: !!body.ig, template: tpl.id, refus: null, reason: null, campaign: null,
+      promo: k === 'aucune' ? null : { kind: k, value: k === 'remise' ? +body.discount : k === 'offre' ? body.offer : body.promoPrice, label: k === 'remise' ? '-' + body.discount + ' %' : k === 'offre' ? body.offer : body.promoPrice + ' €', from: body.from || null, to: body.to || null } };
+    STATE.posts = STATE.posts.concat(post); STATE.quota.used++; demoSave(STATE); emit(); return post;
+  }
+  async function cancelPost(id) {
+    if (!DEMO) { await api('POST', '/franchise/posts/' + encodeURIComponent(id) + '/annuler', { shop: STATE.shop.id }); }
+    const p = STATE.posts.find(x => x.id === id);
+    STATE.posts = STATE.posts.filter(x => x.id !== id);
+    if (p && p.status !== 'Refusé' && STATE.quota.used > 0) STATE.quota.used--;
+    if (DEMO) demoSave(STATE);
+    emit();
+  }
+
+  /** Les règles du réseau appliquées à une saisie (l'écran les montre ; le serveur les impose). */
+  function check(b) {
+    const r = STATE.rules, tpl = STATE.templates.find(t => t.id === b.template), err = [];
+    if (!tpl) return ['Ce modèle n’est plus ouvert.'];
+    if (!(b.fb && tpl.fb && r.fb) && !(b.ig && tpl.ig && r.ig)) err.push('Choisissez au moins un canal.');
+    const when = at(b.date, b.time), now = Date.now();
+    if (!b.date || !b.time || isNaN(when)) err.push('Choisissez la date et l’heure.');
+    else {
+      if (when < now + r.delaiMinHeures * 3600000) err.push('Programmez au moins ' + r.delaiMinHeures + ' h à l’avance.');
+      if (when > now + r.horizonJours * 86400000) err.push('Pas plus de ' + r.horizonJours + ' jours à l’avance.');
+      if (!(r.jours || []).includes(d2(b.date).getDay())) err.push('Ce jour n’est pas ouvert à la publication.');
+      if (b.time < r.heureMin || b.time > r.heureMax) err.push('Heure entre ' + r.heureMin + ' et ' + r.heureMax + '.');
+    }
+    if (STATE.quota.used >= r.quotaSemaine) err.push('Quota de la semaine atteint (' + r.quotaSemaine + ').');
+    if (tpl.product === 'choix' && !STATE.catalogue.some(p => p.id === b.product)) err.push('Choisissez un produit.');
+    const p = tpl.promo || {};
+    if (p.kind === 'remise') { const max = Math.min(p.max, r.remiseMax); if (!(+b.discount >= p.min && +b.discount <= max)) err.push('Remise entre ' + p.min + ' et ' + max + ' %.'); }
+    if (p.kind === 'offre' && !(p.offres || []).includes(b.offer)) err.push('Choisissez une offre.');
+    if (p.kind === 'prix' && !(parseFloat(String(b.promoPrice).replace(',', '.')) > 0)) err.push('Indiquez le prix promotionnel.');
+    if (tpl.period) {
+      if (!b.from || !b.to || b.to < b.from) err.push('Indiquez la période (du … au …).');
+      else if ((d2(b.to) - d2(b.from)) / 86400000 + 1 > r.promoDureeMax) err.push('Une promotion dure au plus ' + r.promoDureeMax + ' jours.');
+    }
+    if (+tpl.free > 0) {
+      const f = String(b.free || '').trim();
+      if (!f) err.push('Complétez la phrase.');
+      if (f.length > +tpl.free) err.push('Phrase limitée à ' + tpl.free + ' caractères.');
+      if (/https?:\/\/|www\.|@\w|#\w/i.test(f)) err.push('Pas de lien, de compte (@) ni de hashtag.');
+    }
+    if (tpl.photo === 'upload' && !b.photo) err.push('Ajoutez votre photo.');
+    return err;
+  }
+  async function logout() {
+    if (DEMO) { try { sessionStorage.removeItem('sf.demo'); localStorage.removeItem('sf.demo.state'); } catch (e) {} location.href = PAGES.login; return; }
+    try { await api('POST', '/franchise/deconnexion', {}); } catch (e) {}
+    try { localStorage.removeItem('sf.shop'); } catch (e) {}
+    location.href = PAGES.login;
+  }
+  function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
+  function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
+
+  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, logout, switchShop, reset, emit,
+    MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
+    STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
+})();
