@@ -996,6 +996,22 @@ sfSessionOuvrir(['4'], 'Test modèle fixe', 'code');
 $pf = $code === 200 ? socItem('posts', (string) $b['post']['id']) : null;
 check('franchisé : publie le modèle sans visuel à dessiner, avec les visuels du réseau', $code === 200 && $pf && count($pf['media']) === 2 && $pf['img'] === $ftSaved['visual']['media'][0]['src']
     && str_contains((string) $pf['text'], '{ville}') && str_contains((string) $pf['text'], 'Dégustation samedi') && $pf['ig'] === false, json_encode($b));
+
+echo "Espace franchisé : opérations du réseau (contenus rattachés, métriques), modèle avec opération et lien\n";
+socRattacher('post', 'mfb-111_9001', 'bo-1');
+[$code, $b] = $fr('GET', '/franchise/operations');
+$opF = array_column($b['operations'] ?? [], null, 'id')['bo-1'] ?? null;
+check('opération du Marketing où figure la boutique : posts et pub rattachés, publication de sa Page (lecture seule)', $code === 200 && $opF
+    && in_array('p1', array_column($opF['posts'], 'id'), true) && in_array('mfb-111_9001', array_column($opF['metaPosts'], 'id'), true) && count($opF['ads']) >= 1 && $opF['budget'] == 200, json_encode($opF));
+check('métriques de la boutique (Meta + ventes) et objectif à sa part du budget', is_array($opF['result']) && array_key_exists('spend', $opF['result']) && $opF['goalShop'] == 500, json_encode([$opF['result'] ?? null, $opF['goalShop'] ?? null]));
+$ftLien = array_merge($ftFixe, ['id' => 'ftlien', 'campaign' => 'bo-1', 'link' => '{webshop}']);
+socStateSave(['changes' => ['ftemplates' => ['upsert' => [$ftLien]]]]);
+$jL = date('Y-m-d', strtotime('monday +3 weeks'));
+[$c1, $b1] = $fr('POST', '/franchise/posts', ['template' => 'ftlien', 'free' => 'Venez goûter', 'fb' => true, 'date' => $jL, 'time' => '12:30']);
+[$c2, $b2] = $fr('POST', '/franchise/posts', ['template' => 'ftlien', 'free' => 'Venez goûter', 'fb' => true, 'date' => $jL, 'time' => '13:30', 'link' => 'https://autre-site.be']);
+$pL1 = $c1 === 200 ? socItem('posts', (string) $b1['post']['id']) : null; $pL2 = $c2 === 200 ? socItem('posts', (string) $b2['post']['id']) : null;
+check('post du franchisé : hérite l’opération et le lien webshop du modèle', $pL1 && $pL1['campaign'] === 'bo-1' && $pL1['link'] === '{webshop}', json_encode([$c1, $b1]));
+check('jamais de lien libre venu du franchisé', $pL2 && $pL2['link'] === '', json_encode([$c2, $b2]));
 unset($_COOKIE[SF_COOKIE]);
 
 echo "API HTTP (routeur)\n";

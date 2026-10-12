@@ -236,6 +236,16 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   du produit choisi : `…&product={id TFBuddy}&open=product`), résolues boutique par
   boutique dans le lien et dans le texte du post (`socWebshopUrl`, `src/publish.php` ;
   adresse de base : réglage `webshop_url`). Boutons « Lien rapide » sous le champ Lien.
+- **Espace franchisé aligné** — « Opérations du réseau » (`GET /franchise/operations`) :
+  chaque campagne du Marketing où figure la boutique, avec ce qui y est rattaché en
+  lecture seule (posts du module, publications de sa Page et de l'Instagram du réseau
+  relues chez Meta, publicités) et toutes ses métriques (budget dépensé, portée,
+  impressions, clics, interactions, vues vidéo, ventes et CA additionnel estimés,
+  tickets, quantités, coûts, objectif à sa part du budget). Les modèles franchisés
+  portent une opération et un lien (webshop de la boutique, produit, catégorie) : le
+  post de la boutique en hérite ; dans « Publier », la boutique garde ou retire ce lien,
+  ou choisit son webshop — jamais un lien libre. Le calendrier franchisé montre
+  l'opération de chaque post.
 - **Ciblage** — une pastille on/off par boutique dans « Créer un post » (Toutes = tout le réseau).
 - **Opérations** (`src/operations.php`) — ce sont les campagnes commerciales du
   Marketing du BO, lues en direct par son API (adresse : Paramètres → API Marketing,

@@ -27,21 +27,51 @@
     </header>
     <sc-if value="{{ hidden }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Le réseau ne partage pas les opérations dans l’espace boutique.</div></sc-if>
     <sc-if value="{{ none }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Aucune opération du réseau ne concerne votre boutique pour l’instant.</div></sc-if>
+    <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:16px;font-size:13px;color:#666666;">Lecture des opérations du réseau…</div></sc-if>
     <sc-for list="{{ camps }}" as="c" hint-placeholder-count="2">
-      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:10px;">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <div style="display:flex;flex-direction:column;gap:3px;"><span style="font-size:17px;font-weight:500;">{{ c.name }}</span><span style="font-size:12px;color:#666666;">{{ c.period }} · {{ c.type }}</span></div>
-          <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 9px;background:{{ c.stBg }};color:{{ c.stFg }};">{{ c.status }}</span>
+      <section style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.10);padding:18px 20px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div style="display:flex;gap:12px;align-items:center;min-width:0;">
+            <sc-if value="{{ c.hasImg }}" hint-placeholder-val="{{ false }}"><img src="{{ c.img }}" alt="" style="width:56px;height:56px;border-radius:10px;object-fit:cover;background:#F4EFE8;flex:0 0 auto;"></sc-if>
+            <div style="display:flex;flex-direction:column;gap:3px;min-width:0;"><span style="font-size:18px;font-weight:500;">{{ c.name }}</span><span style="font-size:12px;color:#666666;">{{ c.period }} · {{ c.type }}</span></div>
+          </div>
+          <span style="font-size:11px;font-weight:500;border-radius:999px;padding:4px 10px;background:{{ c.stBg }};color:{{ c.stFg }};white-space:nowrap;">{{ c.status }}</span>
         </div>
-        <sc-if value="{{ c.hasDesc }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#3A3530;line-height:1.5;">{{ c.description }}</span></sc-if>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ c.products }}" as="p" hint-placeholder-count="0"><span style="font-size:12px;border-radius:999px;padding:4px 10px;background:#F4EFE8;">{{ p }}</span></sc-for></div>
-        <sc-if value="{{ c.hasBudget }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#444444;">Budget publicitaire pour votre boutique : <strong style="font-weight:600;">{{ c.budget }}</strong> (financé et piloté par le réseau)</span></sc-if>
+        <sc-if value="{{ c.hasDesc }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;line-height:1.5;color:#444444;">{{ c.description }}</span></sc-if>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <sc-for list="{{ c.products }}" as="p" hint-placeholder-count="0"><span style="font-size:12px;background:#FBF3F4;color:#8D1D2C;border-radius:999px;padding:4px 10px;">{{ p }}</span></sc-for>
+          <sc-for list="{{ c.tags }}" as="t" hint-placeholder-count="0"><span style="font-size:12px;background:#F4EFE8;color:#444444;border-radius:999px;padding:4px 10px;">{{ t }}</span></sc-for>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:#444444;">
+          <sc-if value="{{ c.hasBudget }}" hint-placeholder-val="{{ false }}"><span>Budget publicitaire pour votre boutique : <strong style="font-weight:600;color:#222222;">{{ c.budget }}</strong> (financé et piloté par le réseau)</span></sc-if>
+          <sc-if value="{{ c.hasGoal }}" hint-placeholder-val="{{ false }}"><span>Objectif pour votre boutique : <strong style="font-weight:600;color:#222222;">{{ c.goal }}</strong></span></sc-if>
+        </div>
+
         <sc-if value="{{ c.hasResult }}" hint-placeholder-val="{{ false }}">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;">
-            <sc-for list="{{ c.kpis }}" as="k" hint-placeholder-count="4"><div style="background:#F4EFE8;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:2px;"><span style="font-size:11px;color:#666666;">{{ k.label }}</span><span style="font-size:18px;font-weight:300;color:{{ k.color }};">{{ k.value }}</span><span style="font-size:10px;color:#666666;">{{ k.sub }}</span></div></sc-for>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Résultats pour votre boutique · {{ c.resultNote }}</span>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">
+              <sc-for list="{{ c.kpis }}" as="k" hint-placeholder-count="8"><div style="background:#F7F3EE;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;"><span style="font-size:11px;color:#666666;">{{ k.label }}</span><span style="font-size:18px;font-weight:500;color:{{ k.color }};">{{ k.value }}</span><span style="font-size:11px;color:#8A847C;">{{ k.sub }}</span></div></sc-for>
+            </div>
           </div>
         </sc-if>
-        <sc-if value="{{ c.hasPosts }}" hint-placeholder-val="{{ false }}"><a href="{{ c.calHref }}" style="font-size:12px;font-weight:500;">{{ c.postsLabel }} →</a></sc-if>
+        <sc-if value="{{ c.noResult }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">{{ c.noResultLabel }}</span></sc-if>
+
+        <div style="display:flex;flex-direction:column;gap:8px;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:12px;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Rattaché à l’opération · {{ c.linkedLabel }} · lecture seule</span>
+          <sc-if value="{{ c.noLinked }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Le réseau n’a encore rattaché ni post ni publicité à cette opération pour votre boutique.</span></sc-if>
+          <sc-for list="{{ c.items }}" as="it" hint-placeholder-count="0">
+            <div style="display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;background:#FBF8F4;">
+              <img src="{{ it.img }}" alt="" style="width:40px;height:40px;border-radius:6px;object-fit:cover;background:#F4EFE8;flex:0 0 auto;">
+              <span style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto;">
+                <span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ it.title }}</span>
+                <span style="font-size:11px;color:#666666;">{{ it.meta }}</span>
+              </span>
+              <span style="font-size:10px;font-weight:600;border-radius:999px;padding:2px 8px;background:{{ it.tagBg }};color:{{ it.tagFg }};white-space:nowrap;">{{ it.tag }}</span>
+              <sc-if value="{{ it.hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ it.link }}" target="{{ it.target }}" rel="noopener" style="font-size:12px;font-weight:500;white-space:nowrap;">{{ it.linkLabel }}</a></sc-if>
+            </div>
+          </sc-for>
+        </div>
       </section>
     </sc-for>
     </sc-if>
@@ -50,24 +80,51 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
+  state = { data: null, err: '' };
+  componentDidMount() {
+    const SF = window.SF; if (!SF || !SF.state() || !SF.operations) return;
+    SF.operations().then(d => this.setState({ data: d })).catch(e => this.setState({ data: { operations: [] }, err: e.message || 'erreur' }));
+  }
   renderVals() {
-    const SF = window.SF, st = SF && SF.state();
+    const SF = window.SF, st = SF && SF.state(), s = this.state;
     if (!st) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', camps: [] };
-    const ST = { 'en cours': ['#E2F0E8', '#0F6B4A'], 'planifiée': ['#F2C9A0', '#6b4420'], 'terminée': ['#EAE4DC', '#555555'], 'brouillon': ['#F4EFE8', '#555555'] };
-    const pct = (a, b) => b ? (a >= b ? '+' : '') + Math.round((a / b - 1) * 100) + ' %' : '—';
-    const camps = (st.campaigns || []).map(c => {
-      const r = c.result, [bg, fg] = ST[c.status] || ST['brouillon'], posts = st.posts.filter(p => p.campaign === c.id);
-      const has = !!(r && st.rules.voirResultats !== false);
-      return { name: c.name, period: !c.start ? 'Dates à venir' : c.end ? 'Du ' + SF.dLabel(c.start) + ' au ' + SF.dLabel(c.end) : 'Depuis le ' + SF.dLabel(c.start), type: c.type || 'opération', status: c.status, stBg: bg, stFg: fg,
-        hasDesc: !!c.description, description: c.description, products: c.products || [], hasBudget: c.budget != null && c.budget > 0, budget: SF.eur(c.budget),
-        hasResult: has, kpis: has ? [
-          { label: 'Personnes touchées', value: (r.reach || 0).toLocaleString('fr-BE'), sub: 'par les publicités', color: '#222222' },
-          { label: 'Clics', value: (r.clicks || 0).toLocaleString('fr-BE'), sub: 'vers votre boutique', color: '#222222' },
-          { label: 'Ventes des produits', value: r.caCamp != null ? SF.eur(r.caCamp) : '—', sub: r.caRef != null ? pct(r.caCamp, r.caRef) + ' vs habituel (estimation)' : 'référence indisponible', color: r.caCamp >= r.caRef ? '#0F6B4A' : '#8A4B00' },
-          { label: 'Tickets', value: r.tCamp != null ? r.tCamp : '—', sub: r.tRef != null ? pct(r.tCamp, r.tRef) + ' vs habituel' : '', color: '#222222' }] : [],
-        hasPosts: posts.length > 0, postsLabel: posts.length + ' post(s) de l’opération dans votre calendrier', calHref: SF.href('cal', 'post=' + encodeURIComponent(posts[0] ? posts[0].id : '')) };
+    const ST = { 'en cours': ['#E2F0E8', '#0F6B4A', 'En cours'], 'à venir': ['#F2C9A0', '#6b4420', 'À venir'], 'terminée': ['#EAE4DC', '#555555', 'Terminée'] };
+    const fmt = (n) => n == null ? '—' : Math.round(n).toLocaleString('fr-BE');
+    const vs = (a, b) => a != null && b ? (a >= b ? '+' : '') + Math.round((a / b - 1) * 100) + ' % vs habituel' : 'référence indisponible';
+    const ops = (s.data && s.data.operations) || [];
+    const camps = ops.map(c => {
+      const r = c.result, [bg, fg, lab] = ST[c.status] || ST['à venir'], voir = st.rules.voirResultats !== false;
+      const caAdd = r && r.caCamp != null && r.caRef != null ? r.caCamp - r.caRef : null;
+      const kpis = r && voir ? [
+        { label: 'Budget dépensé', value: SF.eur(r.spend), sub: 'publicités pour votre boutique', color: '#222222' },
+        { label: 'Personnes touchées', value: fmt(r.reach), sub: 'par les publicités', color: '#222222' },
+        { label: 'Impressions', value: fmt(r.impr), sub: 'affichages des publicités', color: '#222222' },
+        { label: 'Clics', value: fmt(r.clicks), sub: r.impr ? 'taux de clic ' + (r.clicks / r.impr * 100).toFixed(1).replace('.', ',') + ' %' : '', color: '#222222' },
+        { label: 'Interactions', value: fmt(r.eng), sub: 'réactions, commentaires, partages', color: '#222222' },
+        { label: 'Vues vidéo', value: fmt(r.vv), sub: 'vidéos des publicités', color: '#222222' },
+        { label: 'Ventes des produits', value: r.caCamp != null ? SF.eur(r.caCamp) : '—', sub: vs(r.caCamp, r.caRef), color: r.caCamp != null && r.caRef != null && r.caCamp >= r.caRef ? '#0F6B4A' : '#222222' },
+        { label: 'CA additionnel (estimation)', value: caAdd != null ? (caAdd >= 0 ? '+' : '') + SF.eur(caAdd) : '—', sub: c.goalShop ? 'objectif ' + SF.eur(c.goalShop) + (caAdd != null ? ' · ' + Math.round(caAdd / c.goalShop * 100) + ' % atteint' : '') : 'vs mêmes jours des 6 semaines avant', color: caAdd != null && caAdd >= 0 ? '#0F6B4A' : '#8A4B00' },
+        { label: 'Tickets', value: fmt(r.tCamp), sub: vs(r.tCamp, r.tRef), color: '#222222' },
+        { label: 'Quantités vendues', value: fmt(r.qCamp), sub: vs(r.qCamp, r.qRef), color: '#222222' },
+        { label: 'Coût par clic', value: r.clicks ? (r.spend / r.clicks).toFixed(2).replace('.', ',') + ' €' : '—', sub: 'budget ÷ clics', color: '#222222' },
+        { label: 'Coût par ticket gagné', value: r.tCamp != null && r.tRef != null && r.tCamp > r.tRef && r.spend ? (r.spend / (r.tCamp - r.tRef)).toFixed(2).replace('.', ',') + ' €' : '—', sub: 'budget ÷ tickets en plus', color: '#222222' },
+      ] : [];
+      const items = (c.posts || []).map(p => ({ img: p.img || 'img/illus/decorative/circle-01.png', title: p.title, meta: SF.dLabel(p.date) + (p.time ? ' · ' + p.time : '') + ' · ' + [p.fb ? 'Facebook' : '', p.ig ? 'Instagram' : ''].filter(Boolean).join(' + ') + ' · ' + p.status,
+          tag: p.own ? 'Votre post' : 'Post du réseau', tagBg: '#F4EFE8', tagFg: '#444444', hasLink: true, link: SF.href('cal', 'post=' + encodeURIComponent(p.id)), target: '_self', linkLabel: 'Calendrier →' }))
+        .concat((c.metaPosts || []).map(m => ({ img: m.img || 'img/illus/decorative/circle-01.png', title: (m.text || 'Publication').split('\n')[0].slice(0, 90), meta: (m.date ? SF.dLabel(m.date) + ' · ' : '') + (m.channel === 'Instagram' ? 'Instagram du réseau' : 'votre Page Facebook'),
+          tag: 'Publié sur ' + (m.channel === 'Instagram' ? 'Instagram' : 'la Page'), tagBg: '#E7EEF9', tagFg: '#1E4F91', hasLink: !!m.link, link: m.link, target: '_blank', linkLabel: 'Voir ↗' })))
+        .concat((c.ads || []).map(a => ({ img: 'img/illus/customer-facing/webshop.png', title: a.name, meta: (a.objective ? a.objective + ' · ' : '') + (a.start ? 'du ' + SF.dLabel(a.start) + (a.end ? ' au ' + SF.dLabel(a.end) : '') : '') + (a.reseau ? ' · tout le réseau' : ''),
+          tag: 'Publicité · ' + a.status, tagBg: a.status === 'Active' ? '#E2F0E8' : '#F4EFE8', tagFg: a.status === 'Active' ? '#0F6B4A' : '#555555', hasLink: false })));
+      const nP = (c.posts || []).length + (c.metaPosts || []).length, nA = (c.ads || []).length;
+      return { name: c.name, period: !c.start ? 'Dates à venir' : c.end ? 'Du ' + SF.dLabel(c.start) + ' au ' + SF.dLabel(c.end) : 'Depuis le ' + SF.dLabel(c.start), type: c.type || 'opération',
+        status: lab, stBg: bg, stFg: fg, hasImg: !!c.image, img: c.image || '', hasDesc: !!c.description, description: c.description || '', products: c.products || [],
+        tags: (c.channels || []).concat(c.levers || []), hasBudget: !!c.budget, budget: SF.eur(c.budget), hasGoal: !!c.goalShop, goal: c.goalShop ? SF.eur(c.goalShop) + ' ' + ((c.goal && c.goal.metric) || '').toLowerCase() : '',
+        hasResult: kpis.length > 0, kpis, resultNote: r && r.source ? 'ventes : ' + r.source : 'Meta + ventes de la caisse',
+        noResult: !kpis.length, noResultLabel: !voir ? 'Le réseau ne partage pas les résultats dans l’espace boutique.' : c.status === 'à venir' ? 'Les résultats arriveront quand l’opération aura commencé.' : 'Pas encore de résultats pour votre boutique (relus chaque heure).',
+        items, noLinked: !items.length, linkedLabel: nP + ' post' + (nP > 1 ? 's' : '') + ' · ' + nA + ' publicité' + (nA > 1 ? 's' : '') };
     });
-    return { ok: true, hasError: false, shopName: st.shop.name, hidden: st.rules.voirCampagnes === false, none: st.rules.voirCampagnes !== false && camps.length === 0, camps };
+    const hidden = !!(s.data && s.data.hidden) || st.rules.voirCampagnes === false;
+    return { ok: true, hasError: !!s.err, error: s.err, shopName: st.shop.name, loading: !s.data, hidden, none: !!s.data && !hidden && camps.length === 0, camps };
   }
 }
 </script>

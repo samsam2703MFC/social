@@ -333,6 +333,77 @@ function sfPostVue(array $p, string $shop): array
         'reason' => $ko ? (string) ($ko[0]['reason'] ?? '') : null, 'campaign' => $p['campaign'] ?? null];
 }
 
+/**
+ * Les opérations du réseau (campagnes commerciales du Marketing du BO) où figure la boutique, en lecture
+ * seule : ce qui y est rattaché (posts du module, publications de sa Page ou de l'Instagram du réseau lues
+ * chez Meta, publicités) et toutes ses métriques (Meta + ventes, estimation).
+ */
+function sfOperations(string $shop): array
+{
+    $r = sfRegles();
+    if (!$r['voirCampagnes']) { return ['hidden' => true, 'operations' => []]; }
+    $s = socShop($shop);
+    if ($s === null) { throw new HttpError(404, 'boutique inconnue'); }
+    $res = $r['voirResultats'] ? socResults() : [];
+    $page = (string) ($s['ids']['page_id'] ?? '');
+    $igReseau = socIgUnique() ? (string) (socBrand()['ids']['instagram_user_id'] ?? '') : '';
+    $ratt = socRattachements();
+    $tous = array_column(socShops(), 'id');
+    $vise = static fn ($x) => ($x === 'all' || $x === null) ? $tous : array_map('strval', (array) $x);
+    $out = [];
+    foreach (socOperations() as $o) {
+        if (!in_array($shop, $o['shops'], true)) { continue; }
+        $posts = [];
+        foreach (socItems('posts') as $p) {
+            if (($p['campaign'] ?? null) !== $o['id'] || !empty($p['dark']) || !in_array($shop, $vise($p['shops'] ?? null), true)) { continue; }
+            $posts[] = sfPostVue($p, $shop);
+        }
+        $meta = [];
+        foreach ($ratt as $objet => $op) {
+            if ($op !== $o['id']) { continue; }
+            if (preg_match('/^mfb-(\d+)_\d+$/', $objet, $m) && $page !== '' && $m[1] === $page) { $meta[] = sfMetaPublication($objet, $page); }
+            elseif (str_starts_with($objet, 'mig-') && $igReseau !== '') { $meta[] = sfMetaPublication($objet, null, $igReseau); }
+        }
+        usort($meta, static fn ($a, $b) => strcmp($b['date'], $a['date']));
+        $ads = [];
+        foreach (socItems('ads') as $a) {
+            if (($a['campaign'] ?? null) !== $o['id']) { continue; }
+            $aShops = ($a['scope'] ?? '') === 'reseau' || empty($a['shops']) ? $tous : $vise($a['shops']);
+            if (!in_array($shop, $aShops, true)) { continue; }
+            $ads[] = ['name' => (string) ($a['name'] ?? ''), 'status' => (string) ($a['status'] ?? ''), 'objective' => (string) ($a['objective'] ?? ''),
+                'start' => $a['start'] ?? null, 'end' => $a['end'] ?? null, 'reseau' => ($a['scope'] ?? '') === 'reseau', 'meta' => ($a['origin'] ?? '') === 'meta'];
+        }
+        $split = (float) ($o['split'][$shop] ?? 0);
+        $out[] = ['id' => $o['id'], 'name' => $o['name'], 'type' => $o['typeLabel'] ?: $o['type'], 'status' => $o['status'], 'boStatus' => $o['boStatus'],
+            'start' => $o['start'], 'end' => $o['end'], 'description' => $o['description'], 'products' => $o['products'], 'levers' => $o['levers'], 'channels' => $o['channels'],
+            'goal' => $o['goal'], 'goalShop' => $o['goal'] && $split > 0 && $o['budget'] > 0 ? round($o['goal']['value'] * $split / $o['budget'], 2) : null,
+            'budget' => $split > 0 ? $split : null, 'image' => $o['image'], 'result' => $res[$o['id']][$shop] ?? null,
+            'posts' => $posts, 'metaPosts' => $meta, 'ads' => $ads];
+    }
+    return ['hidden' => false, 'operations' => $out];
+}
+
+/** Une publication Meta rattachée (Page de la boutique ou Instagram du réseau), relue chez Meta ; le lien seul si Meta refuse. */
+function sfMetaPublication(string $objet, ?string $page, ?string $ig = null): array
+{
+    $id = substr($objet, 4);
+    $fb = str_starts_with($objet, 'mfb-');
+    $v = ['id' => $objet, 'channel' => $fb ? 'Facebook' : 'Instagram', 'date' => '', 'text' => '', 'img' => null,
+        'link' => $fb ? 'https://www.facebook.com/' . $id : null];
+    try {
+        if ($fb) {
+            $x = Meta::call('GET', $id, ['fields' => 'message,created_time,full_picture,permalink_url'], Meta::pageToken((string) $page));
+            $v['text'] = (string) ($x['message'] ?? ''); $v['img'] = (string) ($x['full_picture'] ?? '') ?: null;
+            $v['date'] = substr((string) ($x['created_time'] ?? ''), 0, 10); $v['link'] = (string) ($x['permalink_url'] ?? '') ?: $v['link'];
+        } else {
+            $x = Meta::call('GET', $id, ['fields' => 'caption,media_type,media_url,thumbnail_url,permalink,timestamp'], socIgToken((string) $ig, ''));
+            $v['text'] = (string) ($x['caption'] ?? ''); $v['img'] = (string) (($x['media_type'] ?? '') === 'VIDEO' ? ($x['thumbnail_url'] ?? '') : ($x['media_url'] ?? '')) ?: null;
+            $v['date'] = substr((string) ($x['timestamp'] ?? ''), 0, 10); $v['link'] = (string) ($x['permalink'] ?? '') ?: null;
+        }
+    } catch (Throwable $e) { /* la publication reste listée, avec son lien */ }
+    return $v;
+}
+
 /** L'état de l'espace franchisé pour une boutique. */
 function sfEtat(string $shop, array $session): array
 {
@@ -483,6 +554,16 @@ function sfPostCreer(string $shop, array $b, array $session = []): array
     $photo = (string) ($b['photo'] ?? '');
     if ($photoMode === 'upload' && !preg_match('#^data:image/#', $photo)) { $err[] = 'Ajoutez votre photo.'; }
 
+    // Lien : celui du modèle, ou le webshop de la boutique (sa page, celle du produit, sa catégorie). Jamais un lien libre.
+    $lien = trim((string) ($tpl['link'] ?? ''));
+    $choix = (string) ($b['link'] ?? ($lien !== '' ? 'modele' : 'aucun'));
+    $lien = match ($choix) {
+        'modele' => $lien, 'webshop' => '{webshop}',
+        'produit' => !empty($prod['apiId']) && ($prod['webshop'] ?? true) ? '{webshop_produit}' : '{webshop}',
+        'categorie' => !empty($prod['categoryId']) ? '{webshop_categorie}' : '{webshop}',
+        default => '',
+    };
+
     if ($err) { throw new HttpError(422, implode(' ', array_unique($err))); }
 
     $vars = ['produit' => $prod['name'] ?? '', 'prix' => $prod['price'] ?? '', 'remise' => $kind === 'remise' ? $promo['value'] : '',
@@ -495,7 +576,7 @@ function sfPostCreer(string $shop, array $b, array $session = []): array
         'shops' => [$shop], 'ch' => [$shop => ['fb' => $fb, 'ig' => $ig]], 'fb' => $fb, 'ig' => $ig, 'status' => $statut, 'date' => $date, 'time' => $time,
         'text' => sfRemplir((string) ($tpl['text'] ?? ''), $vars), 'textNl' => sfRemplir((string) ($tpl['textNl'] ?? ''), $varsNl), 'langs' => $s['langs'],
         'img' => $visuel, 'media' => $fixe ? $medias : [['src' => $visuel, 'kind' => 'img', 'name' => 'Visuel du modèle « ' . $tpl['name'] . ' »']],
-        'promo' => $promo, 'product' => $prod['id'] ?? null, 'spread' => 0, 'campaign' => null, 'link' => '',
+        'promo' => $promo, 'product' => $prod['id'] ?? null, 'spread' => 0, 'campaign' => ((string) ($tpl['campaign'] ?? '')) ?: null, 'link' => $lien,
         'fields' => ['product' => $prod['id'] ?? null, 'discount' => $b['discount'] ?? null, 'offer' => $b['offer'] ?? null, 'promoPrice' => $b['promoPrice'] ?? null,
             'from' => $du, 'to' => $au, 'free' => $libre, 'photo' => $photo !== '' ? $photo : null]];
     $out = socStateSave(['changes' => ['posts' => ['upsert' => [$post]]]]);
@@ -611,6 +692,7 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'POST' && preg_match('#^/franchise/posts/([\w.\-]{1,64})/annuler$#', $path, $m)) { sfPostAnnuler($shop, $m[1]); return [200, ['ok' => true]]; }
     if ($method === 'GET' && $path === '/franchise/suivi') { return [200, sfSuivi($shop, (int) ($_GET['jours'] ?? 28))]; }
     if ($method === 'GET' && $path === '/franchise/instagram') { return [200, sfInstagram()]; }
+    if ($method === 'GET' && $path === '/franchise/operations') { return [200, sfOperations($shop)]; }
     throw new HttpError(404, 'route inconnue');
 }
 

@@ -37,7 +37,7 @@
   function demoState() {
     const today = iso(new Date()), t = (n) => addDays(today, n);
     const cat = [
-      { id: 'p1', name: 'Brioche croustillante', nameNl: 'Krokante brioche', price: '4,20', img: 'img/products/brioche-croustillante.png', gamme: 'Viennoiseries' },
+      { id: 'p1', apiId: 1410006, webshop: true, categoryId: 14100, name: 'Brioche croustillante', nameNl: 'Krokante brioche', price: '4,20', img: 'img/products/brioche-croustillante.png', gamme: 'Viennoiseries' },
       { id: 'p2', name: 'Tarte aux pommes', nameNl: 'Appeltaart', price: '18,50', img: 'img/products/sweet-tart-big.png', gamme: 'Pâtisseries' },
       { id: 'p3', name: 'Croissant pur beurre', nameNl: 'Botercroissant', price: '1,30', img: 'img/products/croissant.png', gamme: 'Viennoiseries' },
       { id: 'p4', name: 'Cookies du goûter', nameNl: 'Vieruurtjescookies', price: '2,20', img: 'img/products/cookies.png', gamme: 'Goûter' },
@@ -121,7 +121,7 @@
     const r = STATE.rules, statut = r.validation === 'toujours' || (r.validation === 'modele' && tpl.validation) ? 'À valider' : 'Programmé';
     const k = (tpl.promo || {}).kind || 'aucune';
     const post = { id: 'demo' + Date.now(), date: body.date, time: body.time, title: window.SFVisuel.fill(tpl.title || tpl.name, v), status: statut, own: true, type: tpl.type, img: body.visual || ((tpl.visual || {}).style === 'fixe' ? media((tpl.visual.media || [])[0] ? tpl.visual.media[0].src : tpl.visual.src) : ''), text: window.SFVisuel.fill(tpl.text, v), textNl: window.SFVisuel.fill(tpl.textNl, v),
-      fb: !!body.fb, ig: !!body.ig, template: tpl.id, refus: null, reason: null, campaign: null,
+      fb: !!body.fb, ig: !!body.ig, template: tpl.id, refus: null, reason: null, campaign: tpl.campaign || null, link: body.link || 'aucun',
       promo: k === 'aucune' ? null : { kind: k, value: k === 'remise' ? +body.discount : k === 'offre' ? body.offer : body.promoPrice, label: k === 'remise' ? '-' + body.discount + ' %' : k === 'offre' ? body.offer : body.promoPrice + ' €', from: body.from || null, to: body.to || null } };
     STATE.posts = STATE.posts.concat(post); STATE.quota.used++; demoSave(STATE); emit(); return post;
   }
@@ -199,10 +199,35 @@
     return Promise.resolve({ username: 'latelierby.be', name: 'L’Atelier By', picture: null, followers: 9412, media, erreur: null, demo: true,
       programmes: [{ title: 'Derniers jours de la gamme automne', date: addDays(STATE.today, 3), time: '08:00', src: 'img/illus/seasonal/autumn-range.png' }, { title: 'Halloween : biscuits citrouille', date: addDays(STATE.today, 9), time: '09:00', src: 'img/products/pumpkin.png' }] });
   }
+  /**
+   * Les opérations du réseau (campagnes du Marketing du BO) où figure la boutique : ce qui y est rattaché
+   * (posts, publications de la Page, publicités) et toutes les métriques de la boutique. Lecture seule.
+   */
+  function operations() {
+    if (!DEMO) return api('GET', '/franchise/operations?shop=' + encodeURIComponent(STATE.shop.id));
+    const ops = (STATE.campaigns || []).map(c => Object.assign({}, c, { type: c.type === 'saison' ? 'Saisonnalité' : c.type, boStatus: 'En cours',
+      levers: c.levers || [], channels: ['Meta Ads', 'Posts des Pages'], goal: { metric: 'CA additionnel', value: 4000, unit: 'EUR' }, goalShop: 480,
+      posts: (STATE.posts || []).filter(p => p.campaign === c.id),
+      metaPosts: [{ id: 'mfb-demo1', channel: 'Facebook', date: addDays(STATE.today, -3), text: 'La gamme automne est là : brioche croustillante, tarte aux pommes… Venez goûter !', img: 'img/illus/seasonal/autumn-range.png', link: 'https://www.facebook.com/' },
+        { id: 'mig-demo2', channel: 'Instagram', date: addDays(STATE.today, -5), text: 'Nouveau : tartelette poire-amande 🍐', img: 'img/products/sweet-tart-small.png', link: 'https://www.instagram.com/' }],
+      ads: [{ name: 'Automne · trafic magasin', status: 'Active', objective: 'Trafic en magasin', start: addDays(STATE.today, -9), end: addDays(STATE.today, 18), reseau: false, meta: false },
+        { name: 'Automne · vidéo notoriété', status: 'Active', objective: 'Notoriété locale', start: addDays(STATE.today, -9), end: addDays(STATE.today, 18), reseau: true, meta: false }],
+      result: c.result ? Object.assign({ impr: 11800, eng: 640, vv: 2100, qCamp: 310, qRef: 240, source: 'API TFBuddy' }, c.result) : null }));
+    return Promise.resolve({ hidden: STATE.rules.voirCampagnes === false, operations: ops });
+  }
+  /** Le webshop de la boutique, la page d'un produit ou d'une catégorie (comme le serveur). */
+  function webshopUrl(product, kind) {
+    const base = 'https://webshop.atelierby.be/', sid = STATE && STATE.shop ? String(STATE.shop.id) : '';
+    if (!/^\w+$/.test(sid)) return base;
+    const u = base + '?shop=' + sid;
+    if (kind === 'produit' && product && product.apiId) return u + '&product=' + product.apiId + '&open=product';
+    if (kind === 'categorie' && product && product.categoryId) return u + '&category=' + product.categoryId;
+    return u;
+  }
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, logout, switchShop, reset, emit, suivi, instagram,
+  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, logout, switchShop, reset, emit, suivi, instagram, operations, webshopUrl,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();

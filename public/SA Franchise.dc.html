@@ -84,6 +84,11 @@
                 <label style="flex:1 1 140px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Type<select value="{{ ed.type }}" onChange="{{ setType }}" style="font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><sc-for list="{{ typeOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o }}">{{ o }}</option></sc-for></select></label>
               </div>
               <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Description (vue par la boutique)<input type="text" value="{{ ed.description }}" onChange="{{ setDescription }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <label style="flex:1 1 200px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Opération du réseau (campagne du Marketing)<select value="{{ ed.campaign }}" onChange="{{ setTplCampaign }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 8px;background:#FFFFFF;"><option value="">Aucune</option><sc-for list="{{ tplOps }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></select></label>
+                <label style="flex:1 1 200px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Lien proposé à la boutique<select value="{{ ed.link }}" onChange="{{ setTplLink }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 8px;background:#FFFFFF;"><sc-for list="{{ tplLinks }}" as="l" hint-placeholder-count="0"><option value="{{ l.v }}">{{ l.label }}</option></sc-for></select></label>
+              </div>
+              <span style="font-size:11px;color:#666666;line-height:1.45;">Le post de la boutique est rattaché à l’opération choisie et renvoie vers son propre webshop ({webshop} → webshop.atelierby.be/?shop=n° de la boutique). La boutique peut retirer le lien, jamais en mettre un autre.</span>
               <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;">
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked="{{ ed.active }}" onChange="{{ toggleActive }}" style="accent-color:#8D1D2C;margin:0;">Ouvert aux boutiques</label>
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked="{{ ed.validation }}" onChange="{{ toggleValidation }}" disabled="{{ valLocked }}" style="accent-color:#8D1D2C;margin:0;">À valider par le franchiseur</label>
@@ -336,6 +341,12 @@ class Component extends DCLogic {
       const S = (k) => (v) => this.E({ [k]: v });
       edVals = {
         ed: e, typeOptions: SA.POST_TYPES, varsHelp: '{produit} {prix} {remise} {offre} {prix_promo} {du} {au} {libre} · {ville} {adresse} {horaires}',
+        // Opération et lien du modèle : hérités par le post de la boutique.
+        tplOps: (SA.state().campaigns || []).filter(c => c.status !== 'terminée').map(c => ({ id: c.id, name: c.name + (c.boStatusCode === 'draft' ? ' (brouillon)' : '') })),
+        setTplCampaign: (ev) => this.E({ campaign: ev.target.value || null }),
+        tplLinks: [['', 'Aucun lien'], ['{webshop}', 'Webshop de la boutique'], ['{webshop_produit}', 'Produit choisi, sur le webshop de la boutique'], ['{webshop_categorie}', 'Catégorie du produit, sur le webshop de la boutique'], ['https://www.latelierby.be', 'Site L’Atelier By']]
+          .concat(e.link && !/^(\{webshop(_produit|_categorie)?\}|https:\/\/www\.latelierby\.be)?$/.test(e.link) ? [[e.link, 'Lien actuel : ' + e.link]] : []).map(([v, label]) => ({ v, label })),
+        setTplLink: (ev) => this.E({ link: ev.target.value }),
         setName: (ev) => this.E({ name: ev.target.value }), setType: (ev) => this.E({ type: ev.target.value }), setDescription: (ev) => this.E({ description: ev.target.value }),
         toggleActive: () => this.E({ active: !e.active }), toggleValidation: () => !valLocked && this.E({ validation: !e.validation }), valLocked,
         valNote: rules.validation === 'toujours' ? 'Règle du réseau : tout post de boutique est validé par vous.' : rules.validation === 'jamais' ? 'Règle du réseau : publication directe, sans validation.' : (e.validation ? 'Les posts de ce modèle vous sont soumis avant publication.' : 'Les posts de ce modèle partent directement, dans les règles du réseau.'),

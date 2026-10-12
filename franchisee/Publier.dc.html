@@ -105,6 +105,15 @@
             </section>
           </sc-if>
 
+          <!-- Lien du post : celui du modèle ou votre webshop (jamais un lien libre) -->
+          <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:8px;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Lien du post</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <sc-for list="{{ linkChoices }}" as="lc" hint-placeholder-count="3"><button onClick="{{ lc.pick }}" disabled="{{ lc.dis }}" title="{{ lc.tip }}" style="border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid {{ lc.border }};background:{{ lc.bg }};color:{{ lc.fg }};opacity:{{ lc.op }};">{{ lc.label }}</button></sc-for>
+            </div>
+            <span style="font-size:11px;color:#666666;line-height:1.45;word-break:break-all;">{{ linkLabel }}</span>
+          </section>
+
           <sc-if value="{{ needPhoto }}" hint-placeholder-val="{{ false }}">
             <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:8px;">
               <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">{{ photoTitle }}</span>
@@ -191,7 +200,7 @@ class Component extends DCLogic {
   forTpl(t, st) {
     const p = t.promo || {}, r = st.rules;
     return { tpl: t.id, product: null, discount: p.kind === 'remise' ? Math.min(p.max, r.remiseMax, Math.max(p.min, 20)) : 0, offer: p.kind === 'offre' ? (p.offres || [])[0] || '' : '',
-      promoPrice: '', free: '', photo: null, fb: !!(t.fb && r.fb && st.shop.fb === 'connected'), ig: !!(t.ig && r.ig && st.shop.igs === 'connected'), errors: [] };
+      promoPrice: '', free: '', photo: null, link: t.link ? 'modele' : 'aucun', fb: !!(t.fb && r.fb && st.shop.fb === 'connected'), ig: !!(t.ig && r.ig && st.shop.igs === 'connected'), errors: [] };
   }
   componentWillUnmount() {}
   readPhoto(file) {
@@ -207,7 +216,7 @@ class Component extends DCLogic {
   }
   body() {
     const s = this.state;
-    return { template: s.tpl, product: s.product, discount: s.discount, offer: s.offer, promoPrice: s.promoPrice, from: s.from, to: s.to, free: s.free.trim(), photo: s.photo, fb: s.fb, ig: s.ig, date: s.date, time: s.time };
+    return { template: s.tpl, product: s.product, discount: s.discount, offer: s.offer, promoPrice: s.promoPrice, from: s.from, to: s.to, free: s.free.trim(), photo: s.photo, link: s.link || 'aucun', fb: s.fb, ig: s.ig, date: s.date, time: s.time };
   }
   async submit() {
     const SF = window.SF, s = this.state;
@@ -275,6 +284,15 @@ class Component extends DCLogic {
       promoPrice: s.promoPrice, setPromoPrice: (e) => S({ promoPrice: e.target.value.replace(/[^\d,\.]/g, '') }), basePrice: prod && prod.price ? prod.price + ' €' : '— (choisissez un produit)',
       needPeriod: !!t.period, from: s.from, to: s.to, maxTo: s.from ? SF.addDays(s.from, r.promoDureeMax - 1) : '', setFrom: (e) => S({ from: e.target.value }), setTo: (e) => S({ to: e.target.value }),
       periodNote: 'au plus ' + r.promoDureeMax + ' jours', minDate, maxDate,
+      // Lien : celui du modèle, ou le webshop de la boutique (sa page, celle du produit, sa catégorie).
+      ...(() => { const cur = s.link || (t.link ? 'modele' : 'aucun'), wsP = !!(prod && prod.apiId && prod.webshop !== false), wsC = !!(prod && prod.categoryId);
+        const tplUrl = String(t.link || '').replace(/\{webshop_produit:(\d+)\}/g, (m, id) => SF.webshopUrl({ apiId: +id }, 'produit')).replace(/\{webshop_categorie:(\d+)\}/g, (m, id) => SF.webshopUrl({ categoryId: +id }, 'categorie'))
+          .replace(/\{webshop_produit\}/g, SF.webshopUrl(prod, 'produit')).replace(/\{webshop_categorie\}/g, SF.webshopUrl(prod, 'categorie')).replace(/\{webshop\}/g, SF.webshopUrl());
+        const url = { aucun: '', modele: tplUrl, webshop: SF.webshopUrl(), produit: wsP ? SF.webshopUrl(prod, 'produit') : SF.webshopUrl(), categorie: wsC ? SF.webshopUrl(prod, 'categorie') : SF.webshopUrl() }[cur] || '';
+        const opt = (k, label, dis, tip) => { const on = cur === k; return { label, dis: !!dis, op: dis ? 0.45 : 1, tip: tip || '', bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)', pick: () => { if (!dis) S({ link: k }); } }; };
+        return { linkChoices: [opt('aucun', 'Aucun lien')].concat(t.link ? [opt('modele', 'Lien du réseau', false, tplUrl)] : [])
+            .concat([opt('webshop', 'Mon webshop'), opt('produit', 'Ce produit sur mon webshop', !wsP, wsP ? '' : 'Choisissez un produit vendu sur le webshop'), opt('categorie', 'Sa catégorie sur mon webshop', !wsC, wsC ? '' : 'Choisissez d’abord un produit')]),
+          linkLabel: url ? 'Le post renverra vers : ' + url : 'Pas de lien dans le post (votre phrase ne peut pas en contenir : le réseau gère les liens).' }; })(),
       needFree: +t.free > 0, free: s.free, freeMax: +t.free, setFree: (e) => S({ free: e.target.value.slice(0, +t.free) }), freeCount: s.free.length + ' / ' + t.free + ' caractères',
       needPhoto: t.photo === 'upload' || t.photo === 'choix', photoTitle: t.photo === 'upload' ? 'Votre photo (obligatoire)' : 'Votre photo (facultatif)',
       hasPhoto: !!s.photo, photo: s.photo || '', photoBtn: s.photo ? 'Changer de photo' : 'Importer une photo', canDropPhoto: !!s.photo && t.photo === 'choix',
