@@ -704,6 +704,7 @@ $GLOBALS['META_EXISTANT'] = [
     'campaigns' => [
         ['id' => '7001', 'name' => 'Promo hiver Halle', 'objective' => 'OUTCOME_TRAFFIC', 'effective_status' => 'ACTIVE', 'daily_budget' => '1500', 'spend_cap' => '30000', 'start_time' => $j(-5)],
         ['id' => '7002', 'name' => 'Notoriété réseau', 'objective' => 'OUTCOME_AWARENESS', 'effective_status' => 'PAUSED', 'lifetime_budget' => '50000', 'start_time' => $j(-30), 'stop_time' => $j(10)],
+        ['id' => '7003', 'name' => 'Brouillon', 'objective' => 'OUTCOME_SALES', 'effective_status' => 'PAUSED', 'start_time' => '1970-01-01T00:59:59+0100', 'created_time' => $j(-1)],
         ['id' => $modCid, 'name' => 'Créée par le module', 'objective' => 'OUTCOME_TRAFFIC', 'effective_status' => 'ACTIVE', 'start_time' => $j(-2)],
     ],
     'adsets' => [
@@ -723,7 +724,8 @@ socShopPut('5', ['ids' => array_merge(socShop('5')['ids'], ['page_id' => '222'])
 $appels = [];
 [$code, $b] = socRoute('POST', '/meta/campagnes/rafraichir');
 $m1 = socItem('ads', 'meta-7001'); $m2 = socItem('ads', 'meta-7002');
-check('récupération : 2 campagnes importées, celle du module ignorée', $code === 200 && $b['import']['importees'] === 2 && $m1 && $m2 && socItem('ads', 'meta-' . $modCid) === null, json_encode($b['import'] ?? null));
+$m3 = socItem('ads', 'meta-7003');
+check('récupération : 3 campagnes importées, celle du module ignorée', $code === 200 && $b['import']['importees'] === 3 && $m1 && $m2 && socItem('ads', 'meta-' . $modCid) === null, json_encode($b['import'] ?? null));
 check('campagne Halle : boutique par la Page, budget quotidien, plafond, dépense, rayon', $m1['origin'] === 'meta' && $m1['shops'] === ['4'] && $m1['scope'] === 'boutique'
     && $m1['budgetType'] === 'quotidien' && $m1['budget'] == 15 && $m1['cap'] == 300 && $m1['spent'] == 42.1 && $m1['status'] === 'Active' && $m1['radius'] == 8 && $m1['end'] === null, json_encode($m1));
 check('campagne Halle : statistiques et vignette', $m1['insights']['impressions'] === 5000 && $m1['insights']['ctr'] == 0.024 && $m1['insights']['engagement'] === 300 && $m1['thumb'] === 'https://cdn.fb/t7201.jpg'
@@ -733,7 +735,8 @@ check('campagne réseau : deux boutiques (Page de la créa / du post), budget to
 $objs = socMetaObjects('ad', 'meta-7002');
 check('objets Meta : une ligne par pub, avec sa boutique (Retour sur campagne)', count($objs) === 2 && array_column($objs, 'shop_id') === ['4', '5'] && $objs[0]['campaign_id'] === '7002');
 check('les pubs importées ne sont pas relues pub par pub', !array_filter($appels, static fn ($a) => $a[0] === 'GET' && in_array($a[1], ['7201', '7201/insights'], true)));
-check('compte rendu gardé et rendu dans l’état', (socStateGet()['metaImport']['importees'] ?? null) === 2);
+check('brouillon sans date (1970 chez Meta) : daté de sa création', $m3['start'] === date('Y-m-d', strtotime('-1 day')) && $m3['end'] === null && $m3['budget'] == 0, json_encode($m3));
+check('compte rendu gardé et rendu dans l’état', (socStateGet()['metaImport']['importees'] ?? null) === 3);
 $appels = [];
 $r = socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($m1, ['status' => 'En pause', 'name' => 'Renommée', 'campaign' => 'c1', 'budget' => 999])]]]]);
 $m1 = socItem('ads', 'meta-7001');
@@ -741,11 +744,11 @@ check('pause depuis l’écran : appliquée à la campagne Meta', $m1['status'] 
 check('champs Meta gardés (nom, budget), rattachement à une campagne du module accepté', $m1['name'] === 'Promo hiver Halle' && $m1['budget'] == 15 && $m1['campaign'] === 'c1');
 socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($m1, ['cap' => 400])]]]]);
 check('plafond relevé : spend_cap de la campagne Meta', in_array(['POST', '7001', ['spend_cap' => 40000, 'access_token' => 'TOK-NOUVEAU']], $appels, true));
-array_pop($GLOBALS['META_EXISTANT']['campaigns']); array_pop($GLOBALS['META_EXISTANT']['campaigns']);
+array_pop($GLOBALS['META_EXISTANT']['campaigns']); array_pop($GLOBALS['META_EXISTANT']['campaigns']); array_pop($GLOBALS['META_EXISTANT']['campaigns']);
 $r = socCampagnesMetaImporter(false);
 $m1 = socItem('ads', 'meta-7001'); $m2 = socItem('ads', 'meta-7002');
 check('rafraîchissement : mise à jour sans doublon, rattachement conservé', $r['majs'] === 1 && $r['importees'] === 0 && $m1['campaign'] === 'c1' && $m1['status'] === 'Active');
-check('campagne supprimée chez Meta : marquée arrêtée', $r['disparues'] === 1 && $m2['status'] === 'Arrêtée' && $m2['gone'] === true);
+check('campagnes supprimées chez Meta : marquées arrêtées', $r['disparues'] === 2 && $m2['status'] === 'Arrêtée' && $m2['gone'] === true);
 
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');

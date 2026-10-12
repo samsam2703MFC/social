@@ -18,3 +18,4 @@ Relivraison : espace franchisé /social_franchisee, page franchiseur, points d'a
 Relivraison : catalogue de l'espace boutique sans produits à 0 € — 2026-10-12T06:18:54Z
 Relivraison : mise à jour automatique des identifiants Meta par boutique — 2026-10-12T08:59:29Z
 Relivraison : récupération des campagnes Meta existantes (Publicités) — 2026-10-12T09:16:23Z
+Relivraison : campagnes Meta — brouillons sans date, alerte compte impayé dans la liste — 2026-10-12T09:19:10Z

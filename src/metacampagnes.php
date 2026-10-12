@@ -232,18 +232,19 @@ function socCampagneMetaVersPub(array $c, array $enfants, array $st, array $comp
             elseif (is_numeric($as['lifetime_budget'] ?? null) && (float) $as['lifetime_budget'] > 0) { $budget += socMontantMeta($as['lifetime_budget']); $quotidien ??= false; }
         }
     }
-    // Dates : la campagne, sinon l'étendue de ses ensembles.
-    $debut = substr((string) ($c['start_time'] ?? ''), 0, 10);
-    $fin = substr((string) ($c['stop_time'] ?? ''), 0, 10);
+    // Dates : la campagne, sinon l'étendue de ses ensembles. Meta rend « 1970-01-01 » pour une date non fixée (brouillon).
+    $jour = static fn (mixed $t): string => ($d = substr((string) ($t ?? ''), 0, 10)) >= '2000-01-01' ? $d : '';
+    $debut = $jour($c['start_time'] ?? null);
+    $fin = $jour($c['stop_time'] ?? null);
     foreach ($adsets as $as) {
-        $d = substr((string) ($as['start_time'] ?? ''), 0, 10); $f = substr((string) ($as['end_time'] ?? ''), 0, 10);
+        $d = $jour($as['start_time'] ?? null); $f = $jour($as['end_time'] ?? null);
         if ($d !== '' && ($debut === '' || $d < $debut)) { $debut = $d; }
-        if ($f !== '' && ($c['stop_time'] ?? '') === '' && $f > $fin) { $fin = $f; }
+        if ($f !== '' && $jour($c['stop_time'] ?? null) === '' && $f > $fin) { $fin = $f; }
     }
-    if ($fin !== '' && ($c['stop_time'] ?? '') === '') {
-        foreach ($adsets as $as) { if (($as['end_time'] ?? '') === '' && ($as['effective_status'] ?? '') !== 'ARCHIVED') { $fin = ''; break; } }  // un ensemble sans fin : en continu
+    if ($fin !== '' && $jour($c['stop_time'] ?? null) === '') {
+        foreach ($adsets as $as) { if ($jour($as['end_time'] ?? null) === '' && ($as['effective_status'] ?? '') !== 'ARCHIVED') { $fin = ''; break; } }  // un ensemble sans fin : en continu
     }
-    if ($debut === '') { $debut = substr((string) ($c['created_time'] ?? $today), 0, 10); }
+    if ($debut === '') { $debut = $jour($c['created_time'] ?? null) ?: $today; }
     // Rayon : le cercle autour de la boutique, s'il est unique.
     $rayons = [];
     foreach ($adsets as $as) {

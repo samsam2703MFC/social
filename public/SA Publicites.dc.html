@@ -478,7 +478,7 @@ class Component extends DCLogic {
       return { name: a.name, objective: a.objective + (a.dark ? ' · dark post' : '') + (a.variants > 1 ? ' · ' + a.variants + ' variantes' : ''), isMeta, img: p ? p.img : (a.thumb || 'img/illus/decorative/bubble.png'), campName: a.campaign ? (SA.byId(camps, a.campaign) || {}).name : 'Hors campagne', shops: SA.shopLabel(a.shops),
         budget: !a.budget ? (isMeta ? 'Budget dans les pubs' : '—') : a.budgetType === 'quotidien' ? money(a, a.budget) + ' / jour' : money(a, a.budget) + ' total', scope: isMeta ? (a.accountName || a.account || 'Compte Meta') : a.scope === 'reseau' ? 'Mutualisé réseau' : 'Par boutique',
         spentLabel: money(a, a.spent) + (tot ? ' / ' + money(a, tot) + ' · reste ' + money(a, Math.max(0, tot - a.spent)) : ' dépensés'), spentPct: Math.min(100, ratio * 100) + '%', barColor: ratio >= 0.9 && a.status === 'Active' ? '#D97B29' : a.status === 'Budget épuisé' ? '#8D1D2C' : '#8D1D2C',
-        status: a.status, stBg: sc.bg, stFg: sc.fg, hasReason: !!a.reason && a.status === 'Refusée', reason: a.reason || '', period: period(a),
+        status: a.status, stBg: sc.bg, stFg: sc.fg, hasReason: (!!a.reason && a.status === 'Refusée') || (isMeta && !!a.note && ['Active', 'En revue'].includes(a.status)), reason: a.status === 'Refusée' ? (a.reason || '') : String(a.note || '').split(' : ')[0], period: period(a),
         bg: a.id === s.selId ? '#F4EFE8' : '#FFFFFF', pick: () => this.setState({ selId: a.id }) };
     });
     const active = ads.filter(a => a.status === 'Active');
