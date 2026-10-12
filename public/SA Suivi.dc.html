@@ -82,6 +82,7 @@
                 </sc-for>
               </div>
               <!-- Budget au-dessus, abonnés en dessous, jour par jour -->
+              <sc-if value="{{ c.hasChart }}" hint-placeholder-val="{{ true }}">
               <div style="display:flex;flex-direction:column;gap:3px;">
                 <div style="display:flex;align-items:flex-end;gap:2px;height:42px;">
                   <sc-for list="{{ c.days }}" as="d" hint-placeholder-count="0"><span title="{{ d.tip }}" style="flex:1 1 0;min-width:1px;height:{{ d.spendH }};background:#8D1D2C;border-radius:2px 2px 0 0;opacity:0.85;"></span></sc-for>
@@ -92,6 +93,13 @@
                 </div>
                 <div style="display:flex;justify-content:space-between;font-size:10px;color:#8A847C;"><span>{{ c.from }}</span><span>{{ c.legend }}</span><span>{{ c.to }}</span></div>
               </div>
+              </sc-if>
+              <sc-if value="{{ c.noChart }}" hint-placeholder-val="{{ false }}">
+                <div style="height:80px;border:1px dashed rgba(34,34,34,0.18);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0 14px;text-align:center;">
+                  <span style="font-size:12px;font-weight:500;color:#444444;">Rien à tracer du {{ c.from }} au {{ c.to }}</span>
+                  <span style="font-size:11px;color:#666666;line-height:1.4;">{{ c.emptyLabel }}</span>
+                </div>
+              </sc-if>
               <sc-if value="{{ c.hasInsight }}" hint-placeholder-val="{{ true }}"><span style="font-size:11px;color:#444444;line-height:1.45;">{{ c.insight }}</span></sc-if>
               <sc-if value="{{ c.hasMotif }}" hint-placeholder-val="{{ false }}"><span title="{{ c.motifTip }}" style="font-size:11px;line-height:1.45;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:6px 8px;">{{ c.motif }}</span></sc-if>
             </div>
@@ -179,6 +187,9 @@ class Component extends DCLogic {
           { k: 'Budget', v: money(x.depense), s: x.depense ? Object.keys(dep).length + ' jour(s) de diffusion' : 'aucune pub', c: '#666666' },
           { k: 'Coût / abonné', v: x.coutParAbonne == null ? '—' : money(x.coutParAbonne, 2), s: x.coutParAbonne == null ? (x.depense ? 'pas de gain net' : '—') : 'budget ÷ abonnés nets', c: '#666666' },
         ].filter(Boolean),
+        // Ni budget ni abonnés jour par jour : on le dit plutôt que de tracer une ligne vide.
+        hasChart: ds.some(d => d.v > 0 || d.fl), noChart: !ds.some(d => d.v > 0 || d.fl),
+        emptyLabel: ['aucune publicité diffusée sur cette Page', 'abonnés jour par jour non fournis par Meta' + (/read_insights|séries vides/.test(fb.motif || '') ? ' (permission read_insights absente du token)' : '')].join(' · '),
         nFacts: ig ? 4 : 3, days: ds, from: SA.dShort(r.du), to: SA.dShort(r.au), legend: 'bordeaux = budget · vert = abonnés gagnés · rouge = perdus', insight, hasInsight: mA != null || mS != null,
         hasMotif: motifs.length > 0, motif: motifs.join(' '), motifTip: tips.join('\n') };
     });
