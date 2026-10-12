@@ -463,9 +463,21 @@ function sfPostCreer(string $shop, array $b, array $session = []): array
         if (preg_match('#https?://|www\.|@\w|\#\w#iu', $libre)) { $err[] = 'Pas de lien, de compte (@) ni de hashtag dans la phrase.'; }
     }
 
-    // Visuel (rendu par l'écran avec le style figé du modèle) et photo
-    $visuel = (string) ($b['visual'] ?? '');
-    if (!preg_match('#^data:image/(jpeg|png|webp);base64,#', $visuel) || strlen($visuel) > 6_000_000) { $err[] = 'Le visuel n’a pas pu être préparé : rechargez la page.'; }
+    // Visuel : figé tel quel (modèle créé depuis un post du réseau), sinon rendu par l'écran avec le style du modèle.
+    $fixe = (($tpl['visual']['style'] ?? '') === 'fixe');
+    $medias = [];
+    if ($fixe) {
+        foreach ((array) ($tpl['visual']['media'] ?? []) as $m) {
+            $src = (string) ($m['src'] ?? '');
+            if ($src !== '' && !str_starts_with($src, 'data:')) { $medias[] = ['src' => $src, 'kind' => ($m['kind'] ?? 'img') === 'video' ? 'video' : 'img', 'name' => 'Visuel du réseau « ' . $tpl['name'] . ' »']; }
+        }
+        $img0 = array_values(array_filter($medias, static fn ($m) => $m['kind'] === 'img'))[0]['src'] ?? '';
+        $visuel = $img0 !== '' ? $img0 : (string) ($tpl['visual']['src'] ?? '');
+        if (!$medias) { $err[] = 'Le visuel de ce modèle manque : prévenez le réseau.'; }
+    } else {
+        $visuel = (string) ($b['visual'] ?? '');
+        if (!preg_match('#^data:image/(jpeg|png|webp);base64,#', $visuel) || strlen($visuel) > 6_000_000) { $err[] = 'Le visuel n’a pas pu être préparé : rechargez la page.'; }
+    }
     $photoMode = (string) ($tpl['photo'] ?? 'catalogue');
     $photo = (string) ($b['photo'] ?? '');
     if ($photoMode === 'upload' && !preg_match('#^data:image/#', $photo)) { $err[] = 'Ajoutez votre photo.'; }
@@ -481,7 +493,7 @@ function sfPostCreer(string $shop, array $b, array $session = []): array
         'type' => (string) ($tpl['type'] ?? 'Produit'), 'title' => mb_substr(sfRemplir((string) ($tpl['title'] ?? $tpl['name']), $vars), 0, 120),
         'shops' => [$shop], 'ch' => [$shop => ['fb' => $fb, 'ig' => $ig]], 'fb' => $fb, 'ig' => $ig, 'status' => $statut, 'date' => $date, 'time' => $time,
         'text' => sfRemplir((string) ($tpl['text'] ?? ''), $vars), 'textNl' => sfRemplir((string) ($tpl['textNl'] ?? ''), $varsNl), 'langs' => $s['langs'],
-        'img' => $visuel, 'media' => [['src' => $visuel, 'kind' => 'img', 'name' => 'Visuel du modèle « ' . $tpl['name'] . ' »']],
+        'img' => $visuel, 'media' => $fixe ? $medias : [['src' => $visuel, 'kind' => 'img', 'name' => 'Visuel du modèle « ' . $tpl['name'] . ' »']],
         'promo' => $promo, 'product' => $prod['id'] ?? null, 'spread' => 0, 'campaign' => null, 'link' => '',
         'fields' => ['product' => $prod['id'] ?? null, 'discount' => $b['discount'] ?? null, 'offer' => $b['offer'] ?? null, 'promoPrice' => $b['promoPrice'] ?? null,
             'from' => $du, 'to' => $au, 'free' => $libre, 'photo' => $photo !== '' ? $photo : null]];

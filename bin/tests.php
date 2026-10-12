@@ -870,6 +870,20 @@ socSettingPut('instagram_unique', null, false);
 socShopPut('marque', ['ids' => $marqueIds]);
 check('sans réglage : mode automatique (une boutique a son propre Instagram → non)', socIgUnique() === false);
 
+echo "Modèle franchisé créé depuis un post du réseau (visuel fixe)\n";
+$ftFixe = ['id' => 'ftfixe', 'order' => 9, 'name' => 'Gamme automne', 'description' => 'Post du réseau', 'active' => true, 'type' => 'Gamme saisonnière', 'fb' => true, 'ig' => false,
+    'validation' => false, 'title' => 'Gamme automne', 'text' => "La gamme automne est arrivée à {ville} !\n\n{libre}", 'textNl' => '', 'product' => 'aucun', 'promo' => ['kind' => 'aucune'],
+    'period' => false, 'free' => 90, 'photo' => 'aucune', 'visual' => ['style' => 'fixe', 'src' => $img, 'media' => [['src' => $img, 'kind' => 'img'], ['src' => $img, 'kind' => 'img']]], 'source' => 'p1'];
+socStateSave(['changes' => ['ftemplates' => ['upsert' => [$ftFixe]]]]);
+$ftSaved = socItem('ftemplates', 'ftfixe');
+check('modèle enregistré depuis l’écran : visuels écrits en fichiers', str_starts_with((string) $ftSaved['visual']['media'][0]['src'], 'uploads/') && str_starts_with((string) $ftSaved['visual']['src'], 'uploads/'));
+sfSessionOuvrir(['4'], 'Test modèle fixe', 'code');
+[$code, $b] = $fr('POST', '/franchise/posts', ['template' => 'ftfixe', 'free' => 'Dégustation samedi', 'fb' => true, 'date' => date('Y-m-d', strtotime('+5 days')), 'time' => '11:30']);
+$pf = $code === 200 ? socItem('posts', (string) $b['post']['id']) : null;
+check('franchisé : publie le modèle sans visuel à dessiner, avec les visuels du réseau', $code === 200 && $pf && count($pf['media']) === 2 && $pf['img'] === $ftSaved['visual']['media'][0]['src']
+    && str_contains((string) $pf['text'], '{ville}') && str_contains((string) $pf['text'], 'Dégustation samedi') && $pf['ig'] === false, json_encode($b));
+unset($_COOKIE[SF_COOKIE]);
+
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');
 check('GET /state', $code === 200 && $b['mode'] === 'live' && count($b['shops']) === 2);

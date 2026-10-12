@@ -104,7 +104,7 @@
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
                   <label style="flex:1 1 150px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Produit<select value="{{ ed.product }}" onChange="{{ setProduct }}" style="font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="aucun">Aucun</option><option value="choix">Un produit de son catalogue</option></select></label>
                   <label style="flex:1 1 150px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Promotion<select value="{{ promoKind }}" onChange="{{ setPromoKind }}" style="font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><sc-for list="{{ promoOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.label }}</option></sc-for></select></label>
-                  <label style="flex:1 1 150px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Photo<select value="{{ ed.photo }}" onChange="{{ setPhoto }}" style="font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="catalogue">Celle du catalogue</option><option value="choix">Sa photo ou celle du catalogue</option><option value="upload">Sa photo (obligatoire)</option></select></label>
+                  <sc-if value="{{ notFixe }}" hint-placeholder-val="{{ true }}"><label style="flex:1 1 150px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Photo<select value="{{ ed.photo }}" onChange="{{ setPhoto }}" style="font-size:13px;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="catalogue">Celle du catalogue</option><option value="choix">Sa photo ou celle du catalogue</option><option value="upload">Sa photo (obligatoire)</option></select></label></sc-if>
                 </div>
                 <sc-if value="{{ isRemise }}" hint-placeholder-val="{{ false }}">
                   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:#444444;">Remise de <input type="number" min="1" max="90" value="{{ promoMin }}" onChange="{{ setPromoMin }}" style="width:70px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;"> à <input type="number" min="1" max="90" value="{{ promoMax }}" onChange="{{ setPromoMax }}" style="width:70px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;"> % <span style="color:#666666;">(plafond du réseau : {{ remiseMax }} %)</span></div>
@@ -120,6 +120,8 @@
 
               <div style="border-top:0.5px solid rgba(34,34,34,0.08);padding-top:10px;display:flex;flex-direction:column;gap:8px;">
                 <span style="font-size:12px;font-weight:500;">Visuel figé</span>
+                <sc-if value="{{ isFixe }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#444444;line-height:1.5;background:#F4EFE8;border-radius:6px;padding:8px 10px;">Visuel du réseau, repris tel quel d’un post (« Créer un post » → « Enregistrer comme modèle franchisé ») : la boutique ne le modifie pas. Pour le changer, recréez le modèle depuis le post.</span></sc-if>
+                <sc-if value="{{ notFixe }}" hint-placeholder-val="{{ true }}">
                 <div style="display:flex;flex-wrap:wrap;gap:6px;">
                   <sc-for list="{{ styles }}" as="st" hint-placeholder-count="6"><button onClick="{{ st.pick }}" style="border-radius:8px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ st.border }};background:{{ st.bg }};color:{{ st.fg }};">{{ st.label }}</button></sc-for>
                 </div>
@@ -127,6 +129,7 @@
                   <label style="flex:1 1 160px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Mention FR<input type="text" value="{{ eyebrow }}" onChange="{{ setEyebrow }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
                   <label style="flex:1 1 160px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Mention NL<input type="text" value="{{ eyebrowNl }}" onChange="{{ setEyebrowNl }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
                 </div>
+                </sc-if>
               </div>
 
               <sc-if value="{{ hasEdErr }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:8px;padding:8px 10px;font-size:12px;">{{ edErr }}</div></sc-if>
@@ -143,7 +146,8 @@
                 <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;"><sc-for list="{{ pvLangs }}" as="l" hint-placeholder-count="2"><button onClick="{{ l.pick }}" style="border:none;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:500;cursor:pointer;background:{{ l.bg }};color:{{ l.fg }};">{{ l.label }}</button></sc-for></div>
               </div>
               <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.12);overflow:hidden;">
-                <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" hint-size="100%,340px"></dc-import>
+                <sc-if value="{{ notFixe }}" hint-placeholder-val="{{ true }}"><dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" hint-size="100%,340px"></dc-import></sc-if>
+                <sc-if value="{{ isFixe }}" hint-placeholder-val="{{ false }}"><div style="display:grid;grid-template-columns:repeat({{ fixeCols }},minmax(0,1fr));gap:2px;background:#F4EFE8;"><sc-for list="{{ fixeMedia }}" as="fm" hint-placeholder-count="1"><img src="{{ fm }}" alt="" style="width:100%;display:block;object-fit:cover;"></sc-for></div></sc-if>
                 <p style="margin:0;padding:10px 12px;font-size:13px;line-height:1.45;color:#1c1e21;white-space:pre-wrap;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">{{ pvText }}</p>
               </div>
               <span style="font-size:11px;color:#666666;line-height:1.5;">Exemple avec {{ pvSample }}. Les variables de la boutique ({ville}, {horaires}…) sont remplies à la publication.</span>
@@ -349,6 +353,8 @@ class Component extends DCLogic {
         eyebrow: (e.visual || {}).eyebrow || '', eyebrowNl: (e.visual || {}).eyebrowNl || '',
         setEyebrow: (ev) => this.E({ visual: Object.assign({}, e.visual, { eyebrow: ev.target.value }) }), setEyebrowNl: (ev) => this.E({ visual: Object.assign({}, e.visual, { eyebrowNl: ev.target.value }) }),
         studioControl: V.control(e, sample, L), pvText: text || '—',
+        isFixe: (e.visual || {}).style === 'fixe', notFixe: (e.visual || {}).style !== 'fixe',
+        fixeMedia: ((e.visual || {}).media || []).filter(m => m.kind !== 'video').map(m => m.src).slice(0, 4), fixeCols: Math.min(2, Math.max(1, ((e.visual || {}).media || []).filter(m => m.kind !== 'video').length)),
         pvSample: [sample.product ? sample.product.name + ' (' + sample.product.price + ' €)' : '', sample.discount ? '-' + sample.discount + ' %' : '', sample.offer || '', sample.from ? 'du ' + SA.dShort(sample.from) + ' au ' + SA.dShort(sample.to) : '', sample.free ? '« ' + sample.free + ' »' : ''].filter(Boolean).join(', ') || 'les textes du modèle',
         pvLangs: ['fr', 'nl'].map(k => { const [bg, fg] = seg(s.pvLang === k); return { label: k.toUpperCase(), bg, fg, pick: () => this.setState({ pvLang: k }) }; }),
         hasEdErr: !!s.err, edErr: s.err, saveLabel: tpls.some(x => x.id === e.id) ? 'Enregistrer le modèle' : 'Créer le modèle',

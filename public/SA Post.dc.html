@@ -315,6 +315,7 @@
           </sc-if>
           <sc-if value="{{ notLocked }}" hint-placeholder-val="{{ true }}">
             <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;border-top:0.5px solid rgba(34,34,34,0.10);padding-top:12px;">
+              <sc-if value="{{ canTpl }}" hint-placeholder-val="{{ true }}"><button onClick="{{ openTpl }}" title="Le visuel et le texte de ce post deviennent un modèle de l’espace franchisé : chaque boutique pourra le publier sur sa Page, à la date de son choix." style="margin-right:auto;border:0.5px dashed #8D1D2C;background:#FFFFFF;color:#8D1D2C;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:500;cursor:pointer;">Enregistrer comme modèle franchisé</button></sc-if>
               <button onClick="{{ saveDraft }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:500;cursor:pointer;">{{ draftLabel }}</button>
               <button onClick="{{ publish }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">{{ publishLabel }}</button>
             </div>
@@ -471,6 +472,26 @@
     </div>
   </sc-if>
 
+  <sc-if value="{{ tplOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(35,34,32,0.5);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#FFFFFF;border-radius:12px;width:100%;max-width:520px;padding:20px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 80px rgba(35,34,32,0.3);">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span style="font-size:16px;font-weight:500;">Enregistrer comme modèle franchisé</span>
+          <span style="font-size:12px;color:#666666;line-height:1.5;">Le visuel de ce post (figé) et son texte deviennent un modèle de l’espace franchisé. Chaque boutique le publie sur sa Page Facebook, à la date de son choix ; {ville}, {adresse} et {horaires} y sont remplis pour elle. Instagram reste au réseau.</span>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Nom du modèle<input type="text" value="{{ tplName }}" onChange="{{ setTplName }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Description pour la boutique<input type="text" value="{{ tplDesc }}" onChange="{{ setTplDesc }}" placeholder="Ex. : la gamme automne, à publier jusqu’au 25/10" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" checked="{{ tplVal }}" onChange="{{ toggleTplVal }}" style="accent-color:#8D1D2C;margin:0;">Je valide chaque publication des boutiques</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" checked="{{ tplFree }}" onChange="{{ toggleTplFree }}" style="accent-color:#8D1D2C;margin:0;">La boutique peut ajouter une phrase (90 caractères, sans lien)</label>
+        <sc-if value="{{ hasTplErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8D1D2C;">{{ tplErr }}</span></sc-if>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button onClick="{{ closeTpl }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Annuler</button>
+          <button onClick="{{ doTpl }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;">{{ tplBtn }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;display:flex;gap:12px;align-items:center;box-shadow:0 12px 30px rgba(35,34,32,0.3);">{{ toast }}<a href="{{ calHref }}" style="color:#F2C9A0;font-weight:500;">Voir le calendrier</a></div>
   </sc-if>
@@ -607,13 +628,9 @@ class Component extends DCLogic {
     if (final && this.isMontage() && !window.SAMontage) errs.push('Le moteur des montages (montage.js) ne s\u2019est pas chargé : rechargez la page.');
     return errs;
   }
-  async persist(status, goAds) {
+  /** Le visuel du post tel qu'il partira : studio exporté, montage dessiné, ou photos et vidéo déposées. */
+  async renderMedia() {
     const SA = window.SA, s = this.state;
-    if (s.dark) status = 'Dark post';
-    const errs = this.validate(status !== 'Brouillon', status);
-    if (errs.length) { this.setState({ errors: errs }); return; }
-    this.setState({ saving: true, errors: [] });
-    const t = this.targets(), cat = s.product ? SA.CATALOGUE.find(x => x.id === s.product) : null;
     let img = null, media, friseTiles = null;
     if (s.mode === 'studio') {
       // En ligne, le visuel part chez Meta : pleine définition (1080 × 1080). En démo, il reste dans le navigateur : demi-définition.
@@ -626,13 +643,52 @@ class Component extends DCLogic {
       let slices = [];
       try { const r = s.mode === 'pano' ? await M.panorama(this.montageInput(), k) : s.mode === 'frise' ? await M.frise(this.montageInput(), k) : await M.collage(this.montageInput(), k);
         slices = r.slices || [r.image]; if (r.tiles) { friseTiles = r.tiles; slices = [r.full]; } }
-      catch (e) { console.error(e); this.setState({ saving: false, errors: ['Le montage n\u2019a pas pu être dessiné : ' + (e && e.message ? e.message : e) + '.'] }); return; }
+      catch (e) { console.error(e); this.setState({ saving: false, errors: ['Le montage n\u2019a pas pu être dessiné : ' + (e && e.message ? e.message : e) + '.'] }); return null; }
       media = slices.map((src, i) => ({ src, kind: 'img', cut: false, name: s.mode === 'pano' ? 'Carrousel ' + (i + 1) + '/' + slices.length : s.mode === 'frise' ? 'Frise · visuel entier (Facebook)' : 'Collage ' + s.m.tpl }));
       img = slices[0];
     } else {
       media = s.photos.map(p => ({ src: p.src, kind: 'img', cut: p.cut, name: p.name })).concat(s.video ? [{ src: s.video.src, kind: 'video', name: s.video.name }] : []);
       img = s.photos[0] ? s.photos[0].src : 'img/illus/products/bread-2.png';
     }
+    return { img, media, friseTiles };
+  }
+  /**
+   * « Enregistrer comme modèle franchisé » : le visuel de ce post (figé) et son texte deviennent un
+   * modèle de l'espace franchisé. {ville}, {adresse} et {horaires} restent des variables, remplies pour
+   * la boutique qui publie ; le produit du post est écrit en clair. Instagram reste au franchiseur.
+   */
+  async saveAsTemplate() {
+    const SA = window.SA, s = this.state, f = s.tplForm || {};
+    if (!String(f.name || '').trim()) { this.setState({ tplErr: 'Donnez un nom au modèle.' }); return; }
+    if (!String(s.text || s.textNl || '').trim()) { this.setState({ tplErr: 'Écrivez d\u2019abord le texte du post.' }); return; }
+    this.setState({ tplBusy: true, tplErr: '' });
+    const rendu = await this.renderMedia();
+    if (!rendu) { this.setState({ tplBusy: false, tplErr: 'Le visuel n\u2019a pas pu être préparé.' }); return; }
+    const cat = s.product ? SA.CATALOGUE.find(x => x.id === s.product) : null;
+    const fixe = (txt, nl) => String(txt || '').replace(/\{produit_du_jour\}/g, cat ? (nl && cat.nameNl ? cat.nameNl : cat.name) : '').replace(/\{prix\}/g, cat && cat.price ? cat.price : '');
+    const libre = f.free ? '\n\n{libre}' : '';
+    const st = SA.state(), tpls = st.ftemplates || [];
+    const tpl = { id: 'ft' + Date.now(), order: tpls.length + 1, name: String(f.name).trim(), description: String(f.description || '').trim() || 'Post du réseau, prêt à publier sur la Page de votre boutique.',
+      active: true, type: s.type, fb: true, ig: false, validation: !!f.validation, title: String(f.name).trim(),
+      text: fixe(s.text, false) + (s.text ? libre : ''), textNl: fixe(s.textNl, true) + (s.textNl ? libre : ''),
+      product: 'aucun', promo: { kind: 'aucune' }, period: false, free: f.free ? 90 : 0, photo: 'aucune',
+      visual: { style: 'fixe', src: rendu.img, media: rendu.media.map(m => ({ src: m.src, kind: m.kind === 'video' ? 'video' : 'img' })) }, source: s.id || null };
+    SA.save({ ftemplates: tpls.concat(tpl) });
+    SA.log('Sarah Lambert (Franchiseur)', 'Espace franchisé', 'Modèle « ' + tpl.name + ' » créé depuis un post');
+    try { await SA.saved(); } catch (e) {}
+    this.setState({ tplBusy: false, tplOpen: false });
+    this.toast('Modèle « ' + tpl.name + ' » ajouté à l\u2019espace franchisé (réglable dans Espace franchisé → Modèles).');
+  }
+  async persist(status, goAds) {
+    const SA = window.SA, s = this.state;
+    if (s.dark) status = 'Dark post';
+    const errs = this.validate(status !== 'Brouillon', status);
+    if (errs.length) { this.setState({ errors: errs }); return; }
+    this.setState({ saving: true, errors: [] });
+    const t = this.targets(), cat = s.product ? SA.CATALOGUE.find(x => x.id === s.product) : null;
+    const rendu = await this.renderMedia();
+    if (!rendu) return;
+    const { img, media, friseTiles } = rendu;
     const title = (this.isMontage() ? (s.m.title || '').trim() : '') || (s.v.title || '').trim() || (cat ? cat.name : (s.text.split(/[.\n]/)[0] || 'Post sans titre').slice(0, 60));
     const now = new Date(), nowT = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
     const post = { id: s.id || ('p' + Date.now()), date: s.when === 'now' ? SA.TODAY : s.date, time: s.when === 'now' ? nowT : s.time, type: s.type, title, img, media,
@@ -872,6 +928,12 @@ class Component extends DCLogic {
           schedRuleColor: !later ? '#666666' : (mins < 10 || mins > 43200) ? '#8D1D2C' : '#0F6B4A' };
       })(),
       hasToast: !!s.toast, toast: s.toast,
+      canTpl: !s.dark, openTpl: () => this.setState({ tplOpen: true, tplErr: '', tplForm: { name: (s.m && s.m.title) || (s.v && s.v.title) || (s.text || '').split(/[.\n]/)[0].slice(0, 60) || 'Modèle du réseau', description: '', validation: false, free: false } }),
+      tplOpen: !!s.tplOpen, closeTpl: () => this.setState({ tplOpen: false }), doTpl: () => !s.tplBusy && this.saveAsTemplate(), tplBtn: s.tplBusy ? 'Préparation du visuel…' : 'Créer le modèle',
+      tplName: (s.tplForm || {}).name || '', tplDesc: (s.tplForm || {}).description || '', tplVal: !!(s.tplForm || {}).validation, tplFree: !!(s.tplForm || {}).free,
+      setTplName: (e) => this.setState({ tplForm: Object.assign({}, s.tplForm, { name: e.target.value }) }), setTplDesc: (e) => this.setState({ tplForm: Object.assign({}, s.tplForm, { description: e.target.value }) }),
+      toggleTplVal: () => this.setState({ tplForm: Object.assign({}, s.tplForm, { validation: !(s.tplForm || {}).validation }) }), toggleTplFree: () => this.setState({ tplForm: Object.assign({}, s.tplForm, { free: !(s.tplForm || {}).free }) }),
+      hasTplErr: !!s.tplErr, tplErr: s.tplErr || '',
     };
   }
 }

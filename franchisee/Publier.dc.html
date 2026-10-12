@@ -144,7 +144,12 @@
               <span style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;color:#1c1e21;">{{ pageName }}</span><span style="font-size:12px;color:#65676b;">{{ whenLabel }} · Public</span></span>
             </div>
             <p style="margin:0;padding:0 14px 10px;font-size:13px;line-height:1.45;color:#1c1e21;white-space:pre-wrap;">{{ pvText }}</p>
-            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" hint-size="100%,380px"></dc-import>
+            <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}"><dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" hint-size="100%,380px"></dc-import></sc-if>
+            <sc-if value="{{ isFixe }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:repeat({{ fixeCols }},minmax(0,1fr));gap:2px;background:#F4EFE8;">
+                <sc-for list="{{ fixeMedia }}" as="fm" hint-placeholder-count="1"><img src="{{ fm }}" alt="" style="width:100%;display:block;object-fit:cover;aspect-ratio:{{ fixeRatio }};"></sc-for>
+              </div>
+            </sc-if>
           </div>
           <span style="font-size:11px;color:#666666;line-height:1.5;">Le texte, le titre et la mise en page sont ceux du réseau ; seuls vos choix changent. {{ langNote }}</span>
         </aside>
@@ -211,8 +216,12 @@ class Component extends DCLogic {
     if (errs.length) { this.setState({ errors: errs }); return; }
     this.setState({ busy: true, errors: [] });
     try {
-      if (!this._api) throw new Error('Le visuel n’est pas prêt : patientez une seconde et recommencez.');
-      b.visual = await this._api.toImage({ jpeg: true, pixelRatio: SF.live ? 1 : 0.5, quality: 0.9 });
+      const tpl0 = SF.state().templates.find(x => x.id === s.tpl), fixe = tpl0 && (tpl0.visual || {}).style === 'fixe';
+      // Modèle à visuel fixe (post du réseau) : le visuel est celui du réseau, rien à dessiner.
+      if (!fixe) {
+        if (!this._api) throw new Error('Le visuel n’est pas prêt : patientez une seconde et recommencez.');
+        b.visual = await this._api.toImage({ jpeg: true, pixelRatio: SF.live ? 1 : 0.5, quality: 0.9 });
+      }
       const p = await SF.createPost(b);
       location.href = SF.href('cal', 'post=' + encodeURIComponent(p.id) + '&ok=' + (p.status === 'À valider' ? 'valider' : 'prog'));
     } catch (e) { this.setState({ busy: false, errors: [e.message] }); }
@@ -234,7 +243,7 @@ class Component extends DCLogic {
         eyebrow: 'Publier · L’Atelier By ' + st.shop.name, title: s.filter === 'promo' ? 'NOUVELLE PROMOTION' : 'CHOISIR UN MODELE',
         filters: [['all', 'Tous les modèles'], ['promo', 'Promotions']].map(([k, label]) => Object.assign(chip(s.filter === k), { label, pick: () => this.setState({ filter: k }) })),
         tpls: list.map(x => ({ name: x.name, description: x.description || '', sw: SW[(x.visual || {}).style] || '#EAE4DC',
-          badges: [isPromo(x) ? { t: ((V.PROMOS.find(p => p[0] === x.promo.kind) || [])[1] || 'Promotion'), bg: '#8D1D2C', fg: '#FFFFFF' } : null,
+          badges: [(x.visual || {}).style === 'fixe' ? { t: 'visuel du réseau', bg: '#232220', fg: '#F2C9A0' } : null, isPromo(x) ? { t: ((V.PROMOS.find(p => p[0] === x.promo.kind) || [])[1] || 'Promotion'), bg: '#8D1D2C', fg: '#FFFFFF' } : null,
             valOf(x) ? { t: 'validé par le réseau', bg: '#FCE7C8', fg: '#7A4100' } : { t: 'publication directe', bg: '#E2F0E8', fg: '#0F6B4A' },
             { t: [x.fb && r.fb ? 'Facebook' : '', x.ig && r.ig ? 'Instagram' : ''].filter(Boolean).join(' + '), bg: '#F4EFE8', fg: '#444444' }].filter(Boolean),
           pick: () => this.setState(this.forTpl(x, st)) })),
@@ -280,6 +289,9 @@ class Component extends DCLogic {
       langNote: langs.length > 1 ? 'Boutique bilingue : la légende part en ' + langs.map(x => x.toUpperCase()).join(' et ') + ' ; le visuel est dans la langue choisie.' : '',
       pageName: st.shop.page || ('L’Atelier By ' + st.shop.name), whenLabel: s.date ? SF.dLabel(s.date) + ' à ' + s.time : '', pvText: text || '—',
       studioControl: V.control(t, fields, L), onStudioApi: (api) => { this._api = api; },
+      isStudio: (t.visual || {}).style !== 'fixe', isFixe: (t.visual || {}).style === 'fixe',
+      fixeMedia: (((t.visual || {}).media || []).filter(m => m.kind !== 'video').map(m => SF.media(m.src)).slice(0, 4)).concat([]).filter(Boolean),
+      fixeCols: Math.min(2, Math.max(1, (((t.visual || {}).media || []).filter(m => m.kind !== 'video').length))), fixeRatio: (((t.visual || {}).media || []).length > 1 ? '4 / 5' : 'auto'),
     });
   }
 }

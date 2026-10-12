@@ -26,3 +26,4 @@ Relivraison : suivi des boutiques (historique vide = non mesuré), Suivi de ma b
 Relivraison : Instagram unique du réseau, réservé au franchiseur, vue franchisé — 2026-10-12T09:55:14Z
 Relivraison : suivi (métriques d'abonnés), connexion Instagram de la marque — sonde — 2026-10-12T09:57:55Z
 Relivraison : motif du suivi (read_insights) — 2026-10-12T10:00:52Z
+Relivraison : post → modèle franchisé (visuel du réseau) — 2026-10-12T10:07:30Z

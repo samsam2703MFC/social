@@ -43,6 +43,8 @@
   /** Ce que le modèle ouvre au franchisé, en clair (écran franchiseur). */
   function resume(tpl) {
     const p = tpl.promo || {}, out = [];
+    // Modèle créé depuis un post du réseau : visuel et texte figés, seule la date (et une phrase, si ouverte) change.
+    if ((tpl.visual || {}).style === 'fixe') return ['visuel du réseau', +tpl.free > 0 ? 'phrase de ' + tpl.free + ' car. max' : 'date et heure seulement'].join(' · ');
     if (tpl.product === 'choix') out.push('produit de son catalogue');
     if (p.kind === 'remise') out.push('remise ' + (p.min || 0) + '–' + (p.max || 0) + ' %');
     if (p.kind === 'offre') out.push('offre : ' + (p.offres || []).join(', '));

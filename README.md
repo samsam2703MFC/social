@@ -147,6 +147,12 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   dans une autre pub (« Sponsoriser un post existant », likes et commentaires
   cumulés), commentaires relus toutes les heures (`social_commentaire`), masquables
   depuis l'écran Publicités.
+- **Post → modèle franchisé** — dans « Créer un post », « Enregistrer comme modèle
+  franchisé » fige le visuel du post (studio, montage ou photos) et son texte en un
+  modèle de l'espace franchisé (`visual.style = fixe`) : la boutique le publie sur sa
+  Page à la date de son choix ({ville}, {adresse}, {horaires} remplis pour elle ;
+  produit du post écrit en clair ; phrase libre de 90 caractères si ouverte ;
+  validation au choix). Réglable ensuite dans Espace franchisé → Modèles.
 - **Instagram unique du réseau** (`socIgUnique()`, src/instagram.php) — un seul
   compte Instagram (celui de la marque) pour toutes les boutiques : réglage
   `instagram_unique`, sinon automatique dès que la marque a son Instagram et
