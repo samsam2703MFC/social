@@ -25,3 +25,4 @@ Relivraison : calendriers Meta en direct + pastilles de comptes, Suivi des bouti
 Relivraison : suivi des boutiques (historique vide = non mesuré), Suivi de ma boutique (espace franchisé), Instagram unique du réseau — 2026-10-12T09:49:29Z
 Relivraison : Instagram unique du réseau, réservé au franchiseur, vue franchisé — 2026-10-12T09:55:14Z
 Relivraison : suivi (métriques d'abonnés), connexion Instagram de la marque — sonde — 2026-10-12T09:57:55Z
+Relivraison : motif du suivi (read_insights) — 2026-10-12T10:00:52Z

@@ -89,7 +89,7 @@ function socSuiviPage(array $c, string $du, string $au): array
     }
     if ($out['serie'] === null) {
         $out['motif'] = $permission !== null ? socSuiviMotif($permission, 'read_insights')
-            : 'historique indisponible : Meta ne fournit aucun chiffre d’abonnés jour par jour pour cette Page (' . implode(' · ', $refus) . ')';
+            : 'historique indisponible : Meta renvoie des séries vides — ajoutez la permission read_insights au token (détail : ' . implode(' · ', $refus) . ')';
     }
     if (is_array($out['serie'])) {
         $out['gagnes'] = array_sum(array_column($out['serie'], 'gagnes')); $out['perdus'] = array_sum(array_column($out['serie'], 'perdus'));
