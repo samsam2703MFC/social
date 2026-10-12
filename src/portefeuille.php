@@ -162,7 +162,11 @@ function socPortefeuilleAppliquer(bool $ecraser = false): array
     foreach (socShops() as $s) { $cibles[$s['id']] = $s; }
     $prop = [];
     foreach ((array) $pf['pages'] as $p) { if ($p['boutique']) { $prop[$p['boutique']]['page_id'] ??= $p['id']; if ($p['instagram']) { $prop[$p['boutique']]['instagram_user_id'] ??= $p['instagram']; } } }
-    foreach ((array) $pf['comptes'] as $a) { if ($a['boutique'] && $a['actif']) { $prop[$a['boutique']]['ad_account_id'] ??= $a['id']; } }
+    // Comptes publicitaires : actifs pour les boutiques ; pour la marque, même inactif (impayé…), le contrôle des connexions le signalera.
+    // Un seul compte dans tout le portefeuille : c'est celui du réseau.
+    $comptes = (array) $pf['comptes'];
+    foreach ($comptes as $a) { if ($a['boutique'] && ($a['actif'] || $a['boutique'] === 'marque')) { $prop[$a['boutique']]['ad_account_id'] ??= $a['id']; } }
+    if (count($comptes) === 1) { $prop['marque']['ad_account_id'] ??= $comptes[0]['id']; }
     foreach ((array) $pf['instagram'] as $i) { if ($i['boutique']) { $prop[$i['boutique']]['instagram_user_id'] ??= $i['id']; } }
     $pixels = (array) $pf['pixels'];
     foreach ($pixels as $x) { if ($x['boutique']) { $prop[$x['boutique']]['pixel_id'] ??= $x['id']; } }
