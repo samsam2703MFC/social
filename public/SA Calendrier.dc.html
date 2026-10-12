@@ -244,6 +244,19 @@
                 <sc-if value="{{ sel.hasStats }}" hint-placeholder-val="{{ false }}"><span style="color:#666666;">Réactions</span><span>{{ sel.statsLabel }}</span></sc-if>
                 <sc-if value="{{ sel.hasAuthor }}" hint-placeholder-val="{{ false }}"><span style="color:#666666;">Proposé par</span><span>{{ sel.author }}</span></sc-if>
               </div>
+              <sc-if value="{{ sel.hasTiles }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">
+                    <sc-for list="{{ sel.tiles }}" as="t" hint-placeholder-count="6">
+                      <div title="{{ t.tip }}" style="background:{{ t.bg }};border-radius:8px;padding:7px 8px;display:flex;flex-direction:column;gap:2px;min-width:0;">
+                        <span style="font-size:16px;font-weight:600;color:{{ t.fg }};line-height:1.1;">{{ t.value }}</span>
+                        <span style="font-size:10px;line-height:1.25;color:{{ t.sub }};">{{ t.label }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <sc-if value="{{ sel.hasStatsNote }}" hint-placeholder-val="{{ false }}"><span title="{{ sel.statsNoteTip }}" style="font-size:11px;color:#8A4B00;line-height:1.4;">{{ sel.statsNote }}</span></sc-if>
+                </div>
+              </sc-if>
               <sc-if value="{{ sel.hasText }}" hint-placeholder-val="{{ false }}"><p style="font-size:12px;line-height:1.5;color:#444444;margin:0;background:#F4EFE8;border-radius:6px;padding:8px 10px;">{{ sel.textPreview }}</p></sc-if>
 
               <sc-if value="{{ sel.isFail }}" hint-placeholder-val="{{ false }}">
@@ -275,6 +288,7 @@
                 <sc-if value="{{ sel.isDark }}" hint-placeholder-val="{{ false }}"><a href="{{ sel.adsHref }}" style="border:none;background:#232220;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;color:#F2C9A0;text-decoration:none;">Créer la publicité →</a></sc-if>
                 <a href="{{ sel.editHref }}" target="{{ sel.target }}" rel="noopener" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;color:#222222;text-decoration:none;">{{ sel.editLabel }}</a>
                 <sc-if value="{{ sel.canDup }}" hint-placeholder-val="{{ true }}"><button onClick="{{ openDup }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Dupliquer</button></sc-if>
+                <sc-if value="{{ sel.canCtrl }}" hint-placeholder-val="{{ false }}"><button onClick="{{ toCtrl }}" title="Annoter ce post et l’envoyer à la boutique comme non conforme" style="border:none;background:#232220;color:#F2C9A0;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Contrôler →</button></sc-if>
               </div>
               <sc-if value="{{ sel.isMeta }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;line-height:1.45;">Publiée hors du module (Meta Business Suite, application…) : lue en direct chez Meta, en lecture seule ici.</span></sc-if>
             </div>
@@ -364,7 +378,7 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   state = { view: 'month', cursor: window.SA ? window.SA.TODAY : '2026-10-10', fShops: [], fType: '', fStatus: '', fCamp: '', selId: null, dragOver: null, loading: true,
-    dupOpen: false, dupDates: [], dupShops: [], dupDateInput: '', toast: '', retrying: false, tick: 0, fAcc: [], mp: null, mpLoading: false, mpErr: '' };
+    dupOpen: false, dupDates: [], dupShops: [], dupDateInput: '', toast: '', retrying: false, tick: 0, fAcc: [], mp: null, mpLoading: false, mpErr: '', ps: null };
   componentDidMount() {
     const SA = window.SA;
     const st = SA && SA.param('status'); if (st) this.setState({ fStatus: st, view: 'list' });
@@ -373,7 +387,17 @@ class Component extends DCLogic {
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
     this.loadMeta();
   }
-  componentDidUpdate() { this.loadMeta(); }
+  componentDidUpdate() { this.loadMeta(); this.loadStats(); }
+  /** Les chiffres (vues…) de la publication Meta ouverte, lus en direct à l'ouverture de sa fiche. */
+  loadStats() {
+    const SA = window.SA, s = this.state; if (!SA || !SA.postStats || !s.selId || !/^m(fb|ig)-/.test(s.selId) || this._psk === s.selId) return;
+    const sp = ((s.mp && s.mp.posts) || []).find(p => p.id === s.selId); if (!sp || sp.status !== 'Publié') return;
+    this._psk = sp.id; this._psc = this._psc || {};
+    if (this._psc[sp.id]) { this.setState({ ps: this._psc[sp.id] }); return; }
+    this.setState({ ps: { id: sp.id, loading: true } });
+    SA.postStats(sp).then(r => { this._psc[sp.id] = Object.assign({}, r, { id: sp.id }); if (this._psk === sp.id) this.setState({ ps: this._psc[sp.id] }); })
+      .catch(e => { if (this._psk === sp.id) this.setState({ ps: { id: sp.id, err: e.message || 'erreur' } }); });
+  }
   /** La période affichée (mois complet en semaines entières, ou semaine). */
   period() {
     const SA = window.SA, s = this.state;
@@ -526,13 +550,28 @@ class Component extends DCLogic {
         canRetry: (sp.status === 'Échec' || st.k === 'Partiel') && !s.retrying, canValidate: sp.status === 'À valider',
         editHref: SA.href('post', 'id=' + sp.id), editLabel: sp.status === 'Publié' ? 'Voir' : 'Modifier', target: '_self', canDup: true, isMeta: false, hasStats: false,
         isDark: !!sp.dark, adsHref: SA.href('ads', 'new=1&post=' + encodeURIComponent(sp.id)),
+        // Contrôle : posts d'une boutique (publiés sur sa Page hors module, ou proposés depuis l'espace franchisé).
+        canCtrl: (sp.origin === 'meta' ? !sp.marque && (sp.shops || []).length === 1 : sp.origin === 'franchise') && !sp.dark,
       });
       if (sp.origin === 'meta') {
         const stt = sp.stats || {}, parts = [stt.reactions != null ? SA.fmt(stt.reactions) + (sp.ig ? ' j’aime' : ' réactions') : '', stt.comments != null ? SA.fmt(stt.comments) + ' commentaires' : '', stt.shares != null ? SA.fmt(stt.shares) + ' partages' : ''].filter(Boolean);
         Object.assign(sel, { isMeta: true, canDup: false, target: '_blank', editHref: sp.permalink || '#', editLabel: 'Voir sur ' + sp.channel + ' ↗', langs: '—', campName: '—',
           when: SA.dLabel(sp.date) + ' · ' + sp.time + (sp.status === 'Programmé' ? ' (programmé dans Meta Business Suite)' : ''), channels: sp.channel,
-          accountLabel: (sp.accountName || '') + (sp.marque ? ' · marque' : ''), hasStats: parts.length > 0, statsLabel: parts.join(' · '),
+          accountLabel: (sp.accountName || '') + (sp.marque ? ' · marque' : ''), hasStats: parts.length > 0 && sp.status !== 'Publié', statsLabel: parts.join(' · '),
           textPreview: sp.text || '', hasText: !!sp.text, canRetry: false, canValidate: false, isFail: false, isPartial: false, hasAuthor: false });
+        // Chiffres de la publication (lus à l'ouverture) : vues en tête, puis l'engagement.
+        if (sp.status === 'Publié') {
+          const ps = s.ps && s.ps.id === sp.id ? s.ps : { loading: true }, n = (v) => ps.loading ? '…' : v == null ? '—' : SA.fmt(v);
+          const or = (a, b) => a != null ? a : b;
+          const t = [['Vues', ps.vues, 'Nombre de fois où la publication a été vue (« vues » Meta, ex-impressions)'],
+            [sp.ig ? 'Comptes touchés' : 'Personnes touchées', ps.personnes, 'Personnes différentes qui ont vu la publication'],
+            [sp.ig ? 'J’aime' : 'Réactions', or(ps.reactions, stt.reactions), ''], ['Commentaires', or(ps.commentaires, stt.comments), ''], ['Partages', or(ps.partages, stt.shares), ''],
+            sp.ig ? ['Enregistrements', ps.enregistrements, ''] : ['Clics', ps.clics, 'Clics sur la publication (lien, photo, « voir plus »…)']];
+          if (ps.videos) t.push(['Vues de la vidéo', ps.videos, '']);
+          const motif = ps.err ? 'Chiffres illisibles : ' + ps.err : ps.motif || '';
+          Object.assign(sel, { hasTiles: true, tiles: t.map(([label, v, tip], i) => ({ label, value: n(v), tip, bg: i ? '#F7F3EE' : '#232220', fg: i ? '#222222' : '#F2C9A0', sub: i ? '#666666' : '#D8D0C4' })),
+            hasStatsNote: !!motif, statsNote: /read_insights|instagram_manage_insights/.test(motif) ? 'Vues indisponibles : le token Meta n’a pas la permission ' + (sp.ig ? 'instagram_manage_insights' : 'read_insights') + '.' : motif, statsNoteTip: motif });
+        }
       }
     }
     const typeOptions = SA.POST_TYPES;
@@ -612,6 +651,10 @@ class Component extends DCLogic {
         }
         this.updatePost(sp.id, { status: 'Brouillon' }); SA.log('Sarah Lambert (Franchiseur)', 'Refus', '« ' + sp.title + ' » renvoyé en brouillon'); this.toast('Post renvoyé en brouillon à la boutique.');
       },
+      toCtrl: () => { if (!sp) return; const meta = sp.origin === 'meta';
+        try { sessionStorage.setItem('sa.ctrl', JSON.stringify({ id: 'cal-' + sp.id, shop: shopsOf(sp)[0], title: sp.title || (sp.text || '').slice(0, 40) || 'Publication', img: sp.img || 'img/products/croissant.png',
+          date: sp.date, time: sp.time || '', channel: meta ? sp.channel : (sp.fb ? 'Facebook' : 'Instagram'), text: sp.text || '', link: sp.permalink || '', origin: meta ? 'Publié hors module' : 'Espace franchisé' })); } catch (e) {}
+        location.href = SA.href('ctrl'); },
       openDup: () => { if (!sp) return; this.setState({ dupOpen: true, dupDates: [SA.addDays(sp.date < SA.TODAY ? SA.TODAY : sp.date, 7)], dupShops: shopsOf(sp).slice(), dupDateInput: '' }); },
       closeDup: () => this.setState({ dupOpen: false }), dupOpen: s.dupOpen,
       dupDates: s.dupDates.map(d => ({ label: SA.dLabel(d), remove: () => this.setState({ dupDates: s.dupDates.filter(x => x !== d) }) })),

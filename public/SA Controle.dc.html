@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
+    section{padding-top:0;padding-bottom:0;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button,textarea{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="ctrl" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <div style="background:#232220;color:#F2C9A0;border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.45;">Maquette à valider : rien n’est envoyé. Ouvrez un post (ici ou depuis sa fiche dans le Calendrier), annotez au stylo ou au carré rouge, puis validez et envoyez la non-conformité par mail à la boutique.</div>
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Communication des boutiques · respect de la charte du réseau</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">CONTROLE</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.pick }}" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ t.border }};background:{{ t.bg }};color:{{ t.fg }};"><span style="width:7px;height:7px;border-radius:50%;background:{{ t.dot }};"></span>{{ t.label }}</button></sc-for>
+        <select value="{{ fShop }}" onChange="{{ setShop }}" style="font-size:12px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 10px;"><option value="">Toutes les boutiques</option><sc-for list="{{ shopOpts }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></select>
+      </div>
+    </header>
+
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+      <!-- File des posts à contrôler -->
+      <aside style="flex:0 1 280px;min-width:250px;display:flex;flex-direction:column;gap:8px;">
+        <sc-for list="{{ items }}" as="it" hint-placeholder-count="4">
+          <button onClick="{{ it.pick }}" style="text-align:left;display:flex;gap:10px;align-items:center;background:{{ it.bg }};border:1px solid {{ it.border }};border-radius:10px;padding:8px;cursor:pointer;">
+            <img src="{{ it.img }}" alt="" style="width:52px;height:52px;object-fit:cover;border-radius:6px;background:#F4EFE8;flex:0 0 auto;">
+            <span style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 auto;">
+              <span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ it.title }}</span>
+              <span style="font-size:11px;color:#666666;">{{ it.meta }}</span>
+              <span style="display:flex;gap:4px;flex-wrap:wrap;"><span style="font-size:10px;font-weight:600;border-radius:999px;padding:1px 7px;background:{{ it.stBg }};color:{{ it.stFg }};">{{ it.status }}</span><span style="font-size:10px;border-radius:999px;padding:1px 7px;background:#F4EFE8;color:#444444;">{{ it.origin }}</span></span>
+            </span>
+          </button>
+        </sc-for>
+        <span style="font-size:11px;color:#666666;line-height:1.45;">Les posts arrivent du Calendrier : publications faites par les boutiques sur leur Page (hors module) et posts créés depuis l’espace franchisé. Bouton « Contrôler → » dans la fiche d’un post.</span>
+      </aside>
+
+      <!-- Post et annotations -->
+      <section style="flex:1 1 460px;min-width:0;background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:15px;font-weight:500;">{{ sel.title }}</span><span style="font-size:12px;color:#666666;">{{ sel.meta }}</span></div>
+          <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+            <sc-for list="{{ tools }}" as="tl" hint-placeholder-count="3"><button onClick="{{ tl.pick }}" title="{{ tl.tip }}" style="border:none;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;background:{{ tl.bg }};color:{{ tl.fg }};">{{ tl.label }}</button></sc-for>
+          </div>
+        </div>
+        <div style="position:relative;align-self:center;width:100%;max-width:520px;user-select:none;touch-action:none;">
+          <img src="{{ sel.img }}" alt="" onLoad="{{ redraw }}" style="width:100%;display:block;border-radius:6px;background:#F4EFE8;aspect-ratio:4 / 5;object-fit:cover;">
+          <canvas ref="{{ cvRef }}" onPointerDown="{{ down }}" onPointerMove="{{ move }}" onPointerUp="{{ up }}" onPointerLeave="{{ up }}" style="position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;border-radius:6px;"></canvas>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Texte publié</span>
+          <p style="margin:0;font-size:13px;line-height:1.5;background:#F7F3EE;border-radius:8px;padding:8px 10px;white-space:pre-wrap;">{{ sel.text }}</p>
+          <a href="{{ sel.link }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;">Voir la publication ↗</a>
+        </div>
+      </section>
+
+      <!-- Verdict -->
+      <aside style="flex:0 1 340px;min-width:290px;display:flex;flex-direction:column;gap:12px;">
+        <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+          <span style="font-size:13px;font-weight:500;">Annotations · {{ nMarks }}</span>
+          <sc-if value="{{ noMarks }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;line-height:1.45;">Dessinez sur le visuel : stylo à main levée ou carré rouge. Chaque annotation est numérotée ; décrivez ici le problème.</span></sc-if>
+          <sc-for list="{{ marks }}" as="m" hint-placeholder-count="0">
+            <div style="display:flex;gap:8px;align-items:flex-start;">
+              <span title="{{ m.kindLabel }}" style="width:22px;height:22px;border-radius:50%;background:#E0151B;color:#FFFFFF;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">{{ m.n }}</span>
+              <input type="text" value="{{ m.note }}" onChange="{{ m.setNote }}" placeholder="Ce qui ne va pas…" style="flex:1 1 auto;min-width:0;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;">
+              <button onClick="{{ m.remove }}" title="Retirer" style="border:none;background:transparent;color:#8D1D2C;font-size:14px;cursor:pointer;padding:2px 4px;">×</button>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+          <span style="font-size:13px;font-weight:500;">Charte du réseau</span>
+          <sc-for list="{{ rules }}" as="r" hint-placeholder-count="6">
+            <button onClick="{{ r.toggle }}" style="display:flex;align-items:center;gap:8px;border:none;background:transparent;padding:2px 0;cursor:pointer;text-align:left;font-size:12px;color:#222222;">
+              <span style="width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:{{ r.bg }};color:#FFFFFF;flex:0 0 auto;">{{ r.mark }}</span>{{ r.label }}
+            </button>
+          </sc-for>
+        </div>
+
+        <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+          <span style="font-size:13px;font-weight:500;">Non-conformité · envoi par mail</span>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Destinataire<input type="email" value="{{ to }}" onChange="{{ setTo }}" style="font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;"></label>
+          <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Gravité
+            <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;"><sc-for list="{{ sevs }}" as="sv" hint-placeholder-count="3"><button onClick="{{ sv.pick }}" style="border:none;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;background:{{ sv.bg }};color:{{ sv.fg }};">{{ sv.label }}</button></sc-for></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <label style="flex:1 1 120px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">À corriger avant le<input type="date" value="{{ due }}" onChange="{{ setDue }}" style="font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;"></label>
+            <label style="flex:1 1 140px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Action demandée<select value="{{ action }}" onChange="{{ setAction }}" style="font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;"><option value="corriger">Corriger le post</option><option value="supprimer">Supprimer le post</option><option value="info">Pour information</option></select></label>
+          </div>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Message à la boutique<textarea value="{{ msg }}" onChange="{{ setMsg }}" rows="6" style="font-size:12px;line-height:1.45;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;resize:vertical;"></textarea></label>
+          <span style="font-size:11px;color:#666666;line-height:1.45;">Le mail contient le visuel annoté, la liste numérotée des points, la grille de la charte et le lien vers la publication.</span>
+          <sc-if value="{{ notSent }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button onClick="{{ markOk }}" style="border:0.5px solid #0F6B4A;background:#FFFFFF;color:#0F6B4A;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:500;cursor:pointer;">Conforme ✓</button>
+              <button onClick="{{ preview }}" style="flex:1 1 auto;border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:500;cursor:pointer;">Valider et envoyer par mail →</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ sent }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <sc-for list="{{ timeline }}" as="tl" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:8px;font-size:12px;color:{{ tl.fg }};"><span style="width:10px;height:10px;border-radius:50%;background:{{ tl.dot }};"></span>{{ tl.label }}</div></sc-for>
+              <div style="display:flex;gap:8px;"><button onClick="{{ remind }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:500;cursor:pointer;">Relancer la boutique</button><button onClick="{{ close }}" style="border:none;background:transparent;color:#0F6B4A;font-size:12px;font-weight:500;cursor:pointer;">Marquer corrigé</button></div>
+            </div>
+          </sc-if>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Historique -->
+    <section style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Non-conformités par boutique · 90 jours</span><span style="font-size:11px;color:#666666;">barre = posts contrôlés · rouge = non conformes</span></div>
+      <sc-for list="{{ history }}" as="h" hint-placeholder-count="6">
+        <div style="display:grid;grid-template-columns:120px minmax(140px,2fr) 90px 90px 110px;gap:10px;align-items:center;font-size:12px;">
+          <span style="font-weight:500;">{{ h.name }}</span>
+          <span style="height:8px;background:#F4EFE8;border-radius:999px;overflow:hidden;display:flex;"><span style="display:block;height:100%;width:{{ h.okW }};background:#B8D8C6;"></span><span style="display:block;height:100%;width:{{ h.koW }};background:#C9474F;"></span></span>
+          <span style="text-align:right;">{{ h.checked }} contrôlés</span>
+          <span style="text-align:right;color:{{ h.koFg }};font-weight:600;">{{ h.ko }} non conf.</span>
+          <span style="text-align:right;color:#666666;">{{ h.open }}</span>
+        </div>
+      </sc-for>
+    </section>
+  </main>
+
+  <sc-if value="{{ pvOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(35,34,32,0.5);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#FFFFFF;border-radius:12px;width:100%;max-width:640px;max-height:92vh;overflow:auto;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(35,34,32,0.3);">
+        <div style="padding:14px 18px;border-bottom:0.5px solid rgba(34,34,34,0.10);display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">
+          <span style="font-size:15px;font-weight:500;color:#222222;">Aperçu du mail</span>
+          <span><strong style="font-weight:600;">À :</strong> {{ to }}</span>
+          <span><strong style="font-weight:600;">Objet :</strong> {{ subject }}</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.5;color:#222222;">
+          <p style="margin:0;white-space:pre-wrap;">{{ mailMsg }}</p>
+          <div style="position:relative;width:100%;max-width:420px;align-self:center;">
+            <img src="{{ sel.img }}" alt="Visuel annoté" style="width:100%;display:block;aspect-ratio:4 / 5;object-fit:cover;border-radius:6px;border:0.5px solid rgba(34,34,34,0.12);background:#F4EFE8;">
+            <img src="{{ annotated }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <sc-for list="{{ marks }}" as="m" hint-placeholder-count="0"><span><strong style="color:#E0151B;">{{ m.n }}.</strong> {{ m.noteOr }}</span></sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;font-size:12px;color:#444444;">
+            <sc-for list="{{ ruleLines }}" as="rl" hint-placeholder-count="0"><span>{{ rl }}</span></sc-for>
+          </div>
+          <span style="font-size:12px;color:#444444;">Gravité : {{ sevLabel }} · à {{ actionLabel }} avant le {{ dueLabel }} · <a href="{{ sel.link }}" target="_blank" rel="noopener">voir la publication</a></span>
+        </div>
+        <div style="padding:12px 18px;border-top:0.5px solid rgba(34,34,34,0.10);display:flex;justify-content:flex-end;gap:8px;">
+          <button onClick="{{ closePv }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Modifier</button>
+          <button onClick="{{ send }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;">Envoyer le mail</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;box-shadow:0 12px 30px rgba(35,34,32,0.3);">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = this.init();
+  init() {
+    const SA = window.SA, T = SA ? SA.TODAY : '2026-10-10', d = (n) => SA ? SA.addDays(T, n) : T;
+    // Maquette : quelques posts de boutiques à contrôler (en réel : ceux du Calendrier, lus chez Meta + espace franchisé).
+    // Annotations comme le contrôle des tâches du BO : coordonnées en % du visuel, jamais une image aplatie.
+    const items = [
+      { id: 'c1', shop: 'gosselies', title: 'PROMO -50% SUR TOUT !!!', img: 'img/products/sweet-tart-big.png', date: d(-1), time: '18:42', channel: 'Facebook', origin: 'Publié hors module',
+        text: 'PROMO -50% SUR TOUT CE WEEK-END !!! Venez vite 🔥🔥 www.autre-boulangerie.be', status: 'À contrôler', marks: [], rules: {} },
+      { id: 'c2', shop: 'wavre', title: 'Brunch du dimanche', img: 'img/products/cupcake.png', date: d(-2), time: '09:10', channel: 'Facebook', origin: 'Publié hors module',
+        text: 'Ce dimanche, brunch chez L’Atelier By Wavre de 9h à 13h. Réservez au comptoir !', status: 'À contrôler', marks: [], rules: {} },
+      { id: 'c3', shop: 'halle', title: 'Croissant pur beurre', img: 'img/products/croissant.png', date: d(-3), time: '07:30', channel: 'Facebook', origin: 'Modèle franchisé',
+        text: 'Croissant pur beurre : 1,30 € chez L’Atelier By Halle. Ouvert 7h00–18h30.', status: 'Conforme', marks: [], rules: { logo: true, typo: true, prix: true, photo: true, ton: true, liens: true } },
+      { id: 'c4', shop: 'corbais', title: 'Photo floue de la vitrine', img: 'img/products/bread-2.png', date: d(-5), time: '12:05', channel: 'Facebook', origin: 'Publié hors module',
+        text: 'Notre vitrine du jour', status: 'Non conforme', marks: [{ kind: 'rect', x: 18, y: 22, w: 64, h: 52, note: 'Photo floue et mal cadrée' }], rules: { photo: false },
+        task: { at: d(-4) + ' 10:12', seen: d(-3) + ' 08:40', fixed: null, sev: 'mineure', to: 'corbais@latelierby.be' } },
+    ];
+    let first = items[0];
+    // Venu du Calendrier (« Contrôler → » dans la fiche du post) : le post choisi s'ouvre directement.
+    try { const x = JSON.parse(sessionStorage.getItem('sa.ctrl') || 'null'); if (x && x.title) { sessionStorage.removeItem('sa.ctrl'); first = Object.assign({ id: 'cal', status: 'À contrôler', marks: [], rules: {}, origin: 'Depuis le calendrier' }, x); items.unshift(first); } } catch (e) {}
+    return { items, selId: first.id, tool: 'rect', tab: 'todo', fShop: '', sev: 'majeure', due: d(3), action: 'corriger', msg: '', to: '', toast: '', pvOpen: false, annotated: '' };
+  }
+  componentDidMount() { this._onResize = () => this.redraw(); window.addEventListener('resize', this._onResize); this.redraw(); }
+  componentDidUpdate() { this.redraw(); }
+  componentWillUnmount() { window.removeEventListener('resize', this._onResize); clearTimeout(this._tt); }
+  toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 3200); }
+  sel() { const s = this.state; return s.items.find(x => x.id === s.selId) || s.items[0]; }
+  upd(patch) { this.setState(s => ({ items: s.items.map(x => x.id === s.selId ? Object.assign({}, x, patch) : x) })); }
+  // Dessin : traits rouges (stylo), carrés rouges, numéro de chaque annotation dans une pastille.
+  paint(ctx, W, H, marks, cur) {
+    const k = W / 520, red = '#E0151B';
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const all = (marks || []).map((m, i) => [m, i + 1]).concat(cur ? [[cur, (marks || []).length + 1]] : []);
+    for (const [m, n] of all) {
+      ctx.strokeStyle = red; ctx.lineWidth = Math.max(2, 3.5 * k);
+      let ax, ay;
+      if (m.kind === 'pen') { const p = m.pts || []; if (!p.length) continue; ctx.beginPath(); p.forEach(([x, y], j) => { const X = x / 100 * W, Y = y / 100 * H; j ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.stroke(); ax = p[0][0] / 100 * W; ay = p[0][1] / 100 * H; }
+      else { const X = m.x / 100 * W, Y = m.y / 100 * H, w = m.w / 100 * W, h = m.h / 100 * H; ctx.fillStyle = 'rgba(224,21,27,0.08)'; ctx.fillRect(X, Y, w, h); ctx.strokeRect(X, Y, w, h); ax = X; ay = Y; }
+      const r = Math.max(9, 12 * k); ax = Math.min(Math.max(ax, r + 2), W - r - 2); ay = Math.min(Math.max(ay, r + 2), H - r - 2);
+      ctx.beginPath(); ctx.arc(ax, ay, r, 0, Math.PI * 2); ctx.fillStyle = red; ctx.fill(); ctx.lineWidth = Math.max(1.5, 2 * k); ctx.strokeStyle = '#FFFFFF'; ctx.stroke();
+      ctx.fillStyle = '#FFFFFF'; ctx.font = '700 ' + Math.round(r * 1.15) + 'px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(n), ax, ay + 0.5);
+    }
+  }
+  redraw() {
+    const cv = this._cv; if (!cv) return;
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (!r.width) return;
+    const W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, W, H);
+    this.paint(ctx, W, H, this.sel().marks, this._cur);
+  }
+  pos(e) { const r = this._cv.getBoundingClientRect(); const c = (v) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10; return [c((e.clientX - r.left) / r.width * 100), c((e.clientY - r.top) / r.height * 100)]; }
+  // Calque des annotations pour l'aperçu du mail, posé sur la photo. Les photos Meta (CDN sans CORS) ne peuvent
+  // pas être aplaties dans le navigateur : à l'envoi réel, le serveur incruste les annotations (GD, comme les rapports du BO).
+  flatten() {
+    const W = 800, H = 1000, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    this.paint(cv.getContext('2d'), W, H, this.sel().marks, null);
+    return cv.toDataURL('image/png');
+  }
+  renderVals() {
+    const SA = window.SA, s = this.state;
+    if (!SA) return { items: [], marks: [], sel: {}, tabs: [], tools: [], rules: [], sevs: [], history: [], timeline: [], ruleLines: [] };
+    const shopName = (id) => (SA.byId(SA.SHOPS, id) || { name: id }).name;
+    const ST = { 'À contrôler': ['#FCE7C8', '#7A4100', '#D97B29'], 'Non conforme': ['#F6DCDF', '#8D1D2C', '#C9474F'], 'Conforme': ['#E2F0E8', '#0F6B4A', '#1F8A60'] };
+    const inTab = (x) => s.tab === 'todo' ? x.status === 'À contrôler' : s.tab === 'ko' ? x.status === 'Non conforme' : x.status === 'Conforme';
+    const list = s.items.filter(x => (!s.fShop || x.shop === s.fShop) && inTab(x));
+    const sel = this.sel();
+    const marks = (sel.marks || []).map((m, i) => ({ n: i + 1, kindLabel: m.kind === 'pen' ? 'Stylo' : 'Carré rouge', note: m.note, noteOr: m.note || '(sans commentaire)',
+      setNote: (e) => this.upd({ marks: sel.marks.map((y, j) => j === i ? Object.assign({}, y, { note: e.target.value }) : y) }), remove: () => this.upd({ marks: sel.marks.filter((_, j) => j !== i) }) }));
+    const RULES = [['logo', 'Logo et couleurs de la marque'], ['typo', 'Typographies de la charte'], ['prix', 'Prix et promotions dans les règles du réseau'], ['photo', 'Photo nette et bien cadrée'], ['ton', 'Ton et orthographe'], ['liens', 'Pas de lien ni de mention externe']];
+    const task = sel.task;
+    const SEV = { mineure: 'Mineure', majeure: 'Majeure', bloquante: 'Bloquante' };
+    const sevs = Object.keys(SEV).map(k => ({ label: SEV[k], bg: s.sev === k ? '#8D1D2C' : 'transparent', fg: s.sev === k ? '#FFFFFF' : '#444444', pick: () => this.setState({ sev: k }) }));
+    const counts = (st) => s.items.filter(x => (!s.fShop || x.shop === s.fShop) && x.status === st).length;
+    const hist = SA.SHOPS.map((sh, i) => { const checked = 6 + (i * 5) % 9, ko = sh.id === 'gosselies' ? 4 : (i * 3) % 3; return { name: sh.name, checked, ko, okW: ((checked - ko) / 15 * 100) + '%', koW: (ko / 15 * 100) + '%', koFg: ko ? '#8D1D2C' : '#0F6B4A', open: ko ? Math.min(ko, 1 + i % 2) + ' ouverte(s)' : 'à jour' }; });
+    const shop = shopName(sel.shop), to = s.to || (sel.shop + '@latelierby.be');
+    const ACT = { corriger: 'corriger', supprimer: 'supprimer', info: 'lire' };
+    const msg = s.msg || ('Bonjour,\n\nVotre publication du ' + SA.dShort(sel.date) + ' sur ' + sel.channel + ' ne respecte pas la charte du réseau. Les points à revoir sont entourés en rouge sur le visuel ci-dessous.\n\nMerci de ' + (s.action === 'supprimer' ? 'la supprimer' : s.action === 'info' ? 'en tenir compte pour vos prochaines publications' : 'la corriger') + ' avant le ' + SA.dShort(s.due) + '.\n\nL’équipe communication du réseau');
+    const tool = (k, l, tip) => ({ label: l, tip, bg: s.tool === k ? '#8D1D2C' : 'transparent', fg: s.tool === k ? '#FFFFFF' : '#444444', pick: () => this.setState({ tool: k }) });
+    const act = (l, tip, fn) => ({ label: l, tip, bg: 'transparent', fg: '#444444', pick: fn });
+    return {
+      tabs: [['todo', 'À contrôler', '#D97B29'], ['ko', 'Non conformes', '#C9474F'], ['ok', 'Conformes', '#1F8A60']].map(([k, l, dot]) => { const n = counts(k === 'todo' ? 'À contrôler' : k === 'ko' ? 'Non conforme' : 'Conforme');
+        return { label: l + ' (' + n + ')', dot: s.tab === k ? '#FFFFFF' : dot, bg: s.tab === k ? '#232220' : '#FFFFFF', fg: s.tab === k ? '#FFFFFF' : '#222222', border: s.tab === k ? '#232220' : 'rgba(34,34,34,0.18)', pick: () => this.setState({ tab: k }) }; }),
+      fShop: s.fShop, setShop: (e) => this.setState({ fShop: e.target.value }), shopOpts: SA.SHOPS.map(x => ({ id: x.id, name: x.name })),
+      items: list.map(x => { const c = ST[x.status]; return { title: x.title, img: x.img, meta: shopName(x.shop) + ' · ' + SA.dShort(x.date) + ' ' + x.time + ' · ' + x.channel, status: x.status, stBg: c[0], stFg: c[1], origin: x.origin,
+        bg: x.id === sel.id ? '#FFFFFF' : '#FBF8F4', border: x.id === sel.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)', pick: () => { this._cur = null; this.setState({ selId: x.id, msg: '', to: '', pvOpen: false }); } }; }),
+      sel: { title: sel.title, img: sel.img, text: sel.text, link: sel.link || 'https://www.facebook.com/', meta: 'L’Atelier By ' + shop + ' · ' + sel.channel + ' · ' + SA.dLabel(sel.date) + ' à ' + sel.time + ' · ' + sel.origin },
+      tools: [tool('pen', '✎ Stylo', 'Dessinez à main levée sur le visuel'), tool('rect', '▢ Carré rouge', 'Glissez pour encadrer une zone'),
+        act('↶ Annuler', 'Retire la dernière annotation', () => this.upd({ marks: (sel.marks || []).slice(0, -1) })), act('Effacer', 'Retire toutes les annotations', () => this.upd({ marks: [] }))],
+      cvRef: (el) => { this._cv = el; }, redraw: () => this.redraw(),
+      down: (e) => { if (task) return; e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId); const [x, y] = this.pos(e);
+        this._cur = s.tool === 'pen' ? { kind: 'pen', pts: [[x, y]], note: '' } : { kind: 'rect', x0: x, y0: y, x, y, w: 0, h: 0, note: '' }; this.redraw(); },
+      move: (e) => { const c = this._cur; if (!c) return; const [x, y] = this.pos(e);
+        if (c.kind === 'pen') { const l = c.pts[c.pts.length - 1]; if (Math.abs(l[0] - x) + Math.abs(l[1] - y) >= 0.4) c.pts.push([x, y]); }
+        else { c.x = Math.min(c.x0, x); c.y = Math.min(c.y0, y); c.w = Math.abs(x - c.x0); c.h = Math.abs(y - c.y0); }
+        this.redraw(); },
+      up: () => { const c = this._cur; if (!c) return; this._cur = null;
+        const ok = c.kind === 'pen' ? c.pts.length > 2 : c.w > 2 && c.h > 2;
+        if (!ok) { this.redraw(); return; }
+        const m = c.kind === 'pen' ? { kind: 'pen', pts: c.pts, note: '' } : { kind: 'rect', x: c.x, y: c.y, w: c.w, h: c.h, note: '' };
+        this.upd({ marks: (sel.marks || []).concat(m) }); },
+      marks, nMarks: marks.length, noMarks: !marks.length,
+      rules: RULES.map(([k, l]) => { const v = (sel.rules || {})[k]; return { label: l, mark: v === true ? '✓' : v === false ? '✕' : '', bg: v === true ? '#1F8A60' : v === false ? '#C9474F' : '#D8D0C4',
+        toggle: () => this.upd({ rules: Object.assign({}, sel.rules, { [k]: v === undefined ? false : v === false ? true : undefined }) }) }; }),
+      ruleLines: RULES.filter(([k]) => (sel.rules || {})[k] === false).map(([, l]) => '✕ ' + l),
+      sevs, sevLabel: SEV[s.sev], due: s.due, dueLabel: SA.dShort(s.due), setDue: (e) => this.setState({ due: e.target.value }), action: s.action, actionLabel: ACT[s.action], setAction: (e) => this.setState({ action: e.target.value }),
+      msg, mailMsg: msg, setMsg: (e) => this.setState({ msg: e.target.value }),
+      to, setTo: (e) => this.setState({ to: e.target.value }),
+      subject: 'Publication non conforme — L’Atelier By ' + shop + ' · ' + SA.dShort(sel.date),
+      notSent: !task, sent: !!task,
+      timeline: task ? [['Mail envoyé à ' + (task.to || to) + ' le ' + SA.dShort(task.at.slice(0, 10)) + ' à ' + task.at.slice(11, 16) + ' · ' + task.sev, true], [task.seen ? 'Ouvert par la boutique le ' + SA.dShort(task.seen.slice(0, 10)) : 'Pas encore ouvert', !!task.seen], [task.fixed ? 'Corrigé le ' + SA.dShort(task.fixed) : 'En attente de correction', !!task.fixed]]
+        .map(([label, on]) => ({ label, dot: on ? '#1F8A60' : '#D8D0C4', fg: on ? '#222222' : '#8A847C' })) : [],
+      markOk: () => { this.upd({ status: 'Conforme', marks: [] }); this.toast('Marqué conforme.'); },
+      preview: () => { if (!(sel.marks || []).length) { this.toast('Annotez au moins un point (stylo ou carré rouge) avant de valider.'); return; }
+        this.setState({ pvOpen: true, annotated: this.flatten() }); },
+      pvOpen: s.pvOpen, annotated: s.annotated, closePv: () => this.setState({ pvOpen: false }),
+      send: () => { const now = new Date();
+        this.upd({ status: 'Non conforme', task: { at: SA.TODAY + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'), seen: null, fixed: null, sev: SEV[s.sev].toLowerCase(), to } });
+        this.setState({ pvOpen: false });
+        this.toast('Maquette : mail prêt à partir vers ' + to + ' (rien n’est envoyé).'); },
+      remind: () => this.toast('Maquette : relance envoyée à la boutique.'), close: () => { this.upd({ task: Object.assign({}, task, { fixed: SA.TODAY }) }); this.toast('Marquée corrigée.'); },
+      history: hist, hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

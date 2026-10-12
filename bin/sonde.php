@@ -51,6 +51,24 @@ try {
     }
 } catch (Throwable $e) { echo "  Meta : " . $e->getMessage() . "\n"; }
 
+// Meta (lecture seule) : les vues d'une publication récente de chaque compte sont-elles lisibles ?
+try {
+    echo "== Meta : vues des publications (fiche du calendrier) ==\n";
+    foreach (socCalComptes() as $c) {
+        if ($c['token'] === null) { continue; }
+        try {
+            $r = $c['type'] === 'facebook'
+                ? Meta::call('GET', $c['id'] . '/published_posts', ['fields' => 'id', 'limit' => 1], $c['token'])
+                : Meta::call('GET', $c['id'] . '/media', ['fields' => 'id', 'limit' => 1], $c['token']);
+            $pid = (string) ($r['data'][0]['id'] ?? '');
+            if ($pid === '') { echo '  ' . $c['key'] . " : aucune publication\n"; continue; }
+            $st = socCalStats(($c['type'] === 'facebook' ? 'mfb-' : 'mig-') . $pid, $c['key']);
+            echo '  ' . $c['key'] . ' (' . $c['name'] . ') : vues=' . json_encode($st['vues']) . ' personnes=' . json_encode($st['personnes']) . ' réactions=' . json_encode($st['reactions'])
+                . ($st['motif'] ? ' · ' . mb_substr((string) $st['motif'], 0, 140) : '') . "\n";
+        } catch (Throwable $e) { echo '  ' . $c['key'] . ' : ' . mb_substr($e->getMessage(), 0, 140) . "\n"; }
+    }
+} catch (Throwable $e) { echo "  Meta : " . $e->getMessage() . "\n"; }
+
 $shop = (string) (socApiShops()[0]['id'] ?? '4');
 $jour = date('Y-m-d');
 $j7 = date('Y-m-d', strtotime('-7 days')); $j1 = date('Y-m-d', strtotime('-1 day'));

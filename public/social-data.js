@@ -313,7 +313,7 @@
       .replace(/\{ville\}/g, s ? s.name : '{ville}').replace(/\{adresse\}/g, s ? s.address : '{adresse}').replace(/\{horaires\}/g, s ? s.hours : '{horaires}')
       .replace(/\{prix\}/g, product && product.price ? product.price : '{prix}').replace(/\{produit_du_jour\}/g, product && product.name ? product.name : 'Brioche croustillante');
   }
-  const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', suivi: 'SA Suivi.dc.html', set: 'SA Parametres.dc.html' };
+  const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', suivi: 'SA Suivi.dc.html', ctrl: 'SA Controle.dc.html', set: 'SA Parametres.dc.html' };
   const href = (k, q) => encodeURI(PAGES[k]) + (q ? '?' + q : '');
   const param = (k) => { try { return new URLSearchParams(location.search).get(k); } catch (e) { return null; } };
 
@@ -505,6 +505,18 @@
     return Promise.resolve({ du, au, le: TODAY + ' ' + String(new Date().getHours()).padStart(2, '0') + ':' + String(new Date().getMinutes()).padStart(2, '0'), comptes, posts, erreurs: [], demo: true });
   }
   /** Suivi des boutiques : abonnés gagnés / perdus face au budget, lus en direct chez Meta (GET /suivi/abonnes). */
+  /**
+   * Les chiffres d'une publication Meta (vues, personnes touchées, clics, réactions…),
+   * lus à l'ouverture de sa fiche (GET /meta/post-stats) : rien n'est gardé.
+   */
+  function postStats(p) {
+    if (LIVE) return api('GET', '/meta/post-stats?id=' + encodeURIComponent(p.id) + '&compte=' + encodeURIComponent(p.account || ''));
+    const h = hash(p.id), fb = !p.ig, vues = 180 + h % 2400;
+    return new Promise(r => setTimeout(() => r({ id: p.id, vues, personnes: Math.round(vues * (0.62 + (h % 20) / 100)), clics: fb ? 4 + h % 70 : null,
+      videos: fb && /Vidéo/.test(p.type || '') ? Math.round(vues * 0.4) : null, reactions: 8 + h % 60, commentaires: h % 9, partages: fb ? h % 5 : 1 + h % 4,
+      enregistrements: fb ? null : h % 12, interactions: fb ? null : 20 + h % 80, motif: null, le: TODAY, demo: true }), 350));
+  }
+
   function suivi(jours) {
     if (LIVE) return api('GET', '/suivi/abonnes?jours=' + jours);
     const au = addDays(TODAY, -1), du = addDays(au, -(jours - 1)), lignes = [];
@@ -565,7 +577,7 @@
   else window.addEventListener('focus', () => { refresh(); });
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
-    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, suivi, avatar,
+    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     igUnique: () => LIVE ? !!LIVE.instagramUnique : true, reseau, marque, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
     TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,

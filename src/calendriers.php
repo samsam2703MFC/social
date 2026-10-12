@@ -222,3 +222,80 @@ function socCalPostInstagram(array $x, array $compte): array
         'stats' => ['reactions' => isset($x['like_count']) ? (int) $x['like_count'] : null, 'comments' => isset($x['comments_count']) ? (int) $x['comments_count'] : null, 'shares' => null],
         'syncedAt' => date('Y-m-d H:i')];
 }
+
+/*
+ * Les chiffres d'une publication (vues, personnes touchées, clics, réactions…),
+ * lus chez Meta à l'ouverture de sa fiche dans le Calendrier : rien n'est gardé.
+ * Meta renomme régulièrement ces métriques (les « impressions » sont devenues des
+ * « vues » en 2025) : chaque chiffre a ses noms possibles, essayés dans l'ordre.
+ * Facebook demande `read_insights`, Instagram `instagram_manage_insights`.
+ */
+const SOC_STATS_FB = ['vues' => ['post_media_view', 'post_impressions'], 'personnes' => ['post_total_media_view_unique', 'post_impressions_unique'],
+    'clics' => ['post_clicks'], 'videos' => ['post_video_views'], 'reactions' => ['post_reactions_by_type_total']];
+const SOC_STATS_IG = ['vues' => ['views', 'impressions', 'plays'], 'personnes' => ['reach'], 'enregistrements' => ['saved'], 'partages' => ['shares'],
+    'interactions' => ['total_interactions']];
+
+/** Valeur d'une métrique : un nombre, ou la somme d'une répartition (réactions par type). */
+function socCalValeur(mixed $v): ?int
+{
+    if (is_numeric($v)) { return (int) $v; }
+    if (is_array($v)) { return array_sum(array_map('intval', array_filter($v, 'is_numeric'))); }
+    return null;
+}
+
+/** Les chiffres d'une publication du calendrier (`mfb-…` / `mig-…`) du compte `fb:…` / `ig:…`. */
+function socCalStats(string $id, string $compte): array
+{
+    $fb = str_starts_with($id, 'mfb-');
+    $mid = substr($id, 4);
+    if ((!$fb && !str_starts_with($id, 'mig-')) || !preg_match('/^\w+$/', $mid)) { throw new HttpError(400, 'publication inconnue : ' . $id); }
+    $c = socCalComptes()[$compte] ?? null;
+    if ($c === null || $c['type'] !== ($fb ? 'facebook' : 'instagram') || ($fb && !str_starts_with($mid, $c['id'] . '_'))) {
+        throw new HttpError(404, 'cette publication n’appartient pas au compte ' . $compte);
+    }
+    $out = ['id' => $id, 'vues' => null, 'personnes' => null, 'clics' => null, 'videos' => null, 'reactions' => null, 'commentaires' => null, 'partages' => null,
+        'enregistrements' => null, 'interactions' => null, 'motif' => null, 'le' => date('Y-m-d H:i')];
+    $tok = $c['token'];
+    if ($tok === null) { $out['motif'] = 'compte non accessible au token (Page non partagée avec l’utilisateur système)'; return $out; }
+    $perm = $fb ? 'read_insights' : 'instagram_manage_insights';
+    $metriques = $fb ? SOC_STATS_FB : SOC_STATS_IG;
+    $lire = static function (array $noms) use ($mid, $tok, $fb): array {
+        $r = Meta::call('GET', $mid . '/insights', ['metric' => implode(',', $noms)] + ($fb ? ['period' => 'lifetime'] : []), $tok);
+        $v = [];
+        foreach ((array) ($r['data'] ?? []) as $d) {
+            $x = socCalValeur($d['values'][0]['value'] ?? ($d['total_value']['value'] ?? null));
+            if ($x !== null) { $v[(string) ($d['name'] ?? '')] = $x; }
+        }
+        return $v;
+    };
+    // Un seul appel pour les noms actuels ; un nom refusé (métrique retirée, type de média) fait tout refuser : alors un par un.
+    $lu = []; $essayes = [];
+    try { $tete = array_map(static fn ($n) => $n[0], $metriques); $lu = $lire(array_values($tete)); $essayes = array_flip($tete); }
+    catch (MetaError $e) { if (socSuiviPermission($e)) { $out['motif'] = 'vues indisponibles : ajoutez la permission ' . $perm . ' au token (' . $e->getMessage() . ')'; } }
+    if ($out['motif'] === null) {
+        foreach ($metriques as $cle => $noms) {
+            foreach ($noms as $nom) {
+                if (!isset($lu[$nom]) && !isset($essayes[$nom])) {
+                    $essayes[$nom] = true;
+                    try { $lu += $lire([$nom]); }
+                    catch (MetaError $e) { if (socSuiviPermission($e)) { $out['motif'] = 'vues indisponibles : ajoutez la permission ' . $perm . ' au token (' . $e->getMessage() . ')'; break 2; } }
+                }
+                if (isset($lu[$nom])) { $out[$cle] = $lu[$nom]; break; }
+            }
+        }
+    }
+    // Réactions, commentaires, partages : champs du post (Facebook : `pages_read_user_content`), utiles même sans insights.
+    try {
+        if ($fb) {
+            $x = Meta::call('GET', $mid, ['fields' => 'reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0),shares'], $tok);
+            if (isset($x['reactions']['summary']['total_count'])) { $out['reactions'] = (int) $x['reactions']['summary']['total_count']; }
+            if (isset($x['comments']['summary']['total_count'])) { $out['commentaires'] = (int) $x['comments']['summary']['total_count']; }
+            if (isset($x['shares']['count'])) { $out['partages'] ??= (int) $x['shares']['count']; }
+        } else {
+            $x = Meta::call('GET', $mid, ['fields' => 'like_count,comments_count'], $tok);
+            if (isset($x['like_count'])) { $out['reactions'] = (int) $x['like_count']; }
+            if (isset($x['comments_count'])) { $out['commentaires'] = (int) $x['comments_count']; }
+        }
+    } catch (MetaError $e) { /* réactions illisibles sans pages_read_user_content : les vues suffisent */ }
+    return $out;
+}

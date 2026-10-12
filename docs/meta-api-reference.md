@@ -114,6 +114,19 @@ Par compte publicitaire (`src/metacampagnes.php`, bouton « Récupérer les camp
 Pilotage d'une campagne récupérée : `POST /{campaign_id}` `status` (ACTIVE / PAUSED / ARCHIVED) ou `spend_cap` (centimes).
 Permission : `ads_read` (lecture) et `ads_management` (pilotage).
 
+## 5 ter. Calendrier → chiffres d'une publication (lecture, à l'ouverture de sa fiche)
+
+`GET /meta/post-stats?id=mfb-{post_id}|mig-{media_id}&compte=fb:{page}|ig:{ig}` (`socCalStats`, `src/calendriers.php`), rien en base :
+
+| Appel | Métriques (essayées dans l'ordre ; un nom retiré par Meta passe au suivant) |
+|---|---|
+| `GET /{post_id}/insights` `period=lifetime` | vues `post_media_view` → `post_impressions` · personnes `post_total_media_view_unique` → `post_impressions_unique` · `post_clicks` · `post_video_views` · `post_reactions_by_type_total` |
+| `GET /{post_id}` | `reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0),shares` (demande `pages_read_user_content`) |
+| `GET /{media_id}/insights` | vues `views` → `impressions` → `plays` · `reach` · `saved` · `shares` · `total_interactions` |
+| `GET /{media_id}` | `like_count,comments_count` |
+
+Permissions : `read_insights` (Facebook), `instagram_manage_insights` (Instagram). Sans elles : `motif` renseigné, chiffres à `null`.
+
 ## 6. Écran « Formulaires de leads » — `POST /{page_id}/leadgen_forms`
 
 | Champ UI | Paramètre |

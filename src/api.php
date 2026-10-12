@@ -110,6 +110,7 @@ function socRoute(string $method, string $path): array
     // Lu en direct chez Meta, rien en base : les publications des Pages et comptes Instagram (src/calendriers.php),
     // les abonnés face au budget (src/suivi.php).
     if ($method === 'GET' && $path === '/meta/calendriers') { return [200, socCalendriersLire((string) ($_GET['du'] ?? ''), (string) ($_GET['au'] ?? ''))]; }
+    if ($method === 'GET' && $path === '/meta/post-stats') { return [200, socCalStats((string) ($_GET['id'] ?? ''), (string) ($_GET['compte'] ?? ''))]; }
     if ($method === 'GET' && $path === '/suivi/abonnes') { return [200, socSuiviAbonnes((int) ($_GET['jours'] ?? 28))]; }
     if ($method === 'GET' && $path === '/meta/portefeuille') { return [200, ['portefeuille' => socSetting('meta_portefeuille'), 'businessId' => (string) (socSetting('meta_business_id') ?? '')]]; }
     if ($method === 'POST' && $path === '/meta/portefeuille/rafraichir') {

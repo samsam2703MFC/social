@@ -94,6 +94,20 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
     }
     if ($m === 'GET' && $path === '222/insights') { return [400, ['error' => ['code' => 10, 'message' => 'Requires read_insights permission']]]; }
     if ($m === 'GET' && $path === '17841/insights') { return [200, ['data' => [['name' => 'follower_count', 'period' => 'day', 'values' => [['value' => 4, 'end_time' => date('Y-m-d') . 'T07:00:00+0000']]]]]]; }
+    // Chiffres d'une publication (fiche du calendrier) : la Page 111 a retiré post_clicks (refus du lot), la 222 refuse les insights.
+    if ($m === 'GET' && preg_match('#^111_\d+/insights$#', $path)) {
+        $noms = explode(',', (string) ($p['metric'] ?? ''));
+        if (array_intersect($noms, ['post_clicks', 'post_impressions', 'post_impressions_unique'])) { return [400, ['error' => ['code' => 100, 'message' => '(#100) The value must be a valid insights metric']]]; }
+        $v = ['post_media_view' => 1234, 'post_total_media_view_unique' => 980, 'post_video_views' => 0, 'post_reactions_by_type_total' => ['like' => 30, 'love' => 5]];
+        return [200, ['data' => array_values(array_map(static fn ($n) => ['name' => $n, 'period' => 'lifetime', 'values' => [['value' => $v[$n]]]], array_intersect($noms, array_keys($v))))]];
+    }
+    if ($m === 'GET' && preg_match('#^222_\d+/insights$#', $path)) { return [400, ['error' => ['code' => 10, 'message' => 'Requires read_insights permission']]]; }
+    if ($m === 'GET' && preg_match('#^(111|222)_\d+$#', $path)) { return [400, ['error' => ['code' => 10, 'message' => 'Requires pages_read_user_content permission']]]; }
+    if ($m === 'GET' && $path === 'm2/insights') {
+        return [200, ['data' => [['name' => 'views', 'values' => [['value' => 500]]], ['name' => 'reach', 'values' => [['value' => 400]]], ['name' => 'saved', 'values' => [['value' => 7]]],
+            ['name' => 'shares', 'values' => [['value' => 3]]], ['name' => 'total_interactions', 'values' => [['value' => 60]]]]]];
+    }
+    if ($m === 'GET' && $path === 'm2') { return [200, ['like_count' => 41, 'comments_count' => 6]]; }
     if ($m === 'GET' && $path === '111/published_posts') { return [200, ['data' => $GLOBALS['META_PUBLIES'] ?? []]]; }
     if ($m === 'GET' && $path === '111/scheduled_posts') { return [200, ['data' => $GLOBALS['META_PROGRAMMES'] ?? []]]; }
     if ($m === 'GET' && preg_match('#^222/(published|scheduled)_posts$#', $path)) { return [400, ['error' => ['code' => 10, 'message' => 'Permission manquante : pages_read_engagement']]]; }
@@ -813,6 +827,24 @@ $_GET = ['du' => '2026-01-01', 'au' => '2026-12-31'];
 $c400 = (static function () { try { return socRoute('GET', '/meta/calendriers')[0]; } catch (HttpError $e) { return $e->status; } })();
 $_GET = [];
 check('période de plus de 100 jours refusée', $c400 === 400);
+
+echo "Calendrier : chiffres d'une publication (vues), lus à la demande\n";
+$stat = static function (string $id, string $compte): array { $_GET = ['id' => $id, 'compte' => $compte];
+    try { return socRoute('GET', '/meta/post-stats'); } catch (HttpError $e) { return [$e->status, ['error' => $e->getMessage()]]; } finally { $_GET = []; } };
+$appels = [];
+[$code, $s1] = $stat('mfb-111_9001', 'fb:111');
+check('Facebook : vues et personnes (noms 2025), réactions par les insights, métrique retirée ignorée', $code === 200 && $s1['vues'] === 1234 && $s1['personnes'] === 980 && $s1['reactions'] === 35
+    && $s1['clics'] === null && $s1['motif'] === null, json_encode($s1));
+check('Facebook : lu en direct avec le token de la Page, rien en base', (bool) array_filter($appels, static fn ($a) => $a[1] === '111_9001/insights' && ($a[2]['access_token'] ?? '') === 'PT111')
+    && (int) Db::row("SELECT COUNT(*) n FROM social_content WHERE id LIKE 'mfb-%'")['n'] === 0);
+[$code, $s2] = $stat('mig-m2', 'ig:17841');
+check('Instagram : vues, couverture, enregistrements, partages, j’aime', $code === 200 && $s2['vues'] === 500 && $s2['personnes'] === 400 && $s2['enregistrements'] === 7
+    && $s2['partages'] === 3 && $s2['reactions'] === 41 && $s2['commentaires'] === 6 && $s2['motif'] === null, json_encode($s2));
+[$code, $s3] = $stat('mfb-222_7001', 'fb:222');
+check('permission read_insights manquante : motif clair, pas d’erreur', $code === 200 && $s3['vues'] === null && str_contains((string) $s3['motif'], 'read_insights'), json_encode($s3));
+[$c4] = $stat('mfb-222_7001', 'fb:111');
+[$c5] = $stat('mfb-../me', 'fb:111');
+check('publication d’un autre compte ou identifiant invalide : refusé', $c4 === 404 && $c5 === 400);
 
 echo "Suivi des boutiques : abonnés face au budget (en direct)\n";
 $GLOBALS['META_DEPENSES'] = [['ad_id' => '7201', 'date_start' => date('Y-m-d', strtotime('-2 days')), 'spend' => '10.00'],

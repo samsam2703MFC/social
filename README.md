@@ -173,6 +173,16 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   qui visent ce compte). Ces publications sont en lecture seule (lien vers Facebook
   ou Instagram, réactions, commentaires, partages) et ne sont jamais enregistrées ni
   mises en file ; celles faites par le module ne sont pas montrées deux fois.
+  Ouvrir une publication lit ses chiffres en direct (`GET /meta/post-stats?id=&compte=`) :
+  vues, personnes touchées, réactions, commentaires, partages, clics (Facebook) ou
+  enregistrements (Instagram). Les vues demandent `read_insights` (Facebook) et
+  `instagram_manage_insights` (Instagram) ; sans elles, la fiche le dit.
+- **Contrôle** (maquette, `public/SA Controle.dc.html`, rien n'est envoyé) — depuis
+  la fiche d'une publication de boutique dans le Calendrier (« Contrôler → ») :
+  annotation au stylo ou au carré rouge (coordonnées en %, comme le contrôle des
+  tâches du BO), grille de la charte, gravité, échéance, puis « Valider et envoyer
+  par mail » avec l'aperçu du mail (visuel annoté, points numérotés). L'envoi réel
+  reste à décider.
 - **Suivi des boutiques** (`src/suivi.php`, lecture directe, rien en base) — par
   Page (et son Instagram) sur 7, 28 ou 90 jours : abonnés actuels
   (`followers_count`), gagnés et perdus par jour (insights `page_daily_follows_unique`
