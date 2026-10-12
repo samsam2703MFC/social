@@ -233,7 +233,7 @@
                 <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ sel.stBg }};color:{{ sel.stFg }};">{{ sel.stLabel }}</span>
                 <span style="font-size:12px;color:#666666;">{{ sel.type }}</span>
               </div>
-              <span style="font-size:16px;font-weight:500;line-height:1.3;">{{ sel.title }}</span>
+              <span style="font-size:16px;font-weight:500;line-height:1.3;overflow-wrap:anywhere;">{{ sel.title }}</span>
               <div style="display:grid;grid-template-columns:86px 1fr;gap:6px 10px;font-size:12px;">
                 <span style="color:#666666;">Date</span><span>{{ sel.when }}</span>
                 <span style="color:#666666;">Boutiques</span><span>{{ sel.shops }}</span>
@@ -257,7 +257,7 @@
                   <sc-if value="{{ sel.hasStatsNote }}" hint-placeholder-val="{{ false }}"><span title="{{ sel.statsNoteTip }}" style="font-size:11px;color:#8A4B00;line-height:1.4;">{{ sel.statsNote }}</span></sc-if>
                 </div>
               </sc-if>
-              <sc-if value="{{ sel.hasText }}" hint-placeholder-val="{{ false }}"><p style="font-size:12px;line-height:1.5;color:#444444;margin:0;background:#F4EFE8;border-radius:6px;padding:8px 10px;">{{ sel.textPreview }}</p></sc-if>
+              <sc-if value="{{ sel.hasText }}" hint-placeholder-val="{{ false }}"><p style="font-size:12px;line-height:1.5;color:#444444;margin:0;background:#F4EFE8;border-radius:6px;padding:8px 10px;overflow-wrap:anywhere;">{{ sel.textPreview }}</p></sc-if>
 
               <sc-if value="{{ sel.isFail }}" hint-placeholder-val="{{ false }}">
                 <div style="background:#F6DCDF;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
