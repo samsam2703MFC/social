@@ -38,3 +38,4 @@ Relivraison : vues des publications, réponse rapide — 2026-10-12T11:03:20Z
 Relivraison : fiche du calendrier, liens longs — 2026-10-12T11:05:47Z
 Relivraison : Contrôle sur les posts déjà publiés — 2026-10-12T11:14:31Z
 Relivraison : Contrôle, pastilles des boutiques — 2026-10-12T12:10:08Z
+Relivraison : opérations = campagnes du Marketing du BO — sonde — 2026-10-12T16:37:03Z
