@@ -860,6 +860,26 @@ $c400 = (static function () { try { return socRoute('GET', '/meta/calendriers')[
 $_GET = [];
 check('période de plus de 100 jours refusée', $c400 === 400);
 
+echo "Rattacher posts et publicités aux opérations du Marketing\n";
+$ratt = static function (array $b): array { $GLOBALS['SOC_BODY'] = $b; try { return socRoute('POST', '/operations/rattacher'); } catch (HttpError $e) { return [$e->status, ['error' => $e->getMessage()]]; } finally { unset($GLOBALS['SOC_BODY']); } };
+[$code] = $ratt(['kind' => 'post', 'id' => 'mfb-111_9001', 'operation' => 'bo-1']);
+$_GET = ['du' => date('Y-m-d', strtotime('-7 days')), 'au' => date('Y-m-d', strtotime('+7 days'))];
+[, $b3] = socRoute('GET', '/meta/calendriers'); $_GET = [];
+$cp3 = array_column($b3['posts'], null, 'id');
+check('publication Facebook lue chez Meta rattachée : le lien seul en base, l’opération revient avec la publication', $code === 200
+    && Db::row("SELECT operation_id FROM social_rattachement WHERE objet = 'mfb-111_9001'")['operation_id'] === 'bo-1' && ($cp3['mfb-111_9001']['campaign'] ?? null) === 'bo-1' && array_key_exists('campaign', $cp3['mig-m2'] ?? []) && $cp3['mig-m2']['campaign'] === null, json_encode([$code, $cp3['mfb-111_9001']['campaign'] ?? '?']));
+[$code] = $ratt(['kind' => 'post', 'id' => 'mfb-111_9001', 'operation' => null]);
+check('détacher une publication Meta', $code === 200 && Db::row("SELECT COUNT(*) n FROM social_rattachement WHERE objet = 'mfb-111_9001'")['n'] == 0);
+[$code] = $ratt(['kind' => 'post', 'id' => 'p1', 'operation' => 'bo-1']);
+check('post du module rattaché (champ campaign)', $code === 200 && (socItem('posts', 'p1')['campaign'] ?? null) === 'bo-1');
+[$code] = $ratt(['kind' => 'ad', 'id' => 'a1', 'operation' => null]);
+[$code2] = $ratt(['kind' => 'ad', 'id' => 'a1', 'operation' => 'bo-1']);
+check('publicité détachée puis rattachée', $code === 200 && $code2 === 200 && (socItem('ads', 'a1')['campaign'] ?? null) === 'bo-1');
+[$c1] = $ratt(['kind' => 'post', 'id' => 'mfb-111_9001', 'operation' => 'bo-999']);
+[$c2] = $ratt(['kind' => 'ad', 'id' => 'inconnue', 'operation' => 'bo-1']);
+[$c3] = $ratt(['kind' => 'post', 'id' => '../x', 'operation' => 'bo-1']);
+check('opération inconnue du Marketing, objet introuvable ou invalide : refusé', $c1 === 404 && $c2 === 404 && $c3 === 400);
+
 echo "Calendrier : chiffres d'une publication (vues), lus à la demande\n";
 $stat = static function (string $id, string $compte): array { $_GET = ['id' => $id, 'compte' => $compte];
     try { return socRoute('GET', '/meta/post-stats'); } catch (HttpError $e) { return [$e->status, ['error' => $e->getMessage()]]; } finally { $_GET = []; } };

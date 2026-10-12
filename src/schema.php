@@ -26,6 +26,7 @@ declare(strict_types=1);
  *  - social_modele_franchise : les modèles de post ouverts aux franchisés (espace /social_franchisee) ;
  *  - social_acces_franchise : les codes d'accès des boutiques à leur espace (empreinte seulement) ;
  *  - social_resultat   : résultats Meta + ventes par campagne et boutique ;
+ *  - social_rattachement : publication Meta (lue en direct) → opération du Marketing du BO (le lien seul) ;
  *  - social_instagram_media : les dernières publications de chaque compte
  *                        Instagram, relues chez Meta (grille du profil) ;
  *  - social_activite   : le journal d'activité.
@@ -120,6 +121,10 @@ function socInstall(): void
     Db::exec('CREATE TABLE IF NOT EXISTS social_instagram_media (media_id VARCHAR(40) PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
         . 'type VARCHAR(20) NULL, media_url VARCHAR(1000) NULL, vignette_url VARCHAR(1000) NULL, permalink VARCHAR(300) NULL,'
         . 'publie_le DATETIME NOT NULL, legende TEXT NULL, maj_le DATETIME NOT NULL, KEY idx_shop (shop_id, publie_le))' . $t);
+
+    // Le lien seul entre une publication lue chez Meta (mfb-…, mig-…) et une opération du Marketing du BO.
+    Db::exec('CREATE TABLE IF NOT EXISTS social_rattachement (objet VARCHAR(80) PRIMARY KEY, operation_id VARCHAR(64) NOT NULL,'
+        . 'par VARCHAR(120) NULL, le DATETIME NOT NULL, KEY idx_operation (operation_id))' . $t);
 
     socParamsInit();
     socTfbInit();

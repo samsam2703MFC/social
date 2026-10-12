@@ -174,6 +174,31 @@
             </div>
           </div>
         </div>
+
+        <!-- Rattacher posts et publicités à l'opération -->
+        <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:13px;font-weight:500;">Rattacher des posts et des publicités</span>
+            <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;"><sc-for list="{{ rt.tabs }}" as="rtt" hint-placeholder-count="2"><button onClick="{{ rtt.pick }}" style="border:none;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;background:{{ rtt.bg }};color:{{ rtt.fg }};">{{ rtt.label }}</button></sc-for></div>
+          </div>
+          <span style="font-size:11px;color:#666666;line-height:1.45;">{{ rt.note }}</span>
+          <sc-if value="{{ rt.loading }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Lecture des publications des Pages chez Meta…</span></sc-if>
+          <sc-if value="{{ rt.hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8D1D2C;">{{ rt.err }}</span></sc-if>
+          <sc-if value="{{ rt.empty }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">{{ rt.emptyLabel }}</span></sc-if>
+          <div style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;">
+            <sc-for list="{{ rt.rows }}" as="r" hint-placeholder-count="0">
+              <label style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;background:{{ r.bg }};cursor:pointer;">
+                <input type="checkbox" checked="{{ r.on }}" onChange="{{ r.toggle }}" style="width:16px;height:16px;accent-color:#8D1D2C;flex:0 0 auto;">
+                <img src="{{ r.img }}" alt="" style="width:36px;height:36px;border-radius:6px;object-fit:cover;background:#F4EFE8;flex:0 0 auto;">
+                <span style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto;">
+                  <span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.title }}</span>
+                  <span style="font-size:11px;color:#666666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.meta }}</span>
+                </span>
+                <span style="font-size:10px;font-weight:600;border-radius:999px;padding:2px 8px;background:{{ r.tagBg }};color:{{ r.tagFg }};white-space:nowrap;">{{ r.tag }}</span>
+              </label>
+            </sc-for>
+          </div>
+        </div>
       </section>
     </div>
   </main>
@@ -182,12 +207,26 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { selId: null, tab: 'all', refOpen: false, tick: 0 };
+  state = { selId: null, tab: 'all', refOpen: false, tick: 0, rtTab: 'posts', mpo: null };
   componentDidMount() {
     const SA = window.SA; const c = SA && SA.param('c'); if (c) this.setState({ selId: c });
+    this.loadMeta();
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
   }
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); }
+  componentDidUpdate() { this.loadMeta(); }
+  /** Les publications des Pages (lues chez Meta) sur la période de l'opération affichée, 100 jours au plus. */
+  loadMeta() {
+    const SA = window.SA; if (!SA || !SA.calendriers) return;
+    const camps = SA.state().campaigns, c = camps.find(x => x.id === this.state.selId) || camps[0]; if (!c) return;
+    let au = c.end && c.end < SA.addDays(SA.TODAY, 30) ? c.end : SA.addDays(SA.TODAY, 30), du = c.start || SA.addDays(SA.TODAY, -30);
+    if (au < du) au = du;
+    if (SA.daysBetween(du, au) > 99) du = SA.addDays(au, -99);
+    const key = c.id + '_' + du + '_' + au; if (this._mk === key) return;
+    this._mk = key; this.setState({ mpo: { key, loading: true, posts: [] } });
+    SA.calendriers(du, au).then(r => { if (this._mk === key) this.setState({ mpo: { key, posts: r.posts || [], du, au } }); })
+      .catch(e => { if (this._mk === key) this.setState({ mpo: { key, posts: [], err: e.message || 'erreur', du, au } }); });
+  }
   renderVals() {
     const SA = window.SA, s = this.state;
     if (!SA) return { f: {}, list: [] };
@@ -224,12 +263,39 @@ class Component extends DCLogic {
       const start = c.start || SA.TODAY, end = c.end || SA.addDays(start, 30), span = Math.max(1, SA.daysBetween(start, end));
       const X = (d) => Math.max(0, Math.min(100, SA.daysBetween(start, d) / span * 100)) + '%';
       const ticks = []; const step = Math.max(1, Math.round(span / 5)); for (let i = 0; i <= span; i += step) ticks.push({ x: X(SA.addDays(start, i)), label: SA.dShort(SA.addDays(start, i)) });
-      const posts = st.posts.filter(p => p.campaign === c.id).sort((a, b) => a.date.localeCompare(b.date));
-      const postMarks = posts.map((p, i) => ({ x: X(p.date), y: (i % 2 ? 30 : 4) + 'px', img: p.img, href: SA.href('post', 'id=' + p.id), tip: SA.dShort(p.date) + ' · ' + p.title + ' · ' + p.status, ring: p.status === 'Publié' ? '#1F8A60' : p.status === 'Programmé' ? '#D97B29' : p.status === 'Échec' ? '#8D1D2C' : '#B8B2A8' }));
+      const mpo = s.mpo && s.mpo.key && s.mpo.key.indexOf(c.id + '_') === 0 ? s.mpo : { posts: [], loading: true };
+      const posts = st.posts.filter(p => p.campaign === c.id).concat(mpo.posts.filter(p => p.campaign === c.id).map(p => Object.assign({}, p, { href: p.permalink })))
+        .sort((a, b) => a.date.localeCompare(b.date));
+      const postMarks = posts.map((p, i) => ({ x: X(p.date), y: (i % 2 ? 30 : 4) + 'px', img: p.img || SA.avatar(p.accountName || p.title, p.ig ? 'instagram' : 'facebook'), href: p.href || SA.href('post', 'id=' + p.id), tip: SA.dShort(p.date) + ' · ' + p.title + ' · ' + p.status, ring: p.status === 'Publié' ? '#1F8A60' : p.status === 'Programmé' ? '#D97B29' : p.status === 'Échec' ? '#8D1D2C' : '#B8B2A8' }));
       const ads = st.ads.filter(a => a.campaign === c.id);
       const adBars = ads.map((a, i) => { const sc = SA.AD_STATUS[a.status] || SA.AD_STATUS['Active']; const x0 = SA.daysBetween(start, a.start) / span * 100, x1 = SA.daysBetween(start, a.end || end) / span * 100;
         return { name: a.name + ' · ' + a.status, x: Math.max(0, x0) + '%', w: Math.max(4, Math.min(100, x1) - Math.max(0, x0)) + '%', y: (8 + i * 28) + 'px', bg: a.status === 'Active' ? '#8D1D2C' : sc.bg, fg: a.status === 'Active' ? '#FFFFFF' : sc.fg, href: SA.href('ads', 'ad=' + a.id), tip: a.name + ' — ' + SA.eur(a.spent) + ' dépensés' }; });
       const goalNow = r ? r.total : null;
+      // Rattacher : les posts de la période (du module, et publiés sur les Pages, lus chez Meta) et les publicités.
+      const nameOf = (id) => (SA.byId(camps, id) || {}).name || id, inShops = (p) => p.marque || !(p.shops && p.shops !== 'all' && p.shops.length) || (p.shops === 'all' ? true : p.shops.some(x => c.shops.includes(x)));
+      const pStart = c.start || '0000', pEnd = c.end || '9999';
+      const tag = (cur) => cur === c.id ? ['Rattaché', '#E2F0E8', '#0F6B4A'] : cur ? ['dans « ' + nameOf(cur) + ' »', '#FCE7C8', '#7A4100'] : ['libre', '#F4EFE8', '#666666'];
+      const rowOf = (kind, x, title, meta, img) => { const [t0, tb, tf] = tag(x.campaign);
+        return { title, meta, img, on: x.campaign === c.id, tag: t0, tagBg: tb, tagFg: tf, bg: x.campaign === c.id ? '#F3FAF6' : '#FBF8F4',
+          toggle: (e) => { const v = e.target.checked ? c.id : null;
+            SA.rattacher(kind, x.id, v).then(() => {
+              if (kind === 'post' && x.origin === 'meta') this.setState(z => ({ mpo: Object.assign({}, z.mpo, { posts: z.mpo.posts.map(y => y.id === x.id ? Object.assign({}, y, { campaign: v }) : y) }) }));
+            }).catch(err => window.alert('Rattachement impossible : ' + err.message)); } }; };
+      const cand = st.posts.filter(p => !p.dark && p.date >= pStart && p.date <= pEnd && inShops(p) || p.campaign === c.id)
+        .concat(mpo.posts.filter(p => p.status === 'Publié' && p.date >= pStart && p.date <= pEnd && inShops(p) || p.campaign === c.id))
+        .sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
+      const postRows = cand.map(p => rowOf('post', p, p.title, SA.dShort(p.date) + (p.time ? ' ' + p.time : '') + ' · ' + (p.origin === 'meta' ? (p.accountName || '') + ' · ' + p.channel + ' (publié sur la Page)' : SA.shopLabel(p.shops) + ' · ' + p.status + ' (module)'),
+        p.img || SA.avatar(p.accountName || p.title, p.ig ? 'instagram' : 'facebook')));
+      const adRows = st.ads.filter(a => a.campaign === c.id || ((a.start || '0000') <= pEnd && (a.end || a.start || '9999') >= pStart))
+        .map(a => rowOf('ad', a, a.name, (a.origin === 'meta' ? 'Campagne Meta · ' : 'Publicité du module · ') + a.status + ' · ' + SA.eur(a.spent || 0) + ' dépensés' + (a.start ? ' · ' + SA.dShort(a.start) + (a.end ? ' → ' + SA.dShort(a.end) : '') : ''),
+          'img/illus/customer-facing/webshop.png'));
+      const rows = s.rtTab === 'ads' ? adRows : postRows;
+      var rt = { tabs: [['posts', 'Posts · ' + postRows.filter(x => x.on).length + '/' + postRows.length], ['ads', 'Publicités · ' + adRows.filter(x => x.on).length + '/' + adRows.length]]
+          .map(([k, l]) => ({ label: l, bg: s.rtTab === k ? '#8D1D2C' : 'transparent', fg: s.rtTab === k ? '#FFFFFF' : '#444444', pick: () => this.setState({ rtTab: k }) })),
+        note: s.rtTab === 'ads' ? 'Publicités du module et campagnes récupérées chez Meta qui tournent pendant l’opération : rattachées, leur dépense et leurs résultats comptent dans le Retour sur opération.'
+          : 'Posts du module et publications déjà en ligne sur les Pages (lues chez Meta) pendant l’opération, dans ses boutiques. Cochez pour les rattacher à cette campagne du Marketing.',
+        loading: s.rtTab === 'posts' && !!mpo.loading, hasErr: s.rtTab === 'posts' && !!mpo.err, err: mpo.err ? 'Publications des Pages illisibles : ' + mpo.err : '',
+        empty: !rows.length && !(s.rtTab === 'posts' && mpo.loading), emptyLabel: s.rtTab === 'ads' ? 'Aucune publicité pendant la période.' : 'Aucun post pendant la période.', rows };
       f = { name: c.name, typeName: t.name, color: t.color, icon: t.icon, tint: tint(t.color), lev: t.lev, levName: lev.name, kpi: t.kpi, locked: c.status === 'terminée',
         boStatus: c.boStatus || '—', boHref: c.lien || SA.opsLink(),
         postHref: SA.href('post'), adHref: SA.href('ads', 'new=1&c=' + c.id), roiHref: SA.href('roi', 'c=' + c.id),
@@ -251,7 +317,7 @@ class Component extends DCLogic {
       refHead: ['', 'Type', 'Levier', 'KPI attendu', 'Durée'],
       ctypes: SA.CTYPES.map(t => ({ name: t.name, color: t.color, tint: tint(t.color), icon: t.icon, lev: t.lev, levName: SA.LEVERS[t.lev].name, kpi: t.kpi, dur: t.continuous ? 'Continue' : 'Datée' })),
       tabs: tabsDef.map(([k, label, arr]) => ({ label, n: arr.length, bg: s.tab === k ? '#8D1D2C' : 'transparent', fg: s.tab === k ? '#FFFFFF' : '#444444', pick: () => this.setState({ tab: k }) })),
-      list, f, boHref: SA.opsLink(), nOps: camps.length + ' opération' + (camps.length > 1 ? 's' : ''),
+      list, f, rt: typeof rt !== 'undefined' ? rt : { tabs: [], rows: [] }, boHref: SA.opsLink(), nOps: camps.length + ' opération' + (camps.length > 1 ? 's' : ''),
       hasOpsErr: !!SA.opsErreur(), opsErr: SA.opsErreur() || '',
     };
   }

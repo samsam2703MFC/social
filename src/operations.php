@@ -159,3 +159,44 @@ function socOperationParId(string $id): ?array
     foreach (socOperations() as $o) { if ($o['id'] === $id) { return $o; } }
     return null;
 }
+
+/** Les publications Meta rattachées : [objet (mfb-… / mig-…) => opération (bo-…)]. */
+function socRattachements(): array
+{
+    $out = [];
+    foreach (Db::rows('SELECT objet, operation_id FROM social_rattachement') as $r) { $out[(string) $r['objet']] = (string) $r['operation_id']; }
+    return $out;
+}
+
+/**
+ * Rattache (ou détache, `operation` null) un post ou une publicité à une opération du Marketing du BO.
+ *  - post du module, publicité (du module ou récupérée chez Meta) : son champ `campaign` ;
+ *  - publication lue en direct chez Meta (`mfb-…`, `mig-…`) : le lien seul, dans social_rattachement.
+ */
+function socRattacher(string $kind, string $id, ?string $operation): array
+{
+    if (!in_array($kind, ['post', 'ad'], true) || !preg_match('/^[\w.\-]{1,80}$/', $id)) { throw new HttpError(400, 'objet invalide'); }
+    $op = null;
+    if ($operation !== null && $operation !== '') {
+        $op = socOperationParId($operation);
+        if ($op === null) { throw new HttpError(404, 'opération inconnue du Marketing du BO : ' . $operation . (socOperationsErreur() ? ' (' . socOperationsErreur() . ')' : '')); }
+    }
+    $nom = '';
+    if ($kind === 'post' && preg_match('/^m(fb|ig)-/', $id)) {
+        if ($op === null) { Db::exec('DELETE FROM social_rattachement WHERE objet = ?', [$id]); }
+        else {
+            Db::exec('INSERT INTO social_rattachement (objet, operation_id, par, le) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE operation_id = VALUES(operation_id), par = VALUES(par), le = VALUES(le)',
+                [$id, $op['id'], socUser(), date('Y-m-d H:i:s')]);
+        }
+        $nom = 'publication ' . $id;
+    } else {
+        $col = $kind === 'post' ? 'posts' : 'ads';
+        $item = socItem($col, $id);
+        if ($item === null) { throw new HttpError(404, ($kind === 'post' ? 'post' : 'publicité') . ' introuvable : ' . $id); }
+        $item['campaign'] = $op['id'] ?? null;
+        socItemPut($col, $item);
+        $nom = '« ' . (string) ($item['title'] ?? $item['name'] ?? $id) . ' »';
+    }
+    socLog(socUser(), 'Opération', $op ? ucfirst($nom) . ' rattaché(e) à « ' . $op['name'] . ' »' : ucfirst($nom) . ' détaché(e) de son opération');
+    return ['ok' => true, 'kind' => $kind, 'id' => $id, 'operation' => $op['id'] ?? null];
+}

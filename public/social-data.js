@@ -278,6 +278,28 @@
     window.dispatchEvent(new Event('sa-change'));
     return cache;
   }
+  /**
+   * Rattache (op = « bo-… ») ou détache (null) un post ou une publicité à une opération du Marketing du BO.
+   * Post du module et publicité : leur champ campaign ; publication lue chez Meta (mfb-…, mig-…) : le lien seul,
+   * côté serveur (POST /operations/rattacher). Rend une promesse.
+   */
+  const demoRatt = () => { try { return JSON.parse(localStorage.getItem('sa.rattach') || '{}') || {}; } catch (e) { return {}; } };
+  function rattacher(kind, id, op) {
+    const meta = kind === 'post' && /^m(fb|ig)-/.test(id);
+    const local = () => {
+      if (meta) {
+        if (!LIVE) { const m = demoRatt(); if (op) m[id] = op; else delete m[id]; try { localStorage.setItem('sa.rattach', JSON.stringify(m)); } catch (e) {} }
+      } else {
+        const col = kind === 'post' ? 'posts' : 'ads';
+        cache = Object.assign({}, state(), { [col]: state()[col].map(x => x.id === id ? Object.assign({}, x, { campaign: op || null }) : x) });
+        if (!LIVE) { try { localStorage.setItem(KEY, JSON.stringify(cache)); } catch (e) {} }
+      }
+      window.dispatchEvent(new Event('sa-change'));
+      return { ok: true, kind, id, operation: op || null };
+    };
+    if (LIVE) return api('POST', '/operations/rattacher', { kind, id, operation: op || null }).then(local);
+    return Promise.resolve(local());
+  }
   function reset() {
     if (LIVE) { refresh(); return; }  // en réel, on relit le serveur : rien ne s'efface
     cache = fresh(); try { localStorage.removeItem(KEY); } catch (e) {} window.dispatchEvent(new Event('sa-change'));
@@ -511,6 +533,7 @@
       });
     }
     comptes.forEach(c => { c.publies = posts.filter(p => p.account === c.key && p.status === 'Publié').length; c.programmes = posts.filter(p => p.account === c.key && p.status === 'Programmé').length; c.erreur = null; });
+    const ratt = demoRatt(); posts.forEach(p => { p.campaign = ratt[p.id] || null; });
     return Promise.resolve({ du, au, le: TODAY + ' ' + String(new Date().getHours()).padStart(2, '0') + ':' + String(new Date().getMinutes()).padStart(2, '0'), comptes, posts, erreurs: [], demo: true });
   }
   /** Suivi des boutiques : abonnés gagnés / perdus face au budget, lus en direct chez Meta (GET /suivi/abonnes). */
@@ -589,7 +612,7 @@
     api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.
-    ctype, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
+    ctype, rattacher, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
     igUnique: () => LIVE ? !!LIVE.instagramUnique : true, reseau, marque, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
     TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
     byId, fmt, eur, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param };

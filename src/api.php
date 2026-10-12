@@ -111,6 +111,10 @@ function socRoute(string $method, string $path): array
     // Lu en direct chez Meta, rien en base : les publications des Pages et comptes Instagram (src/calendriers.php),
     // les abonnés face au budget (src/suivi.php).
     // Les opérations = campagnes commerciales du Marketing du BO, lues par son API (src/operations.php).
+    if ($method === 'POST' && $path === '/operations/rattacher') {
+        $b = body();
+        return [200, socRattacher((string) ($b['kind'] ?? ''), (string) ($b['id'] ?? ''), isset($b['operation']) ? (string) $b['operation'] : null)];
+    }
     if ($method === 'GET' && $path === '/operations') { $o = socOperations(); return [200, ['operations' => $o, 'erreur' => socOperationsErreur(), 'api' => BoMarketing::base()]]; }
     if ($method === 'GET' && $path === '/meta/calendriers') { return [200, socCalendriersLire((string) ($_GET['du'] ?? ''), (string) ($_GET['au'] ?? ''))]; }
     if ($method === 'GET' && $path === '/meta/post-stats') { return [200, socCalStats((string) ($_GET['id'] ?? ''), (string) ($_GET['compte'] ?? ''))]; }

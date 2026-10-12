@@ -47,6 +47,7 @@ Toutes les données **et toutes les clés** sont stockées et lues dans la base
 | `social_publication` | la file de publication (post × boutique × canal, heure prévue, résultat Meta) |
 | `social_meta_objet` | objets créés chez Meta (campagne, ad set, créa, pub, formulaire) |
 | `social_resultat` | résultats Meta + ventes caisse par campagne et boutique |
+| `social_rattachement` | le lien seul entre une publication lue chez Meta (`mfb-…`, `mig-…`) et une opération du Marketing (`bo-…`) |
 | `social_instagram_media` | les 30 dernières publications de chaque compte Instagram (grille du profil) |
 | `social_commentaire` | les commentaires reçus sur les dark posts (Facebook et Instagram), masqués ou non |
 | `social_modele_franchise` | les modèles de post ouverts aux boutiques (espace franchisé) |
@@ -238,6 +239,12 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   objectif = premier levier chiffré, budget par boutique = budget local. Le module
   ne les crée ni ne les modifie (bouton « Créer dans le Marketing du BO ↗ ») : il y
   rattache ses posts et ses publicités (`bo-{id}`) et en calcule le retour.
+  Rattacher (`POST /operations/rattacher {kind: post|ad, id, operation}`) : depuis la
+  fiche d'un post du Calendrier (sélecteur « Opération », posts du module comme
+  publications déjà en ligne sur les Pages), depuis une publicité (Publicités Meta),
+  ou depuis l'opération (panneau « Rattacher » : posts et pubs de la période, à
+  cocher). Post du module et publicité : leur champ `campaign` ; publication lue
+  chez Meta : le lien seul, table `social_rattachement`.
 - **Retour sur campagne** — CA additionnel = CA des produits de la campagne
   pendant la période − moyenne des mêmes jours sur les 6 semaines précédentes
   (**estimation**, affichée comme telle).

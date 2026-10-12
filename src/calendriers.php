@@ -155,6 +155,10 @@ function socCalendriersLire(string $du, string $au): array
         $out['comptes'][] = $ligne;
     }
     usort($out['posts'], static fn ($a, $b) => strcmp($a['date'] . $a['time'], $b['date'] . $b['time']));
+    // L'opération du Marketing du BO à laquelle chaque publication est rattachée (le lien seul est en base).
+    $ratt = socRattachements();
+    foreach ($out['posts'] as &$p) { $p['campaign'] = $ratt[$p['id']] ?? null; }
+    unset($p);
     return $out;
 }
 

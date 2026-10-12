@@ -239,7 +239,7 @@
                 <span style="color:#666666;">Boutiques</span><span>{{ sel.shops }}</span>
                 <span style="color:#666666;">Canaux</span><span>{{ sel.channels }}</span>
                 <span style="color:#666666;">Langues</span><span>{{ sel.langs }}</span>
-                <span style="color:#666666;">Opération</span><span>{{ sel.campName }}</span>
+                <span style="color:#666666;">Opération</span><select value="{{ sel.campaign }}" onChange="{{ setOp }}" title="Rattacher ce post à une campagne du Marketing du BO" style="min-width:0;font-size:12px;font-weight:500;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:4px 6px;background:#FFFFFF;"><option value="">— aucune —</option><sc-for list="{{ opOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></select>
                 <sc-if value="{{ sel.isMeta }}" hint-placeholder-val="{{ false }}"><span style="color:#666666;">Compte</span><span>{{ sel.accountLabel }}</span></sc-if>
                 <sc-if value="{{ sel.hasStats }}" hint-placeholder-val="{{ false }}"><span style="color:#666666;">Réactions</span><span>{{ sel.statsLabel }}</span></sc-if>
                 <sc-if value="{{ sel.hasAuthor }}" hint-placeholder-val="{{ false }}"><span style="color:#666666;">Proposé par</span><span>{{ sel.author }}</span></sc-if>
@@ -549,13 +549,14 @@ class Component extends DCLogic {
         ko: st.k === 'Partiel' ? sp.partial.ko.map(k => Object.assign({ shopName: k.shop === 'marque' ? 'Instagram du réseau' : (SA.byId(SA.SHOPS, k.shop) || { name: k.shop }).name }, k)) : [],
         canRetry: (sp.status === 'Échec' || st.k === 'Partiel') && !s.retrying, canValidate: sp.status === 'À valider',
         editHref: SA.href('post', 'id=' + sp.id), editLabel: sp.status === 'Publié' ? 'Voir' : 'Modifier', target: '_self', canDup: true, isMeta: false, hasStats: false,
+        campaign: sp.campaign || '',
         isDark: !!sp.dark, adsHref: SA.href('ads', 'new=1&post=' + encodeURIComponent(sp.id)),
         // Contrôle : posts déjà publiés par une boutique (sur sa Page hors module, ou depuis l'espace franchisé).
         canCtrl: sp.status === 'Publié' && (sp.origin === 'meta' ? !sp.marque && (sp.shops || []).length === 1 : sp.origin === 'franchise') && !sp.dark,
       });
       if (sp.origin === 'meta') {
         const stt = sp.stats || {}, parts = [stt.reactions != null ? SA.fmt(stt.reactions) + (sp.ig ? ' j’aime' : ' réactions') : '', stt.comments != null ? SA.fmt(stt.comments) + ' commentaires' : '', stt.shares != null ? SA.fmt(stt.shares) + ' partages' : ''].filter(Boolean);
-        Object.assign(sel, { isMeta: true, canDup: false, target: '_blank', editHref: sp.permalink || '#', editLabel: 'Voir sur ' + sp.channel + ' ↗', langs: '—', campName: '—',
+        Object.assign(sel, { isMeta: true, canDup: false, target: '_blank', editHref: sp.permalink || '#', editLabel: 'Voir sur ' + sp.channel + ' ↗', langs: '—',
           when: SA.dLabel(sp.date) + ' · ' + sp.time + (sp.status === 'Programmé' ? ' (programmé dans Meta Business Suite)' : ''), channels: sp.channel,
           accountLabel: (sp.accountName || '') + (sp.marque ? ' · marque' : ''), hasStats: parts.length > 0 && sp.status !== 'Publié', statsLabel: parts.join(' · '),
           textPreview: sp.text || '', hasText: !!sp.text, canRetry: false, canValidate: false, isFail: false, isPartial: false, hasAuthor: false });
@@ -651,6 +652,13 @@ class Component extends DCLogic {
         }
         this.updatePost(sp.id, { status: 'Brouillon' }); SA.log('Sarah Lambert (Franchiseur)', 'Refus', '« ' + sp.title + ' » renvoyé en brouillon'); this.toast('Post renvoyé en brouillon à la boutique.');
       },
+      // Rattacher le post (du module, ou lu chez Meta) à une campagne du Marketing du BO.
+      opOptions: camps.map(c => ({ id: c.id, name: c.name + (c.status === 'terminée' ? ' (terminée)' : c.boStatusCode === 'draft' ? ' (brouillon)' : '') })),
+      setOp: (e) => { if (!sp) return; const v = e.target.value || null, name = v ? (SA.byId(camps, v) || {}).name : '';
+        SA.rattacher('post', sp.id, v).then(() => {
+          if (sp.origin === 'meta') this.setState(st => ({ mp: Object.assign({}, st.mp, { posts: (st.mp.posts || []).map(x => x.id === sp.id ? Object.assign({}, x, { campaign: v }) : x) }) }));
+          this.toast(v ? 'Rattaché à « ' + name + ' ».' : 'Détaché de son opération.');
+        }).catch(err => this.toast('Rattachement impossible : ' + err.message)); },
       toCtrl: () => { if (!sp) return; const meta = sp.origin === 'meta';
         try { sessionStorage.setItem('sa.ctrl', JSON.stringify({ id: sp.id, shop: shopsOf(sp)[0], title: sp.title || (sp.text || '').slice(0, 40) || 'Publication', img: sp.img || '',
           date: sp.date, time: sp.time || '', channel: meta ? sp.channel : (sp.fb ? 'Facebook' : 'Instagram'), text: sp.text || '', link: sp.permalink || '', account: sp.accountName || '', origin: meta ? 'Publié sur la Page' : 'Espace franchisé' })); } catch (e) {}

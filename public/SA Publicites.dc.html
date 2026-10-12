@@ -109,6 +109,7 @@
               <sc-if value="{{ d.canFix }}" hint-placeholder-val="{{ false }}"><button onClick="{{ fixAd }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Corriger et resoumettre</button></sc-if>
               <sc-if value="{{ d.canStop }}" hint-placeholder-val="{{ false }}"><button onClick="{{ stop }}" style="border:none;background:transparent;color:#8D1D2C;padding:8px 4px;font-size:13px;font-weight:500;cursor:pointer;">Arrêter</button></sc-if>
             </div>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Campagne du Marketing (opération) — pour le Retour sur opération<select value="{{ d.campaign }}" onChange="{{ attach }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="">Hors opération</option><sc-for list="{{ d.campOptions }}" as="c" hint-placeholder-count="0"><option value="{{ c.id }}">{{ c.name }}</option></sc-for></select></label>
             <sc-if value="{{ d.isMeta }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:8px;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:10px;">
                 <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Campagne Meta</span><a href="{{ d.lienMeta }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;color:#8D1D2C;">Gestionnaire de publicités ↗</a></div>
@@ -117,7 +118,6 @@
                 <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">
                   <sc-for list="{{ d.metrics }}" as="mt" hint-placeholder-count="6"><div style="background:#F4EFE8;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:1px;min-width:0;"><span style="font-size:10px;color:#666666;">{{ mt.k }}</span><span style="font-size:14px;font-weight:500;">{{ mt.v }}</span></div></sc-for>
                 </div>
-                <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Rattacher à une opération (pour le Retour sur opération)<select value="{{ d.campaign }}" onChange="{{ attach }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="">Hors opération</option><sc-for list="{{ d.campOptions }}" as="c" hint-placeholder-count="0"><option value="{{ c.id }}">{{ c.name }}</option></sc-for></select></label>
                 <span style="font-size:11px;color:#666666;line-height:1.45;">Pause, reprise, arrêt et plafond s’appliquent à la campagne chez Meta. Le reste (ciblage, créas, budget) se règle dans le Gestionnaire de publicités ; relu toutes les heures.</span>
               </div>
             </sc-if>
@@ -669,7 +669,9 @@ class Component extends DCLogic {
       resume: () => this.upd(a.id, { status: 'Active' }, '« ' + a.name + ' » reprise'),
       stop: () => this.upd(a.id, { status: 'Arrêtée' }, '« ' + a.name + ' » arrêtée'),
       topUp: () => a.origin === 'meta' ? this.upd(a.id, { cap: (a.cap || a.spent) + 100, status: 'Active' }, '« ' + a.name + ' » : plafond relevé de 100') : this.upd(a.id, { budget: a.budget + 100, cap: (a.cap || a.budget) + 100, status: 'Active' }, '« ' + a.name + ' » : +100 € de budget'),
-      attach: (e) => { if (!a) return; const v = e.target.value || null; this.upd(a.id, { campaign: v }, '« ' + a.name + ' » ' + (v ? 'rattachée à « ' + ((SA.byId(camps, v) || {}).name || v) + ' »' : 'détachée de son opération')); this.toast(v ? 'Rattachée : sa dépense et ses résultats Meta comptent dans le Retour sur opération (relu toutes les heures).' : 'Détachée de l’opération.'); },
+      attach: (e) => { if (!a) return; const v = e.target.value || null;
+        SA.rattacher('ad', a.id, v).then(() => this.toast(v ? 'Rattachée à « ' + ((SA.byId(camps, v) || {}).name || v) + ' » : sa dépense et ses résultats Meta comptent dans le Retour sur opération.' : 'Détachée de l’opération.'))
+          .catch(err => this.toast('Rattachement impossible : ' + err.message)); },
       importMeta: () => this.importMeta(), impLabel: s.imp ? 'Récupération…' : 'Récupérer les campagnes Meta', impOp: s.imp ? 0.6 : 1,
       impNote: (() => { const r = SA.metaImport && SA.metaImport(); return r && r.le ? 'Dernière relecture Meta : ' + SA.dShort(r.le.slice(0, 10)) + ' à ' + r.le.slice(11, 16) + ' · ' + (r.comptes || []).length + ' compte(s) pub' : 'Campagnes Meta jamais relues : cliquez pour récupérer celles de vos comptes publicitaires.'; })(),
       impErr: (() => { const r = SA.metaImport && SA.metaImport(); return !!(r && (r.erreurs || []).length); })(),
