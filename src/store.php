@@ -256,6 +256,8 @@ function socStateSave(array $b): array
         }
         foreach ((array) ($ch['upsert'] ?? []) as $item) {
             if (!is_array($item) || !isset($item['id']) || !preg_match('/^[\w.\-]{1,64}$/', (string) $item['id'])) { continue; }
+            // Une publication lue en direct chez Meta (src/calendriers.php) n'est jamais enregistrée ni mise en file.
+            if ($kind === 'posts' && ($item['origin'] ?? '') === 'meta') { $out['errors'][] = ['kind' => $kind, 'id' => $item['id'], 'error' => 'publication Meta : lecture seule']; continue; }
             $item = socExtractMedia($item);
             $avant = socItem($kind, (string) $item['id']);
             try {

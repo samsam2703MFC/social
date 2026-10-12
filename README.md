@@ -147,6 +147,25 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   dans une autre pub (« Sponsoriser un post existant », likes et commentaires
   cumulés), commentaires relus toutes les heures (`social_commentaire`), masquables
   depuis l'écran Publicités.
+- **Calendriers des Pages et comptes Instagram** (`src/calendriers.php`, lecture
+  directe, rien en base) — le Calendrier montre, à côté des posts du module, ce que
+  chaque Page Facebook et chaque compte Instagram visibles du System User ont
+  publié (ou programmé dans Meta Business Suite) sur la période affichée
+  (`GET /{page}/published_posts`, `/scheduled_posts`, `GET /{ig}/media`), relu à
+  chaque changement de mois et au bouton « Actualiser ». Une pastille par compte,
+  avec sa photo de profil, sert de filtre (elle compte aussi les posts du module
+  qui visent ce compte). Ces publications sont en lecture seule (lien vers Facebook
+  ou Instagram, réactions, commentaires, partages) et ne sont jamais enregistrées ni
+  mises en file ; celles faites par le module ne sont pas montrées deux fois.
+- **Suivi des boutiques** (`src/suivi.php`, lecture directe, rien en base) — par
+  Page (et son Instagram) sur 7, 28 ou 90 jours : abonnés actuels
+  (`followers_count`), gagnés et perdus par jour (insights `page_daily_follows_unique`
+  / `page_daily_unfollows_unique`, repli `page_follows` ; Instagram `follower_count`,
+  30 jours au plus), budget dépensé par jour (insights des comptes publicitaires au
+  niveau pub, rapportés à la Page qui porte la pub), coût par abonné gagné, effet
+  de la pub (abonnés par jour avec et sans budget) et classement. Permissions :
+  `read_insights` et `instagram_manage_insights` pour l'historique ; sans elles,
+  le total actuel et le budget s'affichent avec le motif.
 - **Publicités** — l'assistant envoie sa description complète ; le serveur crée
   campagne → ad set → créa → pub, un jeu par compte boutique ou un jeu réseau
   (un ad set par boutique, pour lire les résultats boutique par boutique).
@@ -277,6 +296,8 @@ src/
   instagram.php    grille du profil (lecture des publications), frise (publication, verrou)
   darkposts.php    dark posts : relecture chez Meta, réutilisation, commentaires (lecture, masquage)
   metacampagnes.php  campagnes existantes chez Meta : récupération, rafraîchissement, pilotage
+  calendriers.php  publications des Pages et Instagram lues en direct pour le Calendrier
+  suivi.php        suivi des boutiques : abonnés gagnés / perdus face au budget (en direct)
   franchise.php    espace franchisé : règles, modèles, accès, sessions, publication depuis un modèle
   api.php          routes
 bin/               cron.php, deploy.sh, franchisee-build.sh, tests.php

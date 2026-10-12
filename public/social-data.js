@@ -298,7 +298,7 @@
       .replace(/\{ville\}/g, s ? s.name : '{ville}').replace(/\{adresse\}/g, s ? s.address : '{adresse}').replace(/\{horaires\}/g, s ? s.hours : '{horaires}')
       .replace(/\{prix\}/g, product && product.price ? product.price : '{prix}').replace(/\{produit_du_jour\}/g, product && product.name ? product.name : 'Brioche croustillante');
   }
-  const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', set: 'SA Parametres.dc.html' };
+  const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', suivi: 'SA Suivi.dc.html', set: 'SA Parametres.dc.html' };
   const href = (k, q) => encodeURI(PAGES[k]) + (q ? '?' + q : '');
   const param = (k) => { try { return new URLSearchParams(location.search).get(k); } catch (e) { return null; } };
 
@@ -453,6 +453,67 @@
     }
     return api('POST', '/meta/campagnes/rafraichir').then(r => { IMPORT = r.import || IMPORT; return refresh().then(() => IMPORT); });
   }
+  /** Une pastille de profil sans photo : les initiales sur un rond aux couleurs de la marque. */
+  function avatar(name, net) {
+    const ini = String(name || '?').replace(/^l[’']atelier\s*by\s*[-–·]?\s*/i, '').split(/[\s.@_-]+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'AB';
+    const bg = net === 'instagram' ? '#C13584' : '#8D1D2C';
+    return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" rx="32" fill="' + bg + '"/><text x="32" y="41" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="#fff" text-anchor="middle">' + ini + '</text></svg>');
+  }
+  const hash = (t) => { let h = 7; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) % 100003; return h; };
+  /**
+   * Les publications des Pages et comptes Instagram entre deux dates, lues en direct chez Meta
+   * (GET /meta/calendriers) : rien n'est gardé en base ni dans l'état de l'écran.
+   */
+  function calendriers(du, au) {
+    if (LIVE) return api('GET', '/meta/calendriers?du=' + du + '&au=' + au);
+    // Démonstration : une Page et un Instagram par boutique, plus la marque, et quelques publications faites hors du module.
+    const comptes = [{ key: 'fb:999000', type: 'facebook', id: '999000', name: "L'Atelier By", username: 'latelierby', picture: null, link: 'https://www.facebook.com/latelierby', shop: 'marque' },
+      { key: 'ig:17841400000', type: 'instagram', id: '17841400000', name: "L'Atelier By", username: 'latelierby.be', picture: null, link: 'https://www.instagram.com/latelierby.be/', shop: 'marque' }];
+    SHOPS.forEach(sh => { const ids = META.ids[sh.id] || {};
+      if (ids.page_id) comptes.push({ key: 'fb:' + ids.page_id, type: 'facebook', id: ids.page_id, name: sh.page || sh.name, username: '', picture: null, link: null, shop: sh.id });
+      if (ids.instagram_user_id) comptes.push({ key: 'ig:' + ids.instagram_user_id, type: 'instagram', id: ids.instagram_user_id, name: sh.page || sh.name, username: String(sh.ig || '').replace(/^@/, ''), picture: null, link: null, shop: sh.id }); });
+    const pics = CATALOGUE.filter(x => x.img).map(x => x.img), titres = ['Ce matin au comptoir', 'Le coin du boulanger', 'Merci pour vos avis !', 'Nouveau en vitrine', 'Fournée du week-end', 'On vous attend samedi'];
+    const posts = [];
+    for (let d = du; d <= au; d = addDays(d, 1)) {
+      comptes.forEach(c => {
+        const h = hash(c.key + d); if (h % 13) return;
+        const fb = c.type === 'facebook', futur = d > TODAY;
+        if (futur && !fb) return;  // Instagram ne programme pas par l'API : seuls les posts publiés remontent
+        const t = titres[h % titres.length];
+        posts.push({ id: (fb ? 'mfb-' : 'mig-') + c.id + '_' + d, origin: 'meta', channel: fb ? 'Facebook' : 'Instagram', account: c.key, accountName: fb ? c.name : '@' + c.username,
+          date: d, time: String(8 + h % 10).padStart(2, '0') + ':' + (h % 2 ? '30' : '00'), type: fb ? (h % 4 ? 'Photo' : 'Vidéo') : (h % 3 ? 'Photo' : 'Reel'), title: t, text: t + ' — publié directement depuis Meta Business Suite.',
+          img: pics[h % pics.length], shops: c.shop && c.shop !== 'marque' ? [c.shop] : [], marque: c.shop === 'marque', fb, ig: !fb, status: futur ? 'Programmé' : 'Publié',
+          permalink: fb ? 'https://www.facebook.com/' : 'https://www.instagram.com/', stats: futur ? null : { reactions: 8 + h % 60, comments: h % 9, shares: fb ? h % 5 : null } });
+      });
+    }
+    comptes.forEach(c => { c.publies = posts.filter(p => p.account === c.key && p.status === 'Publié').length; c.programmes = posts.filter(p => p.account === c.key && p.status === 'Programmé').length; c.erreur = null; });
+    return Promise.resolve({ du, au, le: TODAY + ' ' + String(new Date().getHours()).padStart(2, '0') + ':' + String(new Date().getMinutes()).padStart(2, '0'), comptes, posts, erreurs: [], demo: true });
+  }
+  /** Suivi des boutiques : abonnés gagnés / perdus face au budget, lus en direct chez Meta (GET /suivi/abonnes). */
+  function suivi(jours) {
+    if (LIVE) return api('GET', '/suivi/abonnes?jours=' + jours);
+    const au = addDays(TODAY, -1), du = addDays(au, -(jours - 1)), lignes = [];
+    const comptes = [{ id: '999000', name: "L'Atelier By", picture: null, shop: 'marque', ig: 'latelierby.be' }].concat(SHOPS.map(sh => ({ id: (META.ids[sh.id] || {}).page_id, name: sh.page || sh.name, picture: null, shop: sh.id, ig: String(sh.ig || '').replace(/^@/, '') })));
+    comptes.forEach((c, k) => {
+      const base = c.shop === 'marque' ? 9 : 2 + (hash(c.id) % 6), serieFb = {}, serieIg = {}, dep = {};
+      let gF = 0, pF = 0, gI = 0, tot = 0;
+      for (let d = du; d <= au; d = addDays(d, 1)) {
+        const h = hash(c.id + d), boost = (h % 7 < 3) ? 1 : 0, v = c.shop === 'gosselies' ? 0 : Math.round((boost ? base * (2 + h % 3) : (h % 4 ? 0 : base)) * 100) / 100;
+        if (v) { dep[d] = v; tot += v; }
+        const g = Math.max(0, Math.round(v * (0.35 + (h % 5) / 10) + h % 3)), p = (h % 6 === 0 ? 2 + h % 3 : h % 3 === 0 ? 1 : 0) + (c.shop === 'gosselies' ? 1 : 0);
+        serieFb[d] = { gagnes: g, perdus: p }; gF += g; pF += p;
+        const gi = Math.max(0, Math.round(v * (0.5 + (h % 4) / 10) + (h % 2)));
+        if (daysBetween(d, au) < 30) { serieIg[d] = { gagnes: gi, perdus: 0 }; gI += gi; }
+      }
+      const net = gF - pF + gI;
+      lignes.push({ page: c.id, name: c.name, username: '', picture: c.picture, link: null, shop: c.shop, shopName: c.shop === 'marque' ? 'Marque' : (byId(SHOPS, c.shop) || {}).name,
+        facebook: { followers: 1800 + hash(c.id) % 4200 + (c.shop === 'marque' ? 9000 : 0), gagnes: gF, perdus: pF, net: gF - pF, serie: serieFb, motif: null },
+        instagram: { id: '178' + k, username: c.ig, picture: null, followers: 900 + hash(c.ig) % 3100 + (c.shop === 'marque' ? 6000 : 0), gagnes: gI, serie: serieIg, motif: jours > 30 ? 'Instagram ne donne que les 30 derniers jours' : null },
+        depense: Math.round(tot * 100) / 100, depenseJours: dep, abonnesNet: net, coutParAbonne: net > 0 && tot > 0 ? Math.round(tot / net * 100) / 100 : null });
+    });
+    lignes.sort((a, b) => b.depense - a.depense);
+    return Promise.resolve({ du, au, jours, devise: 'EUR', lignes, nonAttribue: 0, erreurs: [], le: TODAY + ' 10:00', demo: true });
+  }
   function retryPost(id) {
     return api('POST', '/posts/' + encodeURIComponent(id) + '/relancer').then(r => {
       cache.posts = cache.posts.map(p => p.id === id ? r.post : p); base.posts[id] = JSON.stringify(r.post);
@@ -489,7 +550,7 @@
   else window.addEventListener('focus', () => { refresh(); });
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
-    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
+    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, suivi, avatar, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
     TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
     byId, fmt, eur, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param };
 })();

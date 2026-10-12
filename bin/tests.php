@@ -80,7 +80,23 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
         if (isset($restreinte[$mm[1]])) { return [400, ['error' => ['code' => 368, 'message' => 'Page restreinte']]]; }
         return [200, $mm[2] === 'photos' ? ['id' => $id(), 'post_id' => $mm[1] . '_' . $id()] : ['id' => $mm[1] . '_' . $id()]];
     }
-    if ($m === 'GET' && $path === '17841') { return [200, ['id' => '17841', 'username' => 'latelierby.halle']]; }
+    if ($m === 'GET' && $path === '17841') { return [200, ['id' => '17841', 'username' => 'latelierby.halle', 'name' => 'Atelier Halle', 'profile_picture_url' => 'https://cdn.ig/halle.jpg', 'followers_count' => 2300]]; }
+    // Calendriers déjà tenus chez Meta : profil de la Page, publications, posts programmés.
+    if ($m === 'GET' && in_array($path, ['111', '222'], true) && str_contains((string) ($p['fields'] ?? ''), 'picture')) {
+        return [200, ['id' => $path, 'name' => $path === '111' ? "L'Atelier By Halle" : "L'Atelier By Wavre", 'username' => 'atelier' . $path, 'link' => 'https://facebook.com/' . $path,
+            'followers_count' => $path === '111' ? 1500 : 800, 'picture' => ['data' => ['url' => 'https://cdn.fb/p' . $path . '.jpg']]]];
+    }
+    // Suivi des abonnés : insights de la Page 111 et de l'Instagram 17841 ; la Page 222 refuse (permission).
+    if ($m === 'GET' && $path === '111/insights') {
+        $e = static fn (int $j) => date('Y-m-d', strtotime('-' . $j . ' days')) . 'T07:00:00+0000';
+        return [200, ['data' => [['name' => 'page_daily_follows_unique', 'period' => 'day', 'values' => [['value' => 5, 'end_time' => $e(1)], ['value' => 3, 'end_time' => $e(0)]]],
+            ['name' => 'page_daily_unfollows_unique', 'period' => 'day', 'values' => [['value' => 1, 'end_time' => $e(1)], ['value' => 0, 'end_time' => $e(0)]]]]]];
+    }
+    if ($m === 'GET' && $path === '222/insights') { return [400, ['error' => ['code' => 10, 'message' => 'Requires read_insights permission']]]; }
+    if ($m === 'GET' && $path === '17841/insights') { return [200, ['data' => [['name' => 'follower_count', 'period' => 'day', 'values' => [['value' => 4, 'end_time' => date('Y-m-d') . 'T07:00:00+0000']]]]]]; }
+    if ($m === 'GET' && $path === '111/published_posts') { return [200, ['data' => $GLOBALS['META_PUBLIES'] ?? []]]; }
+    if ($m === 'GET' && $path === '111/scheduled_posts') { return [200, ['data' => $GLOBALS['META_PROGRAMMES'] ?? []]]; }
+    if ($m === 'GET' && preg_match('#^222/(published|scheduled)_posts$#', $path)) { return [400, ['error' => ['code' => 10, 'message' => 'Permission manquante : pages_read_engagement']]]; }
     if ($m === 'POST' && $path === '17841/media') { return [200, ['id' => 'c' . $id()]]; }
     if ($path === '17841/media_publish') {
         if ($igPanne > 0 && ++$igPub === $igPanne) { return [400, ['error' => ['code' => 9007, 'message' => 'Media ID is not available']]]; }
@@ -108,6 +124,7 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
     if ($m === 'GET' && preg_match('#^act_\d+$#', $path)) { return [200, ['name' => 'Compte ' . $path, 'account_status' => 1]]; }
     if ($m === 'GET' && $path === 'search') { return [200, ['data' => ($p['type'] ?? '') === 'adlocale' ? [['key' => 9, 'name' => 'French (All)'], ['key' => 14, 'name' => 'Dutch']] : [['id' => '6003107902', 'name' => $p['q']]]]]; }
     // Campagnes déjà présentes chez Meta (récupération) : seul act_2001 en a.
+    if ($m === 'GET' && $path === 'act_2001/insights' && ($p['level'] ?? '') === 'ad') { return [200, ['data' => $GLOBALS['META_DEPENSES'] ?? []]]; }
     if ($m === 'GET' && preg_match('#^act_\d+/(campaigns|adsets|ads|insights)$#', $path, $mm)) {
         return [200, ['data' => $path === 'act_2001/' . $mm[1] ? ($GLOBALS['META_EXISTANT'][$mm[1]] ?? []) : []]];
     }
@@ -749,6 +766,59 @@ $r = socCampagnesMetaImporter(false);
 $m1 = socItem('ads', 'meta-7001'); $m2 = socItem('ads', 'meta-7002');
 check('rafraîchissement : mise à jour sans doublon, rattachement conservé', $r['majs'] === 1 && $r['importees'] === 0 && $m1['campaign'] === 'c1' && $m1['status'] === 'Active');
 check('campagnes supprimées chez Meta : marquées arrêtées', $r['disparues'] === 2 && $m2['status'] === 'Arrêtée' && $m2['gone'] === true);
+
+echo "Calendriers Meta : lecture en direct (rien en base)\n";
+$duMod = (string) (Db::row("SELECT meta_id FROM social_publication WHERE canal = 'fb' AND meta_id LIKE '111\_%' ORDER BY id LIMIT 1")['meta_id'] ?? '111_0');
+$demain = strtotime('+1 day 10:30');
+$GLOBALS['META_PUBLIES'] = [
+    ['id' => '111_9001', 'message' => "Nouvelle tarte aux pommes !\nDisponible dès ce matin.", 'created_time' => date('c', strtotime('-2 days 09:15')), 'permalink_url' => 'https://facebook.com/111/posts/9001',
+     'full_picture' => 'https://cdn.fb/9001.jpg', 'status_type' => 'added_photos', 'attachments' => ['data' => [['media_type' => 'photo']]],
+     'reactions' => ['summary' => ['total_count' => 12]], 'comments' => ['summary' => ['total_count' => 3]], 'shares' => ['count' => 2]],
+    ['id' => $duMod, 'message' => 'Publié par le module', 'created_time' => date('c', strtotime('-1 day'))],
+];
+$GLOBALS['META_PROGRAMMES'] = [['id' => '111_9002', 'message' => 'Brunch de dimanche', 'scheduled_publish_time' => $demain, 'full_picture' => 'https://cdn.fb/9002.jpg'],
+    ['id' => '111_9003', 'message' => 'Hors période', 'scheduled_publish_time' => strtotime('+40 days')]];
+Meta::reset();
+$_GET = ['du' => date('Y-m-d', strtotime('-7 days')), 'au' => date('Y-m-d', strtotime('+7 days'))];
+[$code, $b] = socRoute('GET', '/meta/calendriers');
+$_GET = [];
+$cp = array_column($b['posts'], null, 'id');
+$f1 = $cp['mfb-111_9001'] ?? null; $f2 = $cp['mfb-111_9002'] ?? null; $i1 = $cp['mig-m2'] ?? null;
+check('calendriers : publications Facebook, post programmé et Instagram lus en direct', $code === 200 && $f1 && $f2 && $i1 && isset($cp['mig-m1']), json_encode(array_keys($cp)));
+check('publication Facebook : date, heure, titre, visuel, boutique par la Page, statistiques', $f1['status'] === 'Publié' && $f1['date'] === date('Y-m-d', strtotime('-2 days')) && $f1['time'] === '09:15'
+    && $f1['title'] === 'Nouvelle tarte aux pommes !' && $f1['img'] === 'https://cdn.fb/9001.jpg' && $f1['shops'] === ['4'] && $f1['stats']['reactions'] === 12 && $f1['account'] === 'fb:111' && $f1['type'] === 'Photo', json_encode($f1));
+check('post programmé dans Meta Business Suite : « Programmé » à sa date ; hors période écarté', $f2['status'] === 'Programmé' && $f2['date'] === date('Y-m-d', $demain) && $f2['time'] === '10:30' && !isset($cp['mfb-111_9003']));
+check('Instagram : média, compte @, boutique', $i1['channel'] === 'Instagram' && $i1['account'] === 'ig:17841' && $i1['accountName'] === '@latelierby.halle' && $i1['shops'] === ['4'] && $i1['type'] === 'Photo');
+check('publication faite par le module : pas montrée deux fois', !isset($cp['mfb-' . $duMod]));
+$cpt = array_column($b['comptes'], null, 'key');
+check('comptes et photos de profil (filtres du calendrier)', ($cpt['fb:111']['picture'] ?? '') === 'https://cdn.fb/p111.jpg' && ($cpt['ig:17841']['picture'] ?? '') === 'https://cdn.ig/halle.jpg'
+    && $cpt['fb:111']['publies'] === 1 && $cpt['fb:111']['programmes'] === 1, json_encode($cpt));
+check('Page refusée (permission) : signalée, les autres comptes passent ; aucun token rendu', str_contains((string) ($cpt['fb:222']['erreur'] ?? ''), 'pages_read_engagement') && !str_contains(json_encode($b), 'PT111'));
+check('rien n’est copié en base', (int) Db::row("SELECT COUNT(*) n FROM social_content WHERE id LIKE 'mfb-%' OR id LIKE 'mig-%'")['n'] === 0);
+$r = socStateSave(['changes' => ['posts' => ['upsert' => [$f2]]]]);
+check('publication Meta renvoyée par l’écran : refusée, ni enregistrée ni mise en file', ($r['errors'][0]['error'] ?? '') === 'publication Meta : lecture seule' && socItem('posts', 'mfb-111_9002') === null
+    && (int) Db::row("SELECT COUNT(*) n FROM social_publication WHERE content_id LIKE 'mfb-%'")['n'] === 0);
+$_GET = ['du' => '2026-01-01', 'au' => '2026-12-31'];
+$c400 = (static function () { try { return socRoute('GET', '/meta/calendriers')[0]; } catch (HttpError $e) { return $e->status; } })();
+$_GET = [];
+check('période de plus de 100 jours refusée', $c400 === 400);
+
+echo "Suivi des boutiques : abonnés face au budget (en direct)\n";
+$GLOBALS['META_DEPENSES'] = [['ad_id' => '7201', 'date_start' => date('Y-m-d', strtotime('-2 days')), 'spend' => '10.00'],
+    ['ad_id' => '7203', 'date_start' => date('Y-m-d', strtotime('-1 day')), 'spend' => '5.50'], ['ad_id' => 'X999', 'date_start' => date('Y-m-d', strtotime('-1 day')), 'spend' => '3']];
+$_GET = ['jours' => '7'];
+[$code, $b] = socRoute('GET', '/suivi/abonnes');
+$_GET = [];
+$L = array_column($b['lignes'], null, 'page');
+$h = $L['111'] ?? null; $w = $L['222'] ?? null;
+check('suivi : une ligne par Page, période de 7 jours jusqu’à hier', $code === 200 && $h && $w && $b['jours'] === 7 && $b['au'] === date('Y-m-d', strtotime('-1 day')), json_encode($b));
+check('Page : abonnés actuels, gagnés, perdus, net (insights jour par jour)', $h['facebook']['followers'] === 1500 && $h['facebook']['gagnes'] === 8 && $h['facebook']['perdus'] === 1 && $h['facebook']['net'] === 7
+    && count($h['facebook']['serie']) === 2, json_encode($h['facebook']));
+check('Instagram de la Page : abonnés actuels et nouveaux abonnés', $h['instagram']['followers'] === 2300 && $h['instagram']['gagnes'] === 4);
+check('budget rapporté à la Page de chaque pub, jour par jour ; coût par abonné', $h['depense'] == 10 && $w['depense'] == 5.5 && $b['nonAttribue'] == 3 && $h['abonnesNet'] === 11 && $h['coutParAbonne'] == 0.91
+    && ($h['depenseJours'][date('Y-m-d', strtotime('-2 days'))] ?? null) == 10, json_encode([$h['depense'], $w['depense'], $b['nonAttribue'], $h['abonnesNet'], $h['coutParAbonne']]));
+check('permission d’insights manquante : motif clair, le total et le budget restent', $w['facebook']['followers'] === 800 && str_contains((string) $w['facebook']['motif'], 'read_insights') && $w['abonnesNet'] === null);
+check('suivi : rien n’est écrit en base', (int) Db::row("SELECT COUNT(*) n FROM social_parametre WHERE cle LIKE '%suivi%'")['n'] === 0);
 
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');

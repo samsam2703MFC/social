@@ -19,12 +19,12 @@ declare(strict_types=1);
  * Le résultat est gardé en base (`meta_portefeuille`, social_parametre).
  */
 
-/** Toutes les pages d'un appel paginé de Graph. */
-function socGraphTout(string $path, array $params, int $max = 500): array
+/** Toutes les pages d'un appel paginé de Graph (`$token` : token de Page, sinon celui du System User). */
+function socGraphTout(string $path, array $params, int $max = 500, ?string $token = null): array
 {
     $out = [];
     for ($p = 0; $p < 20 && count($out) < $max; $p++) {
-        $r = Meta::call('GET', $path, $params);
+        $r = Meta::call('GET', $path, $params, $token);
         foreach ((array) ($r['data'] ?? []) as $x) { $out[] = $x; }
         $next = $r['paging']['next'] ?? null;
         if (!is_string($next) || $next === '') { break; }

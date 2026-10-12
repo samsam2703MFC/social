@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
+    section{padding-top:0;padding-bottom:0;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button,textarea{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="suivi" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Abonnés Facebook + Instagram face au budget publicitaire · lu en direct chez Meta</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">SUIVI DES BOUTIQUES</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:#666666;">{{ periodLabel }}</span>
+        <div style="display:inline-flex;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:3px;gap:2px;">
+          <sc-for list="{{ periods }}" as="pp" hint-placeholder-count="3"><button onClick="{{ pp.pick }}" style="border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer;background:{{ pp.bg }};color:{{ pp.fg }};">{{ pp.label }}</button></sc-for>
+        </div>
+        <button onClick="{{ reload }}" style="height:34px;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">{{ reloadLabel }}</button>
+      </div>
+    </header>
+
+    <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:40px 20px;text-align:center;font-size:13px;color:#666666;">Lecture des Pages, des comptes Instagram et des comptes publicitaires chez Meta…</div>
+    </sc-if>
+    <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#F6DCDF;border-radius:10px;padding:12px 14px;font-size:13px;color:#8D1D2C;line-height:1.45;">{{ errText }}</div>
+    </sc-if>
+
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <!-- Réseau -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;">
+              <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ k.label }}</span>
+              <span style="font-size:26px;font-weight:300;line-height:1.1;color:{{ k.color }};">{{ k.value }}</span>
+              <span style="font-size:11px;color:#666666;">{{ k.sub }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- Une carte par Page -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px;">
+          <sc-for list="{{ cards }}" as="c" hint-placeholder-count="0">
+            <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-width:0;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <img src="{{ c.pic }}" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover;background:#F4EFE8;flex:0 0 auto;">
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto;">
+                  <span style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.name }}</span>
+                  <span style="font-size:11px;color:#666666;">{{ c.sub }}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;">
+                  <span style="font-size:22px;font-weight:400;line-height:1;color:{{ c.netColor }};">{{ c.netLabel }}</span>
+                  <span style="font-size:10px;color:#666666;">abonnés nets</span>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;">
+                <sc-for list="{{ c.facts }}" as="f" hint-placeholder-count="4">
+                  <div style="background:#F7F3EE;border-radius:8px;padding:7px 9px;display:flex;flex-direction:column;gap:1px;min-width:0;">
+                    <span style="font-size:10px;color:#666666;">{{ f.k }}</span>
+                    <span style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ f.v }}</span>
+                    <span style="font-size:10px;color:{{ f.c }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ f.s }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <!-- Budget au-dessus, abonnés en dessous, jour par jour -->
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                <div style="display:flex;align-items:flex-end;gap:2px;height:42px;">
+                  <sc-for list="{{ c.days }}" as="d" hint-placeholder-count="0"><span title="{{ d.tip }}" style="flex:1 1 0;min-width:1px;height:{{ d.spendH }};background:#8D1D2C;border-radius:2px 2px 0 0;opacity:0.85;"></span></sc-for>
+                </div>
+                <div style="height:1px;background:rgba(34,34,34,0.25);"></div>
+                <div style="display:flex;align-items:flex-start;gap:2px;height:22px;">
+                  <sc-for list="{{ c.days }}" as="d" hint-placeholder-count="0"><span title="{{ d.tip }}" style="flex:1 1 0;min-width:1px;display:flex;flex-direction:column;height:22px;"><span style="height:{{ d.upH }};background:#1F8A60;border-radius:0 0 2px 2px;"></span><span style="height:{{ d.downH }};background:#C9474F;border-radius:0 0 2px 2px;margin-top:1px;"></span></span></sc-for>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:10px;color:#8A847C;"><span>{{ c.from }}</span><span>{{ c.legend }}</span><span>{{ c.to }}</span></div>
+              </div>
+              <span style="font-size:11px;color:#444444;line-height:1.45;">{{ c.insight }}</span>
+              <sc-if value="{{ c.hasMotif }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.45;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:6px 8px;">{{ c.motif }}</span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- Classement -->
+        <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:13px;font-weight:500;">Classement · coût par abonné gagné</span>
+            <span style="font-size:11px;color:#666666;">Barre = budget de la période · le moins cher en haut</span>
+          </div>
+          <sc-for list="{{ ranking }}" as="r" hint-placeholder-count="0">
+            <div style="display:grid;grid-template-columns:24px minmax(140px,1.4fr) minmax(120px,2fr) 90px 90px 100px;gap:10px;align-items:center;font-size:12px;">
+              <img src="{{ r.pic }}" alt="" style="width:24px;height:24px;border-radius:50%;object-fit:cover;background:#F4EFE8;">
+              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;">{{ r.name }}</span>
+              <span style="height:8px;background:#F4EFE8;border-radius:999px;overflow:hidden;"><span style="display:block;height:100%;width:{{ r.w }};background:#8D1D2C;"></span></span>
+              <span style="text-align:right;">{{ r.spend }}</span>
+              <span style="text-align:right;color:{{ r.netColor }};">{{ r.net }}</span>
+              <span style="text-align:right;font-weight:600;color:{{ r.cpaColor }};">{{ r.cpa }}</span>
+            </div>
+          </sc-for>
+          <span style="font-size:11px;color:#666666;line-height:1.45;">{{ footnote }}</span>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { jours: 28, data: null, loading: true, err: '' };
+  componentDidMount() { const SA = window.SA; const j = SA && +SA.param('jours'); this.load([7, 28, 90].includes(j) ? j : 28); }
+  load(jours) {
+    const SA = window.SA; if (!SA) return;
+    const k = this._k = (this._k || 0) + 1; this.setState({ jours, loading: true, err: '' });
+    SA.suivi(jours).then(r => { if (k === this._k) this.setState({ data: r, loading: false }); })
+      .catch(e => { if (k === this._k) this.setState({ loading: false, err: e.message || 'erreur' }); });
+  }
+  renderVals() {
+    const SA = window.SA, s = this.state, r = s.data;
+    const base = { periods: [7, 28, 90].map(j => ({ label: j + ' j', bg: s.jours === j ? '#8D1D2C' : 'transparent', fg: s.jours === j ? '#FFFFFF' : '#444444', pick: () => this.load(j) })),
+      reload: () => this.load(s.jours), reloadLabel: s.loading ? 'Lecture…' : 'Actualiser', loading: s.loading, hasErr: !!s.err, errText: 'Lecture chez Meta impossible : ' + s.err };
+    if (!SA || !r) return Object.assign(base, { ready: false, kpis: [], cards: [], ranking: [], periodLabel: '', footnote: '' });
+    const money = (v, d = 0) => r.devise === 'EUR' ? SA.eur(v, d) : SA.fmt(v, d) + ' ' + r.devise;
+    const signed = (n) => n == null ? '—' : (n > 0 ? '▲ +' : n < 0 ? '▼ ' : '') + SA.fmt(n);
+    const col = (n) => n == null ? '#8A847C' : n > 0 ? '#0F6B4A' : n < 0 ? '#8D1D2C' : '#444444';
+    const days = []; for (let d = r.du; d <= r.au; d = SA.addDays(d, 1)) days.push(d);
+    const L = r.lignes || [];
+    const sum = (f) => L.reduce((a, x) => a + (f(x) || 0), 0);
+    const followers = sum(x => (x.facebook && x.facebook.followers) || 0) + sum(x => (x.instagram && x.instagram.followers) || 0);
+    const connus = L.filter(x => x.abonnesNet != null), net = connus.reduce((a, x) => a + x.abonnesNet, 0), spend = sum(x => x.depense) + (r.nonAttribue || 0);
+    const kpis = [
+      { label: 'Abonnés aujourd’hui', value: SA.fmt(followers), sub: 'Facebook + Instagram, ' + L.length + ' Page(s)', color: '#222222' },
+      { label: 'Gagnés nets · ' + r.jours + ' j', value: connus.length ? signed(net) : '—', sub: connus.length ? connus.length + ' Page(s) mesurée(s)' : 'historique indisponible (permissions)', color: col(connus.length ? net : null) },
+      { label: 'Budget dépensé · ' + r.jours + ' j', value: money(spend), sub: r.nonAttribue ? money(r.nonAttribue) + ' non rattachés à une Page' : 'toutes les pubs des comptes', color: '#222222' },
+      { label: 'Coût par abonné gagné', value: net > 0 && spend > 0 ? money(spend / net, 2) : '—', sub: 'budget ÷ abonnés nets', color: '#222222' },
+    ];
+    const maxSpend = Math.max(1, ...L.map(x => Math.max(0, ...Object.values(x.depenseJours || {}))));
+    const flow = (x, d) => { const f = ((x.facebook || {}).serie || {})[d] || null, i = ((x.instagram || {}).serie || {})[d] || null;
+      return f || i ? { g: ((f && f.gagnes) || 0) + ((i && i.gagnes) || 0), p: (f && f.perdus) || 0 } : null; };
+    const maxFlow = Math.max(1, ...L.flatMap(x => days.map(d => { const v = flow(x, d); return v ? Math.max(v.g, v.p) : 0; })));
+    const cards = L.map(x => {
+      const fb = x.facebook || {}, ig = x.instagram || null, dep = x.depenseJours || {};
+      const ds = days.map(d => { const v = dep[d] || 0, fl = flow(x, d);
+        return { spendH: Math.round(v / maxSpend * 42) + 'px', upH: fl ? Math.round(fl.g / maxFlow * 11) + 'px' : '0px', downH: fl ? Math.round(fl.p / maxFlow * 10) + 'px' : '0px',
+          tip: SA.dLabel(d) + ' · budget ' + money(v, 2) + (fl ? ' · +' + fl.g + ' / −' + fl.p + ' abonnés' : ' · abonnés non mesurés'), v, fl }; });
+      // Jours avec budget face aux jours sans : ce que la pub apporte en abonnés.
+      const avec = ds.filter(d => d.v > 0 && d.fl), sans = ds.filter(d => d.v === 0 && d.fl), moy = (a) => a.length ? a.reduce((t, d) => t + d.fl.g - d.fl.p, 0) / a.length : null;
+      const mA = moy(avec), mS = moy(sans);
+      const insight = mA == null && mS == null ? 'Abonnés jour par jour non disponibles : seul le total actuel et le budget s’affichent.'
+        : 'Jours avec pub : ' + (mA == null ? '—' : (mA >= 0 ? '+' : '') + SA.fmt(mA, 1) + ' abonnés/jour') + ' · sans pub : ' + (mS == null ? '—' : (mS >= 0 ? '+' : '') + SA.fmt(mS, 1) + ' abonnés/jour')
+          + (mA != null && mS != null ? (mA > mS ? ' — la pub fait gagner ' + SA.fmt(mA - mS, 1) + ' abonnés de plus par jour.' : ' — pas d’effet visible de la pub sur les abonnés.') : '');
+      const motifs = [fb.motif, ig && ig.motif].filter(Boolean);
+      return { pic: x.picture || SA.avatar(x.name, 'facebook'), name: x.name, sub: [x.shopName || 'Page non rattachée à une boutique', ig && ig.username ? '@' + ig.username : ''].filter(Boolean).join(' · '),
+        netLabel: signed(x.abonnesNet), netColor: col(x.abonnesNet),
+        facts: [
+          { k: 'Facebook', v: fb.followers == null ? '—' : SA.fmt(fb.followers), s: fb.net == null ? 'non mesuré' : '+' + SA.fmt(fb.gagnes) + ' / −' + SA.fmt(fb.perdus), c: col(fb.net) },
+          { k: 'Instagram', v: !ig || ig.followers == null ? '—' : SA.fmt(ig.followers), s: !ig ? 'aucun compte' : ig.gagnes == null ? 'non mesuré' : '+' + SA.fmt(ig.gagnes) + ' nouveaux', c: col(ig ? ig.gagnes : null) },
+          { k: 'Budget', v: money(x.depense), s: x.depense ? Object.keys(dep).length + ' jour(s) de diffusion' : 'aucune pub', c: '#666666' },
+          { k: 'Coût / abonné', v: x.coutParAbonne == null ? '—' : money(x.coutParAbonne, 2), s: x.coutParAbonne == null ? (x.depense ? 'pas de gain net' : '—') : 'budget ÷ abonnés nets', c: '#666666' },
+        ],
+        days: ds, from: SA.dShort(r.du), to: SA.dShort(r.au), legend: 'bordeaux = budget · vert = abonnés gagnés · rouge = perdus', insight,
+        hasMotif: motifs.length > 0, motif: motifs.join(' · ') };
+    });
+    const maxDep = Math.max(1, ...L.map(x => x.depense));
+    const ranking = L.slice().sort((a, b) => (a.coutParAbonne == null) - (b.coutParAbonne == null) || (a.coutParAbonne || 0) - (b.coutParAbonne || 0) || b.depense - a.depense)
+      .map(x => ({ pic: x.picture || SA.avatar(x.name, 'facebook'), name: x.name, w: Math.round(x.depense / maxDep * 100) + '%', spend: money(x.depense), net: signed(x.abonnesNet), netColor: col(x.abonnesNet),
+        cpa: x.coutParAbonne == null ? '—' : money(x.coutParAbonne, 2) + ' / ab.', cpaColor: x.coutParAbonne == null ? '#8A847C' : '#222222' }));
+    return Object.assign(base, { ready: true, kpis, cards, ranking,
+      periodLabel: (r.demo ? 'Démonstration · ' : 'Lu chez Meta à ' + String(r.le || '').slice(11, 16) + ' · ') + 'du ' + SA.dShort(r.du) + ' au ' + SA.dShort(r.au),
+      footnote: 'Abonnés : insights des Pages (gagnés et perdus par jour) et d’Instagram (nouveaux abonnés, 30 derniers jours au plus). Budget : dépense des pubs, rapportée à la Page qui les porte. Rien n’est copié en base : tout est relu chez Meta à chaque ouverture.'
+        + ((r.erreurs || []).length ? ' Erreurs : ' + r.erreurs.join(' · ') : '') });
+  }
+}
+</script>
+</body>
+</html>

@@ -97,6 +97,25 @@
       <span style="margin-left:auto;font-size:12px;color:#666666;">{{ countLabel }}</span>
     </div>
 
+    <!-- Comptes Meta : une pastille par Page et par Instagram, photo de profil, filtre -->
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:10px;padding:8px 12px;">
+      <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;margin-right:2px;">Comptes</span>
+      <sc-for list="{{ accChips }}" as="a" hint-placeholder-count="4">
+        <button onClick="{{ a.toggle }}" title="{{ a.tip }}" style="display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:3px 10px 3px 3px;border:1px solid {{ a.border }};background:{{ a.bg }};color:{{ a.fg }};cursor:pointer;font-size:12px;font-weight:500;opacity:{{ a.op }};">
+          <span style="position:relative;width:26px;height:26px;flex:0 0 auto;">
+            <img src="{{ a.pic }}" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;background:#F4EFE8;display:block;">
+            <span style="position:absolute;right:-3px;bottom:-3px;width:13px;height:13px;border-radius:50%;background:{{ a.netBg }};color:#FFFFFF;font-size:8px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;border:1.5px solid #FFFFFF;">{{ a.net }}</span>
+          </span>
+          <span style="max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.name }}</span>
+          <span style="font-size:11px;font-weight:600;color:{{ a.countFg }};">{{ a.count }}</span>
+        </button>
+      </sc-for>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:11px;color:{{ mpNoteFg }};max-width:340px;line-height:1.35;text-align:right;" title="{{ mpErrTip }}">{{ mpNote }}</span>
+        <button onClick="{{ reloadMeta }}" title="Relit chez Meta les publications et la programmation de toutes les Pages et de tous les comptes Instagram pour la période affichée (rien n’est copié en base)." style="height:30px;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:12px;font-weight:500;cursor:pointer;color:#222222;">{{ mpLabel }}</button>
+      </span>
+    </div>
+
     <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
 
       <!-- ===== Zone calendrier ===== -->
@@ -221,6 +240,8 @@
                 <span style="color:#666666;">Canaux</span><span>{{ sel.channels }}</span>
                 <span style="color:#666666;">Langues</span><span>{{ sel.langs }}</span>
                 <span style="color:#666666;">Opération</span><span>{{ sel.campName }}</span>
+                <sc-if value="{{ sel.isMeta }}" hint-placeholder-val="{{ false }}"><span style="color:#666666;">Compte</span><span>{{ sel.accountLabel }}</span></sc-if>
+                <sc-if value="{{ sel.hasStats }}" hint-placeholder-val="{{ false }}"><span style="color:#666666;">Réactions</span><span>{{ sel.statsLabel }}</span></sc-if>
                 <sc-if value="{{ sel.hasAuthor }}" hint-placeholder-val="{{ false }}"><span style="color:#666666;">Proposé par</span><span>{{ sel.author }}</span></sc-if>
               </div>
               <sc-if value="{{ sel.hasText }}" hint-placeholder-val="{{ false }}"><p style="font-size:12px;line-height:1.5;color:#444444;margin:0;background:#F4EFE8;border-radius:6px;padding:8px 10px;">{{ sel.textPreview }}</p></sc-if>
@@ -252,9 +273,10 @@
                   <button onClick="{{ reject }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Renvoyer en brouillon</button>
                 </sc-if>
                 <sc-if value="{{ sel.isDark }}" hint-placeholder-val="{{ false }}"><a href="{{ sel.adsHref }}" style="border:none;background:#232220;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;color:#F2C9A0;text-decoration:none;">Créer la publicité →</a></sc-if>
-                <a href="{{ sel.editHref }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;color:#222222;text-decoration:none;">{{ sel.editLabel }}</a>
-                <button onClick="{{ openDup }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Dupliquer</button>
+                <a href="{{ sel.editHref }}" target="{{ sel.target }}" rel="noopener" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;color:#222222;text-decoration:none;">{{ sel.editLabel }}</a>
+                <sc-if value="{{ sel.canDup }}" hint-placeholder-val="{{ true }}"><button onClick="{{ openDup }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Dupliquer</button></sc-if>
               </div>
+              <sc-if value="{{ sel.isMeta }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;line-height:1.45;">Publiée hors du module (Meta Business Suite, application…) : lue en direct chez Meta, en lecture seule ici.</span></sc-if>
             </div>
           </div>
         </sc-if>
@@ -342,13 +364,32 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   state = { view: 'month', cursor: window.SA ? window.SA.TODAY : '2026-10-10', fShops: [], fType: '', fStatus: '', fCamp: '', selId: null, dragOver: null, loading: true,
-    dupOpen: false, dupDates: [], dupShops: [], dupDateInput: '', toast: '', retrying: false, tick: 0 };
+    dupOpen: false, dupDates: [], dupShops: [], dupDateInput: '', toast: '', retrying: false, tick: 0, fAcc: [], mp: null, mpLoading: false, mpErr: '' };
   componentDidMount() {
     const SA = window.SA;
     const st = SA && SA.param('status'); if (st) this.setState({ fStatus: st, view: 'list' });
     const v = SA && SA.param('view'); if (v) this.setState({ view: v });
     this._t = setTimeout(() => this.setState({ loading: false }), 450);
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
+    this.loadMeta();
+  }
+  componentDidUpdate() { this.loadMeta(); }
+  /** La période affichée (mois complet en semaines entières, ou semaine). */
+  period() {
+    const SA = window.SA, s = this.state;
+    if (s.view === 'week') { const off = (SA.d2(s.cursor).getDay() + 6) % 7, a = SA.addDays(s.cursor, -off); return [a, SA.addDays(a, 6)]; }
+    const cur = SA.d2(s.cursor), first = new Date(cur.getFullYear(), cur.getMonth(), 1), off = (first.getDay() + 6) % 7, a = SA.addDays(SA.iso(first), -off);
+    const last = new Date(cur.getFullYear(), cur.getMonth() + 1, 0);
+    return [a, SA.addDays(a, Math.ceil((off + last.getDate()) / 7) * 7 - 1)];
+  }
+  /** Les publications des Pages et Instagram de la période, lues en direct chez Meta (rien en base). */
+  loadMeta(force) {
+    const SA = window.SA; if (!SA || !SA.calendriers) return;
+    const [du, au] = this.period(), key = du + '_' + au;
+    if (!force && this._mk === key) return;
+    this._mk = key; this.setState({ mpLoading: true, mpErr: '' });
+    SA.calendriers(du, au).then(r => { if (this._mk === key) this.setState({ mp: r, mpLoading: false }); })
+      .catch(e => { if (this._mk === key) this.setState({ mpLoading: false, mpErr: e.message || 'erreur' }); });
   }
   componentWillUnmount() { clearTimeout(this._t); clearTimeout(this._tt); window.removeEventListener('sa-change', this._h); }
   toast(msg) { clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2600); }
@@ -364,10 +405,23 @@ class Component extends DCLogic {
   renderVals() {
     const SA = window.SA, s = this.state;
     if (!SA) return { loading: true, skeleton: [] };
-    const all = SA.state().posts, camps = SA.state().campaigns;
+    const metaPosts = (s.mp && s.mp.posts) || [], comptes = (s.mp && s.mp.comptes) || [];
+    const all = SA.state().posts.concat(metaPosts), camps = SA.state().campaigns;
+    // Les comptes d'un post : le sien pour une publication Meta ; ceux des boutiques visées pour un post du module.
+    const idsOf = (sid) => ((SA.state().meta || {}).ids || SA.META.ids || {})[sid] || {};
+    const accountsOf = (p) => {
+      if (p.origin === 'meta') return [p.account];
+      const out = [];
+      (p.shops === 'all' ? SA.SHOPS.map(x => x.id) : (p.shops || [])).forEach(sid => {
+        const ch = (p.ch && p.ch[sid]) || {}, ids = idsOf(sid);
+        if ((ch.fb ?? p.fb) && ids.page_id) out.push('fb:' + ids.page_id);
+        if ((ch.ig ?? p.ig) && ids.instagram_user_id) out.push('ig:' + ids.instagram_user_id);
+      });
+      return out;
+    };
     const statusOf = (p) => p.partial && p.partial.ko && p.partial.ko.length ? 'Partiel' : p.status;
     const shopsOf = (p) => (p.shops === 'all' ? SA.SHOPS.map(x => x.id) : p.shops);
-    const filtered = all.filter(p => {
+    const sansCompte = all.filter(p => {
       if (s.fShops.length && !shopsOf(p).some(id => s.fShops.includes(id))) return false;
       if (s.fType && p.type !== s.fType) return false;
       if (s.fStatus && statusOf(p) !== s.fStatus) return false;
@@ -375,21 +429,24 @@ class Component extends DCLogic {
       if (s.fCamp && s.fCamp !== 'none' && p.campaign !== s.fCamp) return false;
       return true;
     }).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    const filtered = s.fAcc.length ? sansCompte.filter(p => accountsOf(p).some(k => s.fAcc.includes(k))) : sansCompte;
     const sc = (p) => { const k = statusOf(p); const c = SA.STATUS[k]; return { k, bg: c.bg, fg: c.fg }; };
     const dotOf = { 'Brouillon': '#B8B2A8', 'À valider': '#E3B155', 'Programmé': '#D97B29', 'Publié': '#1F8A60', 'Échec': '#8D1D2C', 'Partiel': '#C96A6E', 'Dark post': '#232220' };
-    const shortShops = (p) => { const ids = shopsOf(p); return ids.length === SA.SHOPS.length ? 'Réseau' : ids.length > 1 ? ids.length + ' boutiques' : (SA.byId(SA.SHOPS, ids[0]) || {}).name; };
+    const shortShops = (p) => { if (p.origin === 'meta') return String(p.accountName || '').replace(/^l[’']atelier\s*by\s*[-–·]?\s*/i, '') || 'Marque'; const ids = shopsOf(p); return ids.length === SA.SHOPS.length ? 'Réseau' : ids.length > 1 ? ids.length + ' boutiques' : (SA.byId(SA.SHOPS, ids[0]) || {}).name; };
+    const shopsLabel = (p) => p.origin === 'meta' && !(p.shops || []).length ? (p.marque ? 'Marque' : '—') : SA.shopLabel(shopsOf(p));
     const card = (p) => {
       // Un dark post n'a pas de date de publication : il ne se déplace pas dans le calendrier.
-      const st = sc(p), locked = p.status === 'Publié' || !!p.dark;
+      const st = sc(p), meta = p.origin === 'meta', locked = p.status === 'Publié' || !!p.dark || meta;
+      const acc = meta ? comptes.find(c => c.key === p.account) : null;
       return {
-        id: p.id, img: p.img, time: p.time, title: p.title, type: p.type, shops: SA.shopLabel(shopsOf(p)), shopShort: shortShops(p),
+        id: p.id, img: p.img || (acc && acc.picture) || SA.avatar(p.accountName, meta && p.ig ? 'instagram' : 'facebook'), time: p.time, title: p.title, type: p.type, shops: shopsLabel(p), shopShort: shortShops(p),
         dot: dotOf[st.k], stBg: st.bg, stFg: st.fg, stLabel: st.k === 'Partiel' ? 'Partiel · ' + p.partial.ok.length + '/' + (p.partial.ok.length + p.partial.ko.length) : st.k,
         draggable: !locked, cursor: locked ? 'pointer' : 'grab', op: s.selId && s.selId !== p.id ? 0.85 : 1,
-        cardBg: s.selId === p.id ? '#F4EFE8' : (st.k === 'Échec' ? '#FBEDEE' : '#FFFFFF'), cardBorder: s.selId === p.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)',
-        tip: p.title + ' — ' + st.k,
+        cardBg: s.selId === p.id ? '#F4EFE8' : (st.k === 'Échec' ? '#FBEDEE' : meta ? (p.ig ? '#FBF1F7' : '#F1F5FC') : '#FFFFFF'), cardBorder: s.selId === p.id ? '#8D1D2C' : meta ? (p.ig ? '#EBC6DD' : '#C9D8F2') : 'rgba(34,34,34,0.10)',
+        tip: p.title + ' — ' + st.k + (meta ? ' · ' + p.channel + ' ' + (p.accountName || '') + ' (hors module)' : ''),
         dragStart: (e) => { this._drag = p.id; try { e.dataTransfer.setData('text/plain', p.id); e.dataTransfer.effectAllowed = 'move'; } catch (er) {} },
         open: () => this.setState({ selId: p.id }),
-        dateLabel: SA.dLabel(p.date), channels: p.dark ? 'Pub uniquement' : [p.fb ? 'FB' : '', p.ig ? 'IG' : ''].filter(Boolean).join(' · '),
+        dateLabel: SA.dLabel(p.date), channels: p.dark ? 'Pub uniquement' : [p.fb ? 'FB' : '', p.ig ? 'IG' : ''].filter(Boolean).join(' · ') + (meta ? ' · Meta' : ''),
         campName: p.campaign ? (SA.byId(camps, p.campaign) || {}).name : '—',
       };
     };
@@ -466,12 +523,19 @@ class Component extends DCLogic {
         partialTitle: st.k === 'Partiel' ? 'Publié sur ' + sp.partial.ok.length + ' Pages sur ' + (sp.partial.ok.length + sp.partial.ko.length) : '',
         ko: st.k === 'Partiel' ? sp.partial.ko.map(k => Object.assign({ shopName: SA.byId(SA.SHOPS, k.shop).name }, k)) : [],
         canRetry: (sp.status === 'Échec' || st.k === 'Partiel') && !s.retrying, canValidate: sp.status === 'À valider',
-        editHref: SA.href('post', 'id=' + sp.id), editLabel: sp.status === 'Publié' ? 'Voir' : 'Modifier',
+        editHref: SA.href('post', 'id=' + sp.id), editLabel: sp.status === 'Publié' ? 'Voir' : 'Modifier', target: '_self', canDup: true, isMeta: false, hasStats: false,
         isDark: !!sp.dark, adsHref: SA.href('ads', 'new=1&post=' + encodeURIComponent(sp.id)),
       });
+      if (sp.origin === 'meta') {
+        const stt = sp.stats || {}, parts = [stt.reactions != null ? SA.fmt(stt.reactions) + (sp.ig ? ' j’aime' : ' réactions') : '', stt.comments != null ? SA.fmt(stt.comments) + ' commentaires' : '', stt.shares != null ? SA.fmt(stt.shares) + ' partages' : ''].filter(Boolean);
+        Object.assign(sel, { isMeta: true, canDup: false, target: '_blank', editHref: sp.permalink || '#', editLabel: 'Voir sur ' + sp.channel + ' ↗', langs: '—', campName: '—',
+          when: SA.dLabel(sp.date) + ' · ' + sp.time + (sp.status === 'Programmé' ? ' (programmé dans Meta Business Suite)' : ''), channels: sp.channel,
+          accountLabel: (sp.accountName || '') + (sp.marque ? ' · marque' : ''), hasStats: parts.length > 0, statsLabel: parts.join(' · '),
+          textPreview: sp.text || '', hasText: !!sp.text, canRetry: false, canValidate: false, isFail: false, isPartial: false, hasAuthor: false });
+      }
     }
     const typeOptions = SA.POST_TYPES;
-    const hasFilters = !!(s.fShops.length || s.fType || s.fStatus || s.fCamp);
+    const hasFilters = !!(s.fShops.length || s.fType || s.fStatus || s.fCamp || s.fAcc.length);
     const isEmpty = !s.loading && inPeriod.length === 0;
     const alerts = SA.alerts();
     const vs = (k) => s.view === k ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
@@ -486,11 +550,26 @@ class Component extends DCLogic {
       viewMonth: () => this.setState({ view: 'month' }), viewWeek: () => this.setState({ view: 'week' }), viewList: () => this.setState({ view: 'list' }),
       prev: () => shift(-1), next: () => shift(1), goToday: () => this.setState({ cursor: SA.TODAY }),
       kpis,
+      accChips: (() => {
+        const [du, au] = this.period(), n = {};
+        sansCompte.filter(p => p.date >= du && p.date <= au).forEach(p => accountsOf(p).forEach(k => { n[k] = (n[k] || 0) + 1; }));
+        const any = s.fAcc.length > 0;
+        return comptes.map(c => { const on = s.fAcc.includes(c.key), ig = c.type === 'instagram';
+          return { name: ig && c.username ? '@' + c.username : c.name, pic: c.picture || SA.avatar(c.name, c.type), net: ig ? '◎' : 'f',
+            netBg: ig ? 'linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)' : '#1877F2', count: n[c.key] || 0,
+            bg: on ? '#232220' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#232220' : c.erreur ? '#E8A0A8' : 'rgba(34,34,34,0.14)', op: any && !on ? 0.5 : 1, countFg: on ? '#F2C9A0' : '#8A847C',
+            tip: (ig ? 'Instagram' : 'Page Facebook') + ' · ' + c.name + (c.shop === 'marque' ? ' (marque)' : c.shop ? ' (' + ((SA.byId(SA.SHOPS, c.shop) || {}).name || c.shop) + ')' : '') + (c.erreur ? ' — ' + c.erreur : '') + ' — cliquer pour filtrer',
+            toggle: () => this.setState({ fAcc: on ? s.fAcc.filter(x => x !== c.key) : s.fAcc.concat(c.key) }) }; });
+      })(),
+      mpLabel: s.mpLoading ? 'Lecture…' : 'Actualiser',
+      mpNote: s.mpLoading ? 'Lecture des Pages et comptes Instagram chez Meta…' : s.mpErr ? 'Lecture chez Meta impossible : ' + s.mpErr : s.mp ? ((s.mp.demo ? 'Démonstration · ' : 'Lu en direct chez Meta à ' + String(s.mp.le || '').slice(11, 16) + ' · ') + metaPosts.length + ' publication(s) hors module' + ((s.mp.erreurs || []).length ? ' · ' + s.mp.erreurs.length + ' erreur(s)' : '')) : '',
+      mpNoteFg: s.mpErr || (s.mp && (s.mp.erreurs || []).length) ? '#8D1D2C' : '#666666', mpErrTip: s.mp ? (s.mp.erreurs || []).join('\n') : s.mpErr,
+      reloadMeta: () => this.loadMeta(true),
       shopChips: SA.SHOPS.map(sh => { const on = s.fShops.includes(sh.id); return { name: sh.name, bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)', toggle: () => this.setState({ fShops: on ? s.fShops.filter(x => x !== sh.id) : s.fShops.concat(sh.id) }) }; }),
       typeOptions, campOptions: camps.map(c => ({ id: c.id, name: c.name })),
       fType: s.fType, fStatus: s.fStatus, fCamp: s.fCamp,
       setFType: (e) => this.setState({ fType: e.target.value }), setFStatus: (e) => this.setState({ fStatus: e.target.value }), setFCamp: (e) => this.setState({ fCamp: e.target.value }),
-      hasFilters, clearFilters: () => this.setState({ fShops: [], fType: '', fStatus: '', fCamp: '' }),
+      hasFilters, clearFilters: () => this.setState({ fShops: [], fType: '', fStatus: '', fCamp: '', fAcc: [] }),
       countLabel: inPeriod.length + (inPeriod.length > 1 ? ' posts' : ' post') + ' sur la période',
       loading: s.loading, skeleton: new Array(35).fill(0), isEmpty,
       showMonth: !s.loading && !isEmpty && s.view === 'month', showWeek: !s.loading && !isEmpty && s.view === 'week', showList: !s.loading && !isEmpty && s.view === 'list',

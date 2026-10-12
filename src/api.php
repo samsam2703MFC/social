@@ -24,6 +24,8 @@ require_once __DIR__ . '/instagram.php';
 require_once __DIR__ . '/darkposts.php';
 require_once __DIR__ . '/franchise.php';
 require_once __DIR__ . '/metacampagnes.php';
+require_once __DIR__ . '/calendriers.php';
+require_once __DIR__ . '/suivi.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -105,6 +107,10 @@ function socRoute(string $method, string $path): array
         $n = socAdsSync();
         return [200, ['import' => $r, 'synchro' => $n, 'ads' => socItems('ads')]];
     }
+    // Lu en direct chez Meta, rien en base : les publications des Pages et comptes Instagram (src/calendriers.php),
+    // les abonnés face au budget (src/suivi.php).
+    if ($method === 'GET' && $path === '/meta/calendriers') { return [200, socCalendriersLire((string) ($_GET['du'] ?? ''), (string) ($_GET['au'] ?? ''))]; }
+    if ($method === 'GET' && $path === '/suivi/abonnes') { return [200, socSuiviAbonnes((int) ($_GET['jours'] ?? 28))]; }
     if ($method === 'GET' && $path === '/meta/portefeuille') { return [200, ['portefeuille' => socSetting('meta_portefeuille'), 'businessId' => (string) (socSetting('meta_business_id') ?? '')]]; }
     if ($method === 'POST' && $path === '/meta/portefeuille/rafraichir') {
         if (isset(body()['businessId'])) { socSettingPut('meta_business_id', preg_replace('/\D/', '', (string) body()['businessId']), false); }
