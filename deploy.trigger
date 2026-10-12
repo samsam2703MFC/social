@@ -35,3 +35,4 @@ Relivraison : vues des publications au calendrier, maquette Contrôle — sonde 
 Relivraison : vues des publications, motif si Meta répond vide — sonde — 2026-10-12T10:57:15Z
 Relivraison : vues des publications, permission nommée — 2026-10-12T11:00:06Z
 Relivraison : vues des publications, réponse rapide — 2026-10-12T11:03:20Z
+Relivraison : fiche du calendrier, liens longs — 2026-10-12T11:05:47Z
