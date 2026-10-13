@@ -811,6 +811,8 @@ class Component extends DCLogic {
       libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false };
     if (!SA) return base;
     SA.SHOPS.forEach(s => { base.ch[s.id] = { fb: s.fb === 'connected', ig: s.igs === 'connected' }; });
+    // Magasins test : hors du réseau, jamais cochés d'office ; jamais sur l'Instagram du réseau.
+    (SA.TEST_SHOPS || []).forEach(s => { base.ch[s.id] = { fb: s.fb === 'connected', ig: false }; });
     const id = SA.param('id'), p = id && SA.state().posts.find(x => x.id === id);
     if (p) {
       const shops = p.shops === 'all' ? SA.SHOPS.map(s => s.id) : p.shops.slice();
@@ -1035,7 +1037,7 @@ class Component extends DCLogic {
       shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, spread: s.spread, product: s.product };
     if (s.dark) { post.dark = true; post.fb = false; post.ig = false; if (!s.id) { post.date = SA.TODAY; post.time = nowT; } }
     if (status === 'Publié') {
-      const ko = t.filter(id => s.ch[id].ig && SA.byId(SA.state().shops, id).igs !== 'connected').map(id => ({ shop: id, channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }));
+      const ko = t.filter(id => s.ch[id] && s.ch[id].ig && (SA.byId(SA.state().shops, id) || SA.byId(SA.SHOPS, id) || {}).igs !== 'connected').map(id => ({ shop: id, channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }));
       if (ko.length) post.partial = { ok: t.filter(id => !ko.some(k => k.shop === id)), ko };
     }
     SA.save({ posts: SA.state().posts.filter(p => p.id !== post.id).concat(post) });
@@ -1068,16 +1070,21 @@ class Component extends DCLogic {
     // Instagram unique : un seul compte (la marque) pour tout le réseau.
     const igUnique = SA.igUnique(), igHandle = ((st.brand || {}).ig) || (SA.live ? 'le compte de la marque' : '@latelierby.be');
     // Une boutique en plus ou en moins ; toutes cochées = « Tout le réseau ».
+    // Magasins test (ex. Gembloux) : à part, hors de « Tout le réseau » et du compte « n / N boutiques ».
+    const tests = SA.TEST_SHOPS || [], estTest = (id) => tests.some(x => x.id === id), tRes = t.filter(id => !estTest(id)), tTest = t.filter(estTest);
     const toggleShop = (id) => { if (locked) return; const next = t.includes(id) ? t.filter(x => x !== id) : t.concat(id);
-      this.setState({ scope: next.length === SA.SHOPS.length ? 'all' : 'shop', group: null, sel: next }); };
-    const shopRows = SA.SHOPS.map(sh => {
-      const live = SA.byId(shopsState, sh.id), on = t.includes(sh.id), c = s.ch[sh.id] || {}, fbOk = live.fb === 'connected', igOk = live.igs === 'connected';
-      return { name: sh.name, on, bg: on ? '#FFFFFF' : '#FCFAF7', lockShop: locked,
+      this.setState({ scope: next.filter(x => !estTest(x)).length === SA.SHOPS.length ? 'all' : 'shop', group: null, sel: next }); };
+    const shopRows = SA.SHOPS.concat(tests).map(sh => {
+      const live = SA.byId(shopsState, sh.id) || sh, on = t.includes(sh.id), c = s.ch[sh.id] || {}, fbOk = live.fb === 'connected', test = !!sh.test;
+      const igOk = live.igs === 'connected' && !(test && igUnique);
+      return { name: sh.name + (test ? ' · magasin test' : ''), on, bg: test ? (on ? '#FFF8EC' : '#FBF6EE') : on ? '#FFFFFF' : '#FCFAF7', lockShop: locked,
         toggle: () => toggleShop(sh.id),
-        fb: on && !!c.fb, ig: on && !!c.ig, fbDis: locked || !on || !fbOk, igDis: locked || !on || !igOk, igColor: igOk ? '#444444' : '#B8B2A8',
+        fb: on && !!c.fb, ig: on && !!c.ig && igOk, fbDis: locked || !on || !fbOk, igDis: locked || !on || !igOk, igColor: igOk ? '#444444' : '#B8B2A8',
         toggleFb: () => this.setState({ ch: Object.assign({}, s.ch, { [sh.id]: Object.assign({}, c, { fb: !c.fb }) }) }),
         toggleIg: () => this.setState({ ch: Object.assign({}, s.ch, { [sh.id]: Object.assign({}, c, { ig: !c.ig }) }) }),
-        note: !fbOk ? 'Page non connectée' : !igOk ? 'Instagram : ' + SA.CONN[live.igs].label.toLowerCase() : 'Connecté', noteFg: fbOk && igOk ? '#0F6B4A' : '#8A4B00' };
+        note: test ? (fbOk ? 'Magasin test · Page connectée' + (igUnique ? ' · pas l’Instagram du réseau' : '') : 'Magasin test · Page non connectée')
+          : !fbOk ? 'Page non connectée' : !igOk ? 'Instagram : ' + SA.CONN[live.igs].label.toLowerCase() : 'Connecté',
+        noteFg: test ? '#8A4B00' : fbOk && igOk ? '#0F6B4A' : '#8A4B00' };
     });
     // photos
     const photos = s.photos.map((p, i) => ({ src: p.src, n: i + 1, ring: i === 0 ? '#8D1D2C' : 'transparent',
@@ -1099,7 +1106,7 @@ class Component extends DCLogic {
       when: s.dark ? 'Sponsorisé' : s.when === 'now' ? "À l'instant" : SA.dLabel(s.date) + ' à ' + s.time, text: filled || 'Votre texte apparaîtra ici.', hasLink: !!s.link, link: s.link,
       hasMedia: shown.length > 0, noMedia: shown.length === 0, media: shown, cols: shown.length > 1 ? '1fr 1fr' : '1fr',
       resolved: pvShop ? ['{ville} → ' + pvShop.name, '{horaires} → ' + pvShop.hours, '{prix} → ' + (cat ? cat.price + ' €' : 'non défini')].join(' · ') : '—' };
-    const igBroken = t.filter(id => SA.byId(shopsState, id).igs !== 'connected');
+    const igBroken = t.filter(id => (SA.byId(shopsState, id) || SA.byId(SA.SHOPS, id) || {}).igs !== 'connected');
     const pages = t.filter(id => s.ch[id] && (s.ch[id].fb || s.ch[id].ig));
     const [hh, mm] = (s.when === 'now' ? '12:00' : s.time).split(':').map(Number);
     const schedule = pages.map((id, i) => { const off = pages.length > 1 ? Math.round(s.spread * i / (pages.length - 1)) : 0, tot = hh * 60 + mm + off; return { name: SA.byId(SA.SHOPS, id).name, t: s.when === 'now' ? '+' + off + ' min' : String(Math.floor(tot / 60) % 24).padStart(2, '0') + ':' + String(tot % 60).padStart(2, '0') }; });
@@ -1215,11 +1222,13 @@ class Component extends DCLogic {
       studioControl: Object.assign({}, vL, { photos: s.photos, showPrice: v.showPrice && !!String(v.price || '').trim(), showPromo: v.showPromo && !!String(v.promo || '').trim(), showTitle: v.showTitle && !!String(v.title || '').trim(), showPhrase: v.showPhrase && !!String(v.phrase || '').trim() }),
       onStudioApi: (api) => { this._api = api; },
       // ciblage
-      shopBadges: SA.SHOPS.map(sh => { const on = t.includes(sh.id);
-        return { name: sh.name, mark: on ? '✓' : '', dotBg: on ? '#1F8A60' : '#D8D0C4', bg: on ? '#232220' : '#FFFFFF', fg: on ? '#FFFFFF' : '#8A847C', border: on ? '#232220' : 'rgba(34,34,34,0.18)', deco: on ? 'none' : 'line-through',
-          tip: (on ? 'Publié sur ' : 'Pas publié sur ') + sh.name + ' — cliquer pour ' + (on ? 'retirer' : 'ajouter'), toggle: () => toggleShop(sh.id) }; }),
-      allShopsOn: () => setScope('all'), allShopsBg: t.length === SA.SHOPS.length ? '#8D1D2C' : '#FFFFFF', allShopsFg: t.length === SA.SHOPS.length ? '#FFFFFF' : '#222222', allShopsBorder: t.length === SA.SHOPS.length ? '#8D1D2C' : 'rgba(34,34,34,0.18)',
-      shopCountLabel: t.length + ' / ' + SA.SHOPS.length + ' boutique' + (SA.SHOPS.length > 1 ? 's' : ''),
+      shopBadges: SA.SHOPS.concat(tests).map(sh => { const on = t.includes(sh.id), test = !!sh.test;
+        return { name: sh.name + (test ? ' (test)' : ''), mark: on ? '✓' : '', dotBg: on ? (test ? '#D97B29' : '#1F8A60') : '#D8D0C4', bg: on ? (test ? '#8A4B00' : '#232220') : '#FFFFFF', fg: on ? '#FFFFFF' : '#8A847C',
+          border: on ? (test ? '#8A4B00' : '#232220') : test ? 'rgba(138,75,0,0.45)' : 'rgba(34,34,34,0.18)', deco: on ? 'none' : 'line-through',
+          tip: test ? 'Magasin test, hors du réseau : jamais compris dans « Toutes » — cliquer pour ' + (on ? 'le retirer' : 'publier aussi dessus')
+            : (on ? 'Publié sur ' : 'Pas publié sur ') + sh.name + ' — cliquer pour ' + (on ? 'retirer' : 'ajouter'), toggle: () => toggleShop(sh.id) }; }),
+      allShopsOn: () => setScope('all'), allShopsBg: tRes.length === SA.SHOPS.length ? '#8D1D2C' : '#FFFFFF', allShopsFg: tRes.length === SA.SHOPS.length ? '#FFFFFF' : '#222222', allShopsBorder: tRes.length === SA.SHOPS.length ? '#8D1D2C' : 'rgba(34,34,34,0.18)',
+      shopCountLabel: tRes.length + ' / ' + SA.SHOPS.length + ' boutique' + (SA.SHOPS.length > 1 ? 's' : '') + (tTest.length ? ' + ' + tTest.length + ' magasin' + (tTest.length > 1 ? 's' : '') + ' test' : ''),
       scopeAll: () => setScope('all'), scopeGroup: () => setScope('group'), scopeShop: () => setScope('shop'), saBg, saFg, sgBg, sgFg, ssBg, ssFg,
       isGroup: s.scope === 'group', groups: (st.groups || SA.GROUPS).map(g => Object.assign(chip(s.group === g.id), { name: g.name, count: g.shops.length, pick: () => this.setState({ group: g.id, sel: g.shops.slice() }) })),
       shopRows, igUnique, igUniqueNote: 'Instagram : un seul compte pour tout le réseau (' + igHandle + '). Cocher Instagram pour une ou plusieurs boutiques publie le post une seule fois sur ce compte ; {ville} y devient la liste des boutiques visées.',

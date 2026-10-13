@@ -436,7 +436,7 @@ class Component extends DCLogic {
   }
   openWiz(c, postId) {
     const SA = window.SA, st = SA.state(), radius = {}; SA.SHOPS.forEach(s => { radius[s.id] = 8; });
-    const shops = st.shops.filter(s => s.ads === 'connected').map(s => s.id), camp = c ? SA.byId(st.campaigns, c) : null, meta = st.meta || {};
+    const shops = st.shops.filter(s => s.ads === 'connected' && !s.test).map(s => s.id), camp = c ? SA.byId(st.campaigns, c) : null, meta = st.meta || {};
     this.setState({ wizOpen: true, step: 1, err: '', w: { name: (camp ? camp.name : 'Campagne') + ' · trafic', campaign: c || '', account: 'boutique', objective: 'OUTCOME_TRAFFIC', special: [], budgetLevel: 'adset', bid: 'LOWEST_COST_WITHOUT_CAP', bidAmount: 0.6, spendCap: 400, status: 'PAUSED',
       goal: 'LINK_CLICKS', dest: 'WEBSITE', budgetType: 'daily', amount: 10, start: SA.addDays(SA.TODAY, 1), end: SA.addDays(SA.TODAY, 15), shops, radius, ageMin: 25, ageMax: 60, gender: 'all', interests: ['Boulangerie', 'Brunch'], platforms: ['facebook', 'instagram'], advantage: false,
       dsaB: (meta.dsa || SA.META.dsa).beneficiary, dsaP: (meta.dsa || SA.META.dsa).payor, crea: 'existing', post: null, message: '', headline: '', messageNl: '', headlineNl: '', description: '', link: 'https://www.latelierby.be', cta: 'GET_DIRECTIONS',
@@ -607,7 +607,7 @@ class Component extends DCLogic {
         budgetFacts: [{ label: 'Durée', value: days + ' jours', color: '#222222' }, { label: 'Dépense estimée', value: SA.eur(est), color: est > w.spendCap ? '#8D1D2C' : '#222222' }, { label: 'Plafond (spend_cap)', value: SA.eur(w.spendCap), color: '#222222' }].concat(camp ? [{ label: 'Reste sur l’opération', value: SA.eur(campLeft), color: campLeft < est ? '#8A4B00' : '#0F6B4A' }] : []),
         overCap: est > w.spendCap, overCapText: 'La dépense estimée (' + SA.eur(est) + ') dépasse le plafond de ' + SA.eur(w.spendCap) + ' : la diffusion s\u2019arrêtera au plafond, soit environ ' + Math.floor(days * w.spendCap / est) + ' jours sur ' + days + '.',
         overCamp: !!camp && campLeft < est, overCampText: camp ? 'Il reste ' + SA.eur(campLeft) + ' sur le budget de « ' + camp.name + ' ».' : '',
-        audShops: st.shops.map(sh => { const ok = (w.account === 'reseau' || sh.ads === 'connected'), on = w.shops.includes(sh.id); return { name: sh.name, on, dis: !ok, rDis: !on, radius: w.radius[sh.id], min: minR, bg: ok ? '#FFFFFF' : '#FCFAF7',
+        audShops: st.shops.filter(sh => !sh.test).map(sh => { const ok = (w.account === 'reseau' || sh.ads === 'connected'), on = w.shops.includes(sh.id); return { name: sh.name, on, dis: !ok, rDis: !on, radius: w.radius[sh.id], min: minR, bg: ok ? '#FFFFFF' : '#FCFAF7',
           note: ok ? M.geo[sh.id][0].toFixed(4) + ', ' + M.geo[sh.id][1].toFixed(4) : 'Compte pub non connecté', noteFg: ok ? '#8A847C' : '#8D1D2C', noteFont: ok ? 'ui-monospace,monospace' : 'inherit',
           toggle: () => W({ shops: on ? w.shops.filter(x => x !== sh.id) : w.shops.concat(sh.id) }), setRadius: (e) => W({ radius: Object.assign({}, w.radius, { [sh.id]: Math.max(minR, +e.target.value) }) }) }; }),
         setAgeMin: (e) => W({ ageMin: Math.min(+e.target.value, w.ageMax) }), setAgeMax: (e) => W({ ageMax: Math.max(+e.target.value, w.ageMin) }),

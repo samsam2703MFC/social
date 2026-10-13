@@ -197,7 +197,7 @@ function sfSession(): ?array
     if ($c === '' || !str_contains($c, '.')) {
         // Transporté dans l'ERP : le franchisé y est déjà connecté (config/hote.php).
         if (($f = socHote('franchise_session')) !== null && is_array($h = $f()) && !empty($h['shops'])) {
-            $ids = array_values(array_intersect(array_map('strval', (array) $h['shops']), array_column(socShops(), 'id')));
+            $ids = array_values(array_intersect(array_map('strval', (array) $h['shops']), array_column(socReseau(), 'id')));
             return $ids ? ['shops' => $ids, 'name' => (string) ($h['name'] ?? 'Gérant'), 'via' => 'hote', 'exp' => time() + SF_DUREE] : null;
         }
         return null;
@@ -253,7 +253,7 @@ function sfConnexionTfb(string $phone, string $password): array
         }
     } catch (Throwable $e) { /* les claims du jeton prennent le relais */ }
     if (!$ids && in_array(strtolower((string) ($claims['scope_type'] ?? '')), ['shop', 'franchisee_shop'], true) && isset($claims['scope_id'])) { $ids[] = (string) $claims['scope_id']; }
-    $reseau = array_column(socShops(), 'id');
+    $reseau = array_column(socReseau(), 'id');
     $ids = array_values(array_intersect(array_unique($ids), $reseau));
     if (!$ids) { throw new HttpError(403, 'Aucune boutique de ce compte n’est dans le réseau Social & Ads.'); }
     $nom = trim((string) ($claims['name'] ?? $claims['full_name'] ?? '')) ?: ('Gérant ' . (socShop($ids[0])['name'] ?? ''));
@@ -348,7 +348,7 @@ function sfOperations(string $shop): array
     $page = (string) ($s['ids']['page_id'] ?? '');
     $igReseau = socIgUnique() ? (string) (socBrand()['ids']['instagram_user_id'] ?? '') : '';
     $ratt = socRattachements();
-    $tous = array_column(socShops(), 'id');
+    $tous = array_column(socReseau(), 'id');
     $vise = static fn ($x) => ($x === 'all' || $x === null) ? $tous : array_map('strval', (array) $x);
     $out = [];
     foreach (socOperations() as $o) {
@@ -413,7 +413,7 @@ function sfEtat(string $shop, array $session): array
     $posts = [];
     foreach (socItems('posts') as $p) {
         if (!empty($p['dark'])) { continue; }
-        $ids = ($p['shops'] ?? null) === 'all' ? array_column(socShops(), 'id') : array_map('strval', (array) ($p['shops'] ?? []));
+        $ids = ($p['shops'] ?? null) === 'all' ? array_column(socReseau(), 'id') : array_map('strval', (array) ($p['shops'] ?? []));
         if (!in_array($shop, $ids, true)) { continue; }
         $propre = ($p['origin'] ?? '') === 'franchise';
         if (!$propre && (!$r['voirReseau'] || !in_array((string) ($p['status'] ?? ''), ['Programmé', 'Publié'], true))) { continue; }

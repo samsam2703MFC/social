@@ -1092,6 +1092,12 @@ socShopPut($hc[0]['id'], ['langs' => ['fr', 'nl'], 'conn' => ['fb' => 'connected
 $g = socShop($hc[0]['id']);
 check('ses réglages se gardent comme pour une boutique (langues, connexion)', $g && $g['langs'] === ['fr', 'nl'] && $g['fb'] === 'connected' && $g['ids']['page_id'] === '822018994338891', json_encode($g));
 check('hors caisse : pas de webshop (lien vers l’accueil)', socWebshopUrl($hc[0]['id']) === rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/');
+check('magasin test : hors du réseau (« toutes les boutiques », opérations, espace franchisé), retrouvé par son identifiant',
+    !empty($hc[0]['test']) && !in_array($hc[0]['id'], array_column(socReseau(), 'id'), true) && socShop($hc[0]['id']) !== null && count(socReseau()) === count(socShops()) - 1);
+socQueue(['id' => 'ptest1', 'shops' => [$hc[0]['id']], 'fb' => true, 'ig' => true, 'date' => date('Y-m-d', strtotime('+2 days')), 'time' => '10:00']);
+$rq = Db::rows('SELECT shop_id, canal FROM social_publication WHERE content_id = ?', ['ptest1']);
+check('post sur le magasin test : sa Page, jamais l’Instagram du réseau', in_array(['shop_id' => $hc[0]['id'], 'canal' => 'fb'], $rq, true) && !in_array('marque', array_column($rq, 'shop_id'), true), json_encode($rq));
+Db::exec('DELETE FROM social_publication WHERE content_id = ?', ['ptest1']);
 check('nom tiré de la Page', socNomDePage("L'Atelier by - Gembloux") === 'Gembloux' && socNomDePage('L’Atelier By Namur') === 'Namur' && socNomDePage('Autre Page') === 'Autre Page');
 check('la marque : son nom seul ; une boutique ou un franchisé « L’Atelier by … » n’est pas la marque', socEstLaMarque("L'Atelier By") && socEstLaMarque("L'Atelier by latelierby.be")
     && !socEstLaMarque("L'Atelier by - Gembloux latelierbygembloux") && !socEstLaMarque("L'Atelier by Harmonie") && socDevinerBoutique("L'Atelier by Harmonie", socShops()) === null);

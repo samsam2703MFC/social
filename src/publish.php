@@ -139,10 +139,12 @@ function socQueue(array $post, bool $maintenant = false): int
     // Instagram unique : le post part une seule fois sur le compte de la marque (dès qu'une boutique visée l'a coché).
     $unique = socIgUnique();
     $igReseau = false;
+    $tests = $unique ? array_column(array_filter(socShops(), static fn ($s) => !empty($s['test'])), 'id') : [];
     foreach ($shops as $i => $sid) {
         $off = ($n > 1 && $spread > 0 && !$maintenant) ? (int) round($i * $spread / ($n - 1) * 60) : 0;
         foreach (socCanaux($post, (string) $sid) as $c) {
-            if ($c === 'ig' && $unique) { $igReseau = true; continue; }
+            // Instagram unique : un magasin test ne publie jamais sur le compte du réseau.
+            if ($c === 'ig' && $unique) { if (!in_array((string) $sid, $tests, true)) { $igReseau = true; } continue; }
             if (isset($deja[$sid . '|' . $c])) { continue; }
             Db::exec('INSERT INTO social_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
                 [$id, (string) $sid, $c, date('Y-m-d H:i:s', $t0 + $off), 'attente', date('Y-m-d H:i:s')]);

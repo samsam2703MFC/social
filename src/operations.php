@@ -99,7 +99,7 @@ function socOperations(bool $forcer = false): array
         socOperationsErreur($e->getMessage(), true);
         return $cache = [];
     }
-    $nos = array_map(static fn ($s) => (string) $s['id'], socShops());
+    $nos = array_map(static fn ($s) => (string) $s['id'], socReseau());
     $bo = rtrim((string) (socSetting('url_bo') ?? '/consulant_bo/'), '/') . '/';
     $out = [];
     foreach (array_slice(array_values(array_filter((array) $liste, 'is_array')), 0, 80) as $c) {

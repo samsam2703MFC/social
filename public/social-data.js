@@ -21,6 +21,9 @@
     { id: 'gembloux', name: 'Gembloux', langs: ['fr'], address: 'Avenue de la Faculté 9, 5030 Gembloux', hours: '6h30–19h00', page: "L'Atelier By Gembloux", ig: '@latelierby.gembloux', fb: 'connected', igs: 'connected', ads: 'connected' },
     { id: 'wavre', name: 'Wavre', langs: ['fr'], address: 'Place Bosch 3, 1300 Wavre', hours: '7h00–19h00', page: "L'Atelier By Wavre", ig: '@latelierby.wavre', fb: 'connected', igs: 'connected', ads: 'connected' },
   ];
+  // Magasins test (boutiques hors caisse, ex. Gembloux) : hors du réseau — jamais dans « toutes les boutiques »,
+  // les rapports, les compteurs ni l'espace franchisé ; ciblés seulement quand on les coche (Créer un post).
+  const TEST_SHOPS = [];
 
   const GROUPS = [
     { id: 'bw', name: 'Brabant wallon', shops: ['corbais', 'wavre'] },
@@ -192,7 +195,8 @@
   ];
 
   // ---------- helpers ----------
-  const byId = (arr, id) => arr.find(x => x.id === id);
+  // Un magasin test se retrouve aussi par son identifiant dans la liste du réseau (noms des posts, journal…).
+  const byId = (arr, id) => arr.find(x => x.id === id) || (arr === SHOPS ? TEST_SHOPS.find(x => x.id === id) : undefined);
   const fmt = (n, d = 0) => n == null || !isFinite(n) ? '—' : n.toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d });
   const eur = (n, d = 0) => n == null || !isFinite(n) ? '—' : fmt(n, d) + ' €';
   const pct = (n, d = 0) => n == null || !isFinite(n) ? '—' : fmt(n * 100, d) + ' %';
@@ -455,7 +459,7 @@
   function apply(L) {
     LIVE = L; TODAY = L.today || TODAY; MARGIN = L.margin != null ? +L.margin : MARGIN; IMPORT = L.metaImport || null;
     const swap = (arr, v) => { arr.splice(0, arr.length, ...(v || [])); };
-    swap(SHOPS, L.shops); swap(GROUPS, L.groups); swap(TEMPLATES, L.templates); swap(LEADFORMS, L.leadforms); swap(LEADS, L.leads); swap(DARK, L.darkPosts);
+    swap(SHOPS, (L.shops || []).filter(x => !x.test)); swap(TEST_SHOPS, (L.shops || []).filter(x => x.test)); swap(GROUPS, L.groups); swap(TEMPLATES, L.templates); swap(LEADFORMS, L.leadforms); swap(LEADS, L.leads); swap(DARK, L.darkPosts);
     if (L.catalogue && L.catalogue.length) swap(CATALOGUE, L.catalogue);
     Object.keys(RESULTS).forEach(k => delete RESULTS[k]); Object.assign(RESULTS, L.results || {});
     const m = L.meta || {};
@@ -629,7 +633,7 @@
   }
   function testConnexions(shop) {
     return api('POST', '/connexions/test', shop ? { shop } : {}).then(r => {
-      SHOPS.splice(0, SHOPS.length, ...r.shops); cache.shops = r.shops; base.shops = snap(r.shops);
+      SHOPS.splice(0, SHOPS.length, ...r.shops.filter(x => !x.test)); TEST_SHOPS.splice(0, TEST_SHOPS.length, ...r.shops.filter(x => x.test)); cache.shops = r.shops; base.shops = snap(r.shops);
       return refresh().then(() => r.resultats);
     });
   }
@@ -662,6 +666,6 @@
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.
     ctype, rattacher, webshopUrl, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
     igUnique: () => LIVE ? !!LIVE.instagramUnique : true, reseau, marque, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
-    TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
+    TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, TEST_SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
     byId, fmt, eur, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param, embed };
 })();

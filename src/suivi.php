@@ -171,9 +171,12 @@ function socSuiviAbonnes(int $jours, ?string $seulePage = null): array
     $dep = socSuiviDepenses($du, $au);
     $erreurs = array_merge($erreurs, $dep['erreurs']);
     $noms = array_column(socShops(), 'name', 'id');
+    $tests = array_column(array_filter(socShops(), static fn ($s) => !empty($s['test'])), 'id');
     $lignes = [];
     foreach ($comptes as $c) {
         if ($c['type'] !== 'facebook' || ($seulePage !== null && $c['id'] !== $seulePage)) { continue; }
+        // Un magasin test reste hors du suivi du réseau (sauf demandé seul).
+        if ($seulePage === null && in_array((string) $c['shop'], $tests, true)) { continue; }
         $fb = socSuiviPage($c, $du, $au);
         $ig = null;
         foreach ($comptes as $c2) { if ($c2['type'] === 'instagram' && ($c2['page'] ?? null) === $c['id']) { $ig = socSuiviInstagram($c2, $du, $au); break; } }

@@ -75,10 +75,14 @@ boutiques (`/public/shops`, `/shops`), catalogue et prix
 
 Les boutiques ne viennent pas que de l'API : une Page Facebook du portefeuille Meta
 (relu chaque heure) qui n'est ni celle de la marque ni celle d'une boutique de
-l'API devient une boutique **hors caisse** (ex. un magasin de test : « L'Atelier by -
-Gembloux » → « Gembloux », identifiant `pg` + chiffres de la Page). Elle se cible,
-se publie et se suit comme les autres ; sans caisse, elle n'a ni webshop, ni ventes,
-ni accès à l'espace franchisé.
+l'API devient un **magasin test**, hors caisse (« L'Atelier by - Gembloux » →
+« Gembloux », identifiant `pg` + chiffres de la Page). Il reste **hors du circuit** :
+jamais compris dans « Tout le réseau » / « Toutes », ni dans les opérations du réseau,
+les groupes, le suivi des boutiques, le graphique du calendrier, les publicités ou
+l'espace franchisé (`socReseau()` côté serveur, `SA.SHOPS` côté écrans ; les magasins
+test sont à part dans `SA.TEST_SHOPS`). On le vise en cochant sa pastille « (test) »
+dans Créer un post : sa Page seulement, jamais l'Instagram du réseau. Ses connexions et
+identifiants restent visibles dans Paramètres. Sans caisse : ni webshop, ni ventes.
 
 Ce même onglet liste **les routes qui fonctionnent et celles qui ne
 fonctionnent pas** sur le serveur : audit de toutes les routes GET du swagger

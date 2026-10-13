@@ -175,6 +175,16 @@ function socShops(): array
     return $out;
 }
 
+/**
+ * Le réseau : les boutiques sans les magasins test. C'est lui que parcourent « toutes les
+ * boutiques », les opérations du réseau, les rapports, l'espace franchisé ; un magasin test
+ * n'est visé que quand on le choisit (et se retrouve toujours par socShop()).
+ */
+function socReseau(): array
+{
+    return array_values(array_filter(socShops(), static fn ($s) => empty($s['test'])));
+}
+
 /** « L'Atelier by - Gembloux » → « Gembloux » : le nom d'une boutique d'après sa Page. */
 function socNomDePage(string $nom): string
 {
@@ -183,7 +193,7 @@ function socNomDePage(string $nom): string
 }
 
 /**
- * Les boutiques hors caisse : chaque Page Facebook du portefeuille Meta (relu chaque heure
+ * Les boutiques hors caisse (magasins test) : chaque Page Facebook du portefeuille Meta (relu chaque heure
  * par le cron, `meta_portefeuille`) qui n'est ni la Page de la marque ni celle d'une boutique
  * de l'API — un magasin de test, une boutique pas encore ouverte en caisse. Identifiant
  * stable tiré de la Page (`pg` + ses 14 derniers chiffres) ; ses réglages (langues,
@@ -214,13 +224,13 @@ function socShopsHorsCaisse(array $boutiques, array $ov): array
         $nom = socNomDePage((string) ($pg['name'] ?? $pid));
         $out[] = [
             'id' => $id, 'name' => $nom, 'fullName' => (string) ($pg['name'] ?? ''), 'code' => '', 'franchisee' => '', 'zone' => '',
-            'shopStatus' => 'Hors caisse', 'pwaShopId' => null, 'horsCaisse' => true, 'email' => '', 'phone' => '', 'vat' => '',
+            'shopStatus' => 'Magasin test', 'pwaShopId' => null, 'horsCaisse' => true, 'test' => true, 'email' => '', 'phone' => '', 'vat' => '',
             'langs' => array_values(array_filter((array) ($o['langs'] ?? ['fr']), static fn ($l) => in_array($l, ['fr', 'nl'], true))) ?: ['fr'],
             'address' => (string) ($o['address'] ?? ''), 'hours' => (string) ($o['hours'] ?? ''), 'hoursNl' => (string) ($o['hoursNl'] ?? ''),
             'page' => (string) (($o['page'] ?? '') ?: ($pg['name'] ?? '')), 'pageUrl' => '', 'ig' => (string) ($o['ig'] ?? ''),
             'fb' => (string) ($conn['fb'] ?? 'none'), 'igs' => (string) ($conn['igs'] ?? 'none'), 'ads' => (string) ($conn['ads'] ?? 'none'),
             'connDetail' => (array) ($conn['detail'] ?? []), 'checkedAt' => $conn['at'] ?? null,
-            'ids' => $ids, 'geo' => $o['geo'] ?? null, 'sources' => ['Page Meta (portefeuille) · hors caisse'],
+            'ids' => $ids, 'geo' => $o['geo'] ?? null, 'sources' => ['Page Meta (portefeuille) · magasin test, hors caisse'],
         ];
     }
     return $out;

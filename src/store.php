@@ -125,7 +125,7 @@ function socSeed(): void
     $d = socDefaults();
     foreach ((array) ($d['templates'] ?? []) as $t) { socItemPut('templates', $t); }
     $zones = [];
-    foreach (socShops() as $s) { if ($s['zone'] !== '') { $zones[$s['zone']][] = $s['id']; } }
+    foreach (socReseau() as $s) { if ($s['zone'] !== '') { $zones[$s['zone']][] = $s['id']; } }
     $i = 0;
     // Une zone d'une seule boutique n'est pas un groupe (en production, les zones portent souvent le nom du magasin).
     foreach ($zones as $z => $ids) { if (count($ids) > 1) { socItemPut('groups', ['id' => 'g' . (++$i), 'name' => $z, 'shops' => $ids]); } }
@@ -176,7 +176,7 @@ function socStateGet(): array
     $d = socDefaults();
     return [
         'mode' => 'live', 'version' => SOCIAL_VERSION, 'today' => date('Y-m-d'), 'now' => date('Y-m-d H:i'),
-        'user' => ['name' => socUser(), 'role' => 'Franchiseur', 'shops' => count($shops)],
+        'user' => ['name' => socUser(), 'role' => 'Franchiseur', 'shops' => count(socReseau())],
         'boUrl' => (string) (socSetting('url_bo') ?? '/consulant_bo/'),
         'webshopUrl' => rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/',
         'metaStatus' => Meta::statut(),
