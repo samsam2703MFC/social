@@ -63,6 +63,44 @@ try {
     }
 } catch (Throwable $e) { echo '  Marketing : ' . $e->getMessage() . "\n"; }
 
+// Module Marketing (/marketing/, lecture seule) : sur quelle base est-il branché, et que dit
+// son registre des migrations ? (son déploiement bloque sur « tables existantes, registre vide »).
+try {
+    echo "== Module Marketing : base et registre des migrations ==\n";
+    $ptr = '/var/www/html/marketing/api/.env-path';
+    $envf = is_readable($ptr) ? trim((string) file_get_contents($ptr)) : '';
+    echo '  pointeur api/.env-path : ' . ($envf !== '' ? $envf : 'absent ou illisible') . "\n";
+    foreach (glob('/var/www/private/marketing/.env*') ?: [] as $f) { echo '  fichier : ' . $f . (is_readable($f) ? '' : ' (illisible)') . "\n"; }
+    $env = [];
+    if ($envf !== '' && is_readable($envf)) {
+        foreach ((array) file($envf) as $l) { if (preg_match('/^\s*(MAR_DB_\w+)\s*=\s*(.*)$/', (string) $l, $m)) { $env[$m[1]] = trim($m[2], " \t\r\n\"'"); } }
+    }
+    echo '  MAR_DB_NAME=' . ($env['MAR_DB_NAME'] ?? '?') . ' · MAR_DB_HOST=' . ($env['MAR_DB_HOST'] ?? '(défaut)') . ' · socket ' . (($env['MAR_DB_SOCKET'] ?? '') !== '' ? 'oui' : 'non') . "\n";
+    if (($env['MAR_DB_NAME'] ?? '') !== '') {
+        $dsn = ($env['MAR_DB_SOCKET'] ?? '') !== ''
+            ? 'mysql:unix_socket=' . $env['MAR_DB_SOCKET'] . ';dbname=' . $env['MAR_DB_NAME'] . ';charset=utf8mb4'
+            : 'mysql:host=' . ($env['MAR_DB_HOST'] ?? '127.0.0.1') . ';port=' . ($env['MAR_DB_PORT'] ?? '3306') . ';dbname=' . $env['MAR_DB_NAME'] . ';charset=utf8mb4';
+        $pdo = new PDO($dsn, $env['MAR_DB_USER'] ?? 'root', $env['MAR_DB_PASSWORD'] ?? '', [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $tables = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name LIKE 'mar\\_%' ORDER BY 1")->fetchAll(PDO::FETCH_COLUMN);
+        echo '  base ' . $pdo->query('SELECT DATABASE()')->fetchColumn() . ' : ' . count($tables) . ' tables mar_* · ' . implode(',', array_slice($tables, 0, 60)) . "\n";
+        if (in_array('mar_schema_migration', $tables, true)) {
+            $n = (int) $pdo->query('SELECT COUNT(*) FROM mar_schema_migration')->fetchColumn();
+            echo '  registre : ' . $n . ' ligne(s)' . ($n ? ' · dernière ' . $pdo->query('SELECT filename FROM mar_schema_migration ORDER BY id DESC LIMIT 1')->fetchColumn() : '') . "\n";
+        }
+        $col = static function (string $t, string $c) use ($pdo): string {
+            $q = $pdo->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?');
+            $q->execute([$t, $c]);
+            return (int) $q->fetchColumn() ? 'oui' : 'non';
+        };
+        echo '  031 mar_campaign_type.color_hex : ' . $col('mar_campaign_type', 'color_hex')
+            . ' · 032 mar_campaign.show_web_shop : ' . $col('mar_campaign', 'show_web_shop')
+            . ' · 033 mar_campaign_offer_item.image_url : ' . $col('mar_campaign_offer_item', 'image_url')
+            . ' · 034 mar_fund_movement.base_amount (doit être absent) : ' . $col('mar_fund_movement', 'base_amount')
+            . ' · mar_royalty_rate : ' . (in_array('mar_royalty_rate', $tables, true) ? 'présente' : 'absente') . "\n";
+        echo '  campagnes : ' . (int) $pdo->query('SELECT COUNT(*) FROM mar_campaign')->fetchColumn() . "\n";
+    }
+} catch (Throwable $e) { echo '  Marketing (module) : ' . $e->getMessage() . "\n"; }
+
 // Meta (lecture seule) : les vues d'une publication récente de chaque compte sont-elles lisibles ?
 try {
     echo "== Meta : vues des publications (fiche du calendrier) ==\n";
