@@ -1081,7 +1081,6 @@ $pfAvant = socSetting('meta_portefeuille');
 socSettingPut('meta_portefeuille', ['le' => date('Y-m-d H:i'), 'pages' => [
     ['id' => '111', 'name' => "L'Atelier By Halle", 'instagram' => '17841', 'boutique' => '4'],
     ['id' => '222', 'name' => "L'Atelier By Wavre", 'instagram' => '', 'boutique' => '5'],
-    ['id' => '999000', 'name' => "L'Atelier By", 'instagram' => '', 'boutique' => 'marque'],
     ['id' => '822018994338891', 'name' => "L'Atelier by - Gembloux", 'instagram' => '', 'boutique' => 'marque'],   // ancien rapprochement, trop large
     ['id' => '999001', 'name' => "L'Atelier by", 'username' => 'latelierby.be', 'instagram' => '', 'boutique' => 'marque'],
 ], 'comptes' => [], 'instagram' => [], 'pixels' => []]);
@@ -1096,7 +1095,17 @@ check('hors caisse : pas de webshop (lien vers l’accueil)', socWebshopUrl($hc[
 check('nom tiré de la Page', socNomDePage("L'Atelier by - Gembloux") === 'Gembloux' && socNomDePage('L’Atelier By Namur') === 'Namur' && socNomDePage('Autre Page') === 'Autre Page');
 check('la marque : son nom seul ; une boutique ou un franchisé « L’Atelier by … » n’est pas la marque', socEstLaMarque("L'Atelier By") && socEstLaMarque("L'Atelier by latelierby.be")
     && !socEstLaMarque("L'Atelier by - Gembloux latelierbygembloux") && !socEstLaMarque("L'Atelier by Harmonie") && socDevinerBoutique("L'Atelier by Harmonie", socShops()) === null);
-Db::exec('DELETE FROM social_boutique WHERE shop_id = ?', [$hc[0]['id']]);
+// La Page de la marque prise par erreur sur celle de Gembloux : Gembloux n'est plus une boutique… jusqu'à la correction.
+$marqueAvant = socBrand()['ids'];
+socShopPut('marque', ['ids' => array_replace($marqueAvant, ['page_id' => '822018994338891'])]);
+$hc2 = array_values(array_filter(socShops(), static fn ($s) => !empty($s['horsCaisse'])));
+check('Page de la marque erronée : la vraie Page de la marque n’est jamais listée comme boutique', !in_array('999001', array_map(static fn ($s) => $s['ids']['page_id'], $hc2), true), json_encode($hc2));
+$ap = socPortefeuilleAppliquer(false);
+check('rafraîchissement des identifiants : la Page de la marque revient à la Page au nom de la marque', socBrand()['ids']['page_id'] === '999001'
+    && (bool) array_filter($ap['appliques'], static fn ($f) => str_contains($f, 'Page de la marque corrigée')), json_encode([$ap, socBrand()['ids']]));
+check('… et Gembloux redevient une boutique hors caisse', in_array('Gembloux', array_column(array_filter(socShops(), static fn ($s) => !empty($s['horsCaisse'])), 'name'), true));
+socShopPut('marque', ['ids' => $marqueAvant]);
+Db::exec("DELETE FROM social_boutique WHERE shop_id LIKE 'pg%'");
 socSettingPut('meta_portefeuille', $pfAvant);
 
 echo "API HTTP (routeur)\n";

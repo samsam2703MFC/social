@@ -203,7 +203,7 @@ function socShopsHorsCaisse(array $boutiques, array $ov): array
         $rapproche = (string) ($pg['boutique'] ?? '');
         // La Page d'une boutique de caisse (même avant que ses identifiants soient remplis) ou de la marque : déjà là.
         // La marque se reconnaît à son identifiant ou à son nom seul (pas au rapprochement deviné, trop large).
-        if ($pid === '' || in_array($pid, $prises, true) || in_array($rapproche, $nos, true) || socEstLaMarque((string) ($pg['name'] ?? '') . ' ' . ($pg['username'] ?? ''))) { continue; }
+        if ($pid === '' || in_array($pid, $prises, true) || in_array($rapproche, $nos, true) || socEstLaMarque((string) ($pg['name'] ?? ''))) { continue; }
         $id = 'pg' . substr($pid, -14);
         $o = $ov[$id] ?? [];
         $ids = array_fill_keys(SOC_IDS, '');

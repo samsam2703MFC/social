@@ -184,6 +184,18 @@ function socPortefeuilleAppliquer(bool $ecraser = false): array
     if (count($pixels) === 1) { foreach (array_keys($cibles) as $sid) { $prop[$sid]['pixel_id'] ??= $pixels[0]['id']; } }
 
     $faits = [];
+    // Correction : la Page de la marque prise jadis sur une boutique (« L'Atelier by - Gembloux », rapprochement trop
+    // large) revient à la seule Page au nom de la marque — même sans « remplacer », c'est une erreur, pas une saisie.
+    $pagesMarque = array_values(array_filter((array) $pf['pages'], static fn ($p) => socEstLaMarque((string) ($p['name'] ?? ''))));
+    $actuelle = (string) ($cibles['marque']['ids']['page_id'] ?? '');
+    $pageActuelle = null;
+    foreach ((array) $pf['pages'] as $p) { if ((string) $p['id'] === $actuelle) { $pageActuelle = $p; } }
+    if ($actuelle !== '' && $pageActuelle !== null && !socEstLaMarque((string) ($pageActuelle['name'] ?? '')) && count($pagesMarque) === 1 && (string) $pagesMarque[0]['id'] !== $actuelle) {
+        $n = $cibles['marque']['ids']; $n['page_id'] = (string) $pagesMarque[0]['id'];
+        socShopPut('marque', ['ids' => $n]);
+        $cibles['marque']['ids'] = $n;
+        $faits[] = 'Page de la marque corrigée : « ' . $pageActuelle['name'] . ' » → « ' . $pagesMarque[0]['name'] . ' »';
+    }
     foreach ($prop as $sid => $ids) {
         if (!isset($cibles[$sid])) { continue; }
         $cur = $cibles[$sid]['ids']; $n = $cur;

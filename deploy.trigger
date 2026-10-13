@@ -55,3 +55,4 @@ Relivraison : supprimer un post (module, Facebook, Instagram) — 2026-10-13T15:
 Relivraison : calendrier (graphique seul), paramètres par section — 2026-10-13T16:07:10Z — sonde
 Relivraison : boutiques hors caisse (Pages Meta sans boutique de l'API) — 2026-10-13T16:12:51Z — sonde
 Relivraison : marque reconnue à son nom seul, boutiques hors caisse — 2026-10-13T16:17:13Z — sonde
+Relivraison : Page de la marque corrigée par le rafraîchissement des identifiants — 2026-10-13T16:20:45Z
