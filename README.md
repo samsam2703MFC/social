@@ -307,10 +307,12 @@ démonstration ». Rien n'est alors envoyé à Meta.
 ## Écran intégré dans une autre application
 
 Avec `?embed=1`, un écran du module s'affiche sans son rail : c'est ainsi que le
-module Marketing (`/marketing/`, menu « Social & Ads › Créer un post », et le bouton
-« Créer un post pour cette campagne » du suivi de campagne) affiche
-`SA Post.dc.html` dans un cadre. Chaque lien interne garde le paramètre, la
-navigation reste donc dans le cadre. `?op=bo-19` (ou `?op=19`, l'identifiant de la
+module Marketing (`/marketing/`, groupes « Social & Ads » du menu, et le bouton
+« Créer un post pour cette campagne » du suivi de campagne) affiche tous les
+écrans `SA *.dc.html` dans un cadre. Chaque lien interne garde le paramètre, la
+navigation reste donc dans le cadre ; chaque écran annonce sa clé de page à
+l'application hôte (`postMessage` `{type: 'social:page', page}`, même origine),
+dont le menu suit sans recharger le cadre. `?op=bo-19` (ou `?op=19`, l'identifiant de la
 campagne dans le Marketing) présélectionne l'« Opération liée » d'un nouveau post.
 
 ## Installation / déploiement

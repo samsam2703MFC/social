@@ -361,6 +361,14 @@
   // et chaque lien interne garde le paramètre pour que la navigation reste dans le cadre.
   const embed = param('embed') === '1';
   const href = (k, q) => encodeURI(PAGES[k]) + (q || embed ? '?' + [q, embed ? 'embed=1' : ''].filter(Boolean).join('&') : '');
+  // Dans le cadre, l'application hôte apprend quel écran s'affiche (pour suivre la navigation dans son menu).
+  if (embed && window.parent !== window) {
+    try {
+      const f = decodeURIComponent(location.pathname.split('/').pop());
+      const k = Object.keys(PAGES).find(x => PAGES[x] === f);
+      if (k) window.parent.postMessage({ type: 'social:page', page: k }, location.origin);
+    } catch (e) {}
+  }
 
   // ---------- Meta Graph / Marketing API ----------
   const META = {

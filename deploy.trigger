@@ -50,3 +50,4 @@ Relivraison : recherche webshop, permissions signalées — 2026-10-12T18:17:23Z
 Relivraison : espace franchisé aligné — 2026-10-12T18:35:32Z
 Relivraison : écrans intégrables (?embed=1) pour /marketing/ — 2026-10-13T11:09:43Z
 Sonde : base et registre du module Marketing (déploiement bloqué) — 2026-10-13T11:38:38Z — sonde
+Relivraison : écrans annoncés à /marketing/ (menu qui suit) — 2026-10-13T15:06:30Z
