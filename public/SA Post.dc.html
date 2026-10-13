@@ -823,6 +823,8 @@ class Component extends DCLogic {
     }
     const shop = SA.param('shop'); if (shop && !p) { base.scope = 'shop'; base.sel = [shop]; }
     const date = SA.param('date'); if (date && !p) base.date = date;
+    // Opération présélectionnée (`?op=bo-19`, ou `?op=19` : l'identifiant de la campagne dans le Marketing).
+    const op = SA.param('op'); if (op && !p) base.campaign = /^\d+$/.test(op) ? 'bo-' + op : op;
     return base;
   }
   async componentDidMount() {
@@ -1262,7 +1264,7 @@ class Component extends DCLogic {
           wsQ: s.wsQ || '', setWsQ: (e) => this.setState({ wsQ: e.target.value }), wsResults, hasWsResults: wsResults.length > 0, wsNone: q.length >= 2 && !wsResults.length,
           hasLinkWhy: !!why && !wsProd && !mP && !mC, linkWhy: why,
           hasLinkResolved: !!res, linkResolved: res ? (chosen ? chosen + ' · ' : '') + '→ ' + pvShop.name + ' : ' + res + (t.length > 1 ? ' (et l’équivalent pour chacune des ' + t.length + ' boutiques)' : '') : '' }; })(),
-      campaign: s.campaign, setCampaign: (e) => this.setState({ campaign: e.target.value }), campOptions: st.campaigns.filter(c => c.status !== 'terminée').map(c => ({ id: c.id, name: c.name })),
+      campaign: s.campaign, setCampaign: (e) => this.setState({ campaign: e.target.value }), campOptions: st.campaigns.filter(c => c.status !== 'terminée' || c.id === s.campaign).map(c => ({ id: c.id, name: c.name })),
       // médiathèque (comme Posts Facebook) : recherche dans le formulaire, modale à catégories, fiche d'un visuel
       ...(() => {
         const libAll = s.lib, inPost = (it) => s.photos.some(p => p.src === it.src);

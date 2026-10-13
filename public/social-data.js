@@ -356,8 +356,11 @@
     return categoryId ? u + '&category=' + categoryId : u;
   }
   const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', suivi: 'SA Suivi.dc.html', ctrl: 'SA Controle.dc.html', set: 'SA Parametres.dc.html' };
-  const href = (k, q) => encodeURI(PAGES[k]) + (q ? '?' + q : '');
   const param = (k) => { try { return new URLSearchParams(location.search).get(k); } catch (e) { return null; } };
+  // Intégré dans une autre application (`?embed=1`, ex. le module /marketing/) : sans le rail,
+  // et chaque lien interne garde le paramètre pour que la navigation reste dans le cadre.
+  const embed = param('embed') === '1';
+  const href = (k, q) => encodeURI(PAGES[k]) + (q || embed ? '?' + [q, embed ? 'embed=1' : ''].filter(Boolean).join('&') : '');
 
   // ---------- Meta Graph / Marketing API ----------
   const META = {
@@ -626,5 +629,5 @@
     ctype, rattacher, webshopUrl, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
     igUnique: () => LIVE ? !!LIVE.instagramUnique : true, reseau, marque, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
     TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
-    byId, fmt, eur, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param };
+    byId, fmt, eur, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param, embed };
 })();

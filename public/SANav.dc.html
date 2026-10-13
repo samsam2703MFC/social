@@ -12,7 +12,7 @@
   <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
   <script src="social-data.js"></script>
 </helmet>
-<nav style="width:228px;height:100vh;position:sticky;top:0;box-sizing:border-box;background:#FFFFFF;border-right:0.5px solid rgba(34,34,34,0.10);display:flex;flex-direction:column;font-family:var(--font-ui);color:#222222;">
+<nav style="width:228px;height:100vh;position:sticky;top:0;box-sizing:border-box;background:#FFFFFF;border-right:0.5px solid rgba(34,34,34,0.10);display:{{ navDisplay }};flex-direction:column;font-family:var(--font-ui);color:#222222;">
   <div style="padding:20px 20px 16px;display:flex;flex-direction:column;gap:6px;border-bottom:0.5px solid rgba(34,34,34,0.10);">
     <img src="img/logo.png" alt="L'Atelier By" style="height:20px;width:auto;align-self:flex-start;">
     <span style="font-size:11px;color:#666666;letter-spacing:0.08em;text-transform:uppercase;">Franchise Buddy</span>
@@ -102,6 +102,7 @@ class Component extends DCLogic {
     });
     const shops = [...new Set(alerts.map(a => a.shop))];
     return {
+      navDisplay: SA && SA.embed ? 'none' : 'flex',
       items: mk(defs), itemsRec: mk(defsRec), hasAlerts: alerts.length > 0, setHref: SA ? SA.href('set') : '#',
       alertTitle: alerts.length + (alerts.length > 1 ? ' connexions à rétablir' : ' connexion à rétablir'),
       alertDetail: alerts.map(a => a.shop + ' · ' + a.what + ' (' + (SA.CONN[a.st] || {}).label + ')').join(' — '),
