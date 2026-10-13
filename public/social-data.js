@@ -558,6 +558,31 @@
     const ratt = demoRatt(); posts.forEach(p => { p.campaign = ratt[p.id] || null; });
     return Promise.resolve({ du, au, le: TODAY + ' ' + String(new Date().getHours()).padStart(2, '0') + ':' + String(new Date().getMinutes()).padStart(2, '0'), comptes, posts, erreurs: [], demo: true });
   }
+  /**
+   * Supprime un post (POST /posts/supprimer) : du module — et, avec meta, de Facebook et d'Instagram
+   * là où il est déjà publié —, ou une publication lue chez Meta (mfb-…, mig-…), supprimée chez Meta.
+   * Rend une promesse { ok, supprimees: [{shopName, channel}], erreurs: [{shopName, channel, reason}] } ;
+   * tant qu'une suppression est refusée chez Meta, le post reste au calendrier.
+   */
+  function supprimerPost(p, meta) {
+    const horsModule = /^m(fb|ig)-/.test(p.id);
+    const local = (r) => {
+      if (r && r.ok && !horsModule) {
+        cache = Object.assign({}, state(), { posts: state().posts.filter(x => x.id !== p.id) });
+        if (base.posts) { base.posts = Object.assign({}, base.posts); delete base.posts[p.id]; }
+        if (!LIVE) { try { localStorage.setItem(KEY, JSON.stringify(cache)); } catch (e) {} }
+        window.dispatchEvent(new Event('sa-change'));
+      }
+      return r;
+    };
+    if (LIVE) return api('POST', '/posts/supprimer', { id: p.id, meta: !!meta, compte: p.account || '' }).then(local);
+    // Démonstration : rien n'existe chez Meta, la suppression réussit toujours.
+    const enLigne = p.status === 'Publié' && (meta || horsModule);
+    const faits = !enLigne ? [] : horsModule ? [{ shopName: p.accountName || '', channel: p.channel }]
+      : (p.shops === 'all' ? SHOPS.map(x => x.id) : p.shops || []).flatMap(id => [p.fb ? 'Facebook' : '', p.ig ? 'Instagram' : ''].filter(Boolean)
+        .map(channel => ({ shopName: (byId(SHOPS, id) || { name: id }).name, channel })));
+    return new Promise(r => setTimeout(() => r(local({ ok: true, id: p.id, supprimees: faits, erreurs: [], demo: true })), 300));
+  }
   /** Suivi des boutiques : abonnés gagnés / perdus face au budget, lus en direct chez Meta (GET /suivi/abonnes). */
   /**
    * Les chiffres d'une publication Meta (vues, personnes touchées, clics, réactions…),
@@ -631,7 +656,7 @@
   else window.addEventListener('focus', () => { refresh(); });
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
-    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, suivi, avatar,
+    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, supprimerPost, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.
     ctype, rattacher, webshopUrl, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,

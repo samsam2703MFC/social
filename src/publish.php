@@ -337,6 +337,72 @@ function socRetry(string $postId): ?array
     return $r[0] ?? socItem('posts', $postId);
 }
 
+/**
+ * Supprime une publication chez Meta : post de Page (`DELETE /{post-id}`, token de la
+ * Page) ou média Instagram (`DELETE /{ig-media-id}`, permission instagram_manage_contents).
+ * Déjà absente chez Meta (supprimée à la main dans Business Suite…) : c'est le but, pas
+ * une erreur — vérifié par une relecture, car Meta répond le même code 100 à un refus.
+ */
+function socMetaSupprimer(string $mid, string $tok): void
+{
+    try {
+        Meta::call('DELETE', $mid, [], $tok);
+    } catch (MetaError $e) {
+        if ($e->metaCode !== 100) { throw $e; }
+        try { Meta::call('GET', $mid, ['fields' => 'id'], $tok); } catch (MetaError $g) { if ($g->metaCode === 100) { return; } }
+        throw $e;
+    }
+}
+
+/**
+ * Supprime un post du module et, avec $chezMeta, ce qu'il a déjà publié sur les Pages
+ * Facebook et les comptes Instagram (une frise : ses 3 publications). Tant qu'une
+ * publication refuse de partir chez Meta, le post reste au calendrier, avec la liste des
+ * refus : rien ne disparaît du module qui serait encore en ligne. Sans $chezMeta, le post
+ * quitte le module seul ; ses publications restent en ligne et le calendrier les relit
+ * ensuite comme publications faites hors du module.
+ */
+function socPostSupprimer(string $id, bool $chezMeta): array
+{
+    $post = socItem('posts', $id);
+    if ($post === null) { throw new HttpError(404, 'post introuvable : ' . $id); }
+    $titre = (string) ($post['title'] ?? $id);
+    $lignes = Db::rows("SELECT * FROM social_publication WHERE content_id = ? AND statut = 'publie' AND meta_id IS NOT NULL AND meta_id <> ''", [$id]);
+    $faits = []; $erreurs = [];
+    if ($chezMeta && $lignes) {
+        $shops = [];
+        foreach (socShops() as $s) { $shops[$s['id']] = $s; }
+        foreach ($lignes as $r) {
+            $sid = (string) $r['shop_id'];
+            $ig = $r['canal'] === 'ig';
+            $shop = $sid === 'marque' ? socIgCompteReseau($post) : ($shops[$sid] ?? null);
+            $quoi = ['shop' => $sid, 'shopName' => $sid === 'marque' ? 'Instagram du réseau' : (string) ($shop['name'] ?? $sid), 'channel' => $ig ? 'Instagram' : 'Facebook'];
+            try {
+                if ($shop === null) { throw new MetaError('boutique inconnue ou fermée', 0); }
+                $tok = $ig ? socIgToken((string) $shop['ids']['instagram_user_id'], (string) $shop['ids']['page_id']) : Meta::pageToken((string) $shop['ids']['page_id']);
+                if ($tok === null || $tok === '') { throw new MetaError('compte non accessible au token (Page non partagée avec l’utilisateur système)', 190); }
+                foreach (array_filter(array_map('trim', explode(',', (string) $r['meta_id']))) as $mid) { socMetaSupprimer($mid, $tok); }
+                // Partie chez Meta : la ligne n'a plus rien à suivre (ni à re-supprimer si une autre échoue).
+                Db::exec('DELETE FROM social_publication WHERE id = ?', [$r['id']]);
+                $faits[] = $quoi;
+            } catch (MetaError $e) {
+                $erreurs[] = $quoi + ['reason' => socMotif($e, (string) $r['canal'])];
+            }
+        }
+    }
+    if ($erreurs) {
+        socLog(socUser(), 'Suppression', '« ' . $titre . ' » : suppression refusée chez Meta — '
+            . implode(' · ', array_map(static fn ($k) => $k['shopName'] . ' (' . $k['channel'] . ') : ' . $k['reason'], $erreurs)));
+        return ['ok' => false, 'id' => $id, 'supprimees' => $faits, 'erreurs' => $erreurs, 'post' => $post];
+    }
+    Db::exec('DELETE FROM social_publication WHERE content_id = ?', [$id]);
+    socItemDelete('posts', $id);
+    socLog(socUser(), 'Suppression', '« ' . $titre . ' » supprimé'
+        . ($faits ? ' (et retiré de ' . implode(', ', array_map(static fn ($k) => $k['shopName'] . ' ' . $k['channel'], $faits)) . ')'
+            : ($lignes ? ' du module seul — ' . count($lignes) . ' publication(s) restent en ligne' : '')));
+    return ['ok' => true, 'id' => $id, 'supprimees' => $faits, 'erreurs' => [], 'enLigne' => $chezMeta ? 0 : count($lignes)];
+}
+
 /** Les ids Meta des posts publiés : shop_id → id du post Facebook (pour sponsoriser). */
 function socPostMetaIds(string $postId): array
 {

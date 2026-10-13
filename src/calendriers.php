@@ -247,8 +247,11 @@ function socCalValeur(mixed $v): ?int
     return null;
 }
 
-/** Les chiffres d'une publication du calendrier (`mfb-…` / `mig-…`) du compte `fb:…` / `ig:…`. */
-function socCalStats(string $id, string $compte): array
+/**
+ * Une publication du calendrier lue chez Meta (`mfb-…` / `mig-…`) et son compte (`fb:…` / `ig:…`) :
+ * [compte, Facebook ?, id Meta]. Refuse une publication qui n'est pas à ce compte.
+ */
+function socCalPublication(string $id, string $compte): array
 {
     $fb = str_starts_with($id, 'mfb-');
     $mid = substr($id, 4);
@@ -257,6 +260,33 @@ function socCalStats(string $id, string $compte): array
     if ($c === null || $c['type'] !== ($fb ? 'facebook' : 'instagram') || ($fb && !str_starts_with($mid, $c['id'] . '_'))) {
         throw new HttpError(404, 'cette publication n’appartient pas au compte ' . $compte);
     }
+    return [$c, $fb, $mid];
+}
+
+/**
+ * Supprime chez Meta une publication faite hors du module (lue en direct au calendrier) :
+ * post de la Page ou média Instagram. Son rattachement à une opération part avec elle.
+ */
+function socCalSupprimer(string $id, string $compte): array
+{
+    [$c, $fb, $mid] = socCalPublication($id, $compte);
+    $quoi = ['shop' => (string) ($c['shop'] ?? ''), 'shopName' => (string) $c['name'] . (!$fb && $c['username'] !== '' ? ' (@' . $c['username'] . ')' : ''), 'channel' => $fb ? 'Facebook' : 'Instagram'];
+    try {
+        if ($c['token'] === null || $c['token'] === '') { throw new MetaError('compte non accessible au token (Page non partagée avec l’utilisateur système)', 190); }
+        socMetaSupprimer($mid, (string) $c['token']);
+    } catch (MetaError $e) {
+        socLog(socUser(), 'Suppression', 'Publication ' . $quoi['channel'] . ' de ' . $quoi['shopName'] . ' : suppression refusée — ' . socMotif($e, $fb ? 'fb' : 'ig'));
+        return ['ok' => false, 'id' => $id, 'supprimees' => [], 'erreurs' => [$quoi + ['reason' => socMotif($e, $fb ? 'fb' : 'ig')]]];
+    }
+    Db::exec('DELETE FROM social_rattachement WHERE objet = ?', [$id]);
+    socLog(socUser(), 'Suppression', 'Publication ' . $quoi['channel'] . ' de ' . $quoi['shopName'] . ' supprimée chez Meta (' . $mid . ')');
+    return ['ok' => true, 'id' => $id, 'supprimees' => [$quoi], 'erreurs' => []];
+}
+
+/** Les chiffres d'une publication du calendrier (`mfb-…` / `mig-…`) du compte `fb:…` / `ig:…`. */
+function socCalStats(string $id, string $compte): array
+{
+    [$c, $fb, $mid] = socCalPublication($id, $compte);
     $out = ['id' => $id, 'vues' => null, 'personnes' => null, 'clics' => null, 'videos' => null, 'reactions' => null, 'commentaires' => null, 'partages' => null,
         'enregistrements' => null, 'interactions' => null, 'motif' => null, 'le' => date('Y-m-d H:i')];
     $tok = $c['token'];

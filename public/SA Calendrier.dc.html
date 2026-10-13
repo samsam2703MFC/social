@@ -288,9 +288,10 @@
                 <sc-if value="{{ sel.isDark }}" hint-placeholder-val="{{ false }}"><a href="{{ sel.adsHref }}" style="border:none;background:#232220;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;color:#F2C9A0;text-decoration:none;">Créer la publicité →</a></sc-if>
                 <a href="{{ sel.editHref }}" target="{{ sel.target }}" rel="noopener" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;color:#222222;text-decoration:none;">{{ sel.editLabel }}</a>
                 <sc-if value="{{ sel.canDup }}" hint-placeholder-val="{{ true }}"><button onClick="{{ openDup }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Dupliquer</button></sc-if>
+                <sc-if value="{{ sel.canDel }}" hint-placeholder-val="{{ true }}"><button onClick="{{ openDel }}" title="Supprimer le post — et, s’il est en ligne, de Facebook et d’Instagram" style="border:0.5px solid rgba(141,29,44,0.45);background:#FFFFFF;color:#8D1D2C;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Supprimer</button></sc-if>
                 <sc-if value="{{ sel.canCtrl }}" hint-placeholder-val="{{ false }}"><button onClick="{{ toCtrl }}" title="Annoter ce post et l’envoyer à la boutique comme non conforme" style="border:none;background:#232220;color:#F2C9A0;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Contrôler →</button></sc-if>
               </div>
-              <sc-if value="{{ sel.isMeta }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;line-height:1.45;">Publiée hors du module (Meta Business Suite, application…) : lue en direct chez Meta, en lecture seule ici.</span></sc-if>
+              <sc-if value="{{ sel.isMeta }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;line-height:1.45;">Publiée hors du module (Meta Business Suite, application…) : lue en direct chez Meta. Elle ne se modifie pas ici, mais peut être supprimée.</span></sc-if>
             </div>
           </div>
         </sc-if>
@@ -335,6 +336,50 @@
     </div>
   </main>
 
+  <!-- Modale supprimer -->
+  <sc-if value="{{ delOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(35,34,32,0.5);z-index:40;display:flex;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#FFFFFF;border-radius:12px;width:100%;max-width:520px;padding:20px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 80px rgba(35,34,32,0.3);">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span style="font-size:16px;font-weight:500;">Supprimer « {{ sel.title }} » ?</span>
+          <span style="font-size:12px;color:#666666;line-height:1.5;">{{ delIntro }}</span>
+        </div>
+        <sc-if value="{{ delHasWhere }}" hint-placeholder-val="{{ true }}">
+          <div style="background:#F4EFE8;border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.5;"><strong style="font-weight:500;">En ligne :</strong> {{ delWhere }}</div>
+        </sc-if>
+        <sc-if value="{{ delChoice }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:8px;cursor:pointer;border:0.5px solid {{ delMetaBorder }};background:{{ delMetaBg }};">
+              <input type="radio" name="delmode" checked="{{ delMeta }}" onChange="{{ setDelMeta }}" style="accent-color:#8D1D2C;margin:2px 0 0;">
+              <span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:13px;font-weight:500;">Supprimer aussi de Facebook et d’Instagram</span><span style="font-size:11px;color:#666666;">Définitif : la publication disparaît des Pages et des comptes, avec ses commentaires et ses réactions.</span></span>
+            </label>
+            <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:8px;cursor:pointer;border:0.5px solid {{ delLocalBorder }};background:{{ delLocalBg }};">
+              <input type="radio" name="delmode" checked="{{ delLocal }}" onChange="{{ setDelLocal }}" style="accent-color:#8D1D2C;margin:2px 0 0;">
+              <span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:13px;font-weight:500;">Retirer seulement du module</span><span style="font-size:11px;color:#666666;">La publication reste en ligne ; le calendrier la montrera ensuite comme publiée hors du module.</span></span>
+            </label>
+          </div>
+        </sc-if>
+        <sc-for list="{{ delAds }}" as="a" hint-placeholder-count="0">
+          <span style="font-size:12px;line-height:1.45;color:#6b3d0a;background:#FCE7C8;border-radius:8px;padding:8px 10px;">Utilisé par la publicité « {{ a.name }} » ({{ a.status }}) : le supprimer chez Meta arrête cette annonce.</span>
+        </sc-for>
+        <sc-if value="{{ delHasDone }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:12px;line-height:1.45;color:#0F6B4A;">Déjà supprimé : {{ delDoneLabel }}</span>
+        </sc-if>
+        <sc-if value="{{ delHasErrs }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:4px;background:#FBE9EB;border-radius:8px;padding:10px 12px;">
+            <span style="font-size:12px;font-weight:500;color:#8D1D2C;">Meta a refusé — le post reste au calendrier :</span>
+            <sc-for list="{{ delErrs }}" as="e" hint-placeholder-count="0"><span style="font-size:12px;line-height:1.45;color:#5a1320;">{{ e.text }}</span></sc-for>
+            <span style="font-size:11px;color:#666666;line-height:1.45;">Sans la suppression par l’API, supprimez-la dans Meta Business Suite, puis « Retirer seulement du module ».</span>
+          </div>
+        </sc-if>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button onClick="{{ closeDel }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Annuler</button>
+          <button onClick="{{ doDel }}" style="border:none;background:{{ delBtnBg }};color:#FFFFFF;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">{{ delBtnLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- Modale dupliquer -->
   <sc-if value="{{ dupOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;background:rgba(35,34,32,0.5);z-index:40;display:flex;align-items:center;justify-content:center;padding:20px;">
@@ -378,7 +423,8 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   state = { view: 'month', cursor: window.SA ? window.SA.TODAY : '2026-10-10', fShops: [], fType: '', fStatus: '', fCamp: '', selId: null, dragOver: null, loading: true,
-    dupOpen: false, dupDates: [], dupShops: [], dupDateInput: '', toast: '', retrying: false, tick: 0, fAcc: [], mp: null, mpLoading: false, mpErr: '', ps: null };
+    dupOpen: false, dupDates: [], dupShops: [], dupDateInput: '', toast: '', retrying: false, tick: 0, fAcc: [], mp: null, mpLoading: false, mpErr: '', ps: null,
+    delOpen: false, delMeta: true, delBusy: false, delErrs: [], delDone: [] };
   componentDidMount() {
     const SA = window.SA;
     const st = SA && SA.param('status'); if (st) this.setState({ fStatus: st, view: 'list' });
@@ -537,6 +583,12 @@ class Component extends DCLogic {
     // sélection
     const sp = all.find(p => p.id === s.selId);
     let sel = {};
+    // Suppression : publication Meta (hors module), post publié (choix : aussi chez Meta ou non), ou post pas encore en ligne.
+    const delKind = !sp ? '' : sp.origin === 'meta' ? 'meta' : sp.status === 'Publié' ? 'publie' : 'local';
+    const delWhere = !sp || delKind === 'local' ? '' : delKind === 'meta' ? sp.channel + ' · ' + (sp.accountName || '')
+      : (sp.partial && sp.partial.ok ? sp.partial.ok : shopsOf(sp)).map(id => id === 'marque' ? 'Instagram du réseau' : (SA.byId(SA.SHOPS, id) || { name: id }).name).join(', ')
+        + ' · ' + [sp.fb ? 'Facebook' : '', sp.ig ? 'Instagram' : ''].filter(Boolean).join(' + ');
+    const delAds = !sp ? [] : (SA.state().ads || []).filter(a => a.post === sp.id && ['Terminée', 'Refusée', 'Budget épuisé'].indexOf(a.status) < 0).map(a => ({ name: a.name, status: a.status }));
     if (sp) {
       const c = card(sp), st = sc(sp);
       sel = Object.assign(c, {
@@ -553,6 +605,8 @@ class Component extends DCLogic {
         isDark: !!sp.dark, adsHref: SA.href('ads', 'new=1&post=' + encodeURIComponent(sp.id)),
         // Contrôle : posts déjà publiés par une boutique (sur sa Page hors module, ou depuis l'espace franchisé).
         canCtrl: sp.status === 'Publié' && (sp.origin === 'meta' ? !sp.marque && (sp.shops || []).length === 1 : sp.origin === 'franchise') && !sp.dark,
+        // Un dark post vit chez Meta pour ses publicités : il se retire depuis l'écran Publicités.
+        canDel: !sp.dark,
       });
       if (sp.origin === 'meta') {
         const stt = sp.stats || {}, parts = [stt.reactions != null ? SA.fmt(stt.reactions) + (sp.ig ? ' j’aime' : ' réactions') : '', stt.comments != null ? SA.fmt(stt.comments) + ' commentaires' : '', stt.shares != null ? SA.fmt(stt.shares) + ' partages' : ''].filter(Boolean);
@@ -663,6 +717,41 @@ class Component extends DCLogic {
         try { sessionStorage.setItem('sa.ctrl', JSON.stringify({ id: sp.id, shop: shopsOf(sp)[0], title: sp.title || (sp.text || '').slice(0, 40) || 'Publication', img: sp.img || '',
           date: sp.date, time: sp.time || '', channel: meta ? sp.channel : (sp.fb ? 'Facebook' : 'Instagram'), text: sp.text || '', link: sp.permalink || '', account: sp.accountName || '', origin: meta ? 'Publié sur la Page' : 'Espace franchisé' })); } catch (e) {}
         location.href = SA.href('ctrl'); },
+      // Supprimer : un post du module (et, s'il est en ligne, de Facebook et d'Instagram), ou une publication lue chez Meta.
+      openDel: () => { if (!sp) return; this.setState({ delOpen: true, delMeta: true, delBusy: false, delErrs: [], delDone: [] }); },
+      closeDel: () => { if (!s.delBusy) this.setState({ delOpen: false }); }, delOpen: s.delOpen && !!sp,
+      delIntro: delKind === 'meta' ? 'Publiée hors du module : elle sera supprimée chez Meta. C’est définitif.'
+        : delKind === 'publie' ? 'Ce post est publié. Choisissez s’il doit aussi disparaître des réseaux.'
+        : 'Le post sera retiré du calendrier et de la file de publication. Rien n’a encore été publié chez Meta.',
+      delHasWhere: !!delWhere, delWhere, delChoice: delKind === 'publie', delMeta: s.delMeta, delLocal: !s.delMeta,
+      setDelMeta: () => this.setState({ delMeta: true }), setDelLocal: () => this.setState({ delMeta: false }),
+      delMetaBorder: s.delMeta ? '#8D1D2C' : 'rgba(34,34,34,0.12)', delMetaBg: s.delMeta ? '#FBF3F4' : '#FFFFFF',
+      delLocalBorder: !s.delMeta ? '#8D1D2C' : 'rgba(34,34,34,0.12)', delLocalBg: !s.delMeta ? '#FBF3F4' : '#FFFFFF',
+      delAds: delKind !== 'meta' && (delKind !== 'publie' || s.delMeta) ? delAds : [],
+      delErrs: s.delErrs, delHasErrs: s.delErrs.length > 0, delHasDone: s.delDone.length > 0, delDoneLabel: s.delDone.join(', '),
+      delBtnBg: s.delBusy ? '#B8B2A8' : '#8D1D2C',
+      delBtnLabel: s.delBusy ? 'Suppression…' : s.delErrs.length ? 'Réessayer' : delKind === 'meta' || (delKind === 'publie' && s.delMeta) ? 'Supprimer définitivement' : 'Supprimer',
+      doDel: () => {
+        if (!sp || s.delBusy) return;
+        const meta = delKind === 'meta' || (delKind === 'publie' && s.delMeta), titre = sp.title || 'Publication';
+        const lab = (l) => (l || []).map(e => (e.shopName ? e.shopName + ' · ' : '') + e.channel);
+        this.setState({ delBusy: true, delErrs: [] });
+        SA.supprimerPost(sp, meta).then(r => {
+          if (!r || !r.ok) {
+            this.setState(st => ({ delBusy: false, delDone: st.delDone.concat(lab(r && r.supprimees)), delErrs: ((r && r.erreurs) || []).map(e => ({ text: (e.shopName ? e.shopName + ' · ' : '') + e.channel + ' — ' + e.reason })) }));
+            return;
+          }
+          if (sp.origin === 'meta') this.setState(st => ({ mp: Object.assign({}, st.mp, { posts: ((st.mp && st.mp.posts) || []).filter(x => x.id !== sp.id) }) }));
+          if (r.demo) SA.log('Sarah Lambert (Franchiseur)', 'Suppression', '« ' + titre + ' » supprimé' + (meta ? ' (démonstration : rien chez Meta)' : ''));
+          const tout = (r.supprimees || []).concat(s.delDone.map(x => ({ channel: /Instagram$/.test(x) ? 'Instagram' : 'Facebook', label: x })));
+          const nb = (c) => tout.filter(e => e.channel === c).length;
+          // Peu de publications : on les nomme ; beaucoup : on les compte par réseau.
+          const ou = tout.length <= 3 ? s.delDone.concat(lab(r.supprimees)).join(', ')
+            : [nb('Facebook') ? 'Facebook (' + nb('Facebook') + ' Pages)' : '', nb('Instagram') ? 'Instagram (' + nb('Instagram') + ' comptes)' : ''].filter(Boolean).join(' et ');
+          this.setState({ delOpen: false, delBusy: false, delErrs: [], delDone: [], selId: null });
+          this.toast('« ' + titre + ' » supprimé' + (ou ? ' — retiré de ' + ou : '') + (r.enLigne ? ' — ' + r.enLigne + ' publication(s) restent en ligne' : '') + '.');
+        }).catch(err => this.setState({ delBusy: false, delErrs: [{ text: err.message || String(err) }] }));
+      },
       openDup: () => { if (!sp) return; this.setState({ dupOpen: true, dupDates: [SA.addDays(sp.date < SA.TODAY ? SA.TODAY : sp.date, 7)], dupShops: shopsOf(sp).slice(), dupDateInput: '' }); },
       closeDup: () => this.setState({ dupOpen: false }), dupOpen: s.dupOpen,
       dupDates: s.dupDates.map(d => ({ label: SA.dLabel(d), remove: () => this.setState({ dupDates: s.dupDates.filter(x => x !== d) }) })),

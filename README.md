@@ -172,9 +172,17 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   (`GET /{page}/published_posts`, `/scheduled_posts`, `GET /{ig}/media`), relu à
   chaque changement de mois et au bouton « Actualiser ». Une pastille par compte,
   avec sa photo de profil, sert de filtre (elle compte aussi les posts du module
-  qui visent ce compte). Ces publications sont en lecture seule (lien vers Facebook
-  ou Instagram, réactions, commentaires, partages) et ne sont jamais enregistrées ni
-  mises en file ; celles faites par le module ne sont pas montrées deux fois.
+  qui visent ce compte). Ces publications ne se modifient pas ici (lien vers Facebook
+  ou Instagram, réactions, commentaires, partages), mais peuvent être supprimées ; elles
+  ne sont jamais enregistrées ni mises en file ; celles faites par le module ne sont pas montrées deux fois.
+  Supprimer (fiche du post, `POST /posts/supprimer`) : un post pas encore en ligne quitte le
+  calendrier et la file ; un post publié est supprimé, au choix, aussi de Facebook
+  (`DELETE /{post-id}`, token de la Page) et d'Instagram (`DELETE /{ig-media-id}`, permission
+  `instagram_manage_contents` ; une frise : ses 3 publications), ou du module seul ; une
+  publication faite hors du module est supprimée chez Meta. Tant que Meta refuse une
+  suppression, le post reste au calendrier avec le motif par Page et par canal ; une
+  publication déjà absente chez Meta compte comme supprimée. Un dark post se retire depuis
+  l'écran Publicités. La fenêtre de confirmation signale les publicités actives du post.
   Ouvrir une publication lit ses chiffres en direct (`GET /meta/post-stats?id=&compte=`) :
   vues, personnes touchées, réactions, commentaires, partages, clics (Facebook) ou
   enregistrements (Instagram). Les vues demandent `read_insights` (Facebook) et

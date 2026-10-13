@@ -127,6 +127,19 @@ Permission : `ads_read` (lecture) et `ads_management` (pilotage).
 
 Permissions : `read_insights` (Facebook), `instagram_manage_insights` (Instagram). Sans elles : `motif` renseigné, chiffres à `null`.
 
+## 5 quater. Calendrier → supprimer un post (fiche du post, `POST /posts/supprimer`)
+
+| Quoi | Appel | Token / permission |
+|---|---|---|
+| Post de Page (publié par le module ou hors module) | `DELETE /{page_post_id}` | token de la Page · `pages_manage_posts` |
+| Média Instagram (post, carrousel, reel ; une frise = 3 médias) | `DELETE /{ig_media_id}` | token de la Page liée · `instagram_basic`, `instagram_manage_contents` (connexion Facebook uniquement) |
+
+Réponse attendue `{ "success": true }`. Une erreur `100` est relue (`GET /{id}?fields=id`) : si
+l'objet n'existe plus (supprimé dans Meta Business Suite), la suppression est tenue pour faite ;
+sinon c'est un refus, montré avec son motif. Meta note que la suppression d'un post de Page par
+l'API peut être réservée à certaines applications : dans ce cas, supprimer dans Business Suite,
+puis « Retirer seulement du module ».
+
 ## 6. Écran « Formulaires de leads » — `POST /{page_id}/leadgen_forms`
 
 | Champ UI | Paramètre |

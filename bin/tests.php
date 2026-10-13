@@ -72,6 +72,14 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
     $appels[] = [$m, $path, $p];
     $id = static function () use (&$n) { return (string) (++$n); };
     if (($p['access_token'] ?? '') === '') { return [400, ['error' => ['code' => 190, 'message' => 'no token']]]; }
+    // Suppressions (fiche du calendrier) : réussies, refusées (permission), ou objet déjà absent chez Meta.
+    if ($m === 'DELETE') {
+        $GLOBALS['SUPPRIMES'][] = [$path, (string) ($p['access_token'] ?? '')];
+        if (in_array($path, $GLOBALS['DEL_ABSENTS'] ?? [], true)) { return [400, ['error' => ['code' => 100, 'message' => 'Unsupported delete request. Object does not exist']]]; }
+        if (in_array($path, $GLOBALS['DEL_REFUS'] ?? [], true)) { return [400, ['error' => ['code' => 200, 'message' => '(#200) Permissions error']]]; }
+        return [200, ['success' => true]];
+    }
+    if ($m === 'GET' && in_array($path, $GLOBALS['DEL_ABSENTS'] ?? [], true)) { return [400, ['error' => ['code' => 100, 'message' => 'Object does not exist']]]; }
     if ($m === 'GET' && $path === 'me/accounts') {
         return [200, ['data' => [['id' => '111', 'name' => 'L\'Atelier By Halle', 'access_token' => 'PT111', 'instagram_business_account' => ['id' => '17841']],
                                  ['id' => '222', 'name' => 'L\'Atelier By Wavre', 'access_token' => 'PT222']]]];
@@ -1013,6 +1021,60 @@ $pL1 = $c1 === 200 ? socItem('posts', (string) $b1['post']['id']) : null; $pL2 =
 check('post du franchisé : hérite l’opération et le lien webshop du modèle', $pL1 && $pL1['campaign'] === 'bo-1' && $pL1['link'] === '{webshop}', json_encode([$c1, $b1]));
 check('jamais de lien libre venu du franchisé', $pL2 && $pL2['link'] === '', json_encode([$c2, $b2]));
 unset($_COOKIE[SF_COOKIE]);
+
+echo "Calendrier : supprimer un post (du module, de Facebook, d'Instagram)\n";
+$publie = static function (string $id, array $lignes, string $statut = 'Publié'): void {
+    socItemPut('posts', ['id' => $id, 'title' => 'À supprimer ' . $id, 'type' => 'Produit', 'shops' => ['4'], 'fb' => true, 'ig' => true, 'status' => $statut,
+        'date' => date('Y-m-d'), 'time' => '10:00', 'text' => 'x']);
+    foreach ($lignes as [$canal, $mid, $st]) {
+        Db::exec('INSERT INTO social_publication (content_id, shop_id, canal, prevue_le, statut, meta_id, maj_le) VALUES (?,?,?,?,?,?,?)', [$id, '4', $canal, date('Y-m-d H:i:s'), $st, $mid, date('Y-m-d H:i:s')]);
+    }
+};
+$suppr = static function (array $b): array { $GLOBALS['SOC_BODY'] = $b; try { return socRoute('POST', '/posts/supprimer'); } catch (HttpError $e) { return [$e->status, ['error' => $e->getMessage()]]; } finally { unset($GLOBALS['SOC_BODY']); } };
+$lignesDe = static fn (string $id) => (int) Db::row('SELECT COUNT(*) n FROM social_publication WHERE content_id = ?', [$id])['n'];
+$publie('pdel1', [['fb', '111_5001', 'publie'], ['ig', 'ig5002', 'publie']]);
+$GLOBALS['SUPPRIMES'] = [];
+[$code, $r] = $suppr(['id' => 'pdel1', 'meta' => true]);
+check('publié : supprimé de la Page Facebook et du compte Instagram, avec le token de la Page', $code === 200 && $r['ok'] && count($r['supprimees']) === 2
+    && in_array(['111_5001', 'PT111'], $GLOBALS['SUPPRIMES'], true) && in_array(['ig5002', 'PT111'], $GLOBALS['SUPPRIMES'], true), json_encode([$code, $r, $GLOBALS['SUPPRIMES']]));
+check('… puis retiré du module (post et file)', socItem('posts', 'pdel1') === null && $lignesDe('pdel1') === 0);
+$publie('pdel2', [['ig', 'ig6001,ig6002,ig6003', 'publie']]);
+$GLOBALS['SUPPRIMES'] = [];
+[$code, $r] = $suppr(['id' => 'pdel2', 'meta' => true]);
+check('frise Instagram : ses 3 publications supprimées', $code === 200 && $r['ok'] && array_column($GLOBALS['SUPPRIMES'], 0) === ['ig6001', 'ig6002', 'ig6003'], json_encode($GLOBALS['SUPPRIMES']));
+$publie('pdel3', [['fb', '111_5003', 'publie'], ['ig', 'ig5004', 'publie']]);
+$GLOBALS['DEL_REFUS'] = ['111_5003']; $GLOBALS['SUPPRIMES'] = [];
+[$code, $r] = $suppr(['id' => 'pdel3', 'meta' => true]);
+check('Meta refuse la Page : le post reste au calendrier, motif par canal', $code === 200 && !$r['ok'] && count($r['erreurs']) === 1 && $r['erreurs'][0]['channel'] === 'Facebook'
+    && str_contains($r['erreurs'][0]['reason'], 'Permissions error') && count($r['supprimees']) === 1 && socItem('posts', 'pdel3') !== null, json_encode($r));
+check('… la partie supprimée (Instagram) n’est plus suivie', $lignesDe('pdel3') === 1);
+unset($GLOBALS['DEL_REFUS']); $GLOBALS['SUPPRIMES'] = [];
+[$code, $r] = $suppr(['id' => 'pdel3', 'meta' => true]);
+check('réessai : seule la Page restante est supprimée, puis le post', $code === 200 && $r['ok'] && array_column($GLOBALS['SUPPRIMES'], 0) === ['111_5003'] && socItem('posts', 'pdel3') === null, json_encode([$r, $GLOBALS['SUPPRIMES']]));
+$publie('pdel4', [['fb', '111_5005', 'publie']]);
+$GLOBALS['DEL_ABSENTS'] = ['111_5005'];
+[$code, $r] = $suppr(['id' => 'pdel4', 'meta' => true]);
+unset($GLOBALS['DEL_ABSENTS']);
+check('déjà supprimée chez Meta (Business Suite) : vérifié, puis retirée du module', $code === 200 && $r['ok'] && socItem('posts', 'pdel4') === null, json_encode($r));
+$publie('pdel5', [['fb', '111_5006', 'publie']]);
+$GLOBALS['SUPPRIMES'] = [];
+[$code, $r] = $suppr(['id' => 'pdel5', 'meta' => false]);
+check('« retirer seulement du module » : rien chez Meta, la publication reste en ligne', $code === 200 && $r['ok'] && $r['enLigne'] === 1 && $GLOBALS['SUPPRIMES'] === [] && socItem('posts', 'pdel5') === null && $lignesDe('pdel5') === 0, json_encode($r));
+$publie('pdel6', [['fb', null, 'attente'], ['ig', null, 'attente']], 'Programmé');
+$GLOBALS['SUPPRIMES'] = [];
+[$code, $r] = $suppr(['id' => 'pdel6', 'meta' => true]);
+check('programmé (rien chez Meta) : retiré du calendrier et de la file, aucun appel Meta', $code === 200 && $r['ok'] && $GLOBALS['SUPPRIMES'] === [] && socItem('posts', 'pdel6') === null && $lignesDe('pdel6') === 0);
+socRattacher('post', 'mfb-111_9001', 'bo-1');
+$GLOBALS['SUPPRIMES'] = [];
+[$code, $r] = $suppr(['id' => 'mfb-111_9001', 'compte' => 'fb:111']);
+[$c2, $r2] = $suppr(['id' => 'mig-m2', 'compte' => 'ig:17841']);
+check('publication faite hors du module : supprimée chez Meta (Page et Instagram), rattachement retiré', $code === 200 && $r['ok'] && $c2 === 200 && $r2['ok']
+    && array_column($GLOBALS['SUPPRIMES'], 0) === ['111_9001', 'm2'] && !isset(socRattachements()['mfb-111_9001']), json_encode([$r, $r2, $GLOBALS['SUPPRIMES']]));
+[$c3] = $suppr(['id' => 'mfb-222_7001', 'compte' => 'fb:111']);
+[$c4] = $suppr(['id' => 'introuvable', 'meta' => true]);
+[$c5] = $suppr(['id' => '../x']);
+check('publication d’un autre compte, post inconnu ou identifiant invalide : refusé', $c3 === 404 && $c4 === 404 && $c5 === 400, json_encode([$c3, $c4, $c5]));
+check('suppressions tracées au journal', (int) Db::row("SELECT COUNT(*) n FROM social_activite WHERE quoi = 'Suppression'")['n'] >= 6);
 
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');

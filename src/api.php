@@ -117,6 +117,14 @@ function socRoute(string $method, string $path): array
     }
     if ($method === 'GET' && $path === '/operations') { $o = socOperations(); return [200, ['operations' => $o, 'erreur' => socOperationsErreur(), 'api' => BoMarketing::base()]]; }
     if ($method === 'GET' && $path === '/meta/calendriers') { return [200, socCalendriersLire((string) ($_GET['du'] ?? ''), (string) ($_GET['au'] ?? ''))]; }
+    // Supprimer un post : du module (et, avec meta, de Facebook / Instagram), ou une publication lue chez Meta.
+    if ($method === 'POST' && $path === '/posts/supprimer') {
+        $b = body();
+        $id = (string) ($b['id'] ?? '');
+        if (preg_match('/^m(fb|ig)-/', $id)) { return [200, socCalSupprimer($id, (string) ($b['compte'] ?? ''))]; }
+        if (!preg_match('/^[\w.\-]{1,64}$/', $id)) { throw new HttpError(400, 'post invalide'); }
+        return [200, socPostSupprimer($id, !empty($b['meta']))];
+    }
     if ($method === 'GET' && $path === '/meta/post-stats') { return [200, socCalStats((string) ($_GET['id'] ?? ''), (string) ($_GET['compte'] ?? ''))]; }
     if ($method === 'GET' && $path === '/suivi/abonnes') { return [200, socSuiviAbonnes((int) ($_GET['jours'] ?? 28))]; }
     if ($method === 'GET' && $path === '/meta/portefeuille') { return [200, ['portefeuille' => socSetting('meta_portefeuille'), 'businessId' => (string) (socSetting('meta_business_id') ?? '')]]; }
