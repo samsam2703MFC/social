@@ -57,3 +57,4 @@ Relivraison : boutiques hors caisse (Pages Meta sans boutique de l'API) — 2026
 Relivraison : marque reconnue à son nom seul, boutiques hors caisse — 2026-10-13T16:17:13Z — sonde
 Relivraison : Page de la marque corrigée par le rafraîchissement des identifiants — 2026-10-13T16:20:45Z
 Relivraison : Gembloux magasin test, hors du circuit — 2026-10-13T16:51:57Z — sonde
+Relivraison : paramétrage Meta dans le rail (sous Paramètres) — 2026-10-13T16:59:05Z

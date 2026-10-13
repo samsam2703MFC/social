@@ -12,7 +12,7 @@
   <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
   <script src="social-data.js"></script>
 </helmet>
-<nav style="width:228px;height:100vh;position:sticky;top:0;box-sizing:border-box;background:#FFFFFF;border-right:0.5px solid rgba(34,34,34,0.10);display:{{ navDisplay }};flex-direction:column;font-family:var(--font-ui);color:#222222;">
+<nav style="width:228px;height:100vh;position:sticky;top:0;box-sizing:border-box;overflow-y:auto;background:#FFFFFF;border-right:0.5px solid rgba(34,34,34,0.10);display:{{ navDisplay }};flex-direction:column;font-family:var(--font-ui);color:#222222;">
   <div style="padding:20px 20px 16px;display:flex;flex-direction:column;gap:6px;border-bottom:0.5px solid rgba(34,34,34,0.10);">
     <img src="img/logo.png" alt="L'Atelier By" style="height:20px;width:auto;align-self:flex-start;">
     <span style="font-size:11px;color:#666666;letter-spacing:0.08em;text-transform:uppercase;">Franchise Buddy</span>
@@ -31,6 +31,12 @@
         </sc-if>
       </a>
     </sc-for>
+    <!-- Paramètres : tout le paramétrage Meta (et du module), chaque entrée ouvre son onglet ou sa section -->
+    <div style="display:flex;flex-direction:column;gap:1px;margin:2px 0 4px 30px;border-left:1px solid rgba(34,34,34,0.10);padding-left:6px;">
+      <sc-for list="{{ setItems }}" as="si" hint-placeholder-count="11">
+        <a href="{{ si.href }}" style="display:block;padding:5px 8px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:{{ si.w }};color:{{ si.fg }};background:{{ si.bg }};" style-hover="background:#F4EFE8;">{{ si.label }}</a>
+      </sc-for>
+    </div>
   </div>
   <div style="padding:8px 12px 8px;border-top:0.5px solid rgba(34,34,34,0.10);margin-top:6px;display:flex;flex-direction:column;gap:2px;">
     <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8D1D2C;padding:0 10px 2px;">Recrutement</span>
@@ -103,6 +109,15 @@ class Component extends DCLogic {
     const shops = [...new Set(alerts.map(a => a.shop))];
     return {
       navDisplay: SA && SA.embed ? 'none' : 'flex',
+      // Sous « Paramètres » : chaque réglage (Meta en tête), ouvert sur son onglet ou sa section (?tab=…&section=…).
+      setItems: [['conn', '', 'Connexions Meta'], ['api', 'cles', 'Clés d’accès & token'], ['api', 'ids', 'Identifiants par boutique'], ['api', 'pf', 'Portefeuille Business Manager'],
+        ['api', 'version', 'Version & permissions'], ['api', 'dsa', 'Transparence UE (DSA)'], ['tpl', '', 'Modèles de posts'], ['grp', '', 'Groupes de boutiques'],
+        ['rights', '', 'Droits'], ['log', '', 'Journal d’activité'], ['tfb', '', 'API TFBuddy']]
+        .filter(([tab]) => tab !== 'tfb' || (SA && SA.live))
+        .map(([tab, sec, label]) => {
+          const on = active === 'set' && ((SA && SA.param('tab')) || 'conn') === tab && ((SA && SA.param('section')) || '') === sec;
+          return { label, href: SA ? SA.href('set', 'tab=' + tab + (sec ? '&section=' + sec : '')) : '#', fg: on ? '#8D1D2C' : '#555555', bg: on ? '#F4EFE8' : 'transparent', w: on ? 500 : 400 };
+        }),
       items: mk(defs), itemsRec: mk(defsRec), hasAlerts: alerts.length > 0, setHref: SA ? SA.href('set') : '#',
       alertTitle: alerts.length + (alerts.length > 1 ? ' connexions à rétablir' : ' connexion à rétablir'),
       alertDetail: alerts.map(a => a.shop + ' · ' + a.what + ' (' + (SA.CONN[a.st] || {}).label + ')').join(' — '),
