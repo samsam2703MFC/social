@@ -87,7 +87,7 @@
     <!-- API META -->
     <sc-if value="{{ isApi }}" hint-placeholder-val="{{ false }}">
       <sc-if value="{{ live }}" hint-placeholder-val="{{ false }}">
-        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+        <section id="sec-cles" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
           <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Clés d'accès Meta</span><span style="font-size:11px;color:#666666;">Stockées en base (table social_parametre) · jamais réaffichées · un champ vide ne change rien</span></div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">
             <sc-for list="{{ keyFields }}" as="k" hint-placeholder-count="3">
@@ -101,7 +101,7 @@
             <label style="font-size:12px;color:#444444;display:flex;gap:6px;align-items:center;">URL publique du module (Meta y télécharge les visuels) <input value="{{ publicUrl }}" onChange="{{ setPublicUrl }}" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 8px;width:260px;"></label>
             <label style="font-size:12px;color:#444444;display:flex;gap:6px;align-items:center;">API Marketing du BO (les opérations) <input value="{{ marketingApi }}" onChange="{{ setMarketingApi }}" title="Adresse appelée par le serveur pour lire les campagnes commerciales (GET …/campaigns)" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 8px;width:260px;"></label></div>
         </section>
-        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+        <section id="sec-pf" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
           <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
             <span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:13px;font-weight:500;">Portefeuille Business Manager</span><span style="font-size:11px;color:#666666;">{{ pfSummary }}</span></span>
             <span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -132,14 +132,14 @@
         </section>
       </sc-if>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;">
-        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+        <section id="sec-version" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
           <span style="font-size:13px;font-weight:500;">Version de l'API <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;">{VERSION}</span></span>
           <div style="display:flex;gap:6px;"><sc-for list="{{ versions }}" as="v" hint-placeholder-count="2"><button onClick="{{ v.pick }}" style="border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;border:0.5px solid {{ v.border }};background:{{ v.bg }};color:{{ v.fg }};font-family:ui-monospace,monospace;">{{ v.id }}</button></sc-for></div>
           <span style="font-family:ui-monospace,monospace;font-size:12px;background:#F4EFE8;border-radius:6px;padding:8px 10px;">{{ baseUrl }}</span>
           <span style="font-size:11px;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:7px 9px;line-height:1.45;">La doc Meta affiche v25.0 ; une v26.0 est signalée depuis le 29/07/2026. Vérifiez le changelog Marketing API avant de figer la version.</span>
           <span style="font-size:11px;color:#666666;line-height:1.5;">Backend Franchise Buddy : <span style="font-family:ui-monospace,monospace;">{API_BASE_URL}/api/v1/social/{domaine}/{ressource}</span> · session du cockpit (même connexion que le BO consultant). Le navigateur n'appelle jamais Meta directement.</span>
         </section>
-        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+        <section id="sec-perms" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
           <span style="font-size:13px;font-weight:500;">Permissions et niveaux d'accès</span>
           <sc-for list="{{ perms }}" as="p" hint-placeholder-count="6">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-top:0.5px solid rgba(34,34,34,0.06);">
@@ -149,7 +149,7 @@
           </sc-for>
           <span style="font-size:11px;color:#666666;line-height:1.45;">Depuis mai 2026, « Standard » s'appelle « Limited access » et « Advanced » s'appelle « Full access » dans le dashboard Meta. leads_retrieval doit passer en Full access pour lire les leads de toutes les Pages.</span>
         </section>
-        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+        <section id="sec-dsa" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
           <span style="font-size:13px;font-weight:500;">Transparence UE (DSA) · obligatoire pour cibler la Belgique</span>
           <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Bénéficiaire <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;">dsa_beneficiary</span><input type="text" value="{{ dsaB }}" onChange="{{ setDsaB }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
           <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Payeur <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;">dsa_payor</span><input type="text" value="{{ dsaP }}" onChange="{{ setDsaP }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
@@ -163,7 +163,7 @@
           <span style="font-size:12px;line-height:1.5;">Tokens : System User (Business Manager) pour les pubs, Page token par boutique pour les posts.</span>
         </section>
       </div>
-      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
+      <section id="sec-ids" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
         <div style="padding:12px 16px;border-bottom:0.5px solid rgba(34,34,34,0.10);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Identifiants Meta par boutique</span><span style="font-size:11px;color:#666666;">Compte réseau : <sc-if value="{{ live }}" hint-placeholder-val="{{ false }}"><input value="{{ networkAccount }}" onChange="{{ setNetworkAccount }}" placeholder="act_…" style="font-family:ui-monospace,monospace;font-size:11px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:3px 6px;width:150px;"></sc-if><sc-if value="{{ !live }}" hint-placeholder-val="{{ true }}"><span style="font-family:ui-monospace,monospace;">{{ networkAccount }}</span></sc-if></span></div>
         <sc-if value="{{ live }}" hint-placeholder-val="{{ false }}">
           <div style="padding:10px 16px;border-bottom:0.5px solid rgba(34,34,34,0.10);background:#FBF8F4;display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12px;color:#444444;">
@@ -337,7 +337,9 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   state = { tab: 'conn', busy: {}, testing: false, logF: '', toast: '', tick: 0, keys: { appId: '', systemToken: '', appSecret: '', verifyToken: '' }, publicUrl: null, pf: null, pfBiz: null, pfBusy: false, tfb: {}, tfbTest: '', audit: null, auditing: false, auditF: 'ko', auditQ: '' };
-  componentDidMount() { const SA = window.SA; const t = SA && SA.param('tab'); if (t) this.setState({ tab: t }); this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h); }
+  componentDidMount() { const SA = window.SA; const t = SA && SA.param('tab'); if (t) this.setState({ tab: t });
+    // ?section=cles|pf|version|perms|dsa|ids : ouvre l'onglet sur cette section (rail de /marketing/).
+    const sec = SA && SA.param('section'); if (sec && /^\w+$/.test(sec)) setTimeout(() => { const el = document.getElementById('sec-' + sec); if (el) el.scrollIntoView({ block: 'start' }); }, 400); this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h); }
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); clearTimeout(this._aud); }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2800); }
   renderVals() {

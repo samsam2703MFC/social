@@ -298,22 +298,10 @@
 
         <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
           <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;">
-            <span style="font-size:13px;font-weight:500;">Trous dans le calendrier</span>
+            <span style="font-size:13px;font-weight:500;">Posts prévus par boutique</span>
             <span style="font-size:11px;color:#666666;">{{ gapRange }}</span>
           </div>
-          <sc-if value="{{ noGaps }}" hint-placeholder-val="{{ false }}">
-            <span style="font-size:12px;color:#0F6B4A;">Toutes les boutiques ont au moins un post prévu.</span>
-          </sc-if>
-          <sc-for list="{{ gaps }}" as="g" hint-placeholder-count="2">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;background:{{ g.bg }};">
-              <span style="display:flex;flex-direction:column;gap:2px;min-width:0;">
-                <span style="font-size:13px;font-weight:500;color:{{ g.fg }};">{{ g.name }}</span>
-                <span style="font-size:11px;color:{{ g.fg }};">{{ g.note }}</span>
-              </span>
-              <a href="{{ g.href }}" style="font-size:12px;font-weight:500;color:{{ g.fg }};white-space:nowrap;">Planifier →</a>
-            </div>
-          </sc-for>
-          <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px;">
+          <div style="display:flex;flex-direction:column;gap:4px;">
             <sc-for list="{{ coverage }}" as="cv" hint-placeholder-count="6">
               <div style="display:flex;align-items:center;gap:8px;font-size:11px;">
                 <span style="width:68px;color:#666666;">{{ cv.name }}</span>

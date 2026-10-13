@@ -63,6 +63,24 @@ try {
     }
 } catch (Throwable $e) { echo '  Marketing : ' . $e->getMessage() . "\n"; }
 
+// Boutiques (lecture seule) : d'où vient la liste, et pourquoi une boutique (ex. un magasin de test) n'y est pas.
+try {
+    echo "== Boutiques : sources de la liste ==\n";
+    echo '  module : ' . implode(', ', array_map(static fn ($s) => $s['id'] . ' ' . $s['name'], socShops())) . "\n";
+    echo '  TFBuddy (API) : ' . implode(', ', array_map(static fn ($a) => $a['id'] . ' ' . $a['name'] . (array_key_exists('active', $a) ? ($a['active'] ? '' : ' (inactive)') : '') . ' [' . ($a['source'] ?? '') . ']', socApiShops(true))) . "\n";
+    if (Db::hasTable('ceo_shop')) {
+        foreach (Db::rows('SELECT id, code, name, status, pwa_shop_id FROM ceo_shop ORDER BY name') as $r) {
+            echo '  cockpit ceo_shop : #' . $r['id'] . ' ' . $r['name'] . ' · code ' . $r['code'] . ' · statut ' . $r['status'] . ' · caisse ' . ($r['pwa_shop_id'] ?? '—') . "\n";
+        }
+    }
+    if (Db::hasTable('brand_guard_pages')) {
+        foreach (Db::rows('SELECT id, shop_id, boutique, page_id, actif FROM brand_guard_pages ORDER BY id') as $r) {
+            echo '  brand_guard_pages : #' . $r['id'] . ' ' . $r['boutique'] . ' · page ' . $r['page_id'] . ' · shop ' . ($r['shop_id'] ?? '—') . ' · actif ' . $r['actif'] . "\n";
+        }
+    }
+    foreach (Meta::pageTokens(true) as $pid => $pg) { echo '  Page du token : ' . $pid . ' · ' . $pg['name'] . ' · IG ' . ($pg['ig'] !== '' ? $pg['ig'] : '—') . "\n"; }
+} catch (Throwable $e) { echo '  Boutiques : ' . $e->getMessage() . "\n"; }
+
 // Module Marketing (/marketing/, lecture seule) : sur quelle base est-il branché, et que dit
 // son registre des migrations ? (son déploiement bloque sur « tables existantes, registre vide »).
 try {
