@@ -66,7 +66,7 @@ try {
 // Boutiques (lecture seule) : d'où vient la liste, et pourquoi une boutique (ex. un magasin de test) n'y est pas.
 try {
     echo "== Boutiques : sources de la liste ==\n";
-    echo '  module : ' . implode(', ', array_map(static fn ($s) => $s['id'] . ' ' . $s['name'], socShops())) . "\n";
+    echo '  module : ' . implode(', ', array_map(static fn ($s) => $s['id'] . ' ' . $s['name'] . ' (Page ' . ($s['ids']['page_id'] ?: '—') . ', FB ' . $s['fb'] . (!empty($s['horsCaisse']) ? ', hors caisse' : '') . ')', socShops())) . ' · marque : Page ' . (socBrand()['ids']['page_id'] ?: '—') . "\n";
     echo '  TFBuddy (API) : ' . implode(', ', array_map(static fn ($a) => $a['id'] . ' ' . $a['name'] . (array_key_exists('active', $a) ? ($a['active'] ? '' : ' (inactive)') : '') . ' [' . ($a['source'] ?? '') . ']', socApiShops(true))) . "\n";
     if (Db::hasTable('ceo_shop')) {
         foreach (Db::rows('SELECT id, code, name, status, pwa_shop_id FROM ceo_shop ORDER BY name') as $r) {

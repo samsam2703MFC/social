@@ -54,7 +54,18 @@ function socDevinerBoutique(string $libelle, array $shops): ?string
         }
     }
     if ($trouve !== null) { return $trouve; }
-    return preg_match('/atelier\s*by|latelierby/', socNorm($libelle) . ' ' . str_replace(' ', '', socNorm($libelle))) ? 'marque' : null;
+    return socEstLaMarque($libelle) ? 'marque' : null;
+}
+
+/**
+ * Un libellé de la marque : « L'Atelier By », « latelierby.be », « L'Atelier By réseau »… — rien d'autre une fois
+ * retirés ces mots. « L'Atelier by - Gembloux » ou « L'Atelier by Harmonie » (une boutique,
+ * son franchisé) ne sont pas la marque.
+ */
+function socEstLaMarque(string $libelle): bool
+{
+    $mots = array_filter(explode(' ', socNorm($libelle)), static fn ($m) => $m !== '' && !in_array($m, ['l', 'la', 'atelier', 'by', 'latelierby', 'latelier', 'be', 'officiel', 'official', 'page', 'reseau', 'network', 'marque', 'brand', 'franchiseur', 'siege'], true));
+    return $mots === [] && preg_match('/atelier\s*by|latelierby/', socNorm($libelle) . ' ' . str_replace(' ', '', socNorm($libelle))) === 1;
 }
 
 /** Relit le portefeuille chez Meta. `$journal` faux : pas de trace (rafraîchissement automatique). */

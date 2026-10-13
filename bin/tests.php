@@ -1082,7 +1082,8 @@ socSettingPut('meta_portefeuille', ['le' => date('Y-m-d H:i'), 'pages' => [
     ['id' => '111', 'name' => "L'Atelier By Halle", 'instagram' => '17841', 'boutique' => '4'],
     ['id' => '222', 'name' => "L'Atelier By Wavre", 'instagram' => '', 'boutique' => '5'],
     ['id' => '999000', 'name' => "L'Atelier By", 'instagram' => '', 'boutique' => 'marque'],
-    ['id' => '822018994338891', 'name' => "L'Atelier by - Gembloux", 'instagram' => '', 'boutique' => null],
+    ['id' => '822018994338891', 'name' => "L'Atelier by - Gembloux", 'instagram' => '', 'boutique' => 'marque'],   // ancien rapprochement, trop large
+    ['id' => '999001', 'name' => "L'Atelier by", 'username' => 'latelierby.be', 'instagram' => '', 'boutique' => 'marque'],
 ], 'comptes' => [], 'instagram' => [], 'pixels' => []]);
 $hc = array_values(array_filter(socShops(), static fn ($s) => !empty($s['horsCaisse'])));
 check('Page sans boutique de caisse (magasin de test) : boutique « Gembloux », hors caisse, rattachée à sa Page', count($hc) === 1 && $hc[0]['name'] === 'Gembloux'
@@ -1093,6 +1094,8 @@ $g = socShop($hc[0]['id']);
 check('ses réglages se gardent comme pour une boutique (langues, connexion)', $g && $g['langs'] === ['fr', 'nl'] && $g['fb'] === 'connected' && $g['ids']['page_id'] === '822018994338891', json_encode($g));
 check('hors caisse : pas de webshop (lien vers l’accueil)', socWebshopUrl($hc[0]['id']) === rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/');
 check('nom tiré de la Page', socNomDePage("L'Atelier by - Gembloux") === 'Gembloux' && socNomDePage('L’Atelier By Namur') === 'Namur' && socNomDePage('Autre Page') === 'Autre Page');
+check('la marque : son nom seul ; une boutique ou un franchisé « L’Atelier by … » n’est pas la marque', socEstLaMarque("L'Atelier By") && socEstLaMarque("L'Atelier by latelierby.be")
+    && !socEstLaMarque("L'Atelier by - Gembloux latelierbygembloux") && !socEstLaMarque("L'Atelier by Harmonie") && socDevinerBoutique("L'Atelier by Harmonie", socShops()) === null);
 Db::exec('DELETE FROM social_boutique WHERE shop_id = ?', [$hc[0]['id']]);
 socSettingPut('meta_portefeuille', $pfAvant);
 
