@@ -169,8 +169,59 @@ function socShops(): array
             'ids' => $ids, 'geo' => $geo, 'sources' => $sources,
         ];
     }
+    foreach (socShopsHorsCaisse($out, $ov) as $x) { $out[] = $x; }
     // L'hôte (ERP…) peut compléter ou remplacer la liste (config/hote.php).
     if (($f = socHote('boutiques')) !== null) { $out = array_values((array) $f($out)); }
+    return $out;
+}
+
+/** « L'Atelier by - Gembloux » → « Gembloux » : le nom d'une boutique d'après sa Page. */
+function socNomDePage(string $nom): string
+{
+    $n = trim((string) preg_replace("/^l['’]\s*atelier\s+by\b\s*[-–—·:]?\s*/iu", '', trim($nom)));
+    return $n !== '' ? $n : trim($nom);
+}
+
+/**
+ * Les boutiques hors caisse : chaque Page Facebook du portefeuille Meta (relu chaque heure
+ * par le cron, `meta_portefeuille`) qui n'est ni la Page de la marque ni celle d'une boutique
+ * de l'API — un magasin de test, une boutique pas encore ouverte en caisse. Identifiant
+ * stable tiré de la Page (`pg` + ses 14 derniers chiffres) ; ses réglages (langues,
+ * identifiants Meta, connexions) se gardent dans social_boutique comme pour les autres.
+ * Sans caisse : ni webshop, ni ventes, ni accès franchisé.
+ */
+function socShopsHorsCaisse(array $boutiques, array $ov): array
+{
+    $pf = socSetting('meta_portefeuille');
+    if (!is_array($pf) || !is_array($pf['pages'] ?? null)) { return []; }
+    $prises = array_filter(array_map(static fn ($s) => (string) ($s['ids']['page_id'] ?? ''), $boutiques));
+    $prises[] = (string) ($ov['marque']['ids']['page_id'] ?? '');
+    $nos = array_map(static fn ($s) => (string) $s['id'], $boutiques);
+    $out = [];
+    foreach ($pf['pages'] as $pg) {
+        $pid = preg_replace('/\D/', '', (string) ($pg['id'] ?? ''));
+        $rapproche = (string) ($pg['boutique'] ?? '');
+        // La Page d'une boutique de caisse (même avant que ses identifiants soient remplis) ou de la marque : déjà là.
+        if ($pid === '' || in_array($pid, $prises, true) || $rapproche === 'marque' || in_array($rapproche, $nos, true)) { continue; }
+        $id = 'pg' . substr($pid, -14);
+        $o = $ov[$id] ?? [];
+        $ids = array_fill_keys(SOC_IDS, '');
+        foreach (SOC_IDS as $k) { $ids[$k] = (string) ($o['ids'][$k] ?? ''); }
+        if ($ids['page_id'] === '') { $ids['page_id'] = $pid; }
+        if ($ids['instagram_user_id'] === '' && ($pg['instagram'] ?? '') !== '') { $ids['instagram_user_id'] = (string) $pg['instagram']; }
+        $conn = (array) ($o['conn'] ?? []);
+        $nom = socNomDePage((string) ($pg['name'] ?? $pid));
+        $out[] = [
+            'id' => $id, 'name' => $nom, 'fullName' => (string) ($pg['name'] ?? ''), 'code' => '', 'franchisee' => '', 'zone' => '',
+            'shopStatus' => 'Hors caisse', 'pwaShopId' => null, 'horsCaisse' => true, 'email' => '', 'phone' => '', 'vat' => '',
+            'langs' => array_values(array_filter((array) ($o['langs'] ?? ['fr']), static fn ($l) => in_array($l, ['fr', 'nl'], true))) ?: ['fr'],
+            'address' => (string) ($o['address'] ?? ''), 'hours' => (string) ($o['hours'] ?? ''), 'hoursNl' => (string) ($o['hoursNl'] ?? ''),
+            'page' => (string) (($o['page'] ?? '') ?: ($pg['name'] ?? '')), 'pageUrl' => '', 'ig' => (string) ($o['ig'] ?? ''),
+            'fb' => (string) ($conn['fb'] ?? 'none'), 'igs' => (string) ($conn['igs'] ?? 'none'), 'ads' => (string) ($conn['ads'] ?? 'none'),
+            'connDetail' => (array) ($conn['detail'] ?? []), 'checkedAt' => $conn['at'] ?? null,
+            'ids' => $ids, 'geo' => $o['geo'] ?? null, 'sources' => ['Page Meta (portefeuille) · hors caisse'],
+        ];
+    }
     return $out;
 }
 

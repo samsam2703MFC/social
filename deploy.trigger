@@ -53,3 +53,4 @@ Sonde : base et registre du module Marketing (déploiement bloqué) — 2026-10-
 Relivraison : écrans annoncés à /marketing/ (menu qui suit) — 2026-10-13T15:06:30Z
 Relivraison : supprimer un post (module, Facebook, Instagram) — 2026-10-13T15:55:47Z
 Relivraison : calendrier (graphique seul), paramètres par section — 2026-10-13T16:07:10Z — sonde
+Relivraison : boutiques hors caisse (Pages Meta sans boutique de l'API) — 2026-10-13T16:12:51Z — sonde

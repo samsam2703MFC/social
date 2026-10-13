@@ -1076,6 +1076,26 @@ check('publication faite hors du module : supprimée chez Meta (Page et Instagra
 check('publication d’un autre compte, post inconnu ou identifiant invalide : refusé', $c3 === 404 && $c4 === 404 && $c5 === 400, json_encode([$c3, $c4, $c5]));
 check('suppressions tracées au journal', (int) Db::row("SELECT COUNT(*) n FROM social_activite WHERE quoi = 'Suppression'")['n'] >= 6);
 
+echo "Boutiques hors caisse : Pages Meta du portefeuille sans boutique de l'API\n";
+$pfAvant = socSetting('meta_portefeuille');
+socSettingPut('meta_portefeuille', ['le' => date('Y-m-d H:i'), 'pages' => [
+    ['id' => '111', 'name' => "L'Atelier By Halle", 'instagram' => '17841', 'boutique' => '4'],
+    ['id' => '222', 'name' => "L'Atelier By Wavre", 'instagram' => '', 'boutique' => '5'],
+    ['id' => '999000', 'name' => "L'Atelier By", 'instagram' => '', 'boutique' => 'marque'],
+    ['id' => '822018994338891', 'name' => "L'Atelier by - Gembloux", 'instagram' => '', 'boutique' => null],
+], 'comptes' => [], 'instagram' => [], 'pixels' => []]);
+$hc = array_values(array_filter(socShops(), static fn ($s) => !empty($s['horsCaisse'])));
+check('Page sans boutique de caisse (magasin de test) : boutique « Gembloux », hors caisse, rattachée à sa Page', count($hc) === 1 && $hc[0]['name'] === 'Gembloux'
+    && $hc[0]['id'] === 'pg' . substr('822018994338891', -14) && $hc[0]['ids']['page_id'] === '822018994338891' && $hc[0]['pwaShopId'] === null, json_encode($hc));
+check('les Pages des boutiques de l’API et de la marque ne sont pas dupliquées', count(socShops()) === count(array_filter(socShops(), static fn ($s) => empty($s['horsCaisse']))) + 1);
+socShopPut($hc[0]['id'], ['langs' => ['fr', 'nl'], 'conn' => ['fb' => 'connected']]);
+$g = socShop($hc[0]['id']);
+check('ses réglages se gardent comme pour une boutique (langues, connexion)', $g && $g['langs'] === ['fr', 'nl'] && $g['fb'] === 'connected' && $g['ids']['page_id'] === '822018994338891', json_encode($g));
+check('hors caisse : pas de webshop (lien vers l’accueil)', socWebshopUrl($hc[0]['id']) === rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/');
+check('nom tiré de la Page', socNomDePage("L'Atelier by - Gembloux") === 'Gembloux' && socNomDePage('L’Atelier By Namur') === 'Namur' && socNomDePage('Autre Page') === 'Autre Page');
+Db::exec('DELETE FROM social_boutique WHERE shop_id = ?', [$hc[0]['id']]);
+socSettingPut('meta_portefeuille', $pfAvant);
+
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');
 check('GET /state', $code === 200 && $b['mode'] === 'live' && count($b['shops']) === 2);

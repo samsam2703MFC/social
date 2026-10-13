@@ -79,6 +79,9 @@ try {
         }
     }
     foreach (Meta::pageTokens(true) as $pid => $pg) { echo '  Page du token : ' . $pid . ' · ' . $pg['name'] . ' · IG ' . ($pg['ig'] !== '' ? $pg['ig'] : '—') . "\n"; }
+    $pf = socSetting('meta_portefeuille');
+    echo '  portefeuille Meta (cache) : ' . (is_array($pf) ? 'relu le ' . ($pf['le'] ?? '?') . ' · ' . implode(', ', array_map(static fn ($p) => $p['id'] . ' ' . $p['name'] . ' → ' . ($p['boutique'] ?? '—'), (array) ($pf['pages'] ?? []))) : 'absent') . "\n";
+    echo '  boutiques hors caisse : ' . (implode(', ', array_map(static fn ($s) => $s['id'] . ' ' . $s['name'] . ' (Page ' . $s['ids']['page_id'] . ', FB ' . $s['fb'] . ')', array_filter(socShops(), static fn ($s) => !empty($s['horsCaisse'])))) ?: 'aucune') . "\n";
 } catch (Throwable $e) { echo '  Boutiques : ' . $e->getMessage() . "\n"; }
 
 // Module Marketing (/marketing/, lecture seule) : sur quelle base est-il branché, et que dit

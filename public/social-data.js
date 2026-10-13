@@ -350,7 +350,8 @@
   /** Le webshop d'une boutique, la page d'un produit ou une catégorie de ce webshop (comme le serveur, src/publish.php). */
   function webshopUrl(shopId, product, categoryId) {
     const base = (LIVE && LIVE.webshopUrl) || 'https://webshop.atelierby.be/';
-    if (!shopId || !/^\w+$/.test(shopId)) return base;
+    // En ligne, seule une boutique de caisse (identifiant numérique) a son webshop ; une boutique hors caisse renvoie à l'accueil.
+    if (!shopId || !(LIVE ? /^\d+$/ : /^\w+$/).test(shopId)) return base;
     const u = base + '?shop=' + shopId;
     if (product && product.apiId && product.kind !== 'gamme') return u + '&product=' + product.apiId + '&open=product';
     return categoryId ? u + '&category=' + categoryId : u;

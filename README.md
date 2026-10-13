@@ -73,6 +73,13 @@ boutiques (`/public/shops`, `/shops`), catalogue et prix
 `date_from`/`date_to`). Comptes admin et consultant dans `social_parametre`
 (repris une fois du BO), modifiables dans **Paramètres → API TFBuddy**.
 
+Les boutiques ne viennent pas que de l'API : une Page Facebook du portefeuille Meta
+(relu chaque heure) qui n'est ni celle de la marque ni celle d'une boutique de
+l'API devient une boutique **hors caisse** (ex. un magasin de test : « L'Atelier by -
+Gembloux » → « Gembloux », identifiant `pg` + chiffres de la Page). Elle se cible,
+se publie et se suit comme les autres ; sans caisse, elle n'a ni webshop, ni ventes,
+ni accès à l'espace franchisé.
+
 Ce même onglet liste **les routes qui fonctionnent et celles qui ne
 fonctionnent pas** sur le serveur : audit de toutes les routes GET du swagger
 (bouton, ou cron chaque nuit à 5 h 20), résultat dans `social_api_audit`.
