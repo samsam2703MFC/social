@@ -149,18 +149,13 @@ $shop = (string) (socApiShops()[0]['id'] ?? '4');
 $jour = date('Y-m-d');
 $j7 = date('Y-m-d', strtotime('-7 days')); $j1 = date('Y-m-d', strtotime('-1 day'));
 $routes = [
-    "/shops/$shop/statistics/sales/product-category-groups?date=$j1",
-    "/shops/$shop/statistics/sales/product-category-groups?date_from=$j7&date_to=$j1",
-    "/shops/$shop/statistics/sales/product-category-groups?from=$j7&to=$j1",
-    "/shops/$shop/statistics/sales/product-category-groups?start_date=$j7&end_date=$j1",
-    "/shops/$shop/statistics/sales/kpis?date_from=$j7&date_to=$j1",
-    "/shops/$shop/statistics/sales/kpis?date=$j1",
-    "/consultant/shops/category-sales?date_from=$j7&date_to=$j1&shop_ids=$shop",
-    "/consultant/shops/sales-kpis?date_from=$j7&date_to=$j1&shop_ids=$shop",
-    "/shops/$shop/statistics/daily-summary?date=$j1",
-    "/products/aliases?lang_code=nl",
-    "/shops/$shop/products/available?lang_code=nl",
-    '/product-availability-periods?lang_code=nl',
+    // Créer un post : promotions et bundles liés à un produit ou une catégorie (lecture admin).
+    '/admin/promotions/bundles',
+    '/admin/promotions/quantity',
+    '/admin/promotions/buy-x-get-y',
+    '/admin/promotions/scheduled-product-discount',
+    "/shops/$shop/scheduled-product-discounts/active",
+    '/promo-codes',
 ];
 
 [$c, $corps] = Tfb::raw('GET', Tfb::swaggerUrl(), [], null, 60);
@@ -187,6 +182,19 @@ $forme = static function (mixed $x, int $prof = 0) use (&$forme, $masque, $sensi
     foreach (array_slice($x, 0, 40, true) as $k => $v) { $o[$k] = $sensible((string) $k) ? '«masqué»' : $forme($v, $prof + 1); }
     return $o;
 };
+
+// Détail : les 4 premières promotions de chaque type, avec ce qui les relie aux produits et catégories.
+foreach (['/admin/promotions/bundles', '/admin/promotions/quantity', '/admin/promotions/buy-x-get-y', '/admin/promotions/scheduled-product-discount', "/shops/$shop/scheduled-product-discounts/active"] as $r) {
+    echo "\n===== DÉTAIL $r\n";
+    try {
+        $l = Tfb::liste(Tfb::get($r));
+        echo count($l) . " élément(s)\n";
+        foreach (array_slice($l, 0, 4) as $x) {
+            $x = is_array($x) ? array_filter($x, static fn ($k) => !$sensible((string) $k), ARRAY_FILTER_USE_KEY) : $x;
+            echo mb_substr(json_encode($x, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 0, 1600) . "\n";
+        }
+    } catch (Throwable $e) { echo 'ERREUR : ' . $e->getMessage() . "\n"; }
+}
 
 foreach ($routes as $r) {
     $cle = '/api/v1' . preg_replace(['#/shops/' . preg_quote($shop, '#') . '(/|$)#', '#/\d{4}-\d{2}-\d{2}$#'], ['/shops/{param1}$1', '/{param2}'], $r);
