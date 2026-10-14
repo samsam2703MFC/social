@@ -348,7 +348,8 @@
       .replace(/\{produit_du_jour\}/g, product && product.name ? pname(product, L) : (L === 'nl' ? 'Krokante brioche' : 'Brioche croustillante'))
       .replace(/\{ville\}/g, s ? s.name : '{ville}').replace(/\{adresse\}/g, s ? s.address : '{adresse}').replace(/\{horaires\}/g, s ? s.hours : '{horaires}')
       .replace(/\{prix\}/g, product && product.price ? product.price : '{prix}').replace(/\{produit_du_jour\}/g, product && product.name ? product.name : 'Brioche croustillante')
-      .replace(/\{webshop_(produit|categorie|groupe):(\d+)\}/g, (m, k, id) => k === 'produit' ? webshopUrl(s ? s.id : '', { apiId: +id, kind: 'produit' }) : k === 'categorie' ? webshopUrl(s ? s.id : '', null, +id) : webshopUrl(s ? s.id : '', null, 0, +id))
+      .replace(/\{webshop_produit:liste\}/g, webshopUrl(s ? s.id : '', product, 0, 0, false))
+      .replace(/\{webshop_(produit|categorie|groupe):(\d+)(:liste)?\}/g, (m, k, id, liste) => k === 'produit' ? webshopUrl(s ? s.id : '', { apiId: +id, kind: 'produit' }, 0, 0, !liste) : k === 'categorie' ? webshopUrl(s ? s.id : '', null, +id) : webshopUrl(s ? s.id : '', null, 0, +id))
       .replace(/\{webshop_produit\}/g, webshopUrl(s ? s.id : '', product)).replace(/\{webshop_categorie\}/g, webshopUrl(s ? s.id : '', null, product && product.categoryId))
       .replace(/\{webshop\}/g, webshopUrl(s ? s.id : ''))
       .replace(/\{hashtag_ville\}/g, s ? '#' + String(s.name || '').replace(/[^\p{L}\p{N}]/gu, '') : '{hashtag_ville}');
@@ -415,7 +416,8 @@
    * catégorie ?category=group:G · sous-catégorie &sub=category:C · produit : sa sous-catégorie + &product=ID&open=product.
    * Une boutique hors caisse (magasin test) n'a pas de webshop : le lien garde la page, sans boutique.
    */
-  function webshopUrl(shopId, product, categoryId, groupId) {
+  // `fiche` (par défaut) : un produit ouvre sa fiche (&open=product) ; false : il reste dans la liste de sa sous-catégorie.
+  function webshopUrl(shopId, product, categoryId, groupId, fiche) {
     const base = (LIVE && LIVE.webshopUrl) || 'https://webshop.atelierby.be/';
     const sh = shopId ? byId(SHOPS, shopId) : null, q = [];
     if (shopId && !(sh && sh.test) && (LIVE ? /^\d+$/ : /^\w+$/).test(shopId)) q.push(['shop', shopId]);
@@ -424,7 +426,7 @@
     if (pid && !cat) cat = +product.categoryId || PLAN.prods[pid] || 0;
     if (cat) { grp = grp || PLAN.cats[cat] || 0; if (grp) q.push(['category', 'group:' + grp], ['sub', 'category:' + cat]); else q.push(['category', 'category:' + cat]); }
     else if (grp) q.push(['category', 'group:' + grp]);
-    if (pid) q.push(['product', String(pid)], ['open', 'product']);
+    if (pid) { q.push(['product', String(pid)]); if (fiche !== false) q.push(['open', 'product']); }
     // « : » reste lisible (permis dans une requête) : ?category=group:28&sub=category:31000.
     return q.length ? base + '?' + q.map(([k, v]) => k + '=' + encodeURIComponent(v).replace(/%3A/g, ':')).join('&') : base;
   }

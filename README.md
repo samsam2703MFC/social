@@ -278,8 +278,13 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   post (`socWebshopUrl`, `src/publish.php` ; adresse de base : réglage `webshop_url`), aux
   paramètres que le webshop lit lui-même : catégorie `?shop=4&category=group:28`,
   sous-catégorie `…&sub=category:31000` (sans groupe : `category=category:31000`), produit :
-  sa sous-catégorie + `&product={id}&open=product` (le webshop lit ces deux paramètres mais
-  n'ouvre pas encore la fiche : on arrive sur la sous-catégorie, produit en vue). Le groupe
+  sa sous-catégorie + `&product={id}&open=product`, qui ouvre la fiche du produit (dépôt
+  WebShop, branche `claude/wizardly-ritchie-irymdu` : le webshop lisait ces paramètres sans
+  s'en servir). **Toggle « Ouvrir la fiche du produit »** sous le lien de Créer un post :
+  décoché, la variable devient `{webshop_produit:ID:liste}` (ou `{webshop_produit:liste}`) et
+  le lien garde `&product={id}` sans `&open=product` : on arrive sur la sous-catégorie, fiche
+  fermée. « Garder par défaut » enregistre le choix (réglage `lien_fiche`, oui sans réglage).
+  L'espace franchisé suit les mêmes variables et l'adresse `webshop_url`. Le groupe
   d'une catégorie et la catégorie d'un produit viennent du catalogue lu (`socWebshopPlan`).
   Magasin test (hors caisse) : la page du webshop sans boutique. Une boutique sans horaires :
   la phrase qui cite `{horaires}` disparaît (plus de « Ouvert . »). Boutons « Lien rapide »

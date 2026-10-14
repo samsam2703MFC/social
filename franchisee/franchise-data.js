@@ -221,10 +221,11 @@
   }
   /**
    * Le webshop de la boutique, ou une page de ce webshop avec ses paramètres à lui (comme le serveur, src/publish.php) :
-   * catégorie ?category=group:G · sous-catégorie &sub=category:C · produit : sa sous-catégorie + &product=ID&open=product.
+   * catégorie ?category=group:G · sous-catégorie &sub=category:C · produit : sa sous-catégorie + &product=ID, et &open=product
+   * pour ouvrir sa fiche (`fiche` false : {webshop_produit:ID:liste}, le produit reste dans la liste).
    */
-  function webshopUrl(product, kind) {
-    const base = 'https://webshop.atelierby.be/', sid = STATE && STATE.shop ? String(STATE.shop.id) : '';
+  function webshopUrl(product, kind, fiche) {
+    const base = (STATE && STATE.webshopUrl) || 'https://webshop.atelierby.be/', sid = STATE && STATE.shop ? String(STATE.shop.id) : '';
     const plan = (STATE && STATE.webshopPlan) || {}, cats = plan.cats || {}, prods = plan.prods || {}, q = [];
     if (/^\w+$/.test(sid) && (DEMO || /^\d+$/.test(sid))) q.push(['shop', sid]);
     const pid = kind === 'produit' && product && product.apiId ? +product.apiId : 0;
@@ -233,8 +234,8 @@
     if (kind !== 'produit' && kind !== 'categorie' && kind !== 'groupe') return q.length ? base + '?shop=' + sid : base;
     if (cat) { if (grp) q.push(['category', 'group:' + grp], ['sub', 'category:' + cat]); else q.push(['category', 'category:' + cat]); }
     else if (grp) q.push(['category', 'group:' + grp]);
-    if (pid) q.push(['product', String(pid)], ['open', 'product']);
-    return q.length ? base + '?' + q.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&') : base;
+    if (pid) { q.push(['product', String(pid)]); if (fiche !== false) q.push(['open', 'product']); }
+    return q.length ? base + '?' + q.map(([k, v]) => k + '=' + encodeURIComponent(v).replace(/%3A/g, ':')).join('&') : base;
   }
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }

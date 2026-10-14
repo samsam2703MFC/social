@@ -795,6 +795,13 @@
               </div>
               <sc-if value="{{ hasLinkWhy }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8A4B00;line-height:1.45;">{{ linkWhy }}</span></sc-if>
               <sc-if value="{{ hasLinkResolved }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#444444;line-height:1.45;word-break:break-all;">{{ linkResolved }}</span></sc-if>
+              <sc-if value="{{ hasFicheToggle }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:#444444;">
+                  <label style="display:flex;gap:6px;align-items:center;cursor:pointer;"><input type="checkbox" checked="{{ fiche }}" onChange="{{ setFiche }}" disabled="{{ locked }}" style="accent-color:#8D1D2C;">Ouvrir la fiche du produit</label>
+                  <span style="font-size:11px;color:#666666;">{{ ficheNote }}</span>
+                  <sc-if value="{{ ficheDefautDiff }}" hint-placeholder-val="{{ false }}"><button onClick="{{ ficheDefautSave }}" disabled="{{ locked }}" style="border:none;background:transparent;color:#8D1D2C;font-size:11px;font-weight:500;cursor:pointer;padding:0;">Garder par défaut</button></sc-if>
+                </div>
+              </sc-if>
               <div style="display:flex;flex-direction:column;gap:6px;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:8px;">
                 <span style="font-size:12px;color:#444444;">Texte du lien <span style="font-size:11px;color:#666666;">— placé là où le texte dit <code style="font-size:11px;">{lien}</code>, sinon à la fin : « {{ linkTextEx }} »</span></span>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -1503,6 +1510,8 @@ class Component extends DCLogic {
       this.toast('Vidéo impossible : ' + (e.message || e));
     }
   }
+  /** Un lien produit ouvre-t-il sa fiche par défaut ? (réglage `lien_fiche`, oui sans réglage) */
+  ficheDefaut() { const P = ((window.SA && window.SA.state && window.SA.state()) || {}).params || {}; return P.lien_fiche !== false; }
   /** Détoure une photo du post (remove.bg, côté serveur) ; elle est remplacée par le PNG détouré. */
   async detourerPhoto(src) {
     const SA = window.SA;
@@ -1804,8 +1813,8 @@ class Component extends DCLogic {
       const auto = (fr, nl) => { if (libreFr && fr) { st.text = fr; this._autoFr = fr; } if (libreNl && nl) { st.textNl = nl; this._autoNl = nl; } };
       if (it.image) st.photos = [{ src: it.image, cut: false, name: it.name }].concat(s.photos.filter(p => p.src !== it.image && p.origine !== it.image));
       // Le lien du post suit le choix : la page du webshop du produit, de la sous-catégorie ou de la catégorie (un lien saisi à la main reste).
-      const lienLibre = !s.link.trim() || /^\{webshop[a-z_]*(:\d+)?\}$/.test(s.link.trim());
-      if (lienLibre) st.link = it.kind === 'produit' ? '{webshop_produit:' + it.id + '}' : it.kind === 'categorie' ? '{webshop_categorie:' + it.id + '}' : it.kind === 'groupe' ? '{webshop_groupe:' + it.id + '}' : '{webshop}';
+      const lienLibre = !s.link.trim() || /^\{webshop[a-z_]*(:\d+)?(:liste)?\}$/.test(s.link.trim());
+      if (lienLibre) st.link = it.kind === 'produit' ? '{webshop_produit:' + it.id + (this.ficheDefaut() ? '' : ':liste') + '}' : it.kind === 'categorie' ? '{webshop_categorie:' + it.id + '}' : it.kind === 'groupe' ? '{webshop_groupe:' + it.id + '}' : '{webshop}';
       if (it.kind === 'produit') {
         const ref = SA.CATALOGUE.find(c => c.apiId === it.id && c.kind === 'produit');
         st.product = ref ? ref.id : 'p' + it.id; st.type = 'Produit';
@@ -2262,7 +2271,7 @@ class Component extends DCLogic {
       ...(() => {
         const wsAll = (SA.CATALOGUE || []).filter(c => c.kind !== 'gamme' && c.apiId && c.webshop);
         const wsProd = !!(cat && cat.kind !== 'gamme' && cat.apiId && cat.webshop !== false), wsCat = !!(cat && cat.categoryId);
-        const chip = (val, label, tip, dis) => { const on = s.link === val; return { label, tip, dis: locked || dis, op: dis ? 0.45 : 1, bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)',
+        const chip = (val, label, tip, dis) => { const on = s.link === val || (val.startsWith('{webshop_produit') && /^\{webshop_produit(:liste)?\}$/.test(s.link || '')); return { label, tip, dis: locked || dis, op: dis ? 0.45 : 1, bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)',
           pick: () => { if (!locked && !dis) this.setState({ link: on ? '' : val }); } }; };
         // Pourquoi le lien produit n'est pas proposé (gamme, produit absent du webshop, rien choisi).
         const why = !cat ? 'Pour le lien d’un produit : choisissez-le à l’étape 2, ou cherchez-le ci-dessus parmi les ' + wsAll.length + ' produits du webshop.'
@@ -2276,16 +2285,23 @@ class Component extends DCLogic {
         const catHits = q.length >= 2 ? Object.values(cats).filter(c => hit(c.name)).slice(0, 4) : [];
         const pickL = (val) => () => { if (!locked) this.setState({ link: val, wsQ: '' }); };
         const wsResults = catHits.map(c => ({ label: c.name, sub: 'Catégorie · ' + c.n + ' produit' + (c.n > 1 ? 's' : ''), bg: '#FBF8F4', pick: pickL('{webshop_categorie:' + c.id + '}') }))
-          .concat(prodHits.map(c => ({ label: c.name, sub: 'Produit' + (c.price ? ' · ' + c.price + ' €' : ''), bg: '#FFFFFF', pick: pickL('{webshop_produit:' + c.apiId + '}') })));
-        const mP = /\{webshop_produit:(\d+)\}/.exec(s.link || ''), mC = /\{webshop_categorie:(\d+)\}/.exec(s.link || '');
+          .concat(prodHits.map(c => ({ label: c.name, sub: 'Produit' + (c.price ? ' · ' + c.price + ' €' : ''), bg: '#FFFFFF', pick: pickL('{webshop_produit:' + c.apiId + (this.ficheDefaut() ? '' : ':liste') + '}') })));
+        const mP = /\{webshop_produit:(\d+)(:liste)?\}/.exec(s.link || ''), mC = /\{webshop_categorie:(\d+)\}/.exec(s.link || '');
         const chosen = mP ? (wsAll.find(c => String(c.apiId) === mP[1]) || {}).name : mC ? (cats[mC[1]] || {}).name : '';
         const res = s.link && /\{webshop/.test(s.link) && pvShop ? SA.fill(s.link, pvShop, cat) : '';
         return { linkChips: [chip('{webshop}', 'Webshop de la boutique', 'Le webshop de chaque boutique visée (https://webshop.atelierby.be/?shop=…)', false),
-            chip('{webshop_produit}', 'Produit sur le webshop', wsProd ? 'La page de « ' + cat.name + ' » dans le webshop de chaque boutique' : why, !wsProd),
+            chip(this.ficheDefaut() ? '{webshop_produit}' : '{webshop_produit:liste}', 'Produit sur le webshop', wsProd ? 'La page de « ' + cat.name + ' » dans le webshop de chaque boutique' : why, !wsProd),
             chip('{webshop_categorie}', 'Catégorie sur le webshop', wsCat ? 'La catégorie de « ' + cat.name + ' » (' + (cat.gamme || '') + ') dans le webshop de chaque boutique' : 'Choisissez d’abord un produit à l’étape 2', !wsCat),
             chip('https://www.latelierby.be', 'Site L’Atelier By', 'www.latelierby.be', false)],
           wsQ: s.wsQ || '', setWsQ: (e) => this.setState({ wsQ: e.target.value }), wsResults, hasWsResults: wsResults.length > 0, wsNone: q.length >= 2 && !wsResults.length,
           hasLinkWhy: !!why && !wsProd && !mP && !mC, linkWhy: why,
+          ...(() => { const m = /^\{webshop_produit(:\d+)?(:liste)?\}$/.exec(String(s.link || '').trim()), fiche = !!m && !m[2], def = this.ficheDefaut();
+            return { hasFicheToggle: !!m, fiche, ficheNote: fiche ? 'le lien ouvre directement sa fiche (&open=product)' : 'le lien arrive sur sa sous-catégorie, le produit dans la liste, fiche fermée',
+              setFiche: (e) => { if (!locked && m) this.setState({ link: '{webshop_produit' + (m[1] || '') + (e.target.checked ? '' : ':liste') + '}' }); },
+              ficheDefautDiff: !!m && SA.live && fiche !== def,
+              ficheDefautSave: () => SA.api('POST', '/parametres', { lien_fiche: fiche }).then(r => { const st = SA.state(); st.params = (r && r.params) || Object.assign({}, st.params, { lien_fiche: fiche });
+                this.toast(fiche ? 'Par défaut, les liens produit ouvriront la fiche.' : 'Par défaut, les liens produit arriveront sur la liste, fiche fermée.'); this.setState({ tick: (this.state.tick || 0) + 1 }); })
+                .catch(e => this.toast('Réglage non enregistré : ' + (e.message || e))) }; })(),
           hasLinkResolved: !!res, linkResolved: res ? (chosen ? chosen + ' · ' : '') + '→ ' + pvShop.name + ' : ' + res + (t.length > 1 ? ' (et l’équivalent pour chacune des ' + t.length + ' boutiques)' : '') : '' }; })(),
       campaign: s.campaign, setCampaign: (e) => this.setState({ campaign: e.target.value }), campOptions: st.campaigns.filter(c => c.status !== 'terminée' || c.id === s.campaign).map(c => ({ id: c.id, name: c.name })),
       // médiathèque (comme Posts Facebook) : recherche dans le formulaire, modale à catégories, fiche d'un visuel

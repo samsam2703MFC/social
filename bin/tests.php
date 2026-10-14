@@ -916,6 +916,9 @@ $W = 'https://webshop.atelierby.be/';
 $prodWs = ['id' => 'p3200006', 'apiId' => 3200006, 'kind' => 'produit', 'name' => 'Amandes', 'price' => '4,90'];
 check('{webshop} et {webshop_produit} : la boutique, puis la sous-catégorie du produit, ouverte sur lui', socFill('{webshop} | {webshop_produit}', ['id' => '4', 'name' => 'Halle'], $prodWs, 'fr')
     === $W . '?shop=4 | ' . $W . '?shop=4&category=group:28&sub=category:31000&product=3200006&open=product');
+check('« :liste » : le produit dans sa sous-catégorie, sans ouvrir sa fiche (pas de &open=product)',
+    socFill('{webshop_produit:3200006:liste} | {webshop_produit:liste}', ['id' => '4', 'name' => 'Halle'], $prodWs, 'fr')
+    === $W . '?shop=4&category=group:28&sub=category:31000&product=3200006 | ' . $W . '?shop=4&category=group:28&sub=category:31000&product=3200006');
 check('sous-catégorie au format du webshop (?shop=4&category=group:28&sub=category:31000)', socWebshopUrl('4', null, 31000) === $W . '?shop=4&category=group:28&sub=category:31000');
 check('catégorie sans groupe : category=category:… ; catégorie (groupe) seule : category=group:…',
     socWebshopUrl('4', null, 45000) === $W . '?shop=4&category=category:45000' && socWebshopUrl('4', null, 0, 28) === $W . '?shop=4&category=group:28');

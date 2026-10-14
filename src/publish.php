@@ -12,7 +12,7 @@ declare(strict_types=1);
  * la requête.
  *
  * Variables ({ville}, {adresse}, {horaires}, {prix}, {produit_du_jour}, {webshop}, {webshop_produit}, {webshop_categorie},
- * {webshop_produit:ID}, {webshop_categorie:ID}) :
+ * {webshop_produit:ID}, {webshop_produit:ID:liste}, {webshop_categorie:ID}) :
  * résolues ici, boutique par boutique et dans la langue de la Page, AVANT
  * l'appel Meta. Boutique bilingue : légende NL puis FR dans le même message.
  *
@@ -42,7 +42,12 @@ function socCatalogue(): array
  * (socWebshopPlan). Une boutique hors caisse (magasin test) n'a pas de webshop : le lien garde
  * la page, sans boutique. Adresse de base : réglage `webshop_url`.
  */
-function socWebshopUrl(string $shopId, ?array $product = null, int $categorie = 0, int $groupe = 0): string
+/**
+ * L'adresse du webshop d'une boutique, d'une catégorie ou d'un produit. Un produit arrive sur sa
+ * sous-catégorie avec `product=ID` ; `$fiche` ajoute `open=product`, qui ouvre sa fiche (lien
+ * `{webshop_produit:ID}`), sinon il reste dans la liste (`{webshop_produit:ID:liste}`).
+ */
+function socWebshopUrl(string $shopId, ?array $product = null, int $categorie = 0, int $groupe = 0, bool $fiche = true): string
 {
     $base = rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/';
     $q = preg_match('/^\d+$/', $shopId) ? ['shop' => $shopId] : [];
@@ -55,7 +60,7 @@ function socWebshopUrl(string $shopId, ?array $product = null, int $categorie = 
     } elseif ($groupe > 0) {
         $q['category'] = 'group:' . $groupe;
     }
-    if ($produit) { $q += ['product' => (string) $pid, 'open' => 'product']; }
+    if ($produit) { $q += ['product' => (string) $pid] + ($fiche ? ['open' => 'product'] : []); }
     // « : » reste lisible (permis dans une requête) : ?category=group:28&sub=category:31000.
     return $q ? $base . '?' . str_replace('%3A', ':', http_build_query($q, '', '&', PHP_QUERY_RFC3986)) : $base;
 }
@@ -75,10 +80,12 @@ function socFill(string $text, array $shop, ?array $product, string $lang): stri
 {
     $hours = $lang === 'nl' && ($shop['hoursNl'] ?? '') !== '' ? $shop['hoursNl'] : ($shop['hours'] ?? '');
     $pname = $product ? (string) ($lang === 'nl' && !empty($product['nameNl']) ? $product['nameNl'] : ($product['name'] ?? '')) : '';
-    // Un produit ou une catégorie précis du webshop : {webshop_produit:123}, {webshop_categorie:456}.
+    // Un produit ou une catégorie précis du webshop : {webshop_produit:123}, {webshop_categorie:456} ;
+    // « :liste » : le produit dans sa liste, fiche fermée ({webshop_produit:123:liste}, {webshop_produit:liste}).
     $sid = (string) ($shop['id'] ?? '');
-    $text = preg_replace_callback('/\{webshop_(produit|categorie|groupe):(\d+)\}/', static fn ($m) => match ($m[1]) {
-        'produit' => socWebshopUrl($sid, ['apiId' => (int) $m[2], 'kind' => 'produit']),
+    $text = str_replace('{webshop_produit:liste}', socWebshopUrl($sid, $product, 0, 0, false), $text);
+    $text = preg_replace_callback('/\{webshop_(produit|categorie|groupe):(\d+)(:liste)?\}/', static fn ($m) => match ($m[1]) {
+        'produit' => socWebshopUrl($sid, ['apiId' => (int) $m[2], 'kind' => 'produit'], 0, 0, empty($m[3])),
         'categorie' => socWebshopUrl($sid, null, (int) $m[2]),
         default => socWebshopUrl($sid, null, 0, (int) $m[2]),
     }, $text);

@@ -441,6 +441,7 @@ function sfEtat(string $shop, array $session): array
         'instagramUnique' => socIgUnique(),
         // Catégorie → groupe, produit → catégorie : les liens directs du webshop (socWebshopUrl).
         'webshopPlan' => socWebshopPlanCache(),
+        'webshopUrl' => rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/',
         'franchisorUrl' => (string) (socSetting('url_publique') ?? ''),
     ];
 }

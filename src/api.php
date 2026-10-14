@@ -90,7 +90,7 @@ function socRoute(string $method, string $path): array
     }
     if ($method === 'POST' && $path === '/parametres') {
         // Les réglages non secrets modifiables depuis l'écran.
-        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'marketing_api' => 'string', 'webshop_url' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool', 'lien_texte' => 'array', 'etiquettes_modeles' => 'etiquettes', 'charte_editoriale' => 'charte', 'ia_modele' => 'string', 'visuels_modeles' => 'visuels'];
+        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'marketing_api' => 'string', 'webshop_url' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool', 'lien_texte' => 'array', 'lien_fiche' => 'bool', 'etiquettes_modeles' => 'etiquettes', 'charte_editoriale' => 'charte', 'ia_modele' => 'string', 'visuels_modeles' => 'visuels'];
         $faits = [];
         foreach (body() as $k => $v) {
             if (!isset($permis[$k])) { continue; }
