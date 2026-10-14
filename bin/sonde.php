@@ -149,12 +149,7 @@ $shop = (string) (socApiShops()[0]['id'] ?? '4');
 $jour = date('Y-m-d');
 $j7 = date('Y-m-d', strtotime('-7 days')); $j1 = date('Y-m-d', strtotime('-1 day'));
 $routes = [
-    // Créer un post : promotions et bundles liés à un produit ou une catégorie (lecture admin).
-    '/admin/promotions/bundles',
-    '/admin/promotions/quantity',
-    '/admin/promotions/buy-x-get-y',
-    '/admin/promotions/scheduled-product-discount',
-    "/shops/$shop/scheduled-product-discounts/active",
+    // Créer un post : codes promo (lecture admin) ; les promotions sont détaillées plus haut.
     '/promo-codes',
 ];
 
@@ -173,7 +168,7 @@ $masque = static function (mixed $v): mixed {
 };
 // Champs sensibles masqués PAR LEUR NOM, quelle que soit la valeur : l'API rend
 // par exemple `email_password` en clair et les coordonnées bancaires des boutiques.
-$sensible = static fn (string $k): bool => (bool) preg_match('/pass|secret|token|iban|bank|swift|account_number|tax_number|vat|peppol|email|phone|billing/i', $k);
+$sensible = static fn (string $k): bool => (bool) preg_match('/pass|secret|token|iban|bank|swift|account_number|tax_number|(^|_)vat($|_)|peppol|email|phone|billing/i', $k);
 $forme = static function (mixed $x, int $prof = 0) use (&$forme, $masque, $sensible): mixed {
     if (!is_array($x)) { return $masque($x); }
     if ($prof > 2) { return '[' . (array_is_list($x) ? count($x) . ' él.' : 'objet') . ']'; }
@@ -184,14 +179,22 @@ $forme = static function (mixed $x, int $prof = 0) use (&$forme, $masque, $sensi
 };
 
 // Détail : les 4 premières promotions de chaque type, avec ce qui les relie aux produits et catégories.
-foreach (['/admin/promotions/bundles', '/admin/promotions/quantity', '/admin/promotions/buy-x-get-y', '/admin/promotions/scheduled-product-discount', "/shops/$shop/scheduled-product-discounts/active"] as $r) {
+foreach (['/admin/promotions/buy-x-get-y', '/admin/promotions/quantity', '/admin/promotions/scheduled-product-discount'] as $r) {
     echo "\n===== DÉTAIL $r\n";
     try {
         $l = Tfb::liste(Tfb::get($r));
         echo count($l) . " élément(s)\n";
-        foreach (array_slice($l, 0, 4) as $x) {
-            $x = is_array($x) ? array_filter($x, static fn ($k) => !$sensible((string) $k), ARRAY_FILTER_USE_KEY) : $x;
-            echo mb_substr(json_encode($x, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 0, 1600) . "\n";
+        foreach (array_slice($l, 0, 12) as $x) {
+            if (!is_array($x) || !isset($x['id'])) { continue; }
+            // Le détail porte les produits et catégories visés (la liste n'en donne que le nombre).
+            $type = (string) ($x['promotion_type'] ?? '');
+            $route = match ($type) { 'BUNDLE_PROMOTION' => 'bundles', 'BUY_X_GET_Y' => 'buy-x-get-y', 'QUANTITY_PROMOTION', 'QUANTITY' => 'quantity', default => 'scheduled-product-discount' };
+            echo '-- ' . $x['id'] . ' · ' . ($x['name'] ?? '') . ' · ' . $type . ' · ' . ($x['status'] ?? '') . "\n";
+            try {
+                $d = Tfb::get('/admin/promotions/' . $route . '/' . $x['id']);
+                $d = is_array($d) ? array_filter($d['data'] ?? $d, static fn ($k) => !$sensible((string) $k), ARRAY_FILTER_USE_KEY) : $d;
+                echo '   ' . mb_substr(json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 0, 2200) . "\n";
+            } catch (Throwable $e) { echo '   détail : ' . $e->getMessage() . "\n"; }
         }
     } catch (Throwable $e) { echo 'ERREUR : ' . $e->getMessage() . "\n"; }
 }
