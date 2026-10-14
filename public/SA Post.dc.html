@@ -267,6 +267,14 @@
                 <span style="font-size:11px;color:#666666;line-height:1.45;">{{ fondTip }}</span>
               </sc-if>
               <sc-if value="{{ noFonds }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Plein cadre : le fond est la photo.</span></sc-if>
+              <sc-if value="{{ hasFondu }}" hint-placeholder-val="{{ false }}">
+                <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#444444;flex-wrap:wrap;">Fondu sur la photo
+                  <input type="range" min="0" max="100" step="5" value="{{ fondu }}" onChange="{{ setFondu }}" disabled="{{ locked }}" style="flex:1 1 160px;max-width:260px;accent-color:#8D1D2C;">
+                  <span style="width:42px;text-align:right;color:#222222;font-weight:500;">{{ fonduLabel }}</span>
+                  <button onClick="{{ fonduReset }}" disabled="{{ locked }}" title="Revenir au fondu d’origine (60 %)" style="border:none;background:transparent;color:#8D1D2C;font-size:11px;cursor:pointer;">60 %</button>
+                </label>
+                <span style="font-size:11px;color:#666666;">0 % : photo sans dégradé · 100 % : dégradé le plus sombre (texte le plus lisible).</span>
+              </sc-if>
             </div>
             <!-- Illustration : un dessin du design system posé sur le visuel -->
             <div style="display:flex;flex-direction:column;gap:8px;">
@@ -307,7 +315,7 @@
             <div style="display:flex;flex-direction:column;gap:8px;">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <span style="font-size:12px;color:#666666;" title="Chaque texte se réécrit : champ ci-dessous, ou double-clic sur le texte dans l'aperçu">Textes sur le visuel</span>
-                <sc-for list="{{ txtList }}" as="tl" hint-placeholder-count="0"><button onClick="{{ tl.pick }}" style="border:0.5px solid rgba(34,34,34,0.18);background:{{ tl.bg }};color:{{ tl.fg }};border-radius:999px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tl.label }}</button></sc-for>
+                <sc-for list="{{ txtList }}" as="tl" hint-placeholder-count="0"><span style="display:inline-flex;align-items:center;border:0.5px solid rgba(34,34,34,0.18);background:{{ tl.bg }};border-radius:999px;overflow:hidden;"><button onClick="{{ tl.pick }}" style="border:none;background:transparent;color:{{ tl.fg }};padding:4px 4px 4px 10px;font-size:11px;font-weight:500;cursor:pointer;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tl.label }}</button><button onClick="{{ tl.del }}" disabled="{{ locked }}" title="Effacer ce texte du visuel" style="border:none;background:transparent;color:{{ tl.fg }};padding:2px 9px 3px 4px;font-size:14px;line-height:1;cursor:pointer;opacity:0.8;">×</button></span></sc-for>
                 <button onClick="{{ txtAdd }}" disabled="{{ locked }}" style="border:0.5px dashed rgba(34,34,34,0.35);background:#FFFFFF;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;">+ Texte</button>
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
@@ -771,7 +779,7 @@
 
           <!-- visuel : instance unique du studio -->
           <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
-            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-label-move="{{ onLabelMove }}" on-label-select="{{ onLabelSelect }}" on-label-edit="{{ onLabelEdit }}" hint-size="100%,420px"></dc-import>
+            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-label-move="{{ onLabelMove }}" on-label-select="{{ onLabelSelect }}" on-label-edit="{{ onLabelEdit }}" on-label-delete="{{ onLabelDelete }}" hint-size="100%,420px"></dc-import>
           </sc-if>
           <sc-if value="{{ isBrut }}" hint-placeholder-val="{{ false }}">
             <sc-if value="{{ pv.hasMedia }}" hint-placeholder-val="{{ false }}">
@@ -1011,7 +1019,7 @@ class Component extends DCLogic {
   state = this.initState();
   initState() {
     const SA = window.SA;
-    const v = { style: 'epure', format: 'carre', textes: [], cutMode: 'auto', showLogo: true, showEyebrow: true, showTitle: true, showPhrase: true, showPrice: true, showPromo: false, showSite: true,
+    const v = { style: 'epure', format: 'carre', textes: [], fondu: 60, cutMode: 'auto', showLogo: true, showEyebrow: true, showTitle: true, showPhrase: true, showPrice: true, showPromo: false, showSite: true,
       nl: { eyebrow: 'Seizoenseditie · Herfst 2026', title: '', phrase: '', unit: 'Per stuk', promoSub: 'de 5de gratis' },
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', linkText: { fr: '', nl: '' }, campaign: '',
@@ -1133,6 +1141,11 @@ class Component extends DCLogic {
     this.setState({ v: Object.assign({}, v, { textes: ts.concat(t) }), txtSel: t.id, mode: 'studio' });
     // Le texte vient de l'API (nom de promotion, formule) : son champ s'ouvre, prêt à être corrigé.
     this.editerTexte();
+  }
+  /** Efface un texte posé sur le visuel. */
+  effacerTexte(id) {
+    const v = this.state.v;
+    this.setState({ v: Object.assign({}, v, { textes: (v.textes || []).filter(t => t.id !== id) }), txtSel: this.state.txtSel === id ? null : this.state.txtSel });
   }
   /** Le passage sélectionné dans « Texte de l'offre » (sinon tout le texte), pour le texte ou le sous-texte du badge. */
   passageOffre(sel) {
@@ -1607,6 +1620,10 @@ class Component extends DCLogic {
       // Recadrage : le format du visuel est fixé ici (l'image part déjà aux dimensions de Meta).
       vFormats: this.FORMATS.map(([k, label, tip]) => { const [bg, fg] = seg((v.format || 'carre') === k); return { label, tip, bg, fg, pick: () => !locked && this.V({ format: k }) }; }),
       vFormatTip: (this.FORMATS.find(f => f[0] === (v.format || 'carre')) || this.FORMATS[0])[2],
+      // Plein cadre : l'intensité du fondu (dégradé sombre sur la photo), en %.
+      hasFondu: ['plein', 'pleinbandeau', 'pleinhaut', 'pleinfilet'].includes(v.style),
+      fondu: v.fondu != null ? v.fondu : 60, fonduLabel: (v.fondu != null ? v.fondu : 60) + ' %', setFondu: (e) => !locked && this.V({ fondu: +e.target.value }),
+      fonduReset: () => !locked && this.V({ fondu: 60 }),
       // Fond : la palette du design system, dans le ton du style (texte toujours lisible).
       ...(() => {
         const T = window.DS_TONS || {}, ton = Object.prototype.hasOwnProperty.call(T, v.style) ? T[v.style] : 'clair';
@@ -1633,7 +1650,8 @@ class Component extends DCLogic {
         };
         const POS = [['↖', 18, 18], ['↑', 50, 14], ['↗', 82, 18], ['←', 18, 50], ['●', 50, 50], ['→', 82, 50], ['↙', 18, 82], ['↓', 50, 86], ['↘', 82, 82]];
         return { hasTxts: ts.length > 0, hasTxtSel: !!sel,
-          txtList: ts.map(t => { const on = t.id === s.txtSel; return { label: String(t.txt || t.sous || 'Texte').slice(0, 26), bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', pick: () => this.setState({ txtSel: on ? null : t.id }) }; }),
+          txtList: ts.map(t => { const on = t.id === s.txtSel; return { label: String(t.txt || t.sous || 'Texte').slice(0, 26), bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', pick: () => this.setState({ txtSel: on ? null : t.id }),
+            del: () => !locked && this.effacerTexte(t.id) }; }),
           txtAdd: () => !locked && this.poserTexte(String(v.promo || '').trim() || 'Nouveau', ''),
           txtVal: sel ? sel.txt || '' : '', setTxtVal: (e) => upd({ txt: e.target.value }),
           // Le texte de l'offre (libellé de la promotion, du bundle ou de la formule) : modifiable ; on en reprend
@@ -1698,6 +1716,8 @@ class Component extends DCLogic {
       onLabelSelect: (id) => this.setState({ txtSel: id }),
       // Double-clic sur un texte de l'aperçu : son champ s'ouvre, texte sélectionné, prêt à être réécrit.
       onLabelEdit: (id) => { if (!locked) { this.setState({ txtSel: id }); this.editerTexte(); } },
+      // Le × d'un texte posé (sur l'aperçu ou sur sa pastille) : il est effacé du visuel.
+      onLabelDelete: (id) => { if (!locked) this.effacerTexte(id); },
       txtRef: (el) => { this._txtIn = el; },
       // ciblage
       shopBadges: SA.SHOPS.concat(tests).map(sh => { const on = t.includes(sh.id), test = !!sh.test;

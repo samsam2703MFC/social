@@ -308,7 +308,10 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
 - **Styles plein cadre** — en plus de « Plein cadre » : Plein · bandeau (bandeau ruby en bas),
   Plein · encart (encart crème arrondi), Plein · titre haut (titre en haut, prix en pastille
   ruby), Plein · filet (filet crème intérieur, titre et prix centrés en bas). La photo occupe
-  tout le visuel ; fond : la photo.
+  tout le visuel ; fond : la photo. « Fondu sur la photo » règle l'intensité du dégradé sombre
+  (0 à 100 %, 60 % = le dessin d'origine ; `visual.v.fondu`, variable CSS `--fade`).
+  Un texte posé s'efface par son × (sur l'aperçu, au survol ou sélectionné, ou sur sa
+  pastille dans la liste) ; le × n'est jamais dans l'image exportée.
 - **Texte du lien** — le lien publié suit un texte d'introduction : « Commandez ici 👉
   https://… » (`socMessage`). Meta n'accepte pas de lien caché sous un mot dans le texte d'une
   publication : l'adresse reste visible juste après ce texte. Le texte se règle par post (champ

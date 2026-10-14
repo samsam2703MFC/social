@@ -68,3 +68,4 @@ Relivraison : générateur — recadrage (1:1, 4:5, 1,91:1), fond de la palette 
 Relivraison : textes sur le visuel (promotions, formules), modèles d'étiquette — 2026-10-14T14:52:10Z
 Relivraison : textes du visuel modifiables (double-clic sur l'aperçu) — 2026-10-14T14:54:38Z
 Relivraison : texte de l'offre éditable pour les badges ; 4 styles plein cadre — 2026-10-14T15:08:57Z
+Relivraison : × pour effacer un texte du visuel ; fondu réglable en plein cadre — 2026-10-14T15:30:49Z
