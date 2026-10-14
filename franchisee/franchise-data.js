@@ -111,7 +111,8 @@
     const s = STATE ? STATE.shop : {};
     const h = lang === 'nl' ? (s.hoursNl || s.hours || '') : (s.hours || '');
     // Sans horaires, la phrase qui les cite disparaît plutôt que « Ouvert . » (comme le serveur).
-    const t = String(text || ''), t2 = STATE && !String(h).trim() ? t.replace(/[ \t]*[^.!?\n]*\{horaires\}[^.!?\n]*[.!?]?/g, '').replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+(\n|$)/g, '$1') : t;
+    // {lien} : le lien du post, ajouté par le serveur à la publication (« Commandez ici 👉 https://… ») ; pas dans l'aperçu du texte.
+    const t = String(text || '').replace(/[ \t]*\{lien\}[ \t]*/g, ' ').replace(/[ \t]+(\n|$)/g, '$1'), t2 = STATE && !String(h).trim() ? t.replace(/[ \t]*[^.!?\n]*\{horaires\}[^.!?\n]*[.!?]?/g, '').replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+(\n|$)/g, '$1') : t;
     return t2.replace(/\{ville\}/g, s.name || '').replace(/\{adresse\}/g, s.address || '').replace(/\{horaires\}/g, h);
   };
   function emit() { window.dispatchEvent(new Event('sf-change')); }

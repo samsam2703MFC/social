@@ -352,6 +352,23 @@
       .replace(/\{webshop_produit\}/g, webshopUrl(s ? s.id : '', product)).replace(/\{webshop_categorie\}/g, webshopUrl(s ? s.id : '', null, product && product.categoryId))
       .replace(/\{webshop\}/g, webshopUrl(s ? s.id : ''));
   }
+  /**
+   * Le texte qui introduit le lien d'un post (« Commandez ici 👉 ») : celui du post, sinon le réglage
+   * `lien_texte` (Paramètres), sinon le texte d'origine. Meta n'accepte pas de lien caché sous un mot :
+   * l'adresse suit ce texte (comme le serveur, socMessage).
+   */
+  const LIEN_DEF = { fr: 'Commandez ici 👉', nl: 'Bestel hier 👉' };
+  function lienTexte(L, post) {
+    const p = post && post.linkText ? String(post.linkText[L] || '').trim() : '';
+    if (p) return p;
+    const d = typeof cache !== 'undefined' && cache && cache.params ? cache.params.lien_texte : null;
+    return (d && String(d[L] || '').trim()) || LIEN_DEF[L] || LIEN_DEF.fr;
+  }
+  /** Place {lien} dans un texte (« Commandez ici 👉 https://… ») ; sans lien (ou sur Instagram), la variable disparaît. */
+  function placerLien(txt, lien) {
+    const t = lien ? String(txt || '').split('{lien}').join(lien) : String(txt || '').replace(/[ \t]*\{lien\}[ \t]*/g, ' ');
+    return t.replace(/[ \t]+(\n|$)/g, '$1').replace(/\n{3,}/g, '\n\n').trim();
+  }
   /** Sans horaires (magasin test), la phrase qui cite {horaires} disparaît plutôt que « Ouvert . » (comme le serveur). */
   const sansHoraires = (t) => t.replace(/[ \t]*[^.!?\n]*\{horaires\}[^.!?\n]*[.!?]?/g, '').replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+(\n|$)/g, '$1');
   // Le plan du webshop : catégorie → groupe (0 : sans groupe), produit → catégorie. Servi avec l'état, complété par chaque catalogue lu.
@@ -378,7 +395,8 @@
     if (cat) { grp = grp || PLAN.cats[cat] || 0; if (grp) q.push(['category', 'group:' + grp], ['sub', 'category:' + cat]); else q.push(['category', 'category:' + cat]); }
     else if (grp) q.push(['category', 'group:' + grp]);
     if (pid) q.push(['product', String(pid)], ['open', 'product']);
-    return q.length ? base + '?' + q.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&') : base;
+    // « : » reste lisible (permis dans une requête) : ?category=group:28&sub=category:31000.
+    return q.length ? base + '?' + q.map(([k, v]) => k + '=' + encodeURIComponent(v).replace(/%3A/g, ':')).join('&') : base;
   }
   /**
    * Une photo du webshop (Cloudflare R2, sans en-tête CORS) rapatriée par le module et remise en JPEG (data:) :
@@ -745,7 +763,7 @@
   else window.addEventListener('focus', () => { refresh(); });
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
-    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, suivi, avatar,
+    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.
     ctype, rattacher, webshopUrl, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,

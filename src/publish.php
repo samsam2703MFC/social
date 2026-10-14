@@ -56,7 +56,8 @@ function socWebshopUrl(string $shopId, ?array $product = null, int $categorie = 
         $q['category'] = 'group:' . $groupe;
     }
     if ($produit) { $q += ['product' => (string) $pid, 'open' => 'product']; }
-    return $q ? $base . '?' . http_build_query($q, '', '&', PHP_QUERY_RFC3986) : $base;
+    // « : » reste lisible (permis dans une requête) : ?category=group:28&sub=category:31000.
+    return $q ? $base . '?' . str_replace('%3A', ':', http_build_query($q, '', '&', PHP_QUERY_RFC3986)) : $base;
 }
 
 /** Le produit du catalogue cité par un post (null s'il n'en cite pas). */
@@ -98,20 +99,50 @@ function socSansHoraires(string $text): string
     return preg_replace(['/[ \t]{2,}/', '/[ \t]+(\n|$)/'], [' ', '$1'], (string) $t);
 }
 
-/** Le message publié sur la Page d'une boutique : NL puis FR si bilingue. */
-function socMessage(array $post, array $shop): string
+/** Le texte qui introduit le lien d'un post (« Commandez ici 👉 ») : celui du post, sinon le réglage `lien_texte`. */
+function socLienTexte(array $post, string $lang): string
+{
+    $d = socSetting('lien_texte');
+    $defaut = ['fr' => 'Commandez ici 👉', 'nl' => 'Bestel hier 👉'];
+    $t = trim((string) ($post['linkText'][$lang] ?? ''));
+    if ($t === '' && is_array($d)) { $t = trim((string) ($d[$lang] ?? '')); }
+    return $t !== '' ? $t : ($defaut[$lang] ?? $defaut['fr']);
+}
+
+/**
+ * Le message publié sur la Page d'une boutique : NL puis FR si bilingue.
+ *
+ * Le lien du post (résolu pour la boutique) suit son texte d'introduction : « Commandez ici 👉
+ * https://… ». Meta n'accepte pas de lien caché sous un mot dans le texte d'une publication :
+ * l'adresse reste visible, juste après le texte. La variable {lien} le place dans le texte ;
+ * sans elle, il est ajouté à la fin quand le post porte une photo ou une vidéo (sans média,
+ * Facebook en fait une carte cliquable). Instagram : un lien de légende n'est pas cliquable,
+ * {lien} disparaît.
+ */
+function socMessage(array $post, array $shop, string $canal = 'fb'): string
 {
     $product = socPostProduit($post);
-    $parts = [];
-    foreach ((array) ($shop['langs'] ?: ['fr']) as $L) {
+    $langs = (array) ($shop['langs'] ?: ['fr']);
+    $url = socFill(trim((string) ($post['link'] ?? '')), $shop, $product, $langs[0] ?? 'fr');
+    $lien = static fn (string $L) => $canal === 'ig' || $url === '' ? '' : socLienTexte($post, $L) . ' ' . $url;
+    $place = static function (string $txt, string $L) use ($lien): string {
+        $l = $lien($L);
+        $t = $l === '' ? (string) preg_replace('/[ \t]*\{lien\}[ \t]*/', ' ', $txt) : str_replace('{lien}', $l, $txt);
+        return trim((string) preg_replace(["/[ \t]+(\n|$)/", "/\n{3,}/"], ['$1', "\n\n"], $t));
+    };
+    $parts = []; $avecLien = false;
+    foreach ($langs as $L) {
         $t = $L === 'nl' ? (string) ($post['textNl'] ?? '') : (string) ($post['text'] ?? '');
-        if (trim($t) !== '') { $parts[] = socFill($t, $shop, $product, $L); }
+        if (trim($t) !== '') { $avecLien = $avecLien || str_contains($t, '{lien}'); $parts[] = $place(socFill($t, $shop, $product, $L), $L); }
     }
     if (!$parts) {  // un seul texte saisi : il sert pour toutes les langues
         $t = trim((string) ($post['text'] ?? '')) !== '' ? (string) $post['text'] : (string) ($post['textNl'] ?? '');
-        if (trim($t) !== '') { $parts[] = socFill($t, $shop, $product, $shop['langs'][0] ?? 'fr'); }
+        if (trim($t) !== '') { $avecLien = str_contains($t, '{lien}'); $parts[] = $place(socFill($t, $shop, $product, $langs[0] ?? 'fr'), $langs[0] ?? 'fr'); }
     }
-    return implode("\n\n", $parts);
+    $msg = implode("\n\n", $parts);
+    [$imgs, $video] = socMedias($post);
+    if (!$avecLien && ($imgs || $video !== null) && ($l = $lien($langs[0] ?? 'fr')) !== '') { $msg = trim($msg . "\n\n" . $l); }
+    return $msg;
 }
 
 /** L'URL publique d'un média : Meta le télécharge depuis le serveur. */
@@ -212,7 +243,8 @@ function socPublishFb(array $post, array $shop, string $message): string
         return (string) ($r['id'] ?? '');
     }
     if (count($imgs) === 1) {
-        $r = Meta::call('POST', $pid . '/photos', ['url' => socPublicUrl($imgs[0]), 'caption' => $message . ($link !== '' ? "\n" . $link : '')], $tok);
+        // Le lien est déjà dans le message, après son texte (socMessage).
+        $r = Meta::call('POST', $pid . '/photos', ['url' => socPublicUrl($imgs[0]), 'caption' => $message], $tok);
         return (string) ($r['post_id'] ?? $r['id'] ?? '');
     }
     $r = Meta::call('POST', $pid . '/feed', array_filter(['message' => $message, 'link' => $link ?: null]), $tok);
@@ -290,7 +322,7 @@ function socRunQueue(?string $postId = null, int $max = 60): array
             if ($post === null) { throw new MetaError('post supprimé', 0); }
             if ($shop === null) { throw new MetaError('boutique inconnue ou fermée', 0); }
             if (!Meta::configured()) { throw new MetaError('token Meta absent : à saisir dans Paramètres → API Meta → Clés d’accès Meta', 190); }
-            $msg = socMessage($post, $shop);
+            $msg = socMessage($post, $shop, (string) $r['canal']);
             $mid = $r['canal'] === 'ig' ? socPublishIg($post, $shop, $msg) : socPublishFb($post, $shop, $msg);
             Db::exec("UPDATE social_publication SET statut = 'publie', meta_id = ?, erreur = NULL, code_erreur = NULL, maj_le = ? WHERE id = ?", [$mid, date('Y-m-d H:i:s'), $r['id']]);
         } catch (MetaError $e) {

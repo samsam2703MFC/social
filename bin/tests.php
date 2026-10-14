@@ -915,17 +915,17 @@ socSettingPut('tfb_cache_nav', ['v' => 1, 'shops' => ['4' => ['le' => time(), 'd
 $W = 'https://webshop.atelierby.be/';
 $prodWs = ['id' => 'p3200006', 'apiId' => 3200006, 'kind' => 'produit', 'name' => 'Amandes', 'price' => '4,90'];
 check('{webshop} et {webshop_produit} : la boutique, puis la sous-catégorie du produit, ouverte sur lui', socFill('{webshop} | {webshop_produit}', ['id' => '4', 'name' => 'Halle'], $prodWs, 'fr')
-    === $W . '?shop=4 | ' . $W . '?shop=4&category=group%3A28&sub=category%3A31000&product=3200006&open=product');
-check('sous-catégorie au format du webshop (?shop=4&category=group:28&sub=category:31000)', socWebshopUrl('4', null, 31000) === $W . '?shop=4&category=group%3A28&sub=category%3A31000');
+    === $W . '?shop=4 | ' . $W . '?shop=4&category=group:28&sub=category:31000&product=3200006&open=product');
+check('sous-catégorie au format du webshop (?shop=4&category=group:28&sub=category:31000)', socWebshopUrl('4', null, 31000) === $W . '?shop=4&category=group:28&sub=category:31000');
 check('catégorie sans groupe : category=category:… ; catégorie (groupe) seule : category=group:…',
-    socWebshopUrl('4', null, 45000) === $W . '?shop=4&category=category%3A45000' && socWebshopUrl('4', null, 0, 28) === $W . '?shop=4&category=group%3A28');
+    socWebshopUrl('4', null, 45000) === $W . '?shop=4&category=category:45000' && socWebshopUrl('4', null, 0, 28) === $W . '?shop=4&category=group:28');
 check('sans produit (ou gamme) : le webshop de la boutique ; boutique sans n° de caisse : l’accueil du webshop',
     socFill('{webshop_produit}', ['id' => '5', 'name' => 'Wavre'], null, 'fr') === $W . '?shop=5'
     && socWebshopUrl('5', ['apiId' => 7, 'kind' => 'gamme']) === $W . '?shop=5' && socWebshopUrl('ceo:9') === $W);
 check('catégorie du produit, produit, sous-catégorie ou catégorie précis', socFill('{webshop_categorie} | {webshop_produit:6700092} | {webshop_categorie:32000} | {webshop_groupe:28}', ['id' => '2', 'name' => 'Corbais'], $prodWs + ['categoryId' => 31000], 'fr')
-    === $W . '?shop=2&category=group%3A28&sub=category%3A31000 | ' . $W . '?shop=2&category=group%3A28&sub=category%3A32000&product=6700092&open=product | '
-    . $W . '?shop=2&category=group%3A28&sub=category%3A32000 | ' . $W . '?shop=2&category=group%3A28');
-check('boutique hors caisse (magasin test) : la page du webshop, sans boutique', socWebshopUrl('pg12345678901234', null, 31000) === $W . '?category=group%3A28&sub=category%3A31000');
+    === $W . '?shop=2&category=group:28&sub=category:31000 | ' . $W . '?shop=2&category=group:28&sub=category:32000&product=6700092&open=product | '
+    . $W . '?shop=2&category=group:28&sub=category:32000 | ' . $W . '?shop=2&category=group:28');
+check('boutique hors caisse (magasin test) : la page du webshop, sans boutique', socWebshopUrl('pg12345678901234', null, 31000) === $W . '?category=group:28&sub=category:31000');
 check('boutique sans horaires (magasin test) : la phrase des horaires disparaît, pas « Ouvert . »',
     socFill("Brownies : 3,50 € chez L’Atelier By {ville}. Ouvert {horaires}.\nCommandez : {webshop}", ['id' => 'pg1', 'name' => 'Gembloux', 'hours' => ''], null, 'fr')
     === "Brownies : 3,50 € chez L’Atelier By Gembloux.\nCommandez : " . $W
@@ -934,6 +934,17 @@ $appels = [];
 socPublishFb(['id' => 'pw1', 'text' => 'Commandez', 'link' => '{webshop}', 'img' => null], socShop('4'), 'Commandez');
 $feed = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === '111/feed'));
 check('publication : le lien {webshop} devient celui de la boutique visée', ($feed[0][2]['link'] ?? '') === 'https://webshop.atelierby.be/?shop=4', json_encode($feed[0][2] ?? null));
+$halle = ['id' => '4', 'name' => 'Halle', 'langs' => ['fr'], 'hours' => '7h–18h30'];
+$pl = ['id' => 'pl1', 'text' => 'Cookie chez {ville}.' . "\n" . '{lien}', 'link' => '{webshop_categorie:31000}', 'media' => [['src' => 'uploads/x.jpg', 'kind' => 'img']]];
+check('{lien} : le texte du lien puis l’adresse résolue, à sa place (Facebook)', socMessage($pl, $halle, 'fb') === "Cookie chez Halle.\nCommandez ici 👉 " . $W . '?shop=4&category=group:28&sub=category:31000');
+check('Instagram : {lien} disparaît (lien de légende non cliquable)', socMessage($pl, $halle, 'ig') === 'Cookie chez Halle.');
+$pl2 = ['text' => 'Cookie chez {ville}.', 'link' => '{webshop}', 'media' => [['src' => 'uploads/x.jpg', 'kind' => 'img']], 'linkText' => ['fr' => 'À commander ici :']];
+check('sans {lien}, avec photo : ajouté à la fin, avec le texte du post', socMessage($pl2, $halle, 'fb') === "Cookie chez Halle.\n\nÀ commander ici : " . $W . '?shop=4');
+socSettingPut('lien_texte', ['fr' => 'Réservez ici →', 'nl' => 'Reserveer hier →'], false);
+check('texte par défaut réglé (Paramètres) ; sans média, Facebook fait la carte du lien : rien d’ajouté', socMessage(['text' => 'A {lien}', 'link' => '{webshop}'], $halle, 'fb') === 'A Réservez ici → ' . $W . '?shop=4'
+    && socMessage(['text' => 'A', 'link' => '{webshop}'], $halle, 'fb') === 'A');
+socSettingPut('lien_texte', null, false);
+check('sans lien : {lien} disparaît', socMessage(['text' => "A\n{lien}\nB", 'link' => ''], $halle, 'fb') === "A\n\nB");
 
 echo "Rattacher posts et publicités aux opérations du Marketing\n";
 $ratt = static function (array $b): array { $GLOBALS['SOC_BODY'] = $b; try { return socRoute('POST', '/operations/rattacher'); } catch (HttpError $e) { return [$e->status, ['error' => $e->getMessage()]]; } finally { unset($GLOBALS['SOC_BODY']); } };

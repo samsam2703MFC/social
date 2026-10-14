@@ -503,6 +503,15 @@
               </div>
               <sc-if value="{{ hasLinkWhy }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8A4B00;line-height:1.45;">{{ linkWhy }}</span></sc-if>
               <sc-if value="{{ hasLinkResolved }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#444444;line-height:1.45;word-break:break-all;">{{ linkResolved }}</span></sc-if>
+              <div style="display:flex;flex-direction:column;gap:6px;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:8px;">
+                <span style="font-size:12px;color:#444444;">Texte du lien <span style="font-size:11px;color:#666666;">— placé là où le texte dit <code style="font-size:11px;">{lien}</code>, sinon à la fin : « {{ linkTextEx }} »</span></span>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                  <sc-for list="{{ linkTexts }}" as="lt" hint-placeholder-count="2"><label style="flex:1 1 200px;display:flex;gap:6px;align-items:center;font-size:11px;color:#666666;">{{ lt.lang }}
+                    <input type="text" value="{{ lt.value }}" onChange="{{ lt.set }}" disabled="{{ locked }}" placeholder="{{ lt.ph }}" style="flex:1;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;outline:none;" style-focus="border-color:#8D1D2C;"></label></sc-for>
+                  <sc-if value="{{ canSaveLinkText }}" hint-placeholder-val="{{ false }}"><button onClick="{{ saveLinkText }}" title="Ce texte sera proposé pour les prochains posts" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:500;cursor:pointer;">Garder par défaut</button></sc-if>
+                </div>
+                <span style="font-size:11px;color:#8A4B00;line-height:1.45;">Facebook n’accepte pas de lien caché sous un mot : l’adresse reste visible juste après ce texte. Instagram ne rend pas les liens cliquables, il n’est pas repris.</span>
+              </div>
             </div>
             <label style="flex:1 1 200px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;">Opération liée
               <select value="{{ campaign }}" onChange="{{ setCampaign }}" disabled="{{ locked }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:9px 10px;">
@@ -685,8 +694,8 @@
           </sc-if>
           <sc-if value="{{ isIg }}" hint-placeholder-val="{{ false }}">
             <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;">
-              <p style="margin:0;font-size:13px;line-height:1.45;color:#262626;white-space:pre-wrap;"><strong style="font-weight:600;">{{ pv.handle }}</strong> {{ pv.text }}</p>
-              <sc-if value="{{ pv.hasLink }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8e8e8e;">Lien non cliquable dans une légende Instagram : « lien en bio ».</span></sc-if>
+              <p style="margin:0;font-size:13px;line-height:1.45;color:#262626;white-space:pre-wrap;"><strong style="font-weight:600;">{{ pv.handle }}</strong> {{ pv.textIg }}</p>
+              <sc-if value="{{ pv.hasLinkIg }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8e8e8e;">Instagram : un lien de légende n’est pas cliquable, il n’est pas repris (« lien en bio »).</span></sc-if>
               <span style="font-size:10px;color:#8e8e8e;text-transform:uppercase;letter-spacing:0.04em;">{{ pv.when }}</span>
             </div>
           </sc-if>
@@ -857,7 +866,7 @@ class Component extends DCLogic {
     const v = { style: 'epure', cutMode: 'auto', showLogo: true, showEyebrow: true, showTitle: true, showPhrase: true, showPrice: true, showPromo: false, showSite: true,
       nl: { eyebrow: 'Seizoenseditie · Herfst 2026', title: '', phrase: '', unit: 'Per stuk', promoSub: 'de 5de gratis' },
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
-    const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', campaign: '',
+    const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', linkText: { fr: '', nl: '' }, campaign: '',
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
       nav: null, navKey: null, navLoading: false, navErr: '', navMode: 'cat', navG: null, navC: null, navGam: null, navQ: '', navSel: null, offres: null, offresKey: '', offresLoading: false, offreUsed: '',
       libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false };
@@ -868,7 +877,7 @@ class Component extends DCLogic {
     const id = SA.param('id'), p = id && SA.state().posts.find(x => x.id === id);
     if (p) {
       const shops = p.shops === 'all' ? SA.SHOPS.map(s => s.id) : p.shops.slice();
-      Object.assign(base, { id: p.id, type: p.type, text: p.text || '', textNl: p.textNl || '', link: p.link || '', campaign: p.campaign || '', date: p.date, time: p.time, sel: shops,
+      Object.assign(base, { id: p.id, type: p.type, text: p.text || '', textNl: p.textNl || '', link: p.link || '', linkText: Object.assign({ fr: '', nl: '' }, p.linkText || {}), campaign: p.campaign || '', date: p.date, time: p.time, sel: shops,
         scope: shops.length === SA.SHOPS.length ? 'all' : 'shop', status: p.status, spread: p.spread || 10, product: p.product || null, dark: !!p.dark });
       if (p.ch) base.ch = p.ch;
       if (p.catalogue) base.navSel = p.catalogue;
@@ -1130,7 +1139,7 @@ class Component extends DCLogic {
       visual: s.mode === 'studio' ? { v: s.v, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
       frise: friseTiles ? { tiles: friseTiles } : null,
       montage: this.isMontage() ? { kind: s.mode, m: s.m, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
-      shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, spread: s.spread, product: s.product, catalogue: s.navSel || null };
+      shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, linkText: (s.linkText.fr || s.linkText.nl) ? s.linkText : null, spread: s.spread, product: s.product, catalogue: s.navSel || null };
     if (s.dark) { post.dark = true; post.fb = false; post.ig = false; if (!s.id) { post.date = SA.TODAY; post.time = nowT; } }
     if (status === 'Publié') {
       const ko = t.filter(id => s.ch[id] && s.ch[id].ig && (SA.byId(SA.state().shops, id) || SA.byId(SA.SHOPS, id) || {}).igs !== 'connected').map(id => ({ shop: id, channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }));
@@ -1209,18 +1218,18 @@ class Component extends DCLogic {
         const ref = SA.CATALOGUE.find(c => c.apiId === it.id && c.kind === 'produit');
         st.product = ref ? ref.id : 'p' + it.id; st.type = 'Produit';
         st.v = Object.assign({}, v, { title: it.name, showTitle: true, price: it.prix != null ? String(it.prix.toFixed(2)).replace('.', ',') : '', showPrice: it.prix != null, nl: Object.assign({}, v.nl, { title: nomNl }) });
-        auto(it.name + (it.prix != null ? ' : ' + eur(it.prix) : '') + ' chez L\u2019Atelier By {ville}. Ouvert {horaires}.',
-          nomNl + (it.prix != null ? ': ' + eur(it.prix) : '') + ' bij L\u2019Atelier By {ville}. Open {horaires}.');
+        auto(it.name + (it.prix != null ? ' : ' + eur(it.prix) : '') + ' chez L\u2019Atelier By {ville}. Ouvert {horaires}.\n{lien}',
+          nomNl + (it.prix != null ? ': ' + eur(it.prix) : '') + ' bij L\u2019Atelier By {ville}. Open {horaires}.\n{lien}');
       } else if (it.kind === 'gamme') {
         const ref = SA.CATALOGUE.find(c => c.apiId === it.id && c.kind === 'gamme');
         st.product = ref ? ref.id : 'g' + it.id; st.type = 'Gamme saisonnière';
         st.v = Object.assign({}, v, { title: it.name, showTitle: true, price: '', showPrice: false, nl: Object.assign({}, v.nl, { title: it.name }) });
-        auto('La ' + it.name + ' est arrivée chez L\u2019Atelier By {ville}. À découvrir {horaires}.', 'Het ' + it.name + ' is er bij L\u2019Atelier By {ville}. Ontdek het {horaires}.');
+        auto('La ' + it.name + ' est arrivée chez L\u2019Atelier By {ville}. À découvrir {horaires}.\n{lien}', 'Het ' + it.name + ' is er bij L\u2019Atelier By {ville}. Ontdek het {horaires}.\n{lien}');
       } else {
         // Une catégorie ou une sous-catégorie entière : son illustration, pas de prix ; le lien du webshop vers la sous-catégorie.
         st.product = null; st.type = 'Produit';
         st.v = Object.assign({}, v, { title: it.name, showTitle: true, price: '', showPrice: false, nl: Object.assign({}, v.nl, { title: it.name }) });
-        auto('Nos ' + it.name.toLowerCase() + ' vous attendent chez L\u2019Atelier By {ville}. Ouvert {horaires}.', 'Onze ' + it.name.toLowerCase() + ' wachten op u bij L\u2019Atelier By {ville}. Open {horaires}.');
+        auto('Nos ' + it.name.toLowerCase() + ' vous attendent chez L\u2019Atelier By {ville}. Ouvert {horaires}.\n{lien}', 'Onze ' + it.name.toLowerCase() + ' wachten op u bij L\u2019Atelier By {ville}. Open {horaires}.\n{lien}');
       }
       this.setState(st, () => { if (it.image) this.localiser(it.image).catch(e => console.error(e)); });
     };
@@ -1307,7 +1316,13 @@ class Component extends DCLogic {
     const pvId = t.includes(s.pvShop) ? s.pvShop : t[0], pvShop = pvId ? SA.byId(shopsState, pvId) : null;
     const shopLangs = pvShop ? SA.langsOf(pvShop) : ['fr'], pvLang = shopLangs.includes(s.pvLang) ? s.pvLang : shopLangs[0];
     const txt = (L) => L === 'nl' ? s.textNl : s.text;
-    const filled = pvShop ? shopLangs.map(L => SA.fill(txt(L), pvShop, cat, L)).filter(x => x.trim()).join('\n\n— — —\n\n') : s.text;
+    // Le lien résolu pour la boutique de l'aperçu, précédé de son texte (« Commandez ici 👉 ») ; comme le serveur (socMessage).
+    const lienUrl = s.link && pvShop ? SA.fill(s.link, pvShop, cat) : '', aMedia = s.photos.length > 0 || !!s.video;
+    const lienDe = (L) => lienUrl ? SA.lienTexte(L, s) + ' ' + lienUrl : '';
+    const avecLien = shopLangs.some(L => String(txt(L) || '').includes('{lien}'));
+    const remplir = (ig) => { const parts = pvShop ? shopLangs.map(L => SA.placerLien(SA.fill(txt(L), pvShop, cat, L), ig ? '' : lienDe(L))).filter(x => x.trim()) : [s.text];
+      const out = parts.join('\n\n— — —\n\n'); return !ig && !avecLien && aMedia && lienUrl ? (out + '\n\n' + lienDe(shopLangs[0])).trim() : out; };
+    const filled = remplir(false), filledIg = remplir(true);
     const LOC = ['eyebrow', 'title', 'phrase', 'unit', 'promoSub'];
     const vL = pvLang === 'nl' ? Object.assign({}, v, ...LOC.map(k => ({ [k]: (v.nl || {})[k] || '' }))) : v;
     const needed = [...new Set(t.flatMap(id => SA.langsOf(id)))];
@@ -1315,7 +1330,7 @@ class Component extends DCLogic {
     const rawMedia = s.photos.map(p => ({ src: p.src, isImg: true, isVideo: false, fit: p.cut ? 'contain' : 'cover' })).concat(s.video ? [{ src: '', isImg: false, isVideo: true, fit: 'cover' }] : []);
     const shown = rawMedia.slice(0, 4).map((m, i) => Object.assign({}, m, { more: i === 3 && rawMedia.length > 4, moreLabel: '+' + (rawMedia.length - 4) }));
     const pv = { page: pvShop ? pvShop.page : "L'Atelier By", city: pvShop ? pvShop.name : '—', handle: pvShop ? pvShop.ig.replace('@', '') : 'latelierby',
-      when: s.dark ? 'Sponsorisé' : s.when === 'now' ? "À l'instant" : SA.dLabel(s.date) + ' à ' + s.time, text: filled || 'Votre texte apparaîtra ici.', hasLink: !!s.link, link: s.link,
+      when: s.dark ? 'Sponsorisé' : s.when === 'now' ? "À l'instant" : SA.dLabel(s.date) + ' à ' + s.time, text: filled || 'Votre texte apparaîtra ici.', textIg: filledIg || 'Votre texte apparaîtra ici.', hasLink: !!lienUrl && !aMedia, link: lienUrl, hasLinkIg: !!lienUrl,
       hasMedia: shown.length > 0, noMedia: shown.length === 0, media: shown, cols: shown.length > 1 ? '1fr 1fr' : '1fr',
       resolved: pvShop ? ['{ville} → ' + pvShop.name, '{horaires} → ' + pvShop.hours, '{prix} → ' + (cat ? cat.price + ' €' : 'non défini')].join(' · ') : '—' };
     const igBroken = t.filter(id => (SA.byId(shopsState, id) || SA.byId(SA.SHOPS, id) || {}).igs !== 'connected');
@@ -1436,7 +1451,7 @@ class Component extends DCLogic {
       isGroup: s.scope === 'group', groups: (st.groups || SA.GROUPS).map(g => Object.assign(chip(s.group === g.id), { name: g.name, count: g.shops.length, pick: () => this.setState({ group: g.id, sel: g.shops.slice() }) })),
       shopRows, igUnique, igUniqueNote: 'Instagram : un seul compte pour tout le réseau (' + igHandle + '). Cocher Instagram pour une ou plusieurs boutiques publie le post une seule fois sur ce compte ; {ville} y devient la liste des boutiques visées.',
       // texte
-      vars: [['{webshop}', 'Lien du webshop de la boutique'], ['{webshop_produit}', 'Lien du produit dans le webshop de la boutique'], ['{ville}', 'Nom de la boutique'], ['{adresse}', 'Adresse de la boutique'], ['{horaires}', "Horaires d'ouverture"], ['{prix}', 'Prix du produit choisi'], ['{produit_du_jour}', 'Produit du jour (catalogue)']].map(([code, tip]) => ({ code, tip, insert: () => !locked && this.insertVar(code) })),
+      vars: [['{lien}', 'Le lien du post, précédé de son texte (« Commandez ici 👉 https://… »)'], ['{webshop}', 'Lien du webshop de la boutique'], ['{webshop_produit}', 'Lien du produit dans le webshop de la boutique'], ['{ville}', 'Nom de la boutique'], ['{adresse}', 'Adresse de la boutique'], ['{horaires}', "Horaires d'ouverture"], ['{prix}', 'Prix du produit choisi'], ['{produit_du_jour}', 'Produit du jour (catalogue)']].map(([code, tip]) => ({ code, tip, insert: () => !locked && this.insertVar(code) })),
       taRef: (el) => { this._ta = el; }, text: isNlEd ? s.textNl : s.text, setText: (e) => this.setState({ [isNlEd ? 'textNl' : 'text']: e.target.value }),
       templates: (st.templates || SA.TEMPLATES).map(tp => ({ name: tp.name, use: () => !locked && this.setState({ text: tp.text, textNl: tp.textNl || s.textNl, type: tp.type }) })),
       langTabs: ['fr', 'nl'].map(L => { const on = s.edLang === L, req = needed.includes(L), done = L === 'nl' ? !!s.textNl.trim() : !!s.text.trim();
@@ -1447,6 +1462,13 @@ class Component extends DCLogic {
       pvBilingual: shopLangs.length > 1, pvLangs: shopLangs.map(L => Object.assign(chip(L === pvLang), { label: L.toUpperCase(), pick: () => this.setState({ pvLang: L }) })),
       lenLabel: len + ' caractères' + (len > 125 ? ' · tronqué après 125 dans le fil' : ''), lenColor: len > 125 ? '#8A4B00' : '#666666',
       link: s.link, setLink: (e) => this.setState({ link: e.target.value }),
+      linkTexts: [['fr', 'FR'], ['nl', 'NL']].filter(([L]) => needed.includes(L) || L === 'fr').map(([L, lang]) => ({ lang, value: s.linkText[L] || '', ph: SA.lienTexte(L),
+        set: (e) => this.setState({ linkText: Object.assign({}, this.state.linkText, { [L]: e.target.value }) }) })),
+      linkTextEx: SA.lienTexte(pvLang, s) + ' ' + (lienUrl || 'https://webshop.atelierby.be/…'),
+      canSaveLinkText: !locked && SA.live && !!(String(s.linkText.fr || '').trim() || String(s.linkText.nl || '').trim()),
+      saveLinkText: () => { const d = { fr: String(s.linkText.fr || '').trim() || SA.lienTexte('fr'), nl: String(s.linkText.nl || '').trim() || SA.lienTexte('nl') };
+        SA.api('POST', '/parametres', { lien_texte: d }).then(r => { const st = SA.state(); st.params = (r && r.params) || Object.assign({}, st.params, { lien_texte: d }); this.toast('Texte du lien gardé par défaut : « ' + d.fr + ' » / « ' + d.nl + ' ».'); this.setState({ tick: (this.state.tick || 0) + 1 }); })
+          .catch(e => this.toast('Texte du lien non enregistré : ' + (e.message || e))); },
       // Liens du webshop : celui de la boutique, ou la page du produit choisi (étape 2), résolus boutique par boutique.
       ...(() => {
         const wsAll = (SA.CATALOGUE || []).filter(c => c.kind !== 'gamme' && c.apiId && c.webshop);

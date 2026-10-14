@@ -284,6 +284,14 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   Magasin test (hors caisse) : la page du webshop sans boutique. Une boutique sans horaires :
   la phrase qui cite `{horaires}` disparaît (plus de « Ouvert . »). Boutons « Lien rapide »
   sous le champ Lien.
+- **Texte du lien** — le lien publié suit un texte d'introduction : « Commandez ici 👉
+  https://… » (`socMessage`). Meta n'accepte pas de lien caché sous un mot dans le texte d'une
+  publication : l'adresse reste visible juste après ce texte. Le texte se règle par post (champ
+  « Texte du lien », FR/NL) et par défaut (« Garder par défaut » → réglage `lien_texte`). La
+  variable `{lien}` le place dans le texte ; les textes proposés par le catalogue la mettent en
+  dernière ligne. Sans `{lien}`, il est ajouté à la fin d'un post avec photo ou vidéo (sans média,
+  Facebook fait une carte cliquable du lien). Instagram : un lien de légende n'est pas
+  cliquable, `{lien}` disparaît.
 - **Espace franchisé aligné** — « Opérations du réseau » (`GET /franchise/operations`) :
   chaque campagne du Marketing où figure la boutique, avec ce qui y est rattaché en
   lecture seule (posts du module, publications de sa Page et de l'Instagram du réseau

@@ -63,3 +63,4 @@ Sonde : détail des promotions TFBuddy — 2026-10-14T07:12:39Z — sonde
 Relivraison : Créer un post — catalogue par catégorie, sous-catégorie, produit, gamme ; prix d'une boutique ; promotions — 2026-10-14T07:26:20Z
 Relivraison : tuiles du catalogue (badge Formules) — 2026-10-14T07:28:49Z
 Relivraison : visuel composé exporté avec les photos du webshop ; liens directs du webshop (catégorie, sous-catégorie, produit) — 2026-10-14T12:22:22Z
+Relivraison : texte du lien paramétrable (« Commandez ici 👉 »), {lien}, aperçu avec le lien résolu — 2026-10-14T12:36:39Z
