@@ -290,6 +290,14 @@
         </div>
         <label style="font-size:12px;color:#444444;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">Modèle imposé (facultatif) <input value="{{ iaModele }}" onChange="{{ setIaModele }}" placeholder="vide : le plus récent de la famille Opus" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 8px;width:300px;"></label>
       </section>
+      <section id="sec-detourage" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+        <span style="font-size:13px;font-weight:500;">Détourage des photos (remove.bg)</span>
+        <span style="font-size:12px;color:#666666;line-height:1.5;">Le bouton ✂ des photos de Créer un post retire le fond (PNG transparent, idéal pour les styles « détourés »). La clé reste sur le serveur ; chaque détourage consomme un crédit remove.bg. {{ rbEtat }}</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input type="password" autocomplete="off" value="{{ rbKey }}" onChange="{{ setRbKey }}" placeholder="{{ rbKeyPh }}" style="flex:1 1 280px;font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;">
+          <button onClick="{{ saveRbKey }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Enregistrer la clé</button>
+        </div>
+      </section>
       <section id="sec-charte" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
         <span style="font-size:13px;font-weight:500;">Charte éditoriale de la marque</span>
         <span style="font-size:12px;color:#666666;line-height:1.5;">Suivie par l’assistant de rédaction et vérifiée par la relecture de Créer un post (emojis, mots à éviter, vouvoiement, longueur de l’accroche, prix du texte face au prix de vente).</span>
@@ -433,6 +441,10 @@ class Component extends DCLogic {
       ...(() => {
         const ia = SA.ia(), ch = Object.assign({}, SA.charte(), s.charte || {}), put = (k) => (e) => this.setState({ charte: Object.assign({}, ch, { [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }) });
         return { iaEtat: !SA.live ? 'Démonstration : réglage indisponible.' : ia.configure ? 'Clé enregistrée' + (ia.modele ? ' · modèle : ' + ia.modele : '') + '.' : 'Aucune clé enregistrée.',
+          rbEtat: !SA.live ? '' : ia.detourage ? 'Clé enregistrée.' : 'Aucune clé enregistrée.', rbKey: s.rbKey || '', setRbKey: (e) => this.setState({ rbKey: e.target.value }),
+          rbKeyPh: ia.detourage ? '•••••• (clé enregistrée — saisir pour la remplacer)' : 'clé API remove.bg',
+          saveRbKey: () => { if (!String(s.rbKey || '').trim()) { this.toast('Saisissez la clé.'); return; }
+            SA.api('POST', '/parametres/cles', { removebgKey: String(s.rbKey).trim() }).then(() => { this.setState({ rbKey: '' }); this.toast('Clé remove.bg enregistrée sur le serveur.'); return SA.refresh(); }).catch(e => this.toast('Enregistrement impossible : ' + e.message)); },
           iaKey: s.iaKey || '', setIaKey: (e) => this.setState({ iaKey: e.target.value }), iaKeyPh: ia.configure ? '•••••• (clé enregistrée — saisir pour la remplacer)' : 'sk-ant-…',
           saveIaKey: () => { if (!String(s.iaKey || '').trim()) { this.toast('Saisissez la clé.'); return; }
             SA.api('POST', '/parametres/cles', { anthropicKey: String(s.iaKey).trim() }).then(() => { this.setState({ iaKey: '' }); this.toast('Clé API Anthropic enregistrée sur le serveur.'); return SA.refresh(); }).catch(e => this.toast('Enregistrement impossible : ' + e.message)); },

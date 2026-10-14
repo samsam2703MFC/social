@@ -30,6 +30,7 @@ require_once __DIR__ . '/operations.php';
 require_once __DIR__ . '/catalogue.php';
 require_once __DIR__ . '/redaction.php';
 require_once __DIR__ . '/recommandations.php';
+require_once __DIR__ . '/detourage.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -73,7 +74,7 @@ function socRoute(string $method, string $path): array
     }
     if ($method === 'POST' && $path === '/parametres/cles') {
         // Les clés Meta, écrites en base (social_parametre). Un champ vide n'efface rien.
-        $map = ['systemToken' => 'meta_system_token', 'appSecret' => 'meta_app_secret', 'verifyToken' => 'meta_verify_token', 'anthropicKey' => 'anthropic_api_key'];
+        $map = ['systemToken' => 'meta_system_token', 'appSecret' => 'meta_app_secret', 'verifyToken' => 'meta_verify_token', 'anthropicKey' => 'anthropic_api_key', 'removebgKey' => 'removebg_api_key'];
         if (preg_match('/^\d{5,20}$/', trim((string) (body()['appId'] ?? '')))) { socSettingPut('meta_app_id', trim((string) body()['appId']), false); }
         $faits = [];
         foreach ($map as $k => $cle) {
@@ -137,6 +138,7 @@ function socRoute(string $method, string $path): array
         try { $m = SocIa::modele(true); } catch (SocIaError $e) { throw new HttpError($e->http === 401 || $e->http === 403 ? 409 : ($e->http ?: 502), $e->getMessage()); }
         return [200, ['ok' => true, 'modele' => $m] + socIaStatut()];
     }
+    if ($method === 'POST' && $path === '/media/detourer') { return [200, socDetourer(body())]; }
     if ($method === 'GET' && $path === '/media/webshop') { return [200, socMediaWebshop((string) ($_GET['u'] ?? ''))]; }
     // Supprimer un post : du module (et, avec meta, de Facebook / Instagram), ou une publication lue chez Meta.
     if ($method === 'POST' && $path === '/posts/supprimer') {

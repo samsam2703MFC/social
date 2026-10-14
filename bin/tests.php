@@ -1365,6 +1365,34 @@ BoMarketing::$transport = $boAvant; array_splice($GLOBALS['BO_CAMPAGNES'], 2); s
 socSettingPut('tfb_cache_nav', $navAvant, false); socSettingPut('creux_cache', null, false);
 socStateSave(['changes' => ['posts' => ['delete' => ['pidee1']]]]);
 
+echo "Détourage des photos (remove.bg simulé)\n";
+$png1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+$rbAppels = []; $rbMode = 'ok';
+SocDetourage::$transport = static function (array $corps) use (&$rbAppels, &$rbMode, $png1): array {
+    $rbAppels[] = $corps;
+    return match ($rbMode) {
+        'ok' => [200, json_encode(['data' => ['result_b64' => $png1]]), ['x-credits-charged' => '1']],
+        'credits' => [402, json_encode(['errors' => [['title' => 'Insufficient credits']]]), []],
+        default => [403, json_encode(['errors' => [['title' => 'Invalid API Key']]]), []],
+    };
+};
+$detourer = static function (array $b): array { $GLOBALS['SOC_BODY'] = $b; try { return socRoute('POST', '/media/detourer'); } catch (HttpError $e) { return [$e->status, $e->getMessage()]; } finally { unset($GLOBALS['SOC_BODY']); } };
+socSettingPut('removebg_api_key', null, true);
+[$code, $msg] = $detourer(['image' => 'data:image/png;base64,' . $png1]);
+check('sans clé : 409 avec la marche à suivre, rien envoyé', $code === 409 && str_contains((string) $msg, 'Paramètres') && $rbAppels === [] && socStateGet()['ia']['detourage'] === false);
+socSettingPut('removebg_api_key', 'rb-test', true);
+[$code, $r] = $detourer(['image' => 'data:image/png;base64,' . $png1]);
+check('photo déposée : PNG détouré rendu en data:, crédits notés, image envoyée en base64', $code === 200 && str_starts_with($r['src'], 'data:image/png;base64,') && $r['credits'] === 1.0
+    && ($rbAppels[0]['image_file_b64'] ?? '') === $png1 && ($rbAppels[0]['format'] ?? '') === 'png' && socStateGet()['ia']['detourage'] === true, json_encode([$code, $rbAppels[0] ?? null]));
+check('clé secrète : jamais dans les paramètres ni dans l’état', socParams()['removebg_api_key'] === ['defini' => true] && !str_contains(json_encode(socStateGet()), 'rb-test'));
+$n = count($rbAppels);
+[$c1] = $detourer(['image' => 'https://evil.example/x.png']); [$c2] = $detourer(['image' => 'uploads/../../config.png']); [$c3] = $detourer(['image' => 'data:image/png;base64,' . base64_encode('pas une image')]);
+check('hôte hors du webshop, chemin détourné, faux fichier : refusés (422), rien envoyé', $c1 === 422 && $c2 === 422 && $c3 === 422 && count($rbAppels) === $n, json_encode([$c1, $c2, $c3]));
+$rbMode = 'credits'; [$c4, $m4] = $detourer(['image' => 'data:image/png;base64,' . $png1]);
+$rbMode = 'cle'; [$c5, $m5] = $detourer(['image' => 'data:image/png;base64,' . $png1]);
+check('crédits épuisés, clé refusée : 409 lisibles', $c4 === 409 && str_contains((string) $m4, 'crédits remove.bg épuisés') && $c5 === 409 && str_contains((string) $m5, 'clé remove.bg refusée'));
+SocDetourage::$transport = null; socSettingPut('removebg_api_key', null, true);
+
 echo "Publicités : verdict A/B des variantes (taux de clic)\n";
 $ab = static fn (array ...$v) => socAbVerdict(array_map(static fn ($x) => ['variant' => $x[0], 'impressions' => $x[1], 'clicks' => $x[2]], $v));
 $g = $ab(['A', 5000, 70], ['B', 5000, 110]);

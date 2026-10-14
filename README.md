@@ -349,6 +349,26 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   tendances du texte (longueur, question, emoji, prix, lien) sont données à l'assistant.
   « Créer ce post » repart d'un post vierge (confirmation si le post en cours a déjà du contenu) ;
   5 idées affichées, les autres sur demande.
+- **Aperçu téléphone, story, grille** — l'aperçu de Créer un post a quatre vues : Facebook,
+  Instagram, **Story** (l'interface d'Instagram — barre de progression, compte, champ « Envoyer
+  un message » — posée par-dessus le visuel 9:16, sans gêner le glisser des textes ; un visuel
+  d'un autre format propose « Passer le visuel en Story 9:16 ») et **Grille** (le profil
+  Instagram : ce post, recadré en 3:4, parmi les posts programmés et les publications en ligne
+  relues par Grille Instagram, `GET /instagram/grille`). « Téléphone » met l'aperçu dans un
+  cadre de téléphone, à la taille réelle de son écran.
+- **Vidéo animée (9:16)** — le visuel rendu en story, fondu d'entrée et léger zoom, 6 s,
+  enregistré par le navigateur (canvas + MediaRecorder). En **H.264** (Chrome, Edge à jour),
+  « Publier la vidéo à la place de l'image » l'envoie avec le post : reel Instagram, vidéo
+  Facebook (l'image reste la vignette du calendrier). Sans H.264 (VP9, WebM : refusés par Meta
+  pour un reel), elle se télécharge seulement.
+- **Vidéo importée** — lue en `data:` comme les photos (45 Mo au plus) : le serveur l'écrit
+  sous `uploads/` et Meta la télécharge. Auparavant gardée en adresse `blob:`, locale au
+  navigateur, elle ne pouvait pas être publiée.
+- **Détourage des photos** — bouton ✂ sur chaque photo du post (`POST /media/detourer`,
+  `src/detourage.php`) : remove.bg retire le fond, la photo devient un PNG transparent posé
+  « détouré ». Clé `removebg_api_key` (secrète, Paramètres → Rédaction IA & charte) ; image
+  acceptée : `data:`, photo du catalogue du webshop ou fichier du module ; rien n'est gardé
+  côté serveur. Crédits épuisés, clé refusée : message clair.
 - **Verdict A/B des variantes** — à chaque relecture des pubs (`socAdsSync`), `socAbVerdict`
   compare la variante au meilleur taux de clic à chacune des autres (test de deux proportions,
   unilatéral) : « trop tôt » sous 500 impressions ou 20 clics par variante, « gagnante » à 95 %

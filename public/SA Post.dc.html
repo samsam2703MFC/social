@@ -194,6 +194,7 @@
                   <sc-if value="{{ m.src }}" hint-placeholder-val="{{ false }}"><img src="{{ m.src }}" alt="" style="position:absolute;left:4px;top:4px;width:calc(100% - 8px);height:calc(100% - 8px);object-fit:contain;"></sc-if>
                   <span style="position:absolute;left:4px;bottom:4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ m.n }}</span>
                   <sc-if value="{{ notLocked }}" hint-placeholder-val="{{ true }}"><button onClick="{{ m.remove }}" style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;border:none;background:#232220;color:#FFFFFF;font-size:10px;cursor:pointer;padding:0;">×</button></sc-if>
+                  <sc-if value="{{ m.canCut }}" hint-placeholder-val="{{ false }}"><button onClick="{{ m.detourer }}" title="{{ m.cutTip }}" style="position:absolute;bottom:3px;right:3px;width:20px;height:20px;border-radius:50%;border:none;background:#FFFFFF;color:#8D1D2C;font-size:11px;cursor:pointer;padding:0;box-shadow:0 0 0 0.5px rgba(34,34,34,0.25);">{{ m.cutIco }}</button></sc-if>
                 </div>
               </sc-for>
               <sc-if value="{{ hasVideo }}" hint-placeholder-val="{{ false }}">
@@ -309,7 +310,22 @@
                 <input type="text" value="{{ visNom }}" onChange="{{ setVisNom }}" disabled="{{ locked }}" placeholder="Nom du modèle (ex. Promo du mois)" style="flex:1 1 200px;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 9px;outline:none;">
                 <button onClick="{{ visSave }}" disabled="{{ locked }}" style="border:none;background:#232220;color:#FFFFFF;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ visSaveOp }};">Enregistrer ce visuel comme modèle</button>
                 <button onClick="{{ kit }}" style="border:0.5px solid #8D1D2C;background:#FFFFFF;color:#8D1D2C;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ kitOp }};margin-left:auto;">{{ kitLabel }}</button>
+                <button onClick="{{ vidFaire }}" disabled="{{ locked }}" title="Le visuel en story 9:16, animé (fondu et léger zoom, 6 s) : vidéo pour un reel ou une story" style="border:0.5px solid #8D1D2C;background:#FFFFFF;color:#8D1D2C;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ vidOp }};">{{ vidLabel }}</button>
               </div>
+              <sc-if value="{{ hasVidAnim }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;padding:8px;background:#FCFAF7;">
+                  <video src="{{ vidSrc }}" controls="{{ true }}" muted="{{ true }}" loop="{{ true }}" playsInline="{{ true }}" style="width:96px;height:170px;border-radius:6px;background:#000000;object-fit:cover;flex:0 0 auto;"></video>
+                  <div style="flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#444444;">
+                    <span style="font-weight:500;color:#222222;">Vidéo animée · {{ vidInfo }}</span>
+                    <label style="display:flex;gap:6px;align-items:flex-start;line-height:1.45;"><input type="checkbox" checked="{{ vidPublier }}" onChange="{{ setVidPublier }}" disabled="{{ vidPublierOff }}" style="accent-color:#8D1D2C;margin-top:2px;">Publier la vidéo à la place de l’image (reel Instagram, vidéo Facebook)</label>
+                    <span style="font-size:11px;color:#666666;line-height:1.45;">{{ vidNote }}</span>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                      <a href="{{ vidSrc }}" download="{{ vidFichier }}" style="font-size:11px;font-weight:500;color:#8D1D2C;">Télécharger</a>
+                      <button onClick="{{ vidRetirer }}" style="border:none;background:transparent;color:#8A847C;font-size:11px;cursor:pointer;padding:0;">Retirer</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
             </div>
             <!-- Recadrage : le format du visuel, fixé ici plutôt que par Facebook -->
             <div style="display:flex;flex-direction:column;gap:6px;">
@@ -879,12 +895,35 @@
           <div style="display:inline-flex;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:3px;gap:2px;">
             <button onClick="{{ pvFb }}" style="border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ pfBg }};color:{{ pfFg }};">Facebook</button>
             <button onClick="{{ pvIg }}" style="border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ piBg }};color:{{ piFg }};">Instagram</button>
+            <button onClick="{{ pvStory }}" title="La story Instagram : le visuel en plein écran, sous l’interface d’Instagram" style="border:none;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;background:{{ psBg }};color:{{ psFg }};">Story</button>
+            <button onClick="{{ pvGrille }}" title="Le profil Instagram : ce post parmi les posts programmés et ceux déjà en ligne" style="border:none;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;background:{{ pgBg }};color:{{ pgFg }};">Grille</button>
           </div>
+          <button onClick="{{ telToggle }}" title="Aperçu dans un téléphone, à la taille réelle de son écran" style="border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;background:{{ telBtnBg }};color:{{ telBtnFg }};">Téléphone</button>
         </div>
         <div style="display:flex;gap:4px;flex-wrap:wrap;"><sc-for list="{{ pvShops }}" as="ps" hint-placeholder-count="0"><button onClick="{{ ps.pick }}" style="border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid {{ ps.border }};background:{{ ps.bg }};color:{{ ps.fg }};">{{ ps.name }}</button></sc-for></div>
 
         <sc-if value="{{ pvBilingual }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><span style="font-size:11px;color:#666666;">Boutique bilingue · visuel en</span><sc-for list="{{ pvLangs }}" as="pl" hint-placeholder-count="0"><button onClick="{{ pl.pick }}" style="border-radius:999px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid {{ pl.border }};background:{{ pl.bg }};color:{{ pl.fg }};">{{ pl.label }}</button></sc-for><span style="font-size:11px;color:#666666;">· légende dans les deux langues</span></div></sc-if>
-        <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.12);overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+        <sc-if value="{{ isGrille }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.12);padding:10px;display:flex;flex-direction:column;gap:8px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:600;color:#262626;">{{ grilleCompte }}</span><span style="font-size:11px;color:#8e8e8e;">{{ grilleNote }}</span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;">
+              <sc-for list="{{ grilleTiles }}" as="gt" hint-placeholder-count="6">
+                <div style="position:relative;width:100%;height:0;padding-bottom:133.333%;background:#F5EFE4;overflow:hidden;">
+                  <sc-if value="{{ gt.hasSrc }}" hint-placeholder-val="{{ false }}"><img src="{{ gt.src }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+                  <span style="position:absolute;inset:0;box-shadow:inset 0 0 0 {{ gt.ringW }} #8D1D2C;pointer-events:none;"></span>
+                  <sc-if value="{{ gt.hasTag }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:4px;top:4px;font-size:9px;font-weight:600;background:{{ gt.tagBg }};color:#FFFFFF;border-radius:4px;padding:2px 5px;">{{ gt.tag }}</span></sc-if>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ grilleVide }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8e8e8e;">{{ grilleVideTxt }}</span></sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ storyPasFormat }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:12px;color:#8A4B00;background:#FCE7C8;border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">{{ storyMsg }}<sc-if value="{{ storyPeutPasser }}" hint-placeholder-val="{{ true }}"><button onClick="{{ passerStory }}" disabled="{{ locked }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;">Passer le visuel en Story 9:16</button></sc-if></div>
+        </sc-if>
+        <div style="border:{{ telB }};border-radius:{{ telR }};background:{{ telBg }};box-shadow:{{ telSh }};overflow:hidden;">
+        <sc-if value="{{ tel }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;align-items:center;padding:9px 22px 7px;background:{{ telBarBg }};color:{{ telBarFg }};font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:13px;font-weight:600;"><span>9:41</span><span style="width:86px;height:24px;border-radius:13px;background:#0B0B0B;display:block;"></span><span style="font-size:11px;">5G ▮</span></div></sc-if>
+        <div style="background:#FFFFFF;border-radius:{{ cardR }};border:{{ cardB }};overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
           <sc-if value="{{ isFb }}" hint-placeholder-val="{{ true }}">
             <div style="display:flex;align-items:center;gap:10px;padding:12px 14px 8px;">
               <span style="width:38px;height:38px;border-radius:50%;background:#8D1D2C;display:flex;align-items:center;justify-content:center;flex:0 0 auto;"><img src="img/logo-white.png" alt="" style="width:28px;height:auto;"></span>
@@ -893,7 +932,7 @@
             <p style="margin:0;padding:0 14px 10px;font-size:14px;line-height:1.45;color:#1c1e21;white-space:pre-wrap;">{{ pv.text }}</p>
             <sc-if value="{{ pv.hasLink }}" hint-placeholder-val="{{ false }}"><p style="margin:-4px 0 0;padding:0 14px 10px;font-size:13px;color:#385898;word-break:break-all;">{{ pv.link }}</p></sc-if>
           </sc-if>
-          <sc-if value="{{ isIg }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ isIgHead }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;">
               <span style="width:32px;height:32px;border-radius:50%;background:#8D1D2C;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #FFFFFF,0 0 0 3.5px #D97B29;"><img src="img/logo-white.png" alt="" style="width:22px;height:auto;"></span>
               <span style="display:flex;flex-direction:column;"><span style="font-size:13px;font-weight:600;color:#262626;">{{ pv.handle }}</span><span style="font-size:11px;color:#8e8e8e;">{{ pv.city }}</span></span>
@@ -902,7 +941,22 @@
 
           <!-- visuel : instance unique du studio -->
           <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
+            <div style="position:relative;">
             <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-label-move="{{ onLabelMove }}" on-label-select="{{ onLabelSelect }}" on-label-edit="{{ onLabelEdit }}" on-label-delete="{{ onLabelDelete }}" hint-size="100%,420px"></dc-import>
+            <sc-if value="{{ isStoryUi }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;pointer-events:none;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+                <div style="position:absolute;left:0;right:0;top:0;height:16%;background:linear-gradient(180deg,rgba(0,0,0,0.5),rgba(0,0,0,0));"></div>
+                <div style="position:absolute;left:8px;right:8px;top:8px;height:2px;border-radius:2px;background:rgba(255,255,255,0.45);overflow:hidden;"><span style="display:block;width:38%;height:100%;background:#FFFFFF;"></span></div>
+                <div style="position:absolute;left:10px;right:10px;top:17px;display:flex;align-items:center;gap:8px;color:#FFFFFF;font-size:12px;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,0.45);">
+                  <span style="width:26px;height:26px;border-radius:50%;background:#8D1D2C;display:flex;align-items:center;justify-content:center;flex:0 0 auto;"><img src="img/logo-white.png" alt="" style="width:20px;height:auto;"></span>{{ pv.handle }}<span style="font-weight:400;opacity:0.9;">2 h</span><span style="margin-left:auto;font-size:15px;font-weight:400;">✕</span>
+                </div>
+                <div style="position:absolute;left:0;right:0;bottom:0;height:12%;background:linear-gradient(0deg,rgba(0,0,0,0.38),rgba(0,0,0,0));"></div>
+                <div style="position:absolute;left:10px;right:10px;bottom:10px;display:flex;align-items:center;gap:12px;color:#FFFFFF;">
+                  <span style="flex:1;border:1px solid rgba(255,255,255,0.85);border-radius:999px;padding:7px 12px;font-size:12px;text-shadow:0 1px 2px rgba(0,0,0,0.45);">Envoyer un message</span><span style="font-size:18px;">♡</span><span style="font-size:15px;">➤</span>
+                </div>
+              </div>
+            </sc-if>
+            </div>
           </sc-if>
           <sc-if value="{{ isBrut }}" hint-placeholder-val="{{ false }}">
             <sc-if value="{{ pv.hasMedia }}" hint-placeholder-val="{{ false }}">
@@ -968,13 +1022,15 @@
               <span style="text-align:center;font-size:13px;font-weight:600;color:#65676b;padding:6px;">Partager</span>
             </div>
           </sc-if>
-          <sc-if value="{{ isIg }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ isIgHead }}" hint-placeholder-val="{{ false }}">
             <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;">
               <p style="margin:0;font-size:13px;line-height:1.45;color:#262626;white-space:pre-wrap;"><strong style="font-weight:600;">{{ pv.handle }}</strong> {{ pv.textIg }}</p>
               <sc-if value="{{ pv.hasLinkIg }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8e8e8e;">Instagram : un lien de légende n’est pas cliquable, il n’est pas repris (« lien en bio »).</span></sc-if>
               <span style="font-size:10px;color:#8e8e8e;text-transform:uppercase;letter-spacing:0.04em;">{{ pv.when }}</span>
             </div>
           </sc-if>
+        </div>
+        <sc-if value="{{ tel }}" hint-placeholder-val="{{ false }}"><div style="height:22px;display:flex;align-items:center;justify-content:center;background:{{ telBarBg }};"><span style="width:112px;height:4px;border-radius:2px;background:{{ telBarFg }};display:block;"></span></div></sc-if>
         </div>
         <sc-if value="{{ igWarn }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A4B00;background:#FCE7C8;border-radius:8px;padding:8px 10px;">{{ igWarnText }}</span></sc-if>
         <span style="font-size:11px;color:#666666;line-height:1.5;">Variables pour {{ pv.city }} : {{ pv.resolved }}</span>
@@ -1150,7 +1206,7 @@ class Component extends DCLogic {
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
       txtSel: null, txtTplNom: '', etqLocal: null, qc: [], visNom: '', visLocal: null, kitBusy: false, offre: null, mentionAuto: true, iaBusy: false, iaRes: null, iaErr: '', iaConsigne: '',
       objectif: '', inspi: (() => { try { const x = localStorage.getItem('sa.inspi'); return x === null ? null : x === '1'; } catch (e) { return null; } })(),
-      idees: null, ideesTout: false, ideesBusy: false, ideesErr: '', reco: null, recoLu: false, recoBusy: false, recoErr: '', ideeId: '', ideeCat: null, ideeOffre: null,
+      cutBusy: null, pvVue: 'post', tel: false, grilleData: {}, grilleSnap: null, vidBusy: false, vidAnim: null, idees: null, ideesTout: false, ideesBusy: false, ideesErr: '', reco: null, recoLu: false, recoBusy: false, recoErr: '', ideeId: '', ideeCat: null, ideeOffre: null,
       nav: null, navKey: null, navLoading: false, navErr: '', navMode: 'cat', navG: null, navC: null, navGam: null, navQ: '', navSel: null, offres: null, offresKey: '', offresLoading: false, offreUsed: '',
       libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false };
     if (!SA) return base;
@@ -1363,6 +1419,101 @@ class Component extends DCLogic {
     this.toast('Idée appliquée : ' + [ok.length ? ok.map(id => (SA.byId(SA.SHOPS, id) || { name: id }).name).join(', ') : 'tout le réseau', p.date ? SA.dLabel(p.date) + (p.time ? ' à ' + p.time : '') : '',
       p.campaign ? 'opération rattachée' : '', p.catalogue ? 'catalogue choisi' : ''].filter(Boolean).join(' · ') + '. Ajoutez la photo, puis « Proposer 3 textes ».');
   }
+  /**
+   * Les vues de l'aperçu : téléphone (cadre à la taille réelle d'un écran), story (l'interface
+   * d'Instagram par-dessus le visuel 9:16) et grille du profil Instagram (ce post parmi les
+   * posts programmés et ceux déjà en ligne, recadrés en 3:4).
+   */
+  vuesApercu(t, pvId, igUnique, igHandle, locked) {
+    const SA = window.SA, s = this.state, vue = s.pvVue || 'post', story = vue === 'story', studio = s.mode === 'studio', fmt = s.v.format || 'carre';
+    const tel = !!s.tel, sombre = tel && story;
+    const out = { tel, telToggle: () => this.setState({ tel: !tel }), telBtnBg: tel ? '#8D1D2C' : '#FFFFFF', telBtnFg: tel ? '#FFFFFF' : '#444444',
+      telB: tel ? '10px solid #0B0B0B' : '0', telR: tel ? '46px' : '0', telBg: tel ? (sombre ? '#000000' : '#FFFFFF') : 'transparent', telSh: tel ? '0 12px 32px rgba(0,0,0,0.20)' : 'none',
+      telBarBg: sombre ? '#000000' : '#FFFFFF', telBarFg: sombre ? '#FFFFFF' : '#0B0B0B', cardR: tel ? '0' : '10px', cardB: tel ? 'none' : '0.5px solid rgba(34,34,34,0.12)',
+      isStoryUi: story && studio && fmt === 'story', storyPasFormat: story && !(studio && fmt === 'story'), storyPeutPasser: studio,
+      storyMsg: studio ? 'Le visuel est en ' + ((this.FORMATS.find(f => f[0] === fmt) || [0, fmt])[1]) + ' : en story, Instagram le pose réduit au milieu d’un fond uni. Une story n’a pas de légende.'
+        : 'La vue Story montre le visuel composé (mode « Visuel composé »).',
+      passerStory: () => !locked && this.V({ format: 'story' }), isGrille: vue === 'grille' };
+    if (vue !== 'grille') return Object.assign(out, { grilleTiles: [], grilleVide: false });
+    // Le compte Instagram : celui du réseau (Instagram unique) ou celui de la boutique de l'aperçu.
+    const compte = igUnique ? 'marque' : pvId, G = (s.grilleData || {})[compte];
+    if (SA.live && compte && G === undefined && !this._grilleLu) {
+      this._grilleLu = true;
+      setTimeout(() => SA.api('GET', '/instagram/grille?shop=' + encodeURIComponent(compte))
+        .then(r => { this._grilleLu = false; this.setState(st => ({ grilleData: Object.assign({}, st.grilleData, { [compte]: (r && r.media) || [] }) })); })
+        .catch(() => { this._grilleLu = false; this.setState(st => ({ grilleData: Object.assign({}, st.grilleData, { [compte]: [] }) })); }), 0);
+    }
+    // Ce post : un instantané du visuel composé (refait quand le visuel change), sinon sa première photo.
+    if (studio && this._api) {
+      const cle = JSON.stringify(s.v) + s.photos.map(p => p.src.length + p.src.slice(-32)).join('|');
+      if (cle !== this._snapCle) { this._snapCle = cle; clearTimeout(this._snapT);
+        this._snapT = setTimeout(async () => { try { await this.photosLocales(); const src = await this._api.toImage({ jpeg: true, pixelRatio: 0.32, quality: 0.75 }); if (!this._dead) this.setState({ grilleSnap: src }); } catch (e) { console.error(e); } }, 900); }
+    }
+    const moi = { src: studio ? s.grilleSnap : (s.photos[0] || {}).src, quand: (s.when === 'now' ? SA.TODAY : s.date) + ' ' + (s.time || ''), tag: 'Ce post', tagBg: '#8D1D2C', moi: true };
+    const prog = (SA.state().posts || []).filter(p => p.ig && p.status === 'Programmé' && p.id !== s.id && (igUnique || (Array.isArray(p.shops) ? p.shops.includes(compte) : p.shops === 'all')))
+      .map(p => ({ src: p.img, quand: p.date + ' ' + (p.time || ''), tag: 'Programmé ' + SA.dShort(p.date), tagBg: 'rgba(35,34,32,0.82)' }));
+    const avenir = [moi].concat(prog).sort((a, b) => b.quand.localeCompare(a.quand));
+    const enLigne = (G || []).map(m => ({ src: m.src, tag: '', tagBg: '' }));
+    const tiles = avenir.concat(enLigne).slice(0, 12).map(x => ({ src: x.src || '', hasSrc: !!x.src, tag: x.tag, hasTag: !!x.tag, tagBg: x.tagBg, ringW: x.moi ? '3px' : '0' }));
+    const nom = igUnique ? igHandle : (SA.byId(SA.SHOPS, pvId) || { name: '' }).name;
+    return Object.assign(out, { grilleCompte: 'Profil Instagram · ' + nom, grilleTiles: tiles,
+      grilleNote: prog.length + ' programmé' + (prog.length > 1 ? 's' : '') + ' · ' + (G === undefined ? 'lecture…' : G.length + ' en ligne') + ' · recadrage 3:4',
+      grilleVide: G !== undefined && !G.length, grilleVideTxt: SA.live ? 'Aucune publication en ligne relue pour ce compte (Grille Instagram → Relire).' : 'Démonstration : la grille réelle se lit en ligne.' });
+  }
+  /**
+   * La vidéo animée : le visuel rendu en story 9:16, avec un fondu d'entrée et un léger zoom (6 s),
+   * enregistrée par le navigateur (MediaRecorder) ; MP4 quand il le sait, sinon WebM (téléchargement seulement).
+   */
+  async videoAnimee() {
+    const s = this.state;
+    if (!this._api || s.vidBusy) return;
+    // H.264 d'abord (le codec que Meta exige pour un reel) ; « video/mp4 » sans codec peut cacher du VP9 : en dernier.
+    const types = ['video/mp4;codecs=avc1.42E01E', 'video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm', 'video/mp4'];
+    const mime = window.MediaRecorder && MediaRecorder.isTypeSupported ? types.find(x => MediaRecorder.isTypeSupported(x)) : null;
+    if (!mime) { this.toast('Ce navigateur ne sait pas enregistrer de vidéo : essayez avec Chrome ou Edge.'); return; }
+    const av = s.v.format || 'carre', DUREE = 6, W = 1080, H = 1920;
+    this.setState({ vidBusy: true });
+    try {
+      await this.photosLocales();
+      await new Promise(r => this.setState({ v: Object.assign({}, this.state.v, { format: 'story' }) }, r));
+      await new Promise(r => setTimeout(r, 700));
+      const url = await this._api.toImage({ jpeg: true, pixelRatio: 1, quality: 0.92 });
+      await new Promise(r => this.setState({ v: Object.assign({}, this.state.v, { format: av }) }, r));
+      const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko(new Error('visuel illisible')); i.src = url; });
+      const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+      const dessiner = (t) => { const z = 1 + 0.06 * t, w = W * z, h = H * z;
+        g.globalAlpha = 1; g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);
+        g.globalAlpha = Math.min(1, t * DUREE / 0.6); g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h); g.globalAlpha = 1; };
+      dessiner(0);
+      const rec = new MediaRecorder(c.captureStream(30), { mimeType: mime, videoBitsPerSecond: 6000000 }), morceaux = [];
+      rec.ondataavailable = (e) => { if (e.data && e.data.size) morceaux.push(e.data); };
+      const fini = new Promise(r => { rec.onstop = r; });
+      rec.start(250);
+      const t0 = performance.now();
+      await new Promise(r => { const pas = () => { const t = (performance.now() - t0) / 1000 / DUREE; dessiner(Math.min(1, t)); if (t >= 1) r(); else requestAnimationFrame(pas); }; requestAnimationFrame(pas); });
+      rec.stop(); await fini;
+      const type = mime.split(';')[0], blob = new Blob(morceaux, { type });
+      const src = await new Promise((ok, ko) => { const rd = new FileReader(); rd.onload = () => ok(rd.result); rd.onerror = () => ko(new Error('vidéo illisible')); rd.readAsDataURL(blob); });
+      const h264 = /avc1/.test(mime);
+      this.setState({ vidBusy: false, vidAnim: { src, type, h264, taille: blob.size, publier: false } });
+      this.toast('Vidéo animée prête (' + (h264 ? 'MP4 H.264' : type === 'video/mp4' ? 'MP4' : 'WebM') + ', ' + (blob.size / 1048576).toFixed(1).replace('.', ',') + ' Mo).');
+    } catch (e) {
+      console.error(e);
+      this.setState({ vidBusy: false, v: Object.assign({}, this.state.v, { format: av }) });
+      this.toast('Vidéo impossible : ' + (e.message || e));
+    }
+  }
+  /** Détoure une photo du post (remove.bg, côté serveur) ; elle est remplacée par le PNG détouré. */
+  async detourerPhoto(src) {
+    const SA = window.SA;
+    if (this.state.cutBusy) return;
+    this.setState({ cutBusy: src });
+    try {
+      const r = await SA.api('POST', '/media/detourer', { image: src });
+      this.setState(st => ({ cutBusy: null, photos: st.photos.map(x => x.src === src ? Object.assign({}, x, { src: r.src, cut: true, origine: x.origine || src, name: (x.name || 'Photo') + ' (détourée)' }) : x) }));
+      this.toast('Photo détourée' + (r.credits != null ? ' (' + String(r.credits).replace('.', ',') + ' crédit remove.bg)' : '') + '.');
+    } catch (e) { this.setState({ cutBusy: null }); this.toast('Détourage impossible : ' + (e.message || e)); }
+  }
   /** L'assistant de rédaction (Claude, côté serveur) : 3 propositions, ou une réécriture selon `consigne`. */
   async iaDemander(consigne) {
     const SA = window.SA, s = this.state;
@@ -1511,6 +1662,7 @@ class Component extends DCLogic {
       if (!img && SA.live) { this.setState({ saving: false, errors: ['Le visuel composé n\u2019a pas pu être exporté' + (err && err.message ? ' (' + err.message + ')' : '') + '. Rien n\u2019a été enregistré : réessayez, ou passez en mode « Photos telles quelles ».'] }); return null; }
       if (!img) img = s.photos[0] ? s.photos[0].src : 'img/illus/decorative/bubble.png';
       media = [{ src: img, kind: 'img', cut: false, name: 'Visuel composé' }];
+      if (s.vidAnim && s.vidAnim.publier && s.vidAnim.h264) media.push({ src: s.vidAnim.src, kind: 'video', name: 'Vidéo animée' });
     } else if (this.isMontage()) {
       // Montage rendu en pleine définition (1080 × 1350 par image) ; en démo, à moitié pour ne pas saturer le navigateur.
       const M = window.SAMontage, k = SA.live ? 1 : 0.5;
@@ -1779,7 +1931,11 @@ class Component extends DCLogic {
     // photos
     const photos = s.photos.map((p, i) => ({ src: p.src, n: i + 1, ring: i === 0 ? '#8D1D2C' : 'transparent',
       first: () => { if (locked || i === 0) return; const l = s.photos.slice(); const [x] = l.splice(i, 1); l.unshift(x); this.setState({ photos: l }); },
-      remove: (e) => { e.stopPropagation(); this.setState({ photos: s.photos.filter((_, j) => j !== i) }); } }));
+      remove: (e) => { e.stopPropagation(); this.setState({ photos: s.photos.filter((_, j) => j !== i) }); },
+      // Détourage (remove.bg, côté serveur) : la photo devient un PNG transparent, posée « détourée ».
+      canCut: !locked && !!SA.live && !!(SA.ia().detourage), cutIco: s.cutBusy === p.src ? '…' : '✂',
+      cutTip: p.cut && /^data:image\/png/.test(p.src) ? 'Photo détourée · cliquer pour la détourer à nouveau' : 'Détourer cette photo (fond retiré)',
+      detourer: (e) => { e.stopPropagation(); this.detourerPhoto(p.src); } }));
     const curSlots = (this.STYLES2.find(x => x[0] === v.style) || [0, 0, 1])[2];
     // aperçu
     const pvId = t.includes(s.pvShop) ? s.pvShop : t[0], pvShop = pvId ? SA.byId(shopsState, pvId) : null;
@@ -1798,7 +1954,7 @@ class Component extends DCLogic {
     const shopsFor = (L) => t.filter(id => SA.langsOf(id).includes(L)).map(id => SA.byId(SA.SHOPS, id).name);
     const rawMedia = s.photos.map(p => ({ src: p.src, isImg: true, isVideo: false, fit: p.cut ? 'contain' : 'cover' })).concat(s.video ? [{ src: '', isImg: false, isVideo: true, fit: 'cover' }] : []);
     const shown = rawMedia.slice(0, 4).map((m, i) => Object.assign({}, m, { more: i === 3 && rawMedia.length > 4, moreLabel: '+' + (rawMedia.length - 4) }));
-    const pv = { page: pvShop ? pvShop.page : "L'Atelier By", city: pvShop ? pvShop.name : '—', handle: pvShop ? pvShop.ig.replace('@', '') : 'latelierby',
+    const pv = { page: pvShop ? pvShop.page : "L'Atelier By", city: pvShop ? pvShop.name : '—', handle: String(igUnique ? igHandle : (pvShop && pvShop.ig) || igHandle || 'latelierby').replace('@', ''),
       when: s.dark ? 'Sponsorisé' : s.when === 'now' ? "À l'instant" : SA.dLabel(s.date) + ' à ' + s.time, text: filled || 'Votre texte apparaîtra ici.', textIg: filledIg || 'Votre texte apparaîtra ici.', hasLink: !!lienUrl && !aMedia, link: lienUrl, hasLinkIg: !!lienUrl,
       hasMedia: shown.length > 0, noMedia: shown.length === 0, media: shown, cols: shown.length > 1 ? '1fr 1fr' : '1fr',
       resolved: pvShop ? ['{ville} → ' + pvShop.name, '{horaires} → ' + pvShop.hours, '{prix} → ' + (cat ? cat.price + ' €' : 'non défini')].join(' · ') : '—' };
@@ -1819,7 +1975,7 @@ class Component extends DCLogic {
     const vf = (label, key, showKey, extra) => Object.assign({ label: isNlEd && LOCK.includes(key) ? label + ' (NL)' : label, value: gv(key), on: !!v[showKey], isInput: true, isLabel: false, hasSecond: false,
       set: (e) => sv(key, e.target.value), toggle: () => this.V({ [showKey]: !v[showKey] }) }, extra || {});
     const [msBg, msFg] = seg(s.mode === 'studio'), [mbBg, mbFg] = seg(s.mode === 'brut');
-    const [wnBg, wnFg] = seg(s.when === 'now'), [wlBg, wlFg] = seg(s.when === 'later'), [pfBg, pfFg] = seg(s.pv === 'fb'), [piBg, piFg] = seg(s.pv === 'ig');
+    const [wnBg, wnFg] = seg(s.when === 'now'), [wlBg, wlFg] = seg(s.when === 'later'), [pfBg, pfFg] = seg(s.pv === 'fb'), [piBg, piFg] = seg(s.pv === 'ig' && (s.pvVue || 'post') === 'post'), [psBg, psFg] = seg(s.pvVue === 'story'), [pgBg, pgFg] = seg(s.pvVue === 'grille');
     const [saBg, saFg] = seg(s.scope === 'all'), [sgBg, sgFg] = seg(s.scope === 'group'), [ssBg, ssFg] = seg(s.scope === 'shop');
     const len = filled.length;
     return {
@@ -1891,7 +2047,11 @@ class Component extends DCLogic {
         : s.mode === 'studio' ? 'Photos du visuel · ' + s.photos.length + (curSlots > 1 ? ' (ce montage a ' + curSlots + ' cases, les photos se répètent s\u2019il en manque)' : ' (la n°1 est utilisée)') : 'Photos publiées · ' + s.photos.length + ' (la n°1 apparaît en premier)',
       hasVideo: !!s.video, videoName: s.video ? s.video.name : '', removeVideo: () => this.setState({ video: null }),
       onFiles: async (e) => { const fl = Array.from(e.target.files || []); e.target.value = ''; const add = (await Promise.all(fl.slice(0, 12).map(f => this.readFile(f)))).filter(Boolean); if (add.length) this.setState({ photos: this.state.photos.concat(add) }); },
-      onVideo: (e) => { const f = e.target.files && e.target.files[0]; if (f) this.setState({ video: { src: URL.createObjectURL(f), name: f.name.slice(0, 12) }, type: s.type === 'Libre' ? 'Vidéo / film' : s.type }); e.target.value = ''; },
+      onVideo: (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+        // Lue en data: comme les photos : le serveur l'écrit sous uploads/ et Meta la télécharge (une adresse blob: ne quitte pas le navigateur).
+        if (f.size > 45 * 1048576) { this.toast('Vidéo trop lourde : 45 Mo au plus.'); return; }
+        const rd = new FileReader(); rd.onload = () => this.setState({ video: { src: rd.result, name: f.name.slice(0, 12) }, type: s.type === 'Libre' ? 'Vidéo / film' : s.type });
+        rd.onerror = () => this.toast('Vidéo illisible.'); rd.readAsDataURL(f); },
       cutModes: [['auto', 'Auto'], ['cut', 'Détourées'], ['full', 'Pleines']].map(([k, label]) => { const [bg, fg] = seg(v.cutMode === k); return { label, bg, fg, pick: () => this.V({ cutMode: k }) }; }),
       // Recadrage : le format du visuel est fixé ici (l'image part déjà aux dimensions de Meta).
       vFormats: this.FORMATS.map(([k, label, tip]) => { const [bg, fg] = seg((v.format || 'carre') === k); return { label, tip, bg, fg, pick: () => !locked && this.V({ format: k }) }; }),
@@ -1929,7 +2089,15 @@ class Component extends DCLogic {
           visNom: s.visNom || '', setVisNom: (e) => this.setState({ visNom: e.target.value }), visSaveOp: String(s.visNom || '').trim() && !locked ? 1 : 0.4,
           visSave: () => { const nom = String(s.visNom || '').trim(); if (!nom || locked) return; const w = {}; cle.forEach(k => { if (v[k] !== undefined) w[k] = v[k]; });
             this.visGarder(M.concat({ id: 'v' + Date.now().toString(36), nom, v: w }), 'Visuel enregistré comme modèle « ' + nom + ' » : réutilisable pour les prochains posts.'); },
-          kitLabel: s.kitBusy ? 'Préparation du kit…' : 'Télécharger le kit (4 formats)', kitOp: s.kitBusy ? 0.5 : 1, kit: () => this.kitTelecharger() }; })(),
+          kitLabel: s.kitBusy ? 'Préparation du kit…' : 'Télécharger le kit (4 formats)', kitOp: s.kitBusy ? 0.5 : 1, kit: () => this.kitTelecharger(),
+          vidLabel: s.vidBusy ? 'Vidéo en cours (6 s)…' : s.vidAnim ? 'Refaire la vidéo animée' : 'Vidéo animée (9:16)', vidOp: s.vidBusy ? 0.5 : 1, vidFaire: () => !locked && this.videoAnimee(),
+          ...(() => { const A = s.vidAnim, mp4 = !!A && A.type === 'video/mp4', h264 = !!A && !!A.h264;
+            return { hasVidAnim: !!A, vidSrc: A ? A.src : '', vidInfo: A ? (h264 ? 'MP4 H.264' : mp4 ? 'MP4 (VP9)' : 'WebM') + ' · 1080 × 1920 · 6 s · ' + (A.taille / 1048576).toFixed(1).replace('.', ',') + ' Mo' : '',
+              vidFichier: String(v.title || 'visuel').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() + '-anime.' + (mp4 ? 'mp4' : 'webm'),
+              vidPublier: !!(A && A.publier), vidPublierOff: locked || !h264, setVidPublier: (e) => this.setState({ vidAnim: Object.assign({}, A, { publier: e.target.checked }) }),
+              vidNote: !A ? '' : !h264 ? 'Ce navigateur n’enregistre pas en H.264, le codec que Meta exige pour un reel : téléchargez-la (story déposée à la main), ou refaites-la depuis Chrome ou Edge à jour.'
+                : 'Le post garde l’image comme vignette. Instagram la publie en reel (vidéo sans son), Facebook en vidéo ; si Instagram refuse le fichier, le post le signale.',
+              vidRetirer: () => this.setState({ vidAnim: null }) }; })() }; })(),
       // Plein cadre : l'intensité du fondu (dégradé sombre sur la photo), en %.
       hasFondu: ['plein', 'pleinbandeau', 'pleinhaut', 'pleinfilet'].includes(v.style),
       fondu: v.fondu != null ? v.fondu : 60, fonduLabel: (v.fondu != null ? v.fondu : 60) + ' %', setFondu: (e) => !locked && this.V({ fondu: +e.target.value }),
@@ -2197,7 +2365,10 @@ class Component extends DCLogic {
       saveDraft: () => !s.saving && this.persist('Brouillon'), publish: () => !s.saving && (s.dark ? this.persist('Dark post', true) : this.persist(s.when === 'now' ? 'Publié' : 'Programmé')),
       publishLabel: s.saving ? 'Préparation du visuel…' : s.dark ? 'Enregistrer et créer la publicité →' : (s.when === 'now' ? 'Publier maintenant sur ' : 'Programmer sur ') + pages.length + ' Page' + (pages.length > 1 ? 's' : ''),
       // aperçu
-      pvFb: () => this.setState({ pv: 'fb' }), pvIg: () => this.setState({ pv: 'ig' }), pfBg, pfFg, piBg, piFg, isFb: s.pv === 'fb', isIg: s.pv === 'ig',
+      pvFb: () => this.setState({ pv: 'fb', pvVue: 'post' }), pvIg: () => this.setState({ pv: 'ig', pvVue: 'post' }), pfBg, pfFg, piBg, piFg, isFb: s.pv === 'fb', isIg: s.pv === 'ig',
+      pvStory: () => this.setState({ pv: 'ig', pvVue: 'story' }), pvGrille: () => this.setState({ pv: 'ig', pvVue: 'grille' }), psBg, psFg, pgBg, pgFg,
+      isIgHead: s.pv === 'ig' && s.pvVue !== 'story',
+      ...this.vuesApercu(t, pvId, igUnique, igHandle, locked),
       pvShops: t.map(id => Object.assign(chip(id === pvId), { name: SA.byId(SA.SHOPS, id).name, pick: () => this.setState({ pvShop: id }) })), pv,
       igWarn: igBroken.length > 0, igWarnText: 'Instagram indisponible pour ' + igBroken.map(id => SA.byId(SA.SHOPS, id).name).join(', ') + ' (token expiré) : seule la Page Facebook sera publiée.',
       vfVideo: () => this.setState({ videoFormat: 'video' }), vfReel: () => this.setState({ videoFormat: 'reel' }),

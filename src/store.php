@@ -182,7 +182,7 @@ function socStateGet(): array
         // Catégorie → groupe, produit → catégorie : les liens directs du webshop (src/publish.php, socWebshopUrl).
         'webshopPlan' => socWebshopPlanCache(),
         // Rédaction assistée (clé présente, modèle retenu) et charte éditoriale de la marque.
-        'ia' => socIaStatut(), 'charte' => socCharte(),
+        'ia' => socIaStatut() + ['detourage' => function_exists('socDetourer') && SocDetourage::configured()], 'charte' => socCharte(),
         'metaStatus' => Meta::statut(),
         'shops' => $shops,
         'brand' => socBrand(),
