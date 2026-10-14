@@ -347,6 +347,13 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   publications, un écart à partir de ×1,3. Le meilleur jour et le meilleur créneau donnent
   « Programmer samedi à 09:15 ». Seuls les agrégats sont gardés (`reco_cache`, 12 h). Les
   tendances du texte (longueur, question, emoji, prix, lien) sont données à l'assistant.
+  « Créer ce post » repart d'un post vierge (confirmation si le post en cours a déjà du contenu) ;
+  5 idées affichées, les autres sur demande.
+- **Verdict A/B des variantes** — à chaque relecture des pubs (`socAdsSync`), `socAbVerdict`
+  compare la variante au meilleur taux de clic à chacune des autres (test de deux proportions,
+  unilatéral) : « trop tôt » sous 500 impressions ou 20 clics par variante, « gagnante » à 95 %
+  face à toutes, « devant sans certitude » à 80 %, sinon « pas d'écart net » (`ads[].ab`,
+  affiché sous « Résultats par variante » dans Publicités).
 - **Story 9:16** — quatrième format (1080 × 1920, stories Facebook et Instagram). Le haut et le
   bas (≈ 250 px, consigne de Meta) sont couverts par l'interface d'Instagram : en story, chaque
   style se resserre au centre (`.pf-root`, bandes de `--sh` = 200 px) ; le fond, la photo plein

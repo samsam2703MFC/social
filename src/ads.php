@@ -464,6 +464,58 @@ function socAdStatutEcran(string $eff): string
     };
 }
 
+/** Fonction de répartition de la loi normale centrée réduite (Abramowitz et Stegun 26.2.17). */
+function socPhi(float $z): float
+{
+    $t = 1 / (1 + 0.2316419 * abs($z));
+    $d = 0.3989422804014327 * exp(-$z * $z / 2);
+    $p = $d * $t * (0.319381530 + $t * (-0.356563782 + $t * (1.781477937 + $t * (-1.821255978 + $t * 1.330274429))));
+    return $z >= 0 ? 1 - $p : $p;
+}
+
+/**
+ * Le verdict A/B des variantes d'une pub : la variante au meilleur taux de clic face à
+ * chacune des autres (test de deux proportions, unilatéral). Trop tôt sous 500
+ * impressions ou 20 clics par variante ; gagnante à 95 % face à toutes ; tendance à 80 %.
+ * Rend null sans au moins deux variantes.
+ */
+function socAbVerdict(array $stats): ?array
+{
+    $v = array_values(array_filter($stats, static fn ($x) => is_array($x) && isset($x['variant'])));
+    if (count($v) < 2) { return null; }
+    $pct = static fn (float $x) => number_format($x * 100, 1, ',', '') . ' %';
+    $taux = static fn ($x) => (int) $x['impressions'] > 0 ? (int) $x['clicks'] / (int) $x['impressions'] : 0.0;
+    $minImp = min(array_map(static fn ($x) => (int) $x['impressions'], $v));
+    $minClics = min(array_map(static fn ($x) => (int) $x['clicks'], $v));
+    if ($minImp < 500 || $minClics < 20) {
+        return ['statut' => 'tot', 'variante' => null, 'confiance' => null,
+            'texte' => 'Trop tôt pour conclure : il faut au moins 500 impressions et 20 clics par variante (aujourd’hui ' . number_format($minImp, 0, ',', ' ') . ' impressions et ' . $minClics . ' clics pour la moins servie).'];
+    }
+    usort($v, static fn ($a, $b) => $taux($b) <=> $taux($a));
+    $m = $v[0]; $p1 = $taux($m); $n1 = (int) $m['impressions'];
+    $conf = 1.0; $second = $v[1];
+    foreach (array_slice($v, 1) as $x) {
+        $p2 = $taux($x); $n2 = (int) $x['impressions'];
+        $p = ((int) $m['clicks'] + (int) $x['clicks']) / ($n1 + $n2);
+        $se = sqrt(max($p * (1 - $p) * (1 / $n1 + 1 / $n2), 1e-12));
+        $c = socPhi(($p1 - $p2) / $se);
+        if ($c < $conf) { $conf = $c; $second = $x; }
+    }
+    $p2 = $taux($second);
+    $ecart = $p2 > 0 ? '+' . number_format(($p1 / $p2 - 1) * 100, 0, ',', '') . ' %' : '';
+    $face = 'taux de clic ' . $pct($p1) . ' contre ' . $pct($p2) . ' pour ' . $second['variant'] . ($ecart !== '' ? ' (' . $ecart . ')' : '');
+    if ($conf >= 0.95) {
+        return ['statut' => 'gagnante', 'variante' => $m['variant'], 'confiance' => round($conf, 3),
+            'texte' => 'Variante ' . $m['variant'] . ' gagnante : ' . $face . ', sûr à ' . floor($conf * 100) . ' %. Reprenez son visuel et son texte pour la suite.'];
+    }
+    if ($conf >= 0.80) {
+        return ['statut' => 'tendance', 'variante' => $m['variant'], 'confiance' => round($conf, 3),
+            'texte' => 'Variante ' . $m['variant'] . ' devant sans certitude : ' . $face . ', sûr à ' . floor($conf * 100) . ' % seulement. Laissez tourner.'];
+    }
+    return ['statut' => 'egalite', 'variante' => null, 'confiance' => round($conf, 3),
+        'texte' => 'Pas d’écart net entre les variantes (' . $face . ', sûr à ' . floor($conf * 100) . ' % seulement).'];
+}
+
 /**
  * Relit chez Meta l'état et la dépense de chaque pub (cron horaire) :
  * effective_status, motif de refus, dépense cumulée → « Budget épuisé »
@@ -510,6 +562,7 @@ function socAdsSync(): int
             ksort($parVariante);
             $ad['stats'] = array_values(array_map(static fn ($k, $x) => ['variant' => chr(65 + $k), 'spend' => round($x['spend'], 2), 'impressions' => $x['impressions'],
                 'clicks' => $x['clicks'], 'ctr' => $x['impressions'] ? round($x['clicks'] / $x['impressions'], 4) : null], array_keys($parVariante), $parVariante));
+            $ad['ab'] = socAbVerdict($ad['stats']);
         }
         if (!$lu) { continue; }
         $statuts = array_filter($statuts);

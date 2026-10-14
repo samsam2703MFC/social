@@ -342,10 +342,11 @@ function socIdees(): array
             $deja = false;
             foreach ($recents as $p) { if (($p['catalogue']['kind'] ?? '') === 'gamme' && (int) ($p['catalogue']['id'] ?? 0) === (int) $g['id']) { $deja = true; } }
             if ($deja) { continue; }
+            $nom = trim((string) preg_replace('/^gamme\s+/iu', '', (string) $g['name'])) ?: (string) $g['name'];
             $idees[] = ['id' => 'gamme-' . $g['id'], 'genre' => 'gamme', 'urgence' => 20 - (int) round((strtotime($debut) - strtotime($auj)) / 86400),
-                'titre' => 'Gamme « ' . $g['name'] . ' » : ' . ($debut > $auj ? 'commence le ' . socDateFr($debut) : 'commencée le ' . socDateFr($debut)),
-                'detail' => trim(($g['n'] ? $g['n'] . ' produit' . ($g['n'] > 1 ? 's' : '') . ' sur le webshop' : '') . ($g['au'] ? ' · jusqu’au ' . $g['au'] : '') . ' · aucun post depuis 30 jours'),
-                'prefill' => ['shops' => [], 'date' => max($demain, $debut), 'catalogue' => ['kind' => 'gamme', 'id' => (int) $g['id']], 'objectif' => 'Annoncer l’arrivée de la gamme « ' . $g['name'] . ' »']];
+                'titre' => 'Gamme « ' . $nom . ' » : ' . ($debut > $auj ? 'commence le ' . socDateFr($debut) : 'commencée le ' . socDateFr($debut)),
+                'detail' => implode(' · ', array_filter([$g['n'] ? $g['n'] . ' produit' . ($g['n'] > 1 ? 's' : '') . ' sur le webshop' : '', $g['au'] ? 'jusqu’au ' . $g['au'] : '', 'aucun post depuis 30 jours'])),
+                'prefill' => ['shops' => [], 'date' => max($demain, $debut), 'catalogue' => ['kind' => 'gamme', 'id' => (int) $g['id']], 'objectif' => 'Annoncer l’arrivée de la gamme « ' . $nom . ' »']];
         }
     } catch (Throwable $e) { $muettes[] = 'gammes (catalogue)'; }
 
@@ -357,7 +358,7 @@ function socIdees(): array
         $h = max(8, $x['heureDe'] - 2);
         $idees[] = ['id' => 'creux-' . $x['shop'], 'genre' => 'creux', 'urgence' => min(15, (int) round($x['potentiel'] / 500)),
             'titre' => $noms[$x['shop']] . ' : creux ' . mb_strtolower($x['creneau']),
-            'detail' => number_format($x['caH'], 0, ',', ' ') . ' € de l’heure contre ' . number_format($x['moyenne'], 0, ',', ' ') . ' € en moyenne · ≈ '
+            'detail' => number_format($x['caH'], 0, ',', ' ') . ' € de l’heure contre ' . number_format($x['moyenne'], 0, ',', ' ') . ' € en moyenne · environ '
                 . number_format($x['potentiel'], 0, ',', ' ') . ' € à aller chercher sur 4 semaines · un post vers ' . $h . ' h pour donner envie de passer',
             'prefill' => ['shops' => [$x['shop']], 'date' => socProchainJour($x['jours']), 'time' => sprintf('%02d:00', $h),
                 'objectif' => 'Faire venir des clients ' . mb_strtolower($x['creneau']) . ' (heures creuses de la boutique) : une raison de passer à ce moment-là, sans inventer d’offre']];

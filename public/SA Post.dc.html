@@ -60,6 +60,7 @@
                   <button onClick="{{ ix.use }}" disabled="{{ locked }}" style="flex:0 0 auto;border:none;background:{{ ix.btnBg }};color:#FFFFFF;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:500;cursor:pointer;">{{ ix.btn }}</button>
                 </div>
               </sc-for>
+              <sc-if value="{{ hasIdeesPlus }}" hint-placeholder-val="{{ false }}"><button onClick="{{ ideesPlus }}" style="align-self:flex-start;border:none;background:transparent;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;padding:2px 0;">{{ ideesPlusLabel }}</button></sc-if>
               <sc-if value="{{ hasMuettes }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8A4B00;">Sans réponse pour l’instant : {{ muettes }}.</span></sc-if>
             </div>
             <div style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:8px;">
@@ -1149,7 +1150,7 @@ class Component extends DCLogic {
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
       txtSel: null, txtTplNom: '', etqLocal: null, qc: [], visNom: '', visLocal: null, kitBusy: false, offre: null, mentionAuto: true, iaBusy: false, iaRes: null, iaErr: '', iaConsigne: '',
       objectif: '', inspi: (() => { try { const x = localStorage.getItem('sa.inspi'); return x === null ? null : x === '1'; } catch (e) { return null; } })(),
-      idees: null, ideesBusy: false, ideesErr: '', reco: null, recoLu: false, recoBusy: false, recoErr: '', ideeId: '', ideeCat: null, ideeOffre: null,
+      idees: null, ideesTout: false, ideesBusy: false, ideesErr: '', reco: null, recoLu: false, recoBusy: false, recoErr: '', ideeId: '', ideeCat: null, ideeOffre: null,
       nav: null, navKey: null, navLoading: false, navErr: '', navMode: 'cat', navG: null, navC: null, navGam: null, navQ: '', navSel: null, offres: null, offresKey: '', offresLoading: false, offreUsed: '',
       libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false };
     if (!SA) return base;
@@ -1345,14 +1346,19 @@ class Component extends DCLogic {
    * l'élément du catalogue (et l'offre dans le texte) suivent dès que le catalogue de la boutique est lu.
    */
   appliquerIdee(x) {
-    const SA = window.SA, p = x.prefill || {};
+    const SA = window.SA, p = x.prefill || {}, s = this.state;
+    // L'idée repart d'un post vierge : ce qui est déjà saisi ne s'efface pas sans accord.
+    const plein = s.text.trim() || s.textNl.trim() || s.photos.length || s.navSel;
+    if (plein && !window.confirm('Repartir de cette idée ? Le texte, la photo, le produit et l’offre du post en cours seront remplacés.')) return;
     const ok = (p.shops || []).filter(id => SA.byId(SA.SHOPS, id) || (SA.TEST_SHOPS || []).some(t => t.id === id));
-    const st = { ideeId: x.id, objectif: p.objectif || '', ideeCat: p.catalogue || null, ideeOffre: p.offre ? p.offre.id : null, offre: p.offre || this.state.offre, offreUsed: '' };
+    const st = { ideeId: x.id, objectif: p.objectif || '', ideeCat: p.catalogue || null, ideeOffre: p.offre ? p.offre.id : null, offre: p.offre || null, offreUsed: '',
+      text: '', textNl: '', photos: [], navSel: null, product: null, link: '', campaign: p.campaign || '', time: p.time || '08:00', iaRes: null, iaErr: '',
+      type: x.genre === 'gamme' ? 'Gamme saisonnière' : 'Produit',
+      v: Object.assign({}, s.v, { title: '', price: '', showPromo: false, promo: '4+1', promoSub: 'la 5ᵉ offerte', textes: [], nl: Object.assign({}, s.v.nl, { title: '' }) }) };
+    this._autoFr = ''; this._autoNl = '';
     Object.assign(st, ok.length ? { scope: ok.length === SA.SHOPS.length ? 'all' : 'shop', group: null, sel: ok } : { scope: 'all', group: null, sel: SA.SHOPS.map(z => z.id) });
     if (p.date) Object.assign(st, { when: 'later', date: p.date });
     if (p.time) st.time = p.time;
-    if (p.campaign) st.campaign = p.campaign;
-    if (x.genre === 'gamme') st.type = 'Gamme saisonnière';
     this.setState(st);
     this.toast('Idée appliquée : ' + [ok.length ? ok.map(id => (SA.byId(SA.SHOPS, id) || { name: id }).name).join(', ') : 'tout le réseau', p.date ? SA.dLabel(p.date) + (p.time ? ' à ' + p.time : '') : '',
       p.campaign ? 'opération rattachée' : '', p.catalogue ? 'catalogue choisi' : ''].filter(Boolean).join(' · ') + '. Ajoutez la photo, puis « Proposer 3 textes ».');
@@ -1738,7 +1744,8 @@ class Component extends DCLogic {
       else if (ic.kind === 'gamme') { const g = GA.find(x => x.id === ic.id); if (g) it = { kind: 'gamme', id: g.id, name: g.name, image: g.image }; }
       else if (ic.kind === 'categorie') { const c = C.find(x => x.id === ic.id); if (c) it = { kind: 'categorie', id: c.id, name: c.name, image: c.image || (grpById[c.groupe] || {}).image }; }
       this._ideeWait = true;
-      setTimeout(() => { this._ideeWait = false; this.setState({ ideeCat: null }, () => { const n = this.state.navSel; if (it && !(n && n.kind === it.kind && n.id === it.id)) choose(it); }); }, 0);
+      // Le choix et la fin de l'attente dans le même rendu : l'offre attend ainsi les offres de l'élément choisi.
+      setTimeout(() => { this._ideeWait = false; const n = this.state.navSel; if (it && !(n && n.kind === it.kind && n.id === it.id)) choose(it); this.setState({ ideeCat: null }); }, 0);
     }
     if (s.ideeOffre != null && !s.ideeCat && !this._ideeWait) {
       const pret = !sel || (s.offresKey === offresKey && s.offres && !s.offresLoading);
@@ -1897,9 +1904,11 @@ class Component extends DCLogic {
         const idees = ((I && I.idees) || []).map(x => { const [tag, tb, tf] = TAGI[x.genre] || TAGI.promo, on = s.ideeId === x.id;
           return { tag, tagBg: tb, tagFg: tf, titre: x.titre, detail: x.detail, btn: on ? 'Appliquée ✓' : 'Créer ce post', btnBg: on ? '#1F8A60' : '#8D1D2C',
             ring: on ? '#1F8A60' : 'rgba(34,34,34,0.12)', bg: on ? '#F3FAF6' : '#FFFFFF', use: () => !locked && this.appliquerIdee(x) }; });
+        const nI = idees.length, court = nI > 5 && !s.ideesTout;
         return { hasInspi: !!SA.live && !locked && !s.id, inspiOpen: open, inspiLabel: open ? 'Masquer' : 'Afficher',
+          hasIdeesPlus: nI > 5, ideesPlusLabel: court ? 'Voir les ' + (nI - 5) + ' autres idées' : 'Moins d’idées', ideesPlus: () => this.setState({ ideesTout: !s.ideesTout }),
           inspiToggle: () => { this.setState({ inspi: !open }); try { localStorage.setItem('sa.inspi', open ? '0' : '1'); } catch (e) {} },
-          ideesBusy: !!s.ideesBusy, hasIdeesErr: !!s.ideesErr, ideesErr: 'Idées indisponibles : ' + s.ideesErr, ideesVide: !!I && !idees.length, idees,
+          ideesBusy: !!s.ideesBusy, hasIdeesErr: !!s.ideesErr, ideesErr: 'Idées indisponibles : ' + s.ideesErr, ideesVide: !!I && !idees.length, idees: court ? idees.slice(0, 5) : idees,
           hasMuettes: !!(I && I.muettes && I.muettes.length), muettes: I && I.muettes ? I.muettes.join(', ') : '',
           recoAFaire: !!s.recoLu && !R && !s.recoBusy, recoBusy: !!s.recoBusy, hasRecoErr: !!s.recoErr, recoErr: 'Analyse impossible : ' + s.recoErr,
           recoAnalyser: () => this.analyserReco(false), recoRelire: () => this.analyserReco(true),

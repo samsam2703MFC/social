@@ -128,6 +128,7 @@
                   <span style="color:#666666;">Variante</span><span style="color:#666666;">Impr.</span><span style="color:#666666;">Clics</span><span style="color:#666666;">CTR</span><span style="color:#666666;">Dépense</span>
                   <sc-for list="{{ d.stats }}" as="vs" hint-placeholder-count="0"><span style="font-weight:{{ vs.w }};color:{{ vs.c }};">{{ vs.variant }}{{ vs.best }}</span><span>{{ vs.impressions }}</span><span>{{ vs.clicks }}</span><span style="font-weight:{{ vs.w }};color:{{ vs.c }};">{{ vs.ctr }}</span><span>{{ vs.spend }}</span></sc-for>
                 </div>
+                <sc-if value="{{ d.hasAb }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.5;border-radius:6px;padding:6px 9px;background:{{ d.abBg }};color:{{ d.abFg }};">{{ d.abTexte }}</span></sc-if>
               </div>
             </sc-if>
             <sc-if value="{{ d.isDark }}" hint-placeholder-val="{{ false }}">
@@ -527,6 +528,9 @@ class Component extends DCLogic {
       const stats = Array.isArray(a.stats) ? a.stats : [], best = stats.reduce((b, x) => x.ctr != null && x.impressions >= 300 && (!b || x.ctr > b.ctr) ? x : b, null);
       const dark = (SA.DARK || []).filter(x => x.ad === a.id), multi = new Set(dark.map(x => x.lang)).size > 1 || dark.some(x => x.lang === 'nl'), com = s.com && s.com.ad === a.id ? s.com : null;
       const nCom = dark.reduce((x, y) => x + (y.comments || 0), 0);
+      // Le verdict A/B (taux de clic, test de deux proportions) calculé par le serveur à chaque relecture.
+      const ab = a.ab || null, AB = { gagnante: ['#E2F0E8', '#0F6B4A'], tendance: ['#FFF8EC', '#8A4B00'], egalite: ['#F4EFE8', '#444444'], tot: ['#F4EFE8', '#666666'] }, [abBg, abFg] = AB[ab && ab.statut] || AB.tot;
+      Object.assign(d, { hasAb: !!(ab && ab.texte) && stats.length > 1, abTexte: ab ? ab.texte : '', abBg, abFg });
       Object.assign(d, { hasStats: stats.length > 1, stats: stats.map(x => ({ variant: x.variant, best: best && best.variant === x.variant ? ' ★' : '', w: best && best.variant === x.variant ? 600 : 400, c: best && best.variant === x.variant ? '#0F6B4A' : '#222222',
           impressions: SA.fmt(x.impressions), clicks: SA.fmt(x.clicks), ctr: x.ctr == null ? '—' : SA.pct(x.ctr), spend: SA.eur(x.spend) })),
         isDark: !!a.dark, darkCount: dark.length || 'en attente', darkNote: dark.length ? 'Relus chez Meta après la création de la pub (et toutes les heures).' : (SA.live ? 'Ils apparaissent ici dès que Meta les a créés (relu toutes les heures).' : 'Mode démonstration : créez une pub « Dark post » pour voir la liste.'),

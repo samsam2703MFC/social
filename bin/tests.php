@@ -1365,6 +1365,18 @@ BoMarketing::$transport = $boAvant; array_splice($GLOBALS['BO_CAMPAGNES'], 2); s
 socSettingPut('tfb_cache_nav', $navAvant, false); socSettingPut('creux_cache', null, false);
 socStateSave(['changes' => ['posts' => ['delete' => ['pidee1']]]]);
 
+echo "Publicités : verdict A/B des variantes (taux de clic)\n";
+$ab = static fn (array ...$v) => socAbVerdict(array_map(static fn ($x) => ['variant' => $x[0], 'impressions' => $x[1], 'clicks' => $x[2]], $v));
+$g = $ab(['A', 5000, 70], ['B', 5000, 110]);
+check('B nettement devant (2,2 % contre 1,4 %) : gagnante, sûr à plus de 95 %', $g['statut'] === 'gagnante' && $g['variante'] === 'B' && $g['confiance'] > 0.99
+    && str_contains($g['texte'], 'taux de clic 2,2 % contre 1,4 % pour A (+57 %)'), json_encode($g));
+$t = $ab(['A', 3000, 60], ['B', 3000, 72], ['C', 3000, 50]);
+check('écart modeste : tendance (80 à 95 %), comparée à la plus proche', $t['statut'] === 'tendance' && $t['variante'] === 'B' && $t['confiance'] >= 0.8 && $t['confiance'] < 0.95 && str_contains($t['texte'], 'pour A'), json_encode($t));
+$e = $ab(['A', 4000, 80], ['B', 4000, 82]);
+check('pas d’écart net', $e['statut'] === 'egalite' && $e['variante'] === null, json_encode($e));
+$tt = $ab(['A', 2000, 40], ['B', 300, 9]);
+check('trop tôt sous 500 impressions ou 20 clics par variante ; une seule variante : rien', $tt['statut'] === 'tot' && str_contains($tt['texte'], '300 impressions et 9 clics') && $ab(['A', 9000, 90]) === null, json_encode($tt));
+
 echo "Générateur : modèles d'étiquette (textes posés sur le visuel)\n";
 $GLOBALS['SOC_BODY'] = ['etiquettes_modeles' => [
     ['id' => 'm1', 'nom' => 'Promo cookies', 'forme' => 'pastille', 'police' => 'titre', 'couleur' => 'blanc', 'fond' => 'ruby', 'taille' => 999, 'rot' => -8, 'x' => 80, 'y' => 24, 'pirate' => '<script>'],
