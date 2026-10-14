@@ -330,6 +330,24 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   prix de vente du produit choisi changé, promotion plus active, hors de ses dates ou pas valable
   dans la boutique → publication arrêtée (« Publication bloquée, offre à revoir : … »). TFBuddy
   injoignable : rien n'est affirmé, la publication suit son cours.
+- **Story 9:16** — quatrième format (1080 × 1920, stories Facebook et Instagram). Le haut et le
+  bas (≈ 250 px, consigne de Meta) sont couverts par l'interface d'Instagram : en story, chaque
+  style se resserre au centre (`.pf-root`, bandes de `--sh` = 200 px) ; le fond, la photo plein
+  cadre, son dégradé, le bandeau ruby, le filet et la colonne du Duo restent bord à bord
+  (`.pf-bleed`, `.pf-bas`, `.pf-cadre`, `.pf-colonne`).
+- **Contrôle du visuel** — sous le format, relu en direct sur l'aperçu (`controle()` du studio,
+  exposé par `onApi`) : texte qui dépasse du visuel (**bloque** la publication, pas le
+  brouillon) ; contraste texte/fond sous 3:1 ; texte dans les zones recadrées (interface de la
+  story, grille 3:4 du profil Instagram pour un carré) ; texte de moins de 20 px ; photo trop
+  petite pour la place qu'elle prend (floue) ; fondu sous 25 % en plein cadre ; pas de logo.
+- **Modèles de visuel** — « Enregistrer ce visuel comme modèle » garde le style, le format, le
+  fond, le logo, le fondu, l'illustration, les textes posés et les mentions affichées, jamais le
+  produit, le titre, le prix ni la photo (réglage `visuels_modeles`, `POST /parametres`, nettoyé
+  par `socVisuelsModeles` : valeurs sur liste blanche, illustration du design system seulement,
+  30 modèles au plus). Un clic sur la pastille l'applique au post en cours.
+- **Kit multi-format** — « Télécharger le kit (4 formats) » : le même visuel en carré, portrait,
+  story et paysage, aux dimensions de Meta, dans un zip (`nom-kit.zip`, JSZip 3.10.1 MIT
+  embarqué dans `public/vendor/`, chargé au premier clic).
 - **Logo du visuel** — selon le style, ou au choix : Foncé (`img/logo.png`, apostrophe dorée),
   Clair (`img/logo-white.png`), ou recoloré dans la palette (noir, ruby, abricot, crème : masque
   CSS sur le logo blanc ; `DS_LOGOS`). Gardé avec le post (`visual.v.logo`).

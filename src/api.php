@@ -88,11 +88,11 @@ function socRoute(string $method, string $path): array
     }
     if ($method === 'POST' && $path === '/parametres') {
         // Les réglages non secrets modifiables depuis l'écran.
-        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'marketing_api' => 'string', 'webshop_url' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool', 'lien_texte' => 'array', 'etiquettes_modeles' => 'etiquettes', 'charte_editoriale' => 'charte', 'ia_modele' => 'string'];
+        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'marketing_api' => 'string', 'webshop_url' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool', 'lien_texte' => 'array', 'etiquettes_modeles' => 'etiquettes', 'charte_editoriale' => 'charte', 'ia_modele' => 'string', 'visuels_modeles' => 'visuels'];
         $faits = [];
         foreach (body() as $k => $v) {
             if (!isset($permis[$k])) { continue; }
-            $v = match ($permis[$k]) { 'float' => (float) $v, 'array' => (array) $v, 'bool' => (bool) $v, 'etiquettes' => socEtiquettesModeles($v), 'charte' => socCharteNettoyer($v), default => trim((string) $v) };
+            $v = match ($permis[$k]) { 'float' => (float) $v, 'array' => (array) $v, 'bool' => (bool) $v, 'etiquettes' => socEtiquettesModeles($v), 'charte' => socCharteNettoyer($v), 'visuels' => socVisuelsModeles($v), default => trim((string) $v) };
             socSettingPut((string) $k, $v, false); $faits[] = $k;
         }
         if ($faits) { socLog(socUser(), 'Paramètres', 'Modifiés : ' . implode(', ', $faits)); }

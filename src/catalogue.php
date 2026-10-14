@@ -228,6 +228,52 @@ function socEtiquettesModeles(mixed $liste): array
     return $out;
 }
 
+/**
+ * Les modèles de visuel complets enregistrés depuis le générateur (réglage `visuels_modeles`) :
+ * style, format, fond, logo, fondu, illustration, textes posés, éléments affichés et textes fixes
+ * (sur-titre, phrase, unité, site). Le produit, le prix et la photo restent ceux du post.
+ * Champs connus seulement, valeurs bornées, 30 modèles au plus.
+ */
+function socVisuelsModeles(mixed $liste): array
+{
+    $mot = static fn ($v, array $ok, ?string $d) => in_array($v, $ok, true) ? $v : $d;
+    $num = static fn ($v, int $a, int $b, int $d) => is_numeric($v) ? max($a, min($b, (int) round((float) $v))) : $d;
+    $txt = static fn ($v, int $n) => trim(mb_substr((string) ($v ?? ''), 0, $n));
+    $couleurs = ['creme', 'beige', 'beige-clair', 'blanc', 'abricot', 'ruby', 'noir', 'popup', 'ambre'];
+    $out = [];
+    foreach (is_array($liste) ? $liste : [] as $m) {
+        if (!is_array($m) || !is_array($m['v'] ?? null)) { continue; }
+        $id = substr((string) preg_replace('/[^\w-]/', '', (string) ($m['id'] ?? '')), 0, 40);
+        $nom = $txt($m['nom'] ?? '', 60);
+        if ($id === '' || $nom === '') { continue; }
+        $v = $m['v'];
+        $w = ['style' => preg_match('/^[a-z]{2,20}$/', (string) ($v['style'] ?? '')) ? (string) $v['style'] : 'epure',
+            'format' => $mot($v['format'] ?? '', ['carre', 'portrait', 'story', 'paysage'], 'carre'),
+            'fond' => $mot($v['fond'] ?? null, $couleurs, null),
+            'logo' => $mot($v['logo'] ?? 'auto', ['auto', 'fonce', 'clair', 'noir', 'ruby', 'abricot', 'creme'], 'auto'),
+            'fondu' => $num($v['fondu'] ?? null, 0, 100, 60), 'cutMode' => $mot($v['cutMode'] ?? 'auto', ['auto', 'cut', 'full'], 'auto'),
+            'phraseFont' => $mot($v['phraseFont'] ?? 'script', ['script', 'display', 'sans'], 'script'),
+            'phraseColor' => $mot($v['phraseColor'] ?? 'auto', ['auto', 'ruby', 'noir', 'abricot', 'blanc', 'gris'], 'auto')];
+        foreach (['showLogo', 'showEyebrow', 'showTitle', 'showPhrase', 'showPrice', 'showPromo', 'showSite'] as $k) { if (array_key_exists($k, $v)) { $w[$k] = (bool) $v[$k]; } }
+        foreach (['eyebrow' => 80, 'phrase' => 160, 'unit' => 40, 'site' => 60] as $k => $n) { if (isset($v[$k])) { $w[$k] = $txt($v[$k], $n); } }
+        $il = is_array($v['illus'] ?? null) ? $v['illus'] : null;
+        $w['illus'] = $il && preg_match('#^img/(illus|products)/[\w./-]+\.png$#', (string) ($il['src'] ?? '')) && !str_contains((string) $il['src'], '..')
+            ? ['src' => (string) $il['src'], 'name' => $txt($il['name'] ?? '', 60), 'x' => $num($il['x'] ?? null, 0, 100, 82), 'y' => $num($il['y'] ?? null, 0, 100, 18),
+                'taille' => $num($il['taille'] ?? null, 5, 80, 28), 'trait' => $mot($il['trait'] ?? 'auto', ['auto', 'origine', 'ruby', 'noir', 'blanc', 'abricot', 'creme'], 'auto')] : null;
+        $w['textes'] = [];
+        foreach (array_slice((array) ($v['textes'] ?? []), 0, 8) as $t) {
+            if (!is_array($t)) { continue; }
+            $e = socEtiquettesModeles([['id' => 'x', 'nom' => 'x'] + $t])[0] ?? null;
+            if ($e === null) { continue; }
+            unset($e['nom']);
+            $w['textes'][] = ['id' => 't' . substr(md5(json_encode($t)), 0, 10), 'txt' => $txt($t['txt'] ?? '', 80), 'sous' => $txt($t['sous'] ?? '', 80)] + array_diff_key($e, ['id' => 1]);
+        }
+        $out[] = ['id' => $id, 'nom' => $nom, 'v' => $w];
+        if (count($out) >= 30) { break; }
+    }
+    return $out;
+}
+
 /* --- images du webshop ---------------------------------------------------------------------- */
 
 /**

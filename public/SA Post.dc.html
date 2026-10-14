@@ -248,6 +248,19 @@
           </sc-if>
 
           <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
+            <!-- Modèles de visuel complets (style, format, fond, logo, illustration, textes posés) -->
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <span style="font-size:12px;color:#666666;">Modèles de visuel</span>
+                <sc-for list="{{ visModeles }}" as="vm" hint-placeholder-count="0"><span style="display:inline-flex;align-items:center;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;overflow:hidden;"><button onClick="{{ vm.apply }}" title="Appliquer ce modèle (le produit, le prix et la photo restent ceux du post)" style="border:none;background:transparent;padding:4px 4px 4px 10px;font-size:11px;font-weight:500;cursor:pointer;">{{ vm.nom }}</button><button onClick="{{ vm.del }}" title="Supprimer ce modèle" style="border:none;background:transparent;color:#8A847C;padding:2px 9px 3px 4px;font-size:13px;cursor:pointer;">×</button></span></sc-for>
+                <sc-if value="{{ noVisModeles }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8A847C;">aucun pour l’instant</span></sc-if>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <input type="text" value="{{ visNom }}" onChange="{{ setVisNom }}" disabled="{{ locked }}" placeholder="Nom du modèle (ex. Promo du mois)" style="flex:1 1 200px;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 9px;outline:none;">
+                <button onClick="{{ visSave }}" disabled="{{ locked }}" style="border:none;background:#232220;color:#FFFFFF;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ visSaveOp }};">Enregistrer ce visuel comme modèle</button>
+                <button onClick="{{ kit }}" style="border:0.5px solid #8D1D2C;background:#FFFFFF;color:#8D1D2C;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ kitOp }};margin-left:auto;">{{ kitLabel }}</button>
+              </div>
+            </div>
             <!-- Recadrage : le format du visuel, fixé ici plutôt que par Facebook -->
             <div style="display:flex;flex-direction:column;gap:6px;">
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -257,6 +270,12 @@
                 </div>
               </div>
               <span style="font-size:11px;color:#666666;line-height:1.45;">{{ vFormatTip }}</span>
+            </div>
+            <!-- Contrôle qualité du visuel -->
+            <div style="display:flex;flex-direction:column;gap:5px;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:8px 10px;background:#FCFAF7;">
+              <span style="font-size:12px;color:#444444;font-weight:500;">Contrôle du visuel</span>
+              <sc-if value="{{ qcOk }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:500;color:#1F8A60;">✓ Rien à signaler : textes lisibles, dans le cadre et hors des zones recadrées.</span></sc-if>
+              <sc-for list="{{ qcItems }}" as="qi" hint-placeholder-count="0"><span style="display:flex;gap:6px;align-items:flex-start;font-size:11px;line-height:1.45;border-radius:6px;padding:4px 8px;background:{{ qi.bg }};color:{{ qi.fg }};"><b style="flex:0 0 auto;">{{ qi.ico }}</b><span>{{ qi.msg }}</span></span></sc-for>
             </div>
             <!-- Fond : palette du design system de la marque -->
             <div style="display:flex;flex-direction:column;gap:6px;">
@@ -1064,6 +1083,7 @@
 class Component extends DCLogic {
   FORMATS = [['carre', 'Carré 1:1', '1080 × 1080 · entier dans le fil Facebook et Instagram, sur mobile comme sur ordinateur. Sur un écran d’ordinateur peu haut, Facebook peut le réduire et ajouter des bandes de couleur sur les côtés.'],
     ['portrait', 'Portrait 4:5', '1080 × 1350 · le plus grand sur mobile (Facebook et Instagram). Sur ordinateur, Facebook le réduit davantage : bandes de couleur sur les côtés.'],
+    ['story', 'Story 9:16', '1080 × 1920 · stories Facebook et Instagram, plein écran sur téléphone. Le haut et le bas sont couverts par l’interface d’Instagram : le contrôle signale ce qui y tombe.'],
     ['paysage', 'Paysage 1,91:1', '1200 × 630 · toute la largeur du fil sur ordinateur, sans bandes sur les côtés. Plus petit sur mobile ; Instagram l’accepte tel quel.']];
   STYLES1 = [['epure', 'Épuré', '#F5EFE4'], ['abricot', 'Abricot', '#F2C9A0'], ['ruby', 'Ruby', '#8D1D2C'], ['noir', 'Noir', '#232220'], ['plein', 'Plein cadre', '#8A847C'], ['pleinbandeau', 'Plein · bandeau', '#8D1D2C'], ['pleinencart', 'Plein · encart', '#F5EFE4'], ['pleinhaut', 'Plein · titre haut', '#2E2C2A'], ['pleinfilet', 'Plein · filet', '#A39D94'], ['duo', 'Duo', '#EAE4DC']];
   STYLES2 = [['mosaique', 'Mosaïque', 12], ['grille', 'Grille 2×2', 4], ['trio', 'Trio', 3], ['collage', 'Collage', 5], ['bandes', 'Bandes', 3], ['galerie', 'Galerie 3×3', 9], ['frise', 'Frise', 4], ['puzzle', 'Puzzle', 5], ['pastilles', 'Pastilles', 4], ['epinglees', 'Épinglées', 3], ['etagere', 'Étagère', 6], ['diagonale', 'Diagonale', 3], ['vedette', 'Vedette', 5], ['damier', 'Damier', 8], ['encadre', 'Encadré', 4], ['nuit', 'Nuit', 3]];
@@ -1077,7 +1097,7 @@ class Component extends DCLogic {
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', linkText: { fr: '', nl: '' }, campaign: '',
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
-      txtSel: null, txtTplNom: '', etqLocal: null, offre: null, mentionAuto: true, iaBusy: false, iaRes: null, iaErr: '', iaConsigne: '',
+      txtSel: null, txtTplNom: '', etqLocal: null, qc: [], visNom: '', visLocal: null, kitBusy: false, offre: null, mentionAuto: true, iaBusy: false, iaRes: null, iaErr: '', iaConsigne: '',
       nav: null, navKey: null, navLoading: false, navErr: '', navMode: 'cat', navG: null, navC: null, navGam: null, navQ: '', navSel: null, offres: null, offresKey: '', offresLoading: false, offreUsed: '',
       libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false };
     if (!SA) return base;
@@ -1195,6 +1215,48 @@ class Component extends DCLogic {
     this.setState({ v: Object.assign({}, v, { textes: ts.concat(t) }), txtSel: t.id, mode: 'studio' });
     // Le texte vient de l'API (nom de promotion, formule) : son champ s'ouvre, prêt à être corrigé.
     this.editerTexte();
+  }
+  /** Relit le contrôle qualité du visuel (dans le studio) ; ne met l'état à jour que s'il a changé. */
+  qcLire() {
+    if (!this._api || !this._api.controle || this.state.mode !== 'studio') { if (this.state.qc.length) this.setState({ qc: [] }); return; }
+    let q = []; try { q = this._api.controle() || []; } catch (e) { console.error(e); }
+    if (JSON.stringify(q) !== JSON.stringify(this.state.qc)) this.setState({ qc: q });
+  }
+  /** Les modèles de visuel enregistrés (réglage visuels_modeles ; en démonstration, ce navigateur). */
+  visModeles() {
+    const SA = window.SA; let l = [];
+    if (SA.live) l = ((SA.state().params || {}).visuels_modeles) || [];
+    else { try { l = this.state.visLocal || JSON.parse(localStorage.getItem('sa.visuels') || '[]'); } catch (e) { l = []; } }
+    return (Array.isArray(l) ? l : []).filter(m => m && m.id && m.nom && m.v);
+  }
+  visGarder(liste, msg) {
+    const SA = window.SA;
+    if (SA.live) return SA.api('POST', '/parametres', { visuels_modeles: liste }).then(r => { const st = SA.state(); st.params = (r && r.params) || Object.assign({}, st.params, { visuels_modeles: liste }); this.setState({ visNom: '', visLocal: null }); this.toast(msg); }).catch(e => this.toast('Modèle non enregistré : ' + (e.message || e)));
+    try { localStorage.setItem('sa.visuels', JSON.stringify(liste)); } catch (e) {}
+    this.setState({ visLocal: liste, visNom: '' }); this.toast(msg);
+  }
+  /** Le kit multi-format : le même visuel en carré, portrait, story et paysage, dans un zip. */
+  async kitTelecharger() {
+    const SA = window.SA, s = this.state;
+    if (!this._api || s.kitBusy) return;
+    this.setState({ kitBusy: true });
+    const av = s.v.format || 'carre', fichiers = [], nom = String(s.v.title || 'visuel').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'visuel';
+    const DIM = { carre: '1080x1080', portrait: '1080x1350', story: '1080x1920', paysage: '1200x630' };
+    try {
+      await this.photosLocales();
+      if (!window.JSZip) await new Promise((ok, ko) => { const sc = document.createElement('script'); sc.src = 'vendor/jszip.min.js'; sc.onload = ok; sc.onerror = () => ko(new Error('bibliothèque zip introuvable')); document.head.appendChild(sc); });
+      for (const f of ['carre', 'portrait', 'story', 'paysage']) {
+        await new Promise(r => this.setState({ v: Object.assign({}, this.state.v, { format: f }) }, r));
+        await new Promise(r => setTimeout(r, 700));
+        const img = await this._api.toImage({ jpeg: true, pixelRatio: 1, quality: 0.92 });
+        fichiers.push([nom + '-' + f + '-' + DIM[f] + '.jpg', img.split(',')[1]]);
+      }
+      const zip = new window.JSZip(); fichiers.forEach(([n, b64]) => zip.file(n, b64, { base64: true }));
+      const blob = await zip.generateAsync({ type: 'blob' }), a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = nom + '-kit.zip'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      this.toast('Kit téléchargé : carré, portrait, story et paysage.');
+    } catch (e) { console.error(e); this.toast('Kit impossible : ' + (e.message || e)); }
+    this.setState({ kitBusy: false, v: Object.assign({}, this.state.v, { format: av }) });
   }
   /** La mention d'une promotion, tirée de l'API (dates, boutiques), en français ou en néerlandais. */
   mentionOffre(x, L) {
@@ -1400,6 +1462,9 @@ class Component extends DCLogic {
     if (s.dark) status = 'Dark post';
     const errs = this.validate(status !== 'Brouillon', status);
     if (errs.length) { this.setState({ errors: errs }); return; }
+    // Contrôle du visuel : un texte qui dépasse du visuel ne part pas.
+    if (s.mode === 'studio' && status !== 'Brouillon') { this.qcLire(); const bloquants = (this.state.qc || []).filter(q => q.niveau === 'erreur');
+      if (bloquants.length) { this.setState({ errors: bloquants.map(q => 'Visuel : ' + q.msg + '.') }); return; } }
     this.setState({ saving: true, errors: [] });
     // Avant de publier ou programmer : le prix et la promotion du post sont-ils encore ceux de TFBuddy ?
     if (SA.live && (status === 'Publié' || status === 'Programmé') && ((s.navSel && s.navSel.kind === 'produit' && s.navSel.prix != null) || (s.offre && s.offre.id))) {
@@ -1714,6 +1779,18 @@ class Component extends DCLogic {
       // Recadrage : le format du visuel est fixé ici (l'image part déjà aux dimensions de Meta).
       vFormats: this.FORMATS.map(([k, label, tip]) => { const [bg, fg] = seg((v.format || 'carre') === k); return { label, tip, bg, fg, pick: () => !locked && this.V({ format: k }) }; }),
       vFormatTip: (this.FORMATS.find(f => f[0] === (v.format || 'carre')) || this.FORMATS[0])[2],
+      // Contrôle qualité du visuel (lu dans le studio après chaque rendu).
+      ...(() => { clearTimeout(this._qcT); this._qcT = setTimeout(() => this.qcLire(), 600);
+        const COL = { erreur: ['#FDECEC', '#8D1D2C', '✕'], attention: ['#FFF4E5', '#8A4B00', '!'], conseil: ['#F4EFE8', '#444444', 'i'] };
+        return { qcItems: (s.qc || []).map(q => ({ msg: q.msg, bg: COL[q.niveau][0], fg: COL[q.niveau][1], ico: COL[q.niveau][2] })), qcOk: !(s.qc || []).length && s.mode === 'studio', hasQc: (s.qc || []).length > 0 }; })(),
+      // Modèles de visuel complets et kit multi-format.
+      ...(() => { const M = this.visModeles(), cle = ['style', 'format', 'fond', 'logo', 'fondu', 'cutMode', 'illus', 'textes', 'showLogo', 'showEyebrow', 'showTitle', 'showPhrase', 'showPrice', 'showPromo', 'showSite', 'eyebrow', 'phrase', 'unit', 'site', 'phraseFont', 'phraseColor'];
+        return { visModeles: M.map(m => ({ nom: m.nom, apply: () => { if (locked) return; const w = Object.assign({}, m.v); this.V(w); this.toast('Modèle « ' + m.nom + ' » appliqué : le produit, le prix et la photo restent ceux du post.'); },
+            del: () => !locked && this.visGarder(M.filter(x => x.id !== m.id), 'Modèle « ' + m.nom + ' » supprimé.') })), hasVisModeles: M.length > 0, noVisModeles: M.length === 0,
+          visNom: s.visNom || '', setVisNom: (e) => this.setState({ visNom: e.target.value }), visSaveOp: String(s.visNom || '').trim() && !locked ? 1 : 0.4,
+          visSave: () => { const nom = String(s.visNom || '').trim(); if (!nom || locked) return; const w = {}; cle.forEach(k => { if (v[k] !== undefined) w[k] = v[k]; });
+            this.visGarder(M.concat({ id: 'v' + Date.now().toString(36), nom, v: w }), 'Visuel enregistré comme modèle « ' + nom + ' » : réutilisable pour les prochains posts.'); },
+          kitLabel: s.kitBusy ? 'Préparation du kit…' : 'Télécharger le kit (4 formats)', kitOp: s.kitBusy ? 0.5 : 1, kit: () => this.kitTelecharger() }; })(),
       // Plein cadre : l'intensité du fondu (dégradé sombre sur la photo), en %.
       hasFondu: ['plein', 'pleinbandeau', 'pleinhaut', 'pleinfilet'].includes(v.style),
       fondu: v.fondu != null ? v.fondu : 60, fonduLabel: (v.fondu != null ? v.fondu : 60) + ' %', setFondu: (e) => !locked && this.V({ fondu: +e.target.value }),

@@ -1280,6 +1280,26 @@ check('modèles enregistrés : champs connus, valeurs bornées, palette et polic
     && $em[1]['id'] === 'm3' && $em[1]['forme'] === 'etiquette' && $em[1]['police'] === 'titre' && $em[1]['couleur'] === 'blanc' && $em[1]['fond'] === 'abricot' && ($b['params']['etiquettes_modeles'][0]['nom'] ?? '') === 'Promo cookies', json_encode($em));
 socSettingPut('etiquettes_modeles', null, false);
 
+echo "Générateur : modèles de visuel complets (style, format, fond, logo, illustration, textes posés)\n";
+$GLOBALS['SOC_BODY'] = ['visuels_modeles' => [
+    ['id' => 'v1', 'nom' => 'Story automne', 'v' => ['style' => 'pleinhaut', 'format' => 'story', 'fond' => 'abricot', 'logo' => 'clair', 'fondu' => 140, 'showLogo' => 0, 'eyebrow' => 'Automne', 'title' => 'Ne doit pas suivre', 'price' => '9,99', 'photos' => ['https://x/y.jpg'],
+        'illus' => ['src' => 'img/illus/croissant.png', 'x' => 120, 'taille' => 2, 'trait' => 'ruby'],
+        'textes' => [['txt' => '4+1', 'sous' => 'la 5ᵉ offerte', 'forme' => 'pastille', 'police' => 'titre', 'couleur' => 'blanc', 'fond' => 'ruby', 'taille' => 999, 'x' => 80, 'y' => 20], 'pas un texte']]],
+    ['id' => 'v2', 'nom' => 'Piégé', 'v' => ['style' => '<b>', 'format' => '16:9', 'fond' => '#ff00ff', 'logo' => 'neon', 'illus' => ['src' => 'https://evil.example/x.png'], 'textes' => [['txt' => 'x', 'police' => 'comic']]]],
+    ['id' => 'v3', 'nom' => '', 'v' => ['style' => 'epure']], ['id' => 'v4', 'nom' => 'Sans réglages'],
+    ['id' => 'v5', 'nom' => 'Chemin', 'v' => ['illus' => ['src' => 'img/illus/../../config.png']]]]];
+[$code, $b] = socRoute('POST', '/parametres'); unset($GLOBALS['SOC_BODY']);
+$vm = socSetting('visuels_modeles');
+$v1 = $vm[0]['v'] ?? []; $v2 = $vm[1]['v'] ?? [];
+check('modèle de visuel : réglages connus et bornés, sans le produit, le prix ni la photo du post', $code === 200 && count($vm) === 3 && $vm[0]['nom'] === 'Story automne'
+    && $v1['style'] === 'pleinhaut' && $v1['format'] === 'story' && $v1['fond'] === 'abricot' && $v1['logo'] === 'clair' && $v1['fondu'] === 100 && $v1['showLogo'] === false && $v1['eyebrow'] === 'Automne'
+    && !isset($v1['title']) && !isset($v1['price']) && !isset($v1['photos']) && $v1['illus']['x'] === 100 && $v1['illus']['taille'] === 5 && $v1['illus']['trait'] === 'ruby'
+    && count($v1['textes']) === 1 && $v1['textes'][0]['txt'] === '4+1' && $v1['textes'][0]['taille'] === 220 && $v1['textes'][0]['forme'] === 'pastille'
+    && ($b['params']['visuels_modeles'][0]['id'] ?? '') === 'v1', json_encode($vm));
+check('modèle de visuel : style, format, fond, logo et illustration hors liste ramenés aux valeurs sûres', $v2['style'] === 'epure' && $v2['format'] === 'carre' && $v2['fond'] === null && $v2['logo'] === 'auto'
+    && $v2['illus'] === null && $v2['textes'][0]['police'] === 'titre' && ($vm[2]['nom'] ?? '') === 'Chemin' && array_key_exists('illus', $vm[2]['v']) && $vm[2]['v']['illus'] === null, json_encode([$v2, $vm[2] ?? null]));
+socSettingPut('visuels_modeles', null, false);
+
 echo "Images du webshop servies par le module (le visuel composé s'exporte)\n";
 $media = static function (string $u): array { $_GET = ['u' => $u]; try { return socRoute('GET', '/media/webshop'); } catch (HttpError $e) { return [$e->status, $e->getMessage()]; } finally { $_GET = []; } };
 [$code, $f] = $media('https://cdn.r2.dev/webshop/p11.webp');
