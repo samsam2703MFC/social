@@ -86,6 +86,13 @@ cache 15 min) sont liés quand ils visent le produit, sa sous-catégorie ou l'un
 sélection, avec leur portée (toutes les boutiques ou lesquelles) ; les **formules** d'un produit viennent
 de `GET /webshop/shops/{id}/products/{p}/menus`. « Utiliser » met l'offre dans le bandeau promo du
 visuel et dans le texte. Démonstration : un instantané réel du webshop de Halle (`public/demo-catalogue.json`).
+Le choix pose aussi le **lien du post** (sauf un lien saisi à la main) : la page du webshop du produit,
+de la sous-catégorie ou de la catégorie. Les **photos du webshop** sont sur Cloudflare R2, sans en-tête
+CORS : un visuel qui les dessine ne s'exporte pas. Le module les sert donc lui-même
+(`GET /media/webshop?u=` : https, hôte R2 public `*.r2.dev` ou hôte d'image du catalogue en cache,
+pas de redirection, image reconnue à ses octets) et l'écran les remet en JPEG avant de composer le
+visuel. En ligne, un visuel composé qui ne s'exporte pas **bloque** l'enregistrement avec un message,
+au lieu de partir en photo brute (sans logo ni titre).
 
 Les boutiques ne viennent pas que de l'API : une Page Facebook du portefeuille Meta
 (relu chaque heure) qui n'est ni celle de la marque ni celle d'une boutique de
@@ -265,10 +272,18 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   webhook par objet Page, déjà utilisée par Brand Guard : le cron fait donc le
   rattrapage toutes les heures.
 - **Liens du webshop** — variables `{webshop}` (le webshop de la boutique :
-  `https://webshop.atelierby.be/?shop={n° de caisse}`) et `{webshop_produit}` (la page
-  du produit choisi : `…&product={id TFBuddy}&open=product`), résolues boutique par
-  boutique dans le lien et dans le texte du post (`socWebshopUrl`, `src/publish.php` ;
-  adresse de base : réglage `webshop_url`). Boutons « Lien rapide » sous le champ Lien.
+  `https://webshop.atelierby.be/?shop={n° de caisse}`), `{webshop_produit}` /
+  `{webshop_produit:ID}`, `{webshop_categorie}` / `{webshop_categorie:ID}` et
+  `{webshop_groupe:ID}`, résolues boutique par boutique dans le lien et dans le texte du
+  post (`socWebshopUrl`, `src/publish.php` ; adresse de base : réglage `webshop_url`), aux
+  paramètres que le webshop lit lui-même : catégorie `?shop=4&category=group:28`,
+  sous-catégorie `…&sub=category:31000` (sans groupe : `category=category:31000`), produit :
+  sa sous-catégorie + `&product={id}&open=product` (le webshop lit ces deux paramètres mais
+  n'ouvre pas encore la fiche : on arrive sur la sous-catégorie, produit en vue). Le groupe
+  d'une catégorie et la catégorie d'un produit viennent du catalogue lu (`socWebshopPlan`).
+  Magasin test (hors caisse) : la page du webshop sans boutique. Une boutique sans horaires :
+  la phrase qui cite `{horaires}` disparaît (plus de « Ouvert . »). Boutons « Lien rapide »
+  sous le champ Lien.
 - **Espace franchisé aligné** — « Opérations du réseau » (`GET /franchise/operations`) :
   chaque campagne du Marketing où figure la boutique, avec ce qui y est rattaché en
   lecture seule (posts du module, publications de sa Page et de l'Instagram du réseau

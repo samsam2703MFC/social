@@ -122,6 +122,7 @@ function socRoute(string $method, string $path): array
     // et les promotions, bundles et formules liés à la sélection (src/catalogue.php).
     if ($method === 'GET' && $path === '/catalogue/nav') { return [200, socNavCatalogue((string) ($_GET['shop'] ?? ''), !empty($_GET['forcer']))]; }
     if ($method === 'GET' && $path === '/catalogue/offres') { return [200, socNavOffres($_GET)]; }
+    if ($method === 'GET' && $path === '/media/webshop') { return [200, socMediaWebshop((string) ($_GET['u'] ?? ''))]; }
     // Supprimer un post : du module (et, avec meta, de Facebook / Instagram), ou une publication lue chez Meta.
     if ($method === 'POST' && $path === '/posts/supprimer') {
         $b = body();
@@ -226,6 +227,15 @@ function socHandle(string $method, string $path): void
         [$code, $body] = [500, ['error' => 'erreur interne : ' . $e->getMessage()]];
     }
     http_response_code($code);
+    if ($body instanceof SocFichier) {
+        // Une image du catalogue : même origine que l'écran, gardée un jour par le navigateur.
+        header('Content-Type: ' . $body->type);
+        header('Cache-Control: private, max-age=86400');
+        header('X-Content-Type-Options: nosniff');
+        header('Content-Length: ' . strlen($body->octets));
+        echo $body->octets;
+        return;
+    }
     header('Cache-Control: no-store');
     if (is_string($body)) {
         header('Content-Type: text/plain; charset=utf-8');

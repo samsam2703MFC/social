@@ -33,19 +33,30 @@ function socCatalogue(): array
 }
 
 /**
- * Le webshop d'une boutique (https://webshop.atelierby.be/?shop={n° de caisse}), ou la page d'un
- * produit dans ce webshop (&product={id TFBuddy}&open=product). Adresse de base : réglage `webshop_url`.
+ * Le webshop d'une boutique (https://webshop.atelierby.be/?shop={n° de caisse}), ou une page de ce
+ * webshop, avec les paramètres que le webshop lit lui-même (parseDeepLink de son application) :
+ *   catégorie        ?shop=4&category=group:28
+ *   sous-catégorie   ?shop=4&category=group:28&sub=category:31000   (sans groupe : category=category:31000)
+ *   produit          sa sous-catégorie + &product={id}&open=product
+ * Le groupe d'une catégorie et la catégorie d'un produit viennent du catalogue du webshop
+ * (socWebshopPlan). Une boutique hors caisse (magasin test) n'a pas de webshop : le lien garde
+ * la page, sans boutique. Adresse de base : réglage `webshop_url`.
  */
-function socWebshopUrl(string $shopId, ?array $product = null, int $categorie = 0): string
+function socWebshopUrl(string $shopId, ?array $product = null, int $categorie = 0, int $groupe = 0): string
 {
     $base = rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/';
-    if (!preg_match('/^\d+$/', $shopId)) { return $base; }
-    $url = $base . '?shop=' . $shopId;
+    $q = preg_match('/^\d+$/', $shopId) ? ['shop' => $shopId] : [];
     $pid = (int) ($product['apiId'] ?? 0);
-    if ($pid > 0 && ($product['kind'] ?? 'produit') === 'produit') { return $url . '&product=' . $pid . '&open=product'; }
-    // Une catégorie du webshop (son id, celui du catalogue de la caisse) : ?category=…
-    if ($categorie > 0) { return $url . '&category=' . $categorie; }
-    return $url;
+    $produit = $pid > 0 && ($product['kind'] ?? 'produit') === 'produit';
+    if ($produit && $categorie <= 0) { $categorie = (int) ($product['categoryId'] ?? 0) ?: (int) (socWebshopPlan(0, $pid)['prods'][$pid] ?? 0); }
+    if ($categorie > 0) {
+        $groupe = $groupe ?: (int) (socWebshopPlan($categorie)['cats'][$categorie] ?? 0);
+        $q += $groupe > 0 ? ['category' => 'group:' . $groupe, 'sub' => 'category:' . $categorie] : ['category' => 'category:' . $categorie];
+    } elseif ($groupe > 0) {
+        $q['category'] = 'group:' . $groupe;
+    }
+    if ($produit) { $q += ['product' => (string) $pid, 'open' => 'product']; }
+    return $q ? $base . '?' . http_build_query($q, '', '&', PHP_QUERY_RFC3986) : $base;
 }
 
 /** Le produit du catalogue cité par un post (null s'il n'en cite pas). */
@@ -65,14 +76,26 @@ function socFill(string $text, array $shop, ?array $product, string $lang): stri
     $pname = $product ? (string) ($lang === 'nl' && !empty($product['nameNl']) ? $product['nameNl'] : ($product['name'] ?? '')) : '';
     // Un produit ou une catégorie précis du webshop : {webshop_produit:123}, {webshop_categorie:456}.
     $sid = (string) ($shop['id'] ?? '');
-    $text = preg_replace_callback('/\{webshop_(produit|categorie):(\d+)\}/', static fn ($m) => $m[1] === 'produit'
-        ? socWebshopUrl($sid, ['apiId' => (int) $m[2], 'kind' => 'produit']) : socWebshopUrl($sid, null, (int) $m[2]), $text);
+    $text = preg_replace_callback('/\{webshop_(produit|categorie|groupe):(\d+)\}/', static fn ($m) => match ($m[1]) {
+        'produit' => socWebshopUrl($sid, ['apiId' => (int) $m[2], 'kind' => 'produit']),
+        'categorie' => socWebshopUrl($sid, null, (int) $m[2]),
+        default => socWebshopUrl($sid, null, 0, (int) $m[2]),
+    }, $text);
+    // Une boutique sans horaires (magasin test) : la phrase qui les cite disparaît, plutôt que « Ouvert . ».
+    if (trim((string) $hours) === '') { $text = socSansHoraires($text); }
     return strtr($text, [
         '{ville}' => (string) $shop['name'], '{adresse}' => (string) ($shop['address'] ?? ''), '{horaires}' => (string) $hours,
         '{prix}' => (string) ($product['price'] ?? ''), '{produit_du_jour}' => $pname,
         '{webshop_produit}' => socWebshopUrl($sid, $product), '{webshop_categorie}' => socWebshopUrl($sid, null, (int) ($product['categoryId'] ?? 0)),
         '{webshop}' => socWebshopUrl($sid),
     ]);
+}
+
+/** Retire d'un texte la phrase qui cite {horaires} (« Ouvert {horaires}. »), sans toucher au reste. */
+function socSansHoraires(string $text): string
+{
+    $t = preg_replace('/[ \t]*[^.!?\n]*\{horaires\}[^.!?\n]*[.!?]?/u', '', $text);
+    return preg_replace(['/[ \t]{2,}/', '/[ \t]+(\n|$)/'], [' ', '$1'], (string) $t);
 }
 
 /** Le message publié sur la Page d'une boutique : NL puis FR si bilingue. */

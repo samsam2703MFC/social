@@ -222,8 +222,8 @@ function socIllus(string $cat, string $nom = ''): string
 function socApiCatalogue(bool $forcer = false): array
 {
     $cache = socSetting('tfb_cache_catalogue');
-    // v3 : les produits disent s'ils sont vendus sur le webshop et leur catégorie (liens du webshop).
-    if (!$forcer && is_array($cache) && ($cache['v'] ?? 1) === 3 && ($cache['le'] ?? 0) > time() - 21600 && !empty($cache['items'])) { return $cache['items']; }
+    // v4 : les produits disent s'ils sont vendus sur le webshop et leur catégorie (liens du webshop) ; un prix nul n'est pas un prix.
+    if (!$forcer && is_array($cache) && ($cache['v'] ?? 1) === 4 && ($cache['le'] ?? 0) > time() - 21600 && !empty($cache['items'])) { return $cache['items']; }
     try {
         $shop = (string) (socApiShops()[0]['id'] ?? '');
         if ($shop === '') { throw new TfbError('aucune boutique'); }
@@ -243,11 +243,11 @@ function socApiCatalogue(bool $forcer = false): array
             if (empty($p['is_active']) || preg_match('/^B\.?2\.?B/i', $cat)) { continue; }
             $prix = is_numeric($p['portion_price'] ?? null) ? (float) $p['portion_price'] : (is_numeric($p['suggested_sale_price'] ?? null) ? (float) $p['suggested_sale_price'] : null);
             $items[] = ['id' => 'p' . $p['id'], 'apiId' => (int) $p['id'], 'kind' => 'produit', 'webshop' => !empty($p['webshop_active']), 'categoryId' => (int) ($p['id_category'] ?? 0), 'name' => (string) $p['name'],
-                'nameNl' => ($nl[(string) $p['id']] ?? '') ?: (string) $p['name'], 'price' => $prix !== null ? number_format($prix, 2, ',', '') : '',
+                'nameNl' => ($nl[(string) $p['id']] ?? '') ?: (string) $p['name'], 'price' => $prix !== null && $prix > 0 ? number_format($prix, 2, ',', '') : '',
                 'img' => socIllus($cat, (string) $p['name']), 'gamme' => $cat];
         }
         if (!$items) { throw new TfbError('catalogue vide'); }
-        socSettingPut('tfb_cache_catalogue', ['v' => 3, 'le' => time(), 'shop' => $shop, 'items' => $items]);
+        socSettingPut('tfb_cache_catalogue', ['v' => 4, 'le' => time(), 'shop' => $shop, 'items' => $items]);
         return $items;
     } catch (Throwable $e) {
         return is_array($cache['items'] ?? null) && $cache['items'] ? $cache['items'] : [];

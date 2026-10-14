@@ -286,7 +286,7 @@ class Component extends DCLogic {
       periodNote: 'au plus ' + r.promoDureeMax + ' jours', minDate, maxDate,
       // Lien : celui du modèle, ou le webshop de la boutique (sa page, celle du produit, sa catégorie).
       ...(() => { const cur = s.link || (t.link ? 'modele' : 'aucun'), wsP = !!(prod && prod.apiId && prod.webshop !== false), wsC = !!(prod && prod.categoryId);
-        const tplUrl = String(t.link || '').replace(/\{webshop_produit:(\d+)\}/g, (m, id) => SF.webshopUrl({ apiId: +id }, 'produit')).replace(/\{webshop_categorie:(\d+)\}/g, (m, id) => SF.webshopUrl({ categoryId: +id }, 'categorie'))
+        const tplUrl = String(t.link || '').replace(/\{webshop_produit:(\d+)\}/g, (m, id) => SF.webshopUrl({ apiId: +id }, 'produit')).replace(/\{webshop_categorie:(\d+)\}/g, (m, id) => SF.webshopUrl({ categoryId: +id }, 'categorie')).replace(/\{webshop_groupe:(\d+)\}/g, (m, id) => SF.webshopUrl({ groupId: +id }, 'groupe'))
           .replace(/\{webshop_produit\}/g, SF.webshopUrl(prod, 'produit')).replace(/\{webshop_categorie\}/g, SF.webshopUrl(prod, 'categorie')).replace(/\{webshop\}/g, SF.webshopUrl());
         const url = { aucun: '', modele: tplUrl, webshop: SF.webshopUrl(), produit: wsP ? SF.webshopUrl(prod, 'produit') : SF.webshopUrl(), categorie: wsC ? SF.webshopUrl(prod, 'categorie') : SF.webshopUrl() }[cur] || '';
         const opt = (k, label, dis, tip) => { const on = cur === k; return { label, dis: !!dis, op: dis ? 0.45 : 1, tip: tip || '', bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)', pick: () => { if (!dis) S({ link: k }); } }; };

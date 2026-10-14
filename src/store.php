@@ -179,6 +179,8 @@ function socStateGet(): array
         'user' => ['name' => socUser(), 'role' => 'Franchiseur', 'shops' => count(socReseau())],
         'boUrl' => (string) (socSetting('url_bo') ?? '/consulant_bo/'),
         'webshopUrl' => rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/',
+        // Catégorie → groupe, produit → catégorie : les liens directs du webshop (src/publish.php, socWebshopUrl).
+        'webshopPlan' => socWebshopPlanCache(),
         'metaStatus' => Meta::statut(),
         'shops' => $shops,
         'brand' => socBrand(),

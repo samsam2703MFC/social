@@ -342,23 +342,70 @@
   function fill(text, shop, product, lang) {
     const s = typeof shop === 'string' ? byId(state().shops, shop) : shop;
     const L = lang || (s ? langsOf(s)[0] : 'fr');
-    return String(text || '')
+    const h = s ? (L === 'nl' && s.hoursNl ? s.hoursNl : s.hours) : '{horaires}';
+    return (s && !String(h || '').trim() ? sansHoraires(String(text || '')) : String(text || ''))
       .replace(/\{horaires\}/g, s ? (L === 'nl' && s.hoursNl ? s.hoursNl : s.hours) : '{horaires}')
       .replace(/\{produit_du_jour\}/g, product && product.name ? pname(product, L) : (L === 'nl' ? 'Krokante brioche' : 'Brioche croustillante'))
       .replace(/\{ville\}/g, s ? s.name : '{ville}').replace(/\{adresse\}/g, s ? s.address : '{adresse}').replace(/\{horaires\}/g, s ? s.hours : '{horaires}')
       .replace(/\{prix\}/g, product && product.price ? product.price : '{prix}').replace(/\{produit_du_jour\}/g, product && product.name ? product.name : 'Brioche croustillante')
-      .replace(/\{webshop_(produit|categorie):(\d+)\}/g, (m, k, id) => k === 'produit' ? webshopUrl(s ? s.id : '', { apiId: +id, kind: 'produit' }) : webshopUrl(s ? s.id : '', null, +id))
+      .replace(/\{webshop_(produit|categorie|groupe):(\d+)\}/g, (m, k, id) => k === 'produit' ? webshopUrl(s ? s.id : '', { apiId: +id, kind: 'produit' }) : k === 'categorie' ? webshopUrl(s ? s.id : '', null, +id) : webshopUrl(s ? s.id : '', null, 0, +id))
       .replace(/\{webshop_produit\}/g, webshopUrl(s ? s.id : '', product)).replace(/\{webshop_categorie\}/g, webshopUrl(s ? s.id : '', null, product && product.categoryId))
       .replace(/\{webshop\}/g, webshopUrl(s ? s.id : ''));
   }
-  /** Le webshop d'une boutique, la page d'un produit ou une catégorie de ce webshop (comme le serveur, src/publish.php). */
-  function webshopUrl(shopId, product, categoryId) {
+  /** Sans horaires (magasin test), la phrase qui cite {horaires} disparaît plutôt que « Ouvert . » (comme le serveur). */
+  const sansHoraires = (t) => t.replace(/[ \t]*[^.!?\n]*\{horaires\}[^.!?\n]*[.!?]?/g, '').replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+(\n|$)/g, '$1');
+  // Le plan du webshop : catégorie → groupe (0 : sans groupe), produit → catégorie. Servi avec l'état, complété par chaque catalogue lu.
+  const PLAN = { cats: {}, prods: {} };
+  function planAjouter(nav) {
+    if (!nav) return;
+    (nav.categories || []).forEach(c => { if (c && c.id) PLAN.cats[c.id] = Math.max(+c.groupe || 0, PLAN.cats[c.id] || 0); });
+    (nav.produits || []).forEach(p => { if (p && p.id && p.cat) PLAN.prods[p.id] = p.cat; });
+    Object.entries((nav.cats || {})).forEach(([k, v]) => { PLAN.cats[k] = Math.max(+v || 0, PLAN.cats[k] || 0); });
+    Object.entries((nav.prods || {})).forEach(([k, v]) => { if (v) PLAN.prods[k] = +v; });
+  }
+  /**
+   * Le webshop d'une boutique, ou une page de ce webshop avec ses paramètres à lui (comme le serveur, src/publish.php) :
+   * catégorie ?category=group:G · sous-catégorie &sub=category:C · produit : sa sous-catégorie + &product=ID&open=product.
+   * Une boutique hors caisse (magasin test) n'a pas de webshop : le lien garde la page, sans boutique.
+   */
+  function webshopUrl(shopId, product, categoryId, groupId) {
     const base = (LIVE && LIVE.webshopUrl) || 'https://webshop.atelierby.be/';
-    // En ligne, seule une boutique de caisse (identifiant numérique) a son webshop ; une boutique hors caisse renvoie à l'accueil.
-    if (!shopId || !(LIVE ? /^\d+$/ : /^\w+$/).test(shopId)) return base;
-    const u = base + '?shop=' + shopId;
-    if (product && product.apiId && product.kind !== 'gamme') return u + '&product=' + product.apiId + '&open=product';
-    return categoryId ? u + '&category=' + categoryId : u;
+    const sh = shopId ? byId(SHOPS, shopId) : null, q = [];
+    if (shopId && !(sh && sh.test) && (LIVE ? /^\d+$/ : /^\w+$/).test(shopId)) q.push(['shop', shopId]);
+    const pid = product && product.apiId && product.kind !== 'gamme' ? +product.apiId : 0;
+    let cat = +categoryId || 0, grp = +groupId || 0;
+    if (pid && !cat) cat = +product.categoryId || PLAN.prods[pid] || 0;
+    if (cat) { grp = grp || PLAN.cats[cat] || 0; if (grp) q.push(['category', 'group:' + grp], ['sub', 'category:' + cat]); else q.push(['category', 'category:' + cat]); }
+    else if (grp) q.push(['category', 'group:' + grp]);
+    if (pid) q.push(['product', String(pid)], ['open', 'product']);
+    return q.length ? base + '?' + q.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&') : base;
+  }
+  /**
+   * Une photo du webshop (Cloudflare R2, sans en-tête CORS) rapatriée par le module et remise en JPEG (data:) :
+   * le visuel composé qui la dessine peut alors être exporté pour Meta (sinon le post part avec la photo brute).
+   * Une image déjà locale (même origine, data:, blob:) est rendue telle quelle ; en démonstration, sans serveur, aussi.
+   */
+  const LOCALES = new Map();
+  function photoLocale(src) {
+    src = String(src || '');
+    if (!/^https?:\/\//i.test(src)) return Promise.resolve(src);
+    try { if (new URL(src, location.href).origin === location.origin) return Promise.resolve(src); } catch (e) { return Promise.resolve(src); }
+    if (!LIVE) return Promise.resolve(src);
+    if (LOCALES.has(src)) return LOCALES.get(src);
+    const p = (async () => {
+      const r = await fetch(API + '/media/webshop?u=' + encodeURIComponent(src), { credentials: 'same-origin' });
+      if (!r.ok) { let m = 'HTTP ' + r.status; try { m = (await r.json()).error || m; } catch (e) {} throw new Error('photo du webshop illisible : ' + m); }
+      const blob = await r.blob(), url = URL.createObjectURL(blob);
+      try {
+        const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko(new Error('photo du webshop illisible')); i.src = url; });
+        const k = Math.min(1, 1600 / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+        const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+        const g = c.getContext('2d'); g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        return c.toDataURL('image/jpeg', 0.9);
+      } finally { URL.revokeObjectURL(url); }
+    })();
+    LOCALES.set(src, p); p.catch(() => LOCALES.delete(src));
+    return p;
   }
   const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', suivi: 'SA Suivi.dc.html', ctrl: 'SA Controle.dc.html', set: 'SA Parametres.dc.html' };
   const param = (k) => { try { return new URLSearchParams(location.search).get(k); } catch (e) { return null; } };
@@ -457,7 +504,7 @@
   }
   // Applique un état lu au serveur aux constantes que les écrans lisent directement.
   function apply(L) {
-    LIVE = L; TODAY = L.today || TODAY; MARGIN = L.margin != null ? +L.margin : MARGIN; IMPORT = L.metaImport || null;
+    LIVE = L; planAjouter(L.webshopPlan); TODAY = L.today || TODAY; MARGIN = L.margin != null ? +L.margin : MARGIN; IMPORT = L.metaImport || null;
     const swap = (arr, v) => { arr.splice(0, arr.length, ...(v || [])); };
     swap(SHOPS, (L.shops || []).filter(x => !x.test)); swap(TEST_SHOPS, (L.shops || []).filter(x => x.test)); swap(GROUPS, L.groups); swap(TEMPLATES, L.templates); swap(LEADFORMS, L.leadforms); swap(LEADS, L.leads); swap(DARK, L.darkPosts);
     if (L.catalogue && L.catalogue.length) swap(CATALOGUE, L.catalogue);
@@ -596,8 +643,8 @@
   let DEMO_CAT = null;
   const demoCat = () => DEMO_CAT || (DEMO_CAT = fetch('demo-catalogue.json').then(r => r.json()));
   function catalogueNav(shop) {
-    if (LIVE) return api('GET', '/catalogue/nav?shop=' + encodeURIComponent(shop || ''));
-    return demoCat().then(d => {
+    if (LIVE) return api('GET', '/catalogue/nav?shop=' + encodeURIComponent(shop || '')).then(nav => { planAjouter(nav); return nav; });
+    return demoCat().then(d => { planAjouter(d.nav);
       const nav = JSON.parse(JSON.stringify(d.nav));
       nav.shop = shop || null; nav.prix = !!shop;
       if (!shop) nav.produits.forEach(p => { p.prix = null; });
@@ -698,7 +745,7 @@
   else window.addEventListener('focus', () => { refresh(); });
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
-    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, suivi, avatar,
+    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.
     ctype, rattacher, webshopUrl, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,

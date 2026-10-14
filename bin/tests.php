@@ -225,6 +225,10 @@ Tfb::$transport = static function (string $m, string $url, array $h, ?string $bo
         return [200, json_encode([['id' => 4, 'menu_name' => 'Sandwich + boisson', 'name' => 'Avec boisson', 'price_mode' => 'BASE_PLUS', 'price_modifier' => 1.5,
             'slots' => [['label' => 'Boisson'], ['label' => 'Dessert']]]])];
     }
+    // Les images du webshop (Cloudflare R2, publiques).
+    if (str_contains($url, '.r2.dev/')) {
+        return str_contains($url, 'absente') ? [404, ''] : [200, str_contains($url, 'faux') ? '<html>pas une image</html>' : "RIFF\x24\x00\x00\x00WEBPVP8 image"];
+    }
     if (!$auth) { return [401, '{"message":"Unauthenticated"}']; }
     // Créer un post : le catalogue du webshop (catégorie → sous-catégorie → produit) et les promotions.
     if (preg_match('#^/api/v1/shops/(4|5)/products/available$#', $p, $mm) && str_contains($url, 'alias_type=webshop')) {
@@ -903,18 +907,32 @@ $c400 = (static function () { try { return socRoute('GET', '/meta/calendriers')[
 $_GET = [];
 check('période de plus de 100 jours refusée', $c400 === 400);
 
-echo "Liens du webshop (boutique, produit)\n";
+echo "Liens du webshop (boutique, catégorie, sous-catégorie, produit)\n";
+// Le plan du webshop (catégorie → groupe, produit → catégorie) tel que le catalogue lu le laisse en cache.
+socSettingPut('tfb_cache_nav', ['v' => 1, 'shops' => ['4' => ['le' => time(), 'data' => [
+    'categories' => [['id' => 31000, 'groupe' => 28], ['id' => 32000, 'groupe' => 28], ['id' => 45000, 'groupe' => null]],
+    'produits' => [['id' => 6700092, 'cat' => 32000], ['id' => 3200006, 'cat' => 31000]]]]]], false);
+$W = 'https://webshop.atelierby.be/';
 $prodWs = ['id' => 'p3200006', 'apiId' => 3200006, 'kind' => 'produit', 'name' => 'Amandes', 'price' => '4,90'];
-check('{webshop} et {webshop_produit} résolus pour la boutique', socFill('{webshop} | {webshop_produit}', ['id' => '4', 'name' => 'Halle'], $prodWs, 'fr')
-    === 'https://webshop.atelierby.be/?shop=4 | https://webshop.atelierby.be/?shop=4&product=3200006&open=product');
+check('{webshop} et {webshop_produit} : la boutique, puis la sous-catégorie du produit, ouverte sur lui', socFill('{webshop} | {webshop_produit}', ['id' => '4', 'name' => 'Halle'], $prodWs, 'fr')
+    === $W . '?shop=4 | ' . $W . '?shop=4&category=group%3A28&sub=category%3A31000&product=3200006&open=product');
+check('sous-catégorie au format du webshop (?shop=4&category=group:28&sub=category:31000)', socWebshopUrl('4', null, 31000) === $W . '?shop=4&category=group%3A28&sub=category%3A31000');
+check('catégorie sans groupe : category=category:… ; catégorie (groupe) seule : category=group:…',
+    socWebshopUrl('4', null, 45000) === $W . '?shop=4&category=category%3A45000' && socWebshopUrl('4', null, 0, 28) === $W . '?shop=4&category=group%3A28');
 check('sans produit (ou gamme) : le webshop de la boutique ; boutique sans n° de caisse : l’accueil du webshop',
-    socFill('{webshop_produit}', ['id' => '5', 'name' => 'Wavre'], null, 'fr') === 'https://webshop.atelierby.be/?shop=5'
-    && socWebshopUrl('5', ['apiId' => 7, 'kind' => 'gamme']) === 'https://webshop.atelierby.be/?shop=5' && socWebshopUrl('ceo:9') === 'https://webshop.atelierby.be/');
+    socFill('{webshop_produit}', ['id' => '5', 'name' => 'Wavre'], null, 'fr') === $W . '?shop=5'
+    && socWebshopUrl('5', ['apiId' => 7, 'kind' => 'gamme']) === $W . '?shop=5' && socWebshopUrl('ceo:9') === $W);
+check('catégorie du produit, produit, sous-catégorie ou catégorie précis', socFill('{webshop_categorie} | {webshop_produit:6700092} | {webshop_categorie:32000} | {webshop_groupe:28}', ['id' => '2', 'name' => 'Corbais'], $prodWs + ['categoryId' => 31000], 'fr')
+    === $W . '?shop=2&category=group%3A28&sub=category%3A31000 | ' . $W . '?shop=2&category=group%3A28&sub=category%3A32000&product=6700092&open=product | '
+    . $W . '?shop=2&category=group%3A28&sub=category%3A32000 | ' . $W . '?shop=2&category=group%3A28');
+check('boutique hors caisse (magasin test) : la page du webshop, sans boutique', socWebshopUrl('pg12345678901234', null, 31000) === $W . '?category=group%3A28&sub=category%3A31000');
+check('boutique sans horaires (magasin test) : la phrase des horaires disparaît, pas « Ouvert . »',
+    socFill("Brownies : 3,50 € chez L’Atelier By {ville}. Ouvert {horaires}.\nCommandez : {webshop}", ['id' => 'pg1', 'name' => 'Gembloux', 'hours' => ''], null, 'fr')
+    === "Brownies : 3,50 € chez L’Atelier By Gembloux.\nCommandez : " . $W
+    && socFill('Ouvert {horaires}.', ['id' => '4', 'name' => 'Halle', 'hours' => '7h–18h30'], null, 'fr') === 'Ouvert 7h–18h30.');
 $appels = [];
 socPublishFb(['id' => 'pw1', 'text' => 'Commandez', 'link' => '{webshop}', 'img' => null], socShop('4'), 'Commandez');
 $feed = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === '111/feed'));
-check('catégorie du produit, produit ou catégorie précis du webshop', socFill('{webshop_categorie} | {webshop_produit:6700092} | {webshop_categorie:32000}', ['id' => '2', 'name' => 'Corbais'], $prodWs + ['categoryId' => 32000], 'fr')
-    === 'https://webshop.atelierby.be/?shop=2&category=32000 | https://webshop.atelierby.be/?shop=2&product=6700092&open=product | https://webshop.atelierby.be/?shop=2&category=32000');
 check('publication : le lien {webshop} devient celui de la boutique visée', ($feed[0][2]['link'] ?? '') === 'https://webshop.atelierby.be/?shop=4', json_encode($feed[0][2] ?? null));
 
 echo "Rattacher posts et publicités aux opérations du Marketing\n";
@@ -1172,6 +1190,17 @@ $o3 = socNavOffres(['categorie' => '32100']); $o4 = socNavOffres(['groupe' => '2
 check('sous-catégorie, catégorie, gamme : les promotions de leurs produits', array_column($o3['promotions'], 'id') === [17] && array_column($o4['promotions'], 'id') === [15] && array_column($o5['promotions'], 'id') === [17]);
 $_GET = ['shop' => '5']; [$code, $b] = socRoute('GET', '/catalogue/nav'); $_GET = [];
 check('GET /catalogue/nav?shop=5', $code === 200 && $b['prix'] === true && count($b['produits']) === 2);
+$plan = socWebshopPlanCache();
+check('plan du webshop tiré du catalogue lu : sous-catégorie → catégorie, produit → sous-catégorie', ($plan['cats'][32100] ?? null) === 31 && ($plan['prods'][11] ?? null) === 32100 && ($plan['cats'][23000] ?? null) === 26, json_encode($plan));
+check('le plan part avec l’état (liens du webshop à l’écran)', (socStateGet()['webshopPlan']['cats'][32100] ?? null) === 31);
+
+echo "Images du webshop servies par le module (le visuel composé s'exporte)\n";
+$media = static function (string $u): array { $_GET = ['u' => $u]; try { return socRoute('GET', '/media/webshop'); } catch (HttpError $e) { return [$e->status, $e->getMessage()]; } finally { $_GET = []; } };
+[$code, $f] = $media('https://cdn.r2.dev/webshop/p11.webp');
+check('photo du catalogue (R2) rendue par le module, type lu dans ses octets', $code === 200 && $f instanceof SocFichier && $f->type === 'image/webp' && str_starts_with($f->octets, 'RIFF'));
+check('hôte hors du webshop, http, ou adresse détournée : refusés (422)', $media('https://exemple.com/x.webp')[0] === 422 && $media('http://cdn.r2.dev/x.webp')[0] === 422
+    && $media('https://cdn.r2.dev@exemple.com/x.webp')[0] === 422 && $media('file:///etc/passwd')[0] === 422 && $media('')[0] === 422);
+check('réponse qui n’est pas une image, ou image absente : 502', $media('https://cdn.r2.dev/faux.webp')[0] === 502 && $media('https://cdn.r2.dev/absente.webp')[0] === 502);
 
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');

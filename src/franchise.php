@@ -286,7 +286,7 @@ function sfCatalogueBrut(string $shop): array
             if (empty($p['is_active']) || preg_match('/^B\.?2\.?B/i', $cat)) { continue; }
             $prix = is_numeric($p['portion_price'] ?? null) ? (float) $p['portion_price'] : (is_numeric($p['suggested_sale_price'] ?? null) ? (float) $p['suggested_sale_price'] : null);
             $items[] = ['id' => 'p' . $p['id'], 'apiId' => (int) $p['id'], 'webshop' => !empty($p['webshop_active']), 'categoryId' => (int) ($p['id_category'] ?? 0), 'name' => (string) $p['name'], 'nameNl' => ($nl[(string) $p['id']] ?? '') ?: (string) $p['name'],
-                'price' => $prix !== null ? number_format($prix, 2, ',', '') : '', 'img' => socIllus($cat, (string) $p['name']), 'gamme' => $cat];
+                'price' => $prix !== null && $prix > 0 ? number_format($prix, 2, ',', '') : '', 'img' => socIllus($cat, (string) $p['name']), 'gamme' => $cat];
         }
         if ($items) { socSettingPut($cle, ['v' => 3, 'le' => time(), 'items' => $items], false); return $items; }
     } catch (Throwable $e) { /* repli */ }
@@ -439,6 +439,8 @@ function sfEtat(string $shop, array $session): array
         'rules' => array_replace($r, ['ig' => $r['ig'] && !socIgUnique()]), 'templates' => sfModeles(true), 'posts' => $posts, 'campaigns' => $camps, 'catalogue' => sfCatalogue($shop),
         'quota' => ['week' => sfLundi(date('Y-m-d')), 'used' => sfQuotaUtilise($shop, date('Y-m-d')), 'max' => $r['quotaSemaine']],
         'instagramUnique' => socIgUnique(),
+        // Catégorie → groupe, produit → catégorie : les liens directs du webshop (socWebshopUrl).
+        'webshopPlan' => socWebshopPlanCache(),
         'franchisorUrl' => (string) (socSetting('url_publique') ?? ''),
     ];
 }

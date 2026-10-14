@@ -110,6 +110,82 @@ function socNavLire(string $shop): array
     return ['le' => time(), 'data' => ['groupes' => $groupes, 'categories' => array_values($cats), 'produits' => $produits, 'gammes' => $listeGammes, 'lu' => date('Y-m-d H:i'), 'source' => $shop]];
 }
 
+/**
+ * Le plan du webshop, tiré des catalogues déjà lus (cache) : catégorie → son groupe (0 : sans groupe),
+ * produit → sa catégorie. Sert aux liens directs (socWebshopUrl). Une catégorie ou un produit absent
+ * du plan relit le catalogue une fois par requête (lecture TFBuddy, 30 min de cache).
+ */
+function socWebshopPlan(int $categorie = 0, int $produit = 0): array
+{
+    static $relu = false;
+    $plan = socWebshopPlanCache();
+    $manque = ($categorie > 0 && !array_key_exists($categorie, $plan['cats'])) || ($produit > 0 && !isset($plan['prods'][$produit]));
+    if ($manque && !$relu && Tfb::configured('admin')) {
+        $relu = true;
+        try { socNavCatalogue(''); $plan = socWebshopPlanCache(); } catch (Throwable $e) { /* le lien garde ce qu'on sait */ }
+    }
+    return $plan;
+}
+
+/** Le plan du webshop tel que les catalogues en cache le donnent, sans appel. */
+function socWebshopPlanCache(): array
+{
+    $plan = ['cats' => [], 'prods' => []];
+    $cache = socSetting('tfb_cache_nav');
+    foreach ((array) (is_array($cache) ? ($cache['shops'] ?? []) : []) as $c) {
+        foreach ((array) ($c['data']['categories'] ?? []) as $x) {
+            if (!empty($x['id'])) { $plan['cats'][(int) $x['id']] = max((int) ($x['groupe'] ?? 0), (int) ($plan['cats'][(int) $x['id']] ?? 0)); }
+        }
+        foreach ((array) ($c['data']['produits'] ?? []) as $x) {
+            if (!empty($x['id']) && !empty($x['cat'])) { $plan['prods'][(int) $x['id']] = (int) $x['cat']; }
+        }
+    }
+    return $plan;
+}
+
+/* --- images du webshop ---------------------------------------------------------------------- */
+
+/**
+ * Une image du catalogue servie par le module (même origine que l'écran). Les photos du webshop
+ * sont sur Cloudflare R2, sans en-tête CORS : un visuel qui les dessine ne peut plus être exporté
+ * en image, et le post partait avec la photo brute au lieu du visuel composé (logo, titre, prix).
+ * Seules passent les images https d'un hôte R2 public (*.r2.dev) ou d'un hôte d'image du
+ * catalogue en cache ; pas de redirection suivie, une image reconnue à ses octets, 15 Mo au plus.
+ */
+function socMediaWebshop(string $url): SocFichier
+{
+    $hote = strtolower((string) parse_url($url, PHP_URL_HOST));
+    if (!preg_match('#^https://[^/?\#@]+/#i', $url) || !socMediaHoteAdmis($hote)) { throw new HttpError(422, 'image refusée : seules les images du catalogue du webshop passent'); }
+    [$code, $octets] = Tfb::raw('GET', $url, ['Accept: image/*'], null, 20);
+    if ($code !== 200 || $octets === '') { throw new HttpError(502, 'image du webshop illisible (HTTP ' . $code . ')'); }
+    if (strlen($octets) > 15 * 1024 * 1024) { throw new HttpError(502, 'image du webshop trop lourde'); }
+    $type = socMediaType($octets);
+    if ($type === null) { throw new HttpError(502, 'le webshop n’a pas rendu une image'); }
+    return new SocFichier($type, $octets);
+}
+
+function socMediaHoteAdmis(string $hote): bool
+{
+    if ($hote === '') { return false; }
+    if (preg_match('/^[a-z0-9-]+\.r2\.dev$/', $hote)) { return true; }
+    $cache = socSetting('tfb_cache_nav');
+    $vu = json_encode(is_array($cache) ? $cache : []);
+    return is_string($vu) && str_contains($vu, 'https:\/\/' . $hote . '\/');
+}
+
+/** Le type d'une image d'après ses premiers octets (JPEG, PNG, WebP, GIF, AVIF), sinon null. */
+function socMediaType(string $o): ?string
+{
+    return match (true) {
+        str_starts_with($o, "\xFF\xD8\xFF") => 'image/jpeg',
+        str_starts_with($o, "\x89PNG\r\n\x1A\n") => 'image/png',
+        str_starts_with($o, 'RIFF') && substr($o, 8, 4) === 'WEBP' => 'image/webp',
+        str_starts_with($o, 'GIF87a'), str_starts_with($o, 'GIF89a') => 'image/gif',
+        substr($o, 4, 8) === 'ftypavif' => 'image/avif',
+        default => null,
+    };
+}
+
 /* --- promotions et bundles ------------------------------------------------------------------ */
 
 /** « 1,40 € ». */

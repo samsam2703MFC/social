@@ -1043,12 +1043,33 @@ class Component extends DCLogic {
     return errs;
   }
   /** Le visuel du post tel qu'il partira : studio exporté, montage dessiné, ou photos et vidéo déposées. */
+  /**
+   * Une photo du webshop (Cloudflare R2, sans CORS) remplacée dans le post par sa copie locale (JPEG) :
+   * sans elle, le visuel composé ne s'exporte pas et le post partirait avec la photo brute.
+   */
+  localiser(src) {
+    const SA = window.SA;
+    if (!SA.photoLocale || !/^https?:\/\//i.test(src || '')) return Promise.resolve();
+    return SA.photoLocale(src).then(loc => loc === src ? null : new Promise(r => this.setState(st => ({
+      photos: st.photos.map(x => x.src === src ? Object.assign({}, x, { src: loc, origine: src }) : x) }), r)));
+  }
+  /** Toutes les photos distantes du post rapatriées (avant d'exporter le visuel ou de publier). */
+  photosLocales() {
+    const loin = this.state.photos.filter(p => { try { return /^https?:\/\//i.test(p.src) && new URL(p.src, location.href).origin !== location.origin; } catch (e) { return false; } });
+    return Promise.all(loin.map(p => this.localiser(p.src)));
+  }
   async renderMedia() {
-    const SA = window.SA, s = this.state;
+    const SA = window.SA;
+    try { await this.photosLocales(); }
+    catch (e) { console.error(e); this.setState({ saving: false, errors: ['La photo du webshop n\u2019a pas pu être préparée (' + (e && e.message ? e.message : e) + '). Rien n\u2019a été enregistré : réessayez.'] }); return null; }
+    const s = this.state;
     let img = null, media, friseTiles = null;
     if (s.mode === 'studio') {
       // En ligne, le visuel part chez Meta : pleine définition (1080 × 1080). En démo, il reste dans le navigateur : demi-définition.
-      try { if (this._api) img = await this._api.toImage({ jpeg: true, pixelRatio: SA.live ? 1 : 0.5, quality: SA.live ? 0.9 : 0.82 }); } catch (e) { console.error(e); }
+      let err = null;
+      try { if (this._api) img = await this._api.toImage({ jpeg: true, pixelRatio: SA.live ? 1 : 0.5, quality: SA.live ? 0.9 : 0.82 }); } catch (e) { console.error(e); err = e; }
+      // En ligne, jamais la photo brute à la place du visuel composé (logo, titre, prix) : on s'arrête et on le dit.
+      if (!img && SA.live) { this.setState({ saving: false, errors: ['Le visuel composé n\u2019a pas pu être exporté' + (err && err.message ? ' (' + err.message + ')' : '') + '. Rien n\u2019a été enregistré : réessayez, ou passez en mode « Photos telles quelles ».'] }); return null; }
       if (!img) img = s.photos[0] ? s.photos[0].src : 'img/illus/decorative/bubble.png';
       media = [{ src: img, kind: 'img', cut: false, name: 'Visuel composé' }];
     } else if (this.isMontage()) {
@@ -1106,7 +1127,7 @@ class Component extends DCLogic {
     const title = (this.isMontage() ? (s.m.title || '').trim() : '') || (s.v.title || '').trim() || (cat ? cat.name : (s.text.split(/[.\n]/)[0] || 'Post sans titre').slice(0, 60));
     const now = new Date(), nowT = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
     const post = { id: s.id || ('p' + Date.now()), date: s.when === 'now' ? SA.TODAY : s.date, time: s.when === 'now' ? nowT : s.time, type: s.type, title, img, media,
-      visual: s.mode === 'studio' ? { v: s.v, photos: s.photos.filter(p => !/^data:/.test(p.src) || p.src.length < 400000) } : null,
+      visual: s.mode === 'studio' ? { v: s.v, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
       frise: friseTiles ? { tiles: friseTiles } : null,
       montage: this.isMontage() ? { kind: s.mode, m: s.m, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
       shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, spread: s.spread, product: s.product, catalogue: s.navSel || null };
@@ -1180,7 +1201,10 @@ class Component extends DCLogic {
       // Le texte proposé suit le choix tant qu'il n'a pas été retouché à la main.
       const libreFr = !s.text.trim() || s.text === this._autoFr, libreNl = !s.textNl.trim() || s.textNl === this._autoNl;
       const auto = (fr, nl) => { if (libreFr && fr) { st.text = fr; this._autoFr = fr; } if (libreNl && nl) { st.textNl = nl; this._autoNl = nl; } };
-      if (it.image) st.photos = [{ src: it.image, cut: false, name: it.name }].concat(s.photos.filter(p => p.src !== it.image));
+      if (it.image) st.photos = [{ src: it.image, cut: false, name: it.name }].concat(s.photos.filter(p => p.src !== it.image && p.origine !== it.image));
+      // Le lien du post suit le choix : la page du webshop du produit, de la sous-catégorie ou de la catégorie (un lien saisi à la main reste).
+      const lienLibre = !s.link.trim() || /^\{webshop[a-z_]*(:\d+)?\}$/.test(s.link.trim());
+      if (lienLibre) st.link = it.kind === 'produit' ? '{webshop_produit:' + it.id + '}' : it.kind === 'categorie' ? '{webshop_categorie:' + it.id + '}' : it.kind === 'groupe' ? '{webshop_groupe:' + it.id + '}' : '{webshop}';
       if (it.kind === 'produit') {
         const ref = SA.CATALOGUE.find(c => c.apiId === it.id && c.kind === 'produit');
         st.product = ref ? ref.id : 'p' + it.id; st.type = 'Produit';
@@ -1197,9 +1221,8 @@ class Component extends DCLogic {
         st.product = null; st.type = 'Produit';
         st.v = Object.assign({}, v, { title: it.name, showTitle: true, price: '', showPrice: false, nl: Object.assign({}, v.nl, { title: it.name }) });
         auto('Nos ' + it.name.toLowerCase() + ' vous attendent chez L\u2019Atelier By {ville}. Ouvert {horaires}.', 'Onze ' + it.name.toLowerCase() + ' wachten op u bij L\u2019Atelier By {ville}. Open {horaires}.');
-        if (it.kind === 'categorie' && !s.link.trim()) st.link = '{webshop_categorie:' + it.id + '}';
       }
-      this.setState(st);
+      this.setState(st, () => { if (it.image) this.localiser(it.image).catch(e => console.error(e)); });
     };
     const prodItem = (p) => ({ kind: 'produit', id: p.id, name: p.name, nameNl: p.nameNl, image: illus(p), prix: nav && nav.prix ? p.prix : null, shop: nav && nav.prix ? prixShop : null, cat: p.cat });
     const isSel = (kind, id) => !!sel && sel.kind === kind && sel.id === id;
@@ -1258,7 +1281,7 @@ class Component extends DCLogic {
           btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, f.court, 'Formule ' + f.nom, f.libelle) }; }));
     const KIND = { produit: 'Produit', categorie: 'Sous-catégorie', groupe: 'Catégorie', gamme: 'Gamme' };
     const selView = sel ? { kind: KIND[sel.kind] || '', name: sel.name, image: sel.image || '', hasImg: !!sel.image,
-      prix: sel.kind !== 'produit' ? 'Pas de prix : ' + (KIND[sel.kind] || '').toLowerCase() + ' entière' + (sel.kind === 'categorie' ? ' · lien vers sa page du webshop' : '')
+      prix: sel.kind !== 'produit' ? 'Pas de prix : ' + (KIND[sel.kind] || '').toLowerCase() + ' entière' + (sel.kind === 'categorie' || sel.kind === 'groupe' ? ' · lien vers sa page du webshop' : '')
         : nav && nav.prix ? (sel.prix != null ? 'Prix de vente à ' + shopNom + ' : ' + eur(sel.prix) : 'Prix non renseigné à ' + shopNom)
         : tRes.length > 1 ? 'Plusieurs boutiques : pas de prix (il dépend de la boutique)' : 'Choisissez une boutique pour afficher son prix de vente',
       prixFg: sel.kind === 'produit' && nav && nav.prix && sel.prix != null ? '#8D1D2C' : '#666666' } : {};

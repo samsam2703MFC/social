@@ -109,7 +109,10 @@
   const media = (src) => !src ? '' : /^(https?:|data:|\/)/.test(src) ? src : /^uploads\//.test(src) ? CFG.media + src : src;
   const fill = (text, lang) => {
     const s = STATE ? STATE.shop : {};
-    return String(text || '').replace(/\{ville\}/g, s.name || '').replace(/\{adresse\}/g, s.address || '').replace(/\{horaires\}/g, lang === 'nl' ? (s.hoursNl || s.hours || '') : (s.hours || ''));
+    const h = lang === 'nl' ? (s.hoursNl || s.hours || '') : (s.hours || '');
+    // Sans horaires, la phrase qui les cite disparaît plutôt que « Ouvert . » (comme le serveur).
+    const t = String(text || ''), t2 = STATE && !String(h).trim() ? t.replace(/[ \t]*[^.!?\n]*\{horaires\}[^.!?\n]*[.!?]?/g, '').replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+(\n|$)/g, '$1') : t;
+    return t2.replace(/\{ville\}/g, s.name || '').replace(/\{adresse\}/g, s.address || '').replace(/\{horaires\}/g, h);
   };
   function emit() { window.dispatchEvent(new Event('sf-change')); }
 
@@ -215,14 +218,22 @@
       result: c.result ? Object.assign({ impr: 11800, eng: 640, vv: 2100, qCamp: 310, qRef: 240, source: 'API TFBuddy' }, c.result) : null }));
     return Promise.resolve({ hidden: STATE.rules.voirCampagnes === false, operations: ops });
   }
-  /** Le webshop de la boutique, la page d'un produit ou d'une catégorie (comme le serveur). */
+  /**
+   * Le webshop de la boutique, ou une page de ce webshop avec ses paramètres à lui (comme le serveur, src/publish.php) :
+   * catégorie ?category=group:G · sous-catégorie &sub=category:C · produit : sa sous-catégorie + &product=ID&open=product.
+   */
   function webshopUrl(product, kind) {
     const base = 'https://webshop.atelierby.be/', sid = STATE && STATE.shop ? String(STATE.shop.id) : '';
-    if (!/^\w+$/.test(sid)) return base;
-    const u = base + '?shop=' + sid;
-    if (kind === 'produit' && product && product.apiId) return u + '&product=' + product.apiId + '&open=product';
-    if (kind === 'categorie' && product && product.categoryId) return u + '&category=' + product.categoryId;
-    return u;
+    const plan = (STATE && STATE.webshopPlan) || {}, cats = plan.cats || {}, prods = plan.prods || {}, q = [];
+    if (/^\w+$/.test(sid) && (DEMO || /^\d+$/.test(sid))) q.push(['shop', sid]);
+    const pid = kind === 'produit' && product && product.apiId ? +product.apiId : 0;
+    const cat = kind === 'groupe' ? 0 : (product && +product.categoryId) || (pid && prods[pid]) || 0;
+    const grp = kind === 'groupe' ? +(product && product.groupId) || 0 : cat ? +cats[cat] || 0 : 0;
+    if (kind !== 'produit' && kind !== 'categorie' && kind !== 'groupe') return q.length ? base + '?shop=' + sid : base;
+    if (cat) { if (grp) q.push(['category', 'group:' + grp], ['sub', 'category:' + cat]); else q.push(['category', 'category:' + cat]); }
+    else if (grp) q.push(['category', 'group:' + grp]);
+    if (pid) q.push(['product', String(pid)], ['open', 'product']);
+    return q.length ? base + '?' + q.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&') : base;
   }
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }

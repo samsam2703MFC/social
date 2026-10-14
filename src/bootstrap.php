@@ -284,3 +284,9 @@ final class HttpError extends RuntimeException
 {
     public function __construct(public int $status, string $message) { parent::__construct($message); }
 }
+
+/** Un corps de réponse binaire (une image) : son type MIME et ses octets. */
+final class SocFichier
+{
+    public function __construct(public string $type, public string $octets) {}
+}
