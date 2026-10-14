@@ -244,6 +244,64 @@
           </sc-if>
 
           <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
+            <!-- Recadrage : le format du visuel, fixé ici plutôt que par Facebook -->
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span style="font-size:12px;color:#666666;">Recadrage · format du visuel</span>
+                <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+                  <sc-for list="{{ vFormats }}" as="vf" hint-placeholder-count="3"><button onClick="{{ vf.pick }}" title="{{ vf.tip }}" style="border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:500;cursor:pointer;background:{{ vf.bg }};color:{{ vf.fg }};">{{ vf.label }}</button></sc-for>
+                </div>
+              </div>
+              <span style="font-size:11px;color:#666666;line-height:1.45;">{{ vFormatTip }}</span>
+            </div>
+            <!-- Fond : palette du design system de la marque -->
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;color:#666666;">Fond · palette de la marque</span>
+              <sc-if value="{{ hasFonds }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+                  <sc-for list="{{ fonds }}" as="fd" hint-placeholder-count="6"><button onClick="{{ fd.pick }}" title="{{ fd.nom }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:58px;">
+                    <span style="width:40px;height:40px;border-radius:50%;background:{{ fd.hex }};border:{{ fd.border }};box-shadow:0 0 0 {{ fd.ringW }} {{ fd.ring }};display:flex;align-items:center;justify-content:center;font-size:10px;color:#666666;box-sizing:border-box;">{{ fd.label }}</span>
+                    <span style="font-size:10px;color:#444444;text-align:center;line-height:1.2;">{{ fd.nom }}</span></button></sc-for>
+                </div>
+                <span style="font-size:11px;color:#666666;line-height:1.45;">{{ fondTip }}</span>
+              </sc-if>
+              <sc-if value="{{ noFonds }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Plein cadre : le fond est la photo.</span></sc-if>
+            </div>
+            <!-- Illustration : un dessin du design system posé sur le visuel -->
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span style="font-size:12px;color:#666666;">Illustration · design system</span>
+                <button onClick="{{ illusToggle }}" disabled="{{ locked }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:500;cursor:pointer;">{{ illusBtn }}</button>
+                <sc-if value="{{ hasIllus }}" hint-placeholder-val="{{ false }}"><button onClick="{{ illusRemove }}" disabled="{{ locked }}" style="border:none;background:transparent;color:#8D1D2C;font-size:11px;font-weight:500;cursor:pointer;padding:5px 4px;">Retirer</button></sc-if>
+              </div>
+              <sc-if value="{{ illusOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="border:0.5px solid rgba(34,34,34,0.12);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;background:#FBF8F4;">
+                  <div style="display:inline-flex;flex-wrap:wrap;gap:2px;background:#F4EFE8;border-radius:8px;padding:3px;align-self:flex-start;">
+                    <sc-for list="{{ illusSubs }}" as="isub" hint-placeholder-count="5"><button onClick="{{ isub.pick }}" style="border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:500;cursor:pointer;background:{{ isub.bg }};color:{{ isub.fg }};">{{ isub.label }}</button></sc-for>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;max-height:220px;overflow:auto;">
+                    <sc-for list="{{ illusItems }}" as="it" hint-placeholder-count="8"><button onClick="{{ it.pick }}" title="{{ it.name }}" style="aspect-ratio:1/1;background:#FFFFFF;border:2px solid {{ it.ring }};border-radius:8px;padding:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-sizing:border-box;"><img src="{{ it.src }}" alt="{{ it.name }}" style="max-width:100%;max-height:100%;object-fit:contain;"></button></sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ hasIllus }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+                  <span style="width:56px;height:56px;border-radius:8px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.12);display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box;flex:0 0 auto;" title="{{ illusName }}"><img src="{{ illusThumb }}" alt="" style="max-width:100%;max-height:100%;object-fit:contain;"></span>
+                  <div style="display:grid;grid-template-columns:repeat(3,24px);gap:3px;flex:0 0 auto;" title="Position">
+                    <sc-for list="{{ illusPos }}" as="ip" hint-placeholder-count="9"><button onClick="{{ ip.pick }}" style="width:24px;height:24px;border-radius:5px;border:0.5px solid rgba(34,34,34,0.18);background:{{ ip.bg }};color:{{ ip.fg }};font-size:11px;cursor:pointer;padding:0;">{{ ip.lab }}</button></sc-for>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:4px;flex:1 1 200px;min-width:180px;font-size:11px;color:#666666;">
+                    <label style="display:flex;align-items:center;gap:6px;">↔<input type="range" min="0" max="100" value="{{ illusX }}" onChange="{{ setIllusX }}" disabled="{{ locked }}" style="flex:1;accent-color:#8D1D2C;"></label>
+                    <label style="display:flex;align-items:center;gap:6px;">↕<input type="range" min="0" max="100" value="{{ illusY }}" onChange="{{ setIllusY }}" disabled="{{ locked }}" style="flex:1;accent-color:#8D1D2C;"></label>
+                    <label style="display:flex;align-items:center;gap:6px;">Taille<input type="range" min="5" max="80" value="{{ illusT }}" onChange="{{ setIllusT }}" disabled="{{ locked }}" style="flex:1;accent-color:#8D1D2C;"><span style="width:34px;text-align:right;color:#222222;">{{ illusTLabel }}</span></label>
+                  </div>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                  <span style="font-size:11px;color:#666666;">Trait :</span>
+                  <sc-for list="{{ illusTraits }}" as="tr" hint-placeholder-count="5"><button onClick="{{ tr.pick }}" title="{{ tr.nom }}" style="display:inline-flex;align-items:center;gap:5px;border:{{ tr.ringW }} solid {{ tr.ring }};background:#FFFFFF;border-radius:999px;padding:3px 9px 3px 4px;font-size:11px;cursor:pointer;"><sc-if value="{{ tr.isHex }}" hint-placeholder-val="{{ true }}"><span style="width:14px;height:14px;border-radius:50%;background:{{ tr.hex }};border:0.5px solid rgba(34,34,34,0.25);display:block;"></span></sc-if>{{ tr.nom }}</button></sc-for>
+                </div>
+              </sc-if>
+            </div>
             <!-- Style -->
             <div style="display:flex;flex-direction:column;gap:8px;">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
@@ -856,6 +914,9 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
+  FORMATS = [['carre', 'Carré 1:1', '1080 × 1080 · entier dans le fil Facebook et Instagram, sur mobile comme sur ordinateur. Sur un écran d’ordinateur peu haut, Facebook peut le réduire et ajouter des bandes de couleur sur les côtés.'],
+    ['portrait', 'Portrait 4:5', '1080 × 1350 · le plus grand sur mobile (Facebook et Instagram). Sur ordinateur, Facebook le réduit davantage : bandes de couleur sur les côtés.'],
+    ['paysage', 'Paysage 1,91:1', '1200 × 630 · toute la largeur du fil sur ordinateur, sans bandes sur les côtés. Plus petit sur mobile ; Instagram l’accepte tel quel.']];
   STYLES1 = [['epure', 'Épuré', '#F5EFE4'], ['abricot', 'Abricot', '#F2C9A0'], ['ruby', 'Ruby', '#8D1D2C'], ['noir', 'Noir', '#232220'], ['plein', 'Plein cadre', '#8A847C'], ['duo', 'Duo', '#EAE4DC']];
   STYLES2 = [['mosaique', 'Mosaïque', 12], ['grille', 'Grille 2×2', 4], ['trio', 'Trio', 3], ['collage', 'Collage', 5], ['bandes', 'Bandes', 3], ['galerie', 'Galerie 3×3', 9], ['frise', 'Frise', 4], ['puzzle', 'Puzzle', 5], ['pastilles', 'Pastilles', 4], ['epinglees', 'Épinglées', 3], ['etagere', 'Étagère', 6], ['diagonale', 'Diagonale', 3], ['vedette', 'Vedette', 5], ['damier', 'Damier', 8], ['encadre', 'Encadré', 4], ['nuit', 'Nuit', 3]];
   // Montages Instagram : réglages par défaut (B · carrousel panoramique, C · collage 4:5).
@@ -863,7 +924,7 @@ class Component extends DCLogic {
   state = this.initState();
   initState() {
     const SA = window.SA;
-    const v = { style: 'epure', cutMode: 'auto', showLogo: true, showEyebrow: true, showTitle: true, showPhrase: true, showPrice: true, showPromo: false, showSite: true,
+    const v = { style: 'epure', format: 'carre', cutMode: 'auto', showLogo: true, showEyebrow: true, showTitle: true, showPhrase: true, showPrice: true, showPromo: false, showSite: true,
       nl: { eyebrow: 'Seizoenseditie · Herfst 2026', title: '', phrase: '', unit: 'Per stuk', promoSub: 'de 5de gratis' },
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', linkText: { fr: '', nl: '' }, campaign: '',
@@ -1424,6 +1485,37 @@ class Component extends DCLogic {
       onFiles: async (e) => { const fl = Array.from(e.target.files || []); e.target.value = ''; const add = (await Promise.all(fl.slice(0, 12).map(f => this.readFile(f)))).filter(Boolean); if (add.length) this.setState({ photos: this.state.photos.concat(add) }); },
       onVideo: (e) => { const f = e.target.files && e.target.files[0]; if (f) this.setState({ video: { src: URL.createObjectURL(f), name: f.name.slice(0, 12) }, type: s.type === 'Libre' ? 'Vidéo / film' : s.type }); e.target.value = ''; },
       cutModes: [['auto', 'Auto'], ['cut', 'Détourées'], ['full', 'Pleines']].map(([k, label]) => { const [bg, fg] = seg(v.cutMode === k); return { label, bg, fg, pick: () => this.V({ cutMode: k }) }; }),
+      // Recadrage : le format du visuel est fixé ici (l'image part déjà aux dimensions de Meta).
+      vFormats: this.FORMATS.map(([k, label, tip]) => { const [bg, fg] = seg((v.format || 'carre') === k); return { label, tip, bg, fg, pick: () => !locked && this.V({ format: k }) }; }),
+      vFormatTip: (this.FORMATS.find(f => f[0] === (v.format || 'carre')) || this.FORMATS[0])[2],
+      // Fond : la palette du design system, dans le ton du style (texte toujours lisible).
+      ...(() => {
+        const T = window.DS_TONS || {}, ton = Object.prototype.hasOwnProperty.call(T, v.style) ? T[v.style] : 'clair';
+        const fonds = (window.DS_FONDS || []).filter(f => f.ton === ton);
+        const cur = fonds.some(f => f.id === v.fond) ? v.fond : null;
+        return { hasFonds: !!ton && fonds.length > 0, noFonds: !ton,
+          fondTip: ton === 'fonce' ? 'Style foncé : fonds foncés de la marque (texte clair).' : 'Style clair : fonds clairs de la marque (texte foncé). Pour un fond foncé, prenez Ruby, Noir, Encadré ou Nuit.',
+          fonds: [{ id: null, nom: 'Fond du style', hex: 'transparent', dash: true }].concat(fonds).map(f => ({ nom: f.nom, hex: f.hex, ring: (cur || null) === f.id ? '#8D1D2C' : 'rgba(34,34,34,0.18)', ringW: (cur || null) === f.id ? '3px' : '1px',
+            border: f.dash ? '1px dashed rgba(34,34,34,0.35)' : '1px solid rgba(34,34,34,0.12)', label: f.dash ? 'Style' : '', pick: () => !locked && this.V({ fond: f.id }) })) };
+      })(),
+      // Illustration du design system : un calque au-dessus du visuel (position, taille, couleur du trait).
+      ...(() => {
+        const all = (window.DS_ILLUS || []).filter(x => x.cat === 'Illustrations'), subs = [...new Set(all.map(x => x.sub))];
+        const sub = subs.includes(s.illusCat) ? s.illusCat : subs[0], il = v.illus && v.illus.src ? v.illus : null;
+        const put = (patch) => { if (!locked) this.V({ illus: Object.assign({ x: 82, y: 18, taille: 28, trait: 'auto' }, il || {}, patch) }); };
+        const POS = [['↖', 16, 16], ['↑', 50, 14], ['↗', 84, 16], ['←', 14, 50], ['●', 50, 50], ['→', 86, 50], ['↙', 16, 84], ['↓', 50, 86], ['↘', 84, 84]];
+        const [aBg, aFg] = seg(!il || !il.trait || il.trait === 'auto');
+        return { illusOpen: !!s.illusOpen && !locked, illusToggle: () => !locked && this.setState({ illusOpen: !s.illusOpen }), illusBtn: s.illusOpen ? 'Fermer le choix' : il ? 'Changer d’illustration' : 'Ajouter une illustration',
+          illusSubs: subs.map(x => { const [bg, fg] = seg(x === sub); return { label: x, bg, fg, pick: () => this.setState({ illusCat: x }) }; }),
+          illusItems: all.filter(x => x.sub === sub).map(x => ({ src: x.src, name: x.name, ring: il && il.src === x.src ? '#8D1D2C' : 'rgba(34,34,34,0.10)', pick: () => put({ src: x.src, name: x.name }) })),
+          hasIllus: !!il, illusName: il ? il.name || 'Illustration' : '', illusThumb: il ? il.src : '',
+          illusPos: POS.map(([lab, x, y]) => ({ lab, pick: () => put({ x, y }), bg: il && +il.x === x && +il.y === y ? '#8D1D2C' : '#FFFFFF', fg: il && +il.x === x && +il.y === y ? '#FFFFFF' : '#444444' })),
+          illusX: il ? (il.x != null ? il.x : 82) : 82, illusY: il ? (il.y != null ? il.y : 18) : 18, illusT: il ? (il.taille != null ? il.taille : 28) : 28, illusTLabel: (il ? (il.taille != null ? il.taille : 28) : 28) + ' %',
+          setIllusX: (e) => put({ x: +e.target.value }), setIllusY: (e) => put({ y: +e.target.value }), setIllusT: (e) => put({ taille: +e.target.value }),
+          illusTraits: [{ id: 'auto', nom: 'Auto', hex: null }].concat(window.DS_TRAITS || []).map(t => { const on = il && (il.trait || 'auto') === t.id; return { nom: t.nom, hex: t.hex || '#FFFFFF', isHex: !!t.hex, ring: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)', ringW: on ? '2px' : '1px', pick: () => put({ trait: t.id }) }; }),
+          illusAutoBg: aBg, illusAutoFg: aFg,
+          illusRemove: () => !locked && this.V({ illus: null }) };
+      })(),
       stylesSingle: this.STYLES1.map(([k, name, sw]) => Object.assign(chip(v.style === k), { name, sw, pick: () => !locked && this.V({ style: k }) })),
       stylesMontage: this.STYLES2.map(([k, name, n]) => Object.assign(chip(v.style === k), { name, slots: n + ' photos', pick: () => !locked && this.V({ style: k }) })),
       vFields: [

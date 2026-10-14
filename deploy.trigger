@@ -64,3 +64,4 @@ Relivraison : Créer un post — catalogue par catégorie, sous-catégorie, prod
 Relivraison : tuiles du catalogue (badge Formules) — 2026-10-14T07:28:49Z
 Relivraison : visuel composé exporté avec les photos du webshop ; liens directs du webshop (catégorie, sous-catégorie, produit) — 2026-10-14T12:22:22Z
 Relivraison : texte du lien paramétrable (« Commandez ici 👉 »), {lien}, aperçu avec le lien résolu — 2026-10-14T12:36:39Z
+Relivraison : générateur — recadrage (1:1, 4:5, 1,91:1), fond de la palette de la marque, illustration du design system — 2026-10-14T13:23:30Z

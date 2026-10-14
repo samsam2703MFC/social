@@ -284,6 +284,17 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   Magasin test (hors caisse) : la page du webshop sans boutique. Une boutique sans horaires :
   la phrase qui cite `{horaires}` disparaît (plus de « Ouvert . »). Boutons « Lien rapide »
   sous le champ Lien.
+- **Générateur de visuel : recadrage, fond, illustration** — le format est choisi dans le
+  générateur (Créer un post → Visuel composé, et le studio Posts Facebook) : Carré 1:1
+  (1080 × 1080), Portrait 4:5 (1080 × 1350), Paysage 1,91:1 (1200 × 630, sans bandes sur
+  ordinateur) ; l'image part aux dimensions choisies, Facebook n'a plus à la recadrer. En
+  paysage, Épuré, Ruby et Noir passent en deux colonnes. Le **fond** se choisit dans la palette
+  du design system (`DS_FONDS`, `public/ds-catalogue.js` : crème, beige, beige clair, blanc,
+  abricot ; ruby, noir, pop-up, ambre foncé), dans le ton du style pour que le texte reste
+  lisible (Plein cadre : le fond est la photo). Une **illustration** du design system
+  (`DS_ILLUS`, catégorie Illustrations) se pose sur le visuel : position (9 repères + ↔ ↕),
+  taille, trait d'origine ou recoloré dans la palette (`DS_TRAITS`, masque CSS ; « Auto » :
+  abricot sur un style foncé). Le tout est gardé avec le post (`visual.v.format`, `fond`, `illus`).
 - **Texte du lien** — le lien publié suit un texte d'introduction : « Commandez ici 👉
   https://… » (`socMessage`). Meta n'accepte pas de lien caché sous un mot dans le texte d'une
   publication : l'adresse reste visible juste après ce texte. Le texte se règle par post (champ

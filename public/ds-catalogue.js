@@ -108,3 +108,30 @@ window.DS_ILLUS = [
   ['ds-d-lines', 'img/illus/decorative/lines.png', 'Traits', 'Illustrations', 'Décoratif', "Toute l'année"],
   ['ds-d-artboard', 'img/illus/decorative/artboard-4.png', 'Motif', 'Illustrations', 'Décoratif', "Toute l'année"],
 ].map(([id, src, name, cat, sub, season]) => ({ id, src, name, cat, sub, season, cut: true, ds: true }));
+
+// Palette de fond du design system (global.css : --color-primary, --color-secondary, --color-bg,
+// --color-surface, --color-background-secondary, --color-popup, --color-on-abricot ; crème et noir
+// des visuels). Par ton : un style clair (texte foncé) prend un fond clair, un style foncé (texte
+// clair) un fond foncé — le texte reste lisible sans retoucher le style.
+window.DS_FONDS = [
+  { id: 'creme', nom: 'Crème', hex: '#F5EFE4', ton: 'clair' },
+  { id: 'beige', nom: 'Beige', hex: '#EAE4DC', ton: 'clair' },
+  { id: 'beige-clair', nom: 'Beige clair', hex: '#F4EFE8', ton: 'clair' },
+  { id: 'blanc', nom: 'Blanc', hex: '#FFFFFF', ton: 'clair' },
+  { id: 'abricot', nom: 'Abricot', hex: '#F2C9A0', ton: 'clair' },
+  { id: 'ruby', nom: 'Ruby', hex: '#8D1D2C', ton: 'fonce' },
+  { id: 'noir', nom: 'Noir', hex: '#232220', ton: 'fonce' },
+  { id: 'popup', nom: 'Pop-Up', hex: '#78554B', ton: 'fonce' },
+  { id: 'ambre', nom: 'Ambre foncé', hex: '#6B4420', ton: 'fonce' },
+];
+// Le ton de chaque style du studio (les autres sont clairs) ; Plein cadre : le fond est la photo.
+window.DS_TONS = { ruby: 'fonce', noir: 'fonce', encadre: 'fonce', nuit: 'fonce', plein: null };
+// Couleurs du trait d'une illustration (recolorée par masque) : la palette de la marque.
+window.DS_TRAITS = [
+  { id: 'origine', nom: 'D’origine', hex: null },
+  { id: 'ruby', nom: 'Ruby', hex: '#8D1D2C' },
+  { id: 'noir', nom: 'Noir', hex: '#232220' },
+  { id: 'blanc', nom: 'Blanc', hex: '#FFFFFF' },
+  { id: 'abricot', nom: 'Abricot', hex: '#F2C9A0' },
+  { id: 'creme', nom: 'Crème', hex: '#F5EFE4' },
+];
