@@ -114,6 +114,7 @@
                       <span style="font-size:12px;font-weight:500;">{{ of.libelle }}</span>
                       <span style="font-size:11px;color:{{ of.noteFg }};">{{ of.note }}</span>
                     </span>
+                    <button onClick="{{ of.poser }}" title="Poser ce prix ou cette promotion sur la photo, en texte (typo et couleurs de la marque)" style="border:0.5px solid #8D1D2C;background:#FFFFFF;color:#8D1D2C;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;flex:0 0 auto;">Sur le visuel</button>
                     <button onClick="{{ of.use }}" style="border:none;background:{{ of.btnBg }};color:#FFFFFF;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;flex:0 0 auto;">{{ of.btn }}</button>
                   </div>
                 </sc-for>
@@ -299,6 +300,56 @@
                 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                   <span style="font-size:11px;color:#666666;">Trait :</span>
                   <sc-for list="{{ illusTraits }}" as="tr" hint-placeholder-count="5"><button onClick="{{ tr.pick }}" title="{{ tr.nom }}" style="display:inline-flex;align-items:center;gap:5px;border:{{ tr.ringW }} solid {{ tr.ring }};background:#FFFFFF;border-radius:999px;padding:3px 9px 3px 4px;font-size:11px;cursor:pointer;"><sc-if value="{{ tr.isHex }}" hint-placeholder-val="{{ true }}"><span style="width:14px;height:14px;border-radius:50%;background:{{ tr.hex }};border:0.5px solid rgba(34,34,34,0.25);display:block;"></span></sc-if>{{ tr.nom }}</button></sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <!-- Textes sur le visuel : promotion, formule ou prix posé sur la photo, dans la typo et les couleurs de la marque -->
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;color:#666666;">Textes sur le visuel</span>
+                <sc-for list="{{ txtList }}" as="tl" hint-placeholder-count="0"><button onClick="{{ tl.pick }}" style="border:0.5px solid rgba(34,34,34,0.18);background:{{ tl.bg }};color:{{ tl.fg }};border-radius:999px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tl.label }}</button></sc-for>
+                <button onClick="{{ txtAdd }}" disabled="{{ locked }}" style="border:0.5px dashed rgba(34,34,34,0.35);background:#FFFFFF;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;">+ Texte</button>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <span style="font-size:11px;color:#666666;">Modèles :</span>
+                <sc-for list="{{ txtModeles }}" as="tm" hint-placeholder-count="5"><span style="display:inline-flex;align-items:center;gap:2px;"><button onClick="{{ tm.apply }}" title="Appliquer ce modèle" style="border:{{ tm.border }};background:{{ tm.bg }};color:{{ tm.fg }};border-radius:{{ tm.radius }};padding:5px 11px;font-size:12px;font-family:{{ tm.font }};text-transform:{{ tm.tt }};cursor:pointer;white-space:nowrap;">{{ tm.nom }}</button><sc-if value="{{ tm.canDel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ tm.del }}" title="Supprimer ce modèle" style="border:none;background:transparent;color:#8A847C;font-size:13px;cursor:pointer;padding:0 3px;">×</button></sc-if></span></sc-for>
+              </div>
+              <sc-if value="{{ hasTxtSel }}" hint-placeholder-val="{{ false }}">
+                <div style="border:0.5px solid rgba(34,34,34,0.12);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:9px;background:#FBF8F4;">
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <input type="text" value="{{ txtVal }}" onChange="{{ setTxtVal }}" disabled="{{ locked }}" placeholder="Texte (ex. −1,40 €, 13,00 €, 2+1)" style="flex:1 1 160px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;outline:none;">
+                    <input type="text" value="{{ sousVal }}" onChange="{{ setSousVal }}" disabled="{{ locked }}" placeholder="Sous-texte (facultatif)" style="flex:1 1 160px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;outline:none;">
+                  </div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-size:11px;color:#666666;width:52px;">Forme</span>
+                    <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap;"><sc-for list="{{ txtFormes }}" as="tf" hint-placeholder-count="4"><button onClick="{{ tf.pick }}" style="border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:500;cursor:pointer;background:{{ tf.bg }};color:{{ tf.fg }};">{{ tf.label }}</button></sc-for></div>
+                  </div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-size:11px;color:#666666;width:52px;">Police</span>
+                    <sc-for list="{{ txtPolices }}" as="tp" hint-placeholder-count="4"><button onClick="{{ tp.pick }}" title="{{ tp.detail }}" style="border:{{ tp.bw }} solid {{ tp.border }};background:#FFFFFF;border-radius:8px;padding:5px 10px;cursor:pointer;font-family:{{ tp.font }};font-weight:{{ tp.weight }};text-transform:{{ tp.tt }};font-size:14px;color:#222222;">{{ tp.label }}</button></sc-for>
+                  </div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-size:11px;color:#666666;width:52px;">Texte</span>
+                    <sc-for list="{{ txtCouleurs }}" as="tc" hint-placeholder-count="9"><button onClick="{{ tc.pick }}" title="{{ tc.nom }}" style="width:24px;height:24px;border-radius:50%;background:{{ tc.hex }};border:1px solid rgba(34,34,34,0.15);box-shadow:0 0 0 {{ tc.ringW }} {{ tc.ring }};cursor:pointer;padding:0;"></button></sc-for>
+                  </div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-size:11px;color:#666666;width:52px;">Fond</span>
+                    <sc-for list="{{ txtFonds }}" as="tb" hint-placeholder-count="10"><button onClick="{{ tb.pick }}" title="{{ tb.nom }}" style="width:24px;height:24px;border-radius:50%;background:{{ tb.hex }};border:1px solid rgba(34,34,34,0.15);box-shadow:0 0 0 {{ tb.ringW }} {{ tb.ring }};cursor:pointer;padding:0;font-size:9px;color:#8A847C;">{{ tb.dashLabel }}</button></sc-for>
+                    <span style="font-size:11px;color:#8A4B00;">{{ txtFondNote }}</span>
+                  </div>
+                  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <div style="display:grid;grid-template-columns:repeat(3,24px);gap:3px;" title="Position"><sc-for list="{{ txtPos }}" as="tq" hint-placeholder-count="9"><button onClick="{{ tq.pick }}" style="width:24px;height:24px;border-radius:5px;border:0.5px solid rgba(34,34,34,0.18);background:{{ tq.bg }};color:{{ tq.fg }};font-size:11px;cursor:pointer;padding:0;">{{ tq.lab }}</button></sc-for></div>
+                    <div style="display:flex;flex-direction:column;gap:4px;flex:1 1 200px;min-width:180px;font-size:11px;color:#666666;">
+                      <label style="display:flex;align-items:center;gap:6px;">Taille<input type="range" min="20" max="200" value="{{ txtTaille }}" onChange="{{ setTxtTaille }}" disabled="{{ locked }}" style="flex:1;accent-color:#8D1D2C;"><span style="width:44px;text-align:right;color:#222222;">{{ txtTailleLabel }}</span></label>
+                      <label style="display:flex;align-items:center;gap:6px;">Rotation<input type="range" min="-30" max="30" value="{{ txtRot }}" onChange="{{ setTxtRot }}" disabled="{{ locked }}" style="flex:1;accent-color:#8D1D2C;"><span style="width:44px;text-align:right;color:#222222;">{{ txtRotLabel }}</span></label>
+                      <span>Ou glissez le texte directement sur l’aperçu.</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:8px;">
+                    <input type="text" value="{{ txtTplNom }}" onChange="{{ setTxtTplNom }}" disabled="{{ locked }}" placeholder="Nom du modèle (ex. Promo cookies)" style="flex:1 1 180px;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 9px;outline:none;">
+                    <button onClick="{{ txtTplSave }}" disabled="{{ notCanTplSave }}" style="border:none;background:#232220;color:#FFFFFF;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ tplSaveOp }};">Enregistrer comme modèle</button>
+                    <button onClick="{{ txtDel }}" disabled="{{ locked }}" style="border:none;background:transparent;color:#8D1D2C;font-size:11px;font-weight:500;cursor:pointer;margin-left:auto;">Supprimer ce texte</button>
+                  </div>
                 </div>
               </sc-if>
             </div>
@@ -684,7 +735,7 @@
 
           <!-- visuel : instance unique du studio -->
           <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
-            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" hint-size="100%,420px"></dc-import>
+            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-label-move="{{ onLabelMove }}" on-label-select="{{ onLabelSelect }}" hint-size="100%,420px"></dc-import>
           </sc-if>
           <sc-if value="{{ isBrut }}" hint-placeholder-val="{{ false }}">
             <sc-if value="{{ pv.hasMedia }}" hint-placeholder-val="{{ false }}">
@@ -924,11 +975,12 @@ class Component extends DCLogic {
   state = this.initState();
   initState() {
     const SA = window.SA;
-    const v = { style: 'epure', format: 'carre', cutMode: 'auto', showLogo: true, showEyebrow: true, showTitle: true, showPhrase: true, showPrice: true, showPromo: false, showSite: true,
+    const v = { style: 'epure', format: 'carre', textes: [], cutMode: 'auto', showLogo: true, showEyebrow: true, showTitle: true, showPhrase: true, showPrice: true, showPromo: false, showSite: true,
       nl: { eyebrow: 'Seizoenseditie · Herfst 2026', title: '', phrase: '', unit: 'Per stuk', promoSub: 'de 5de gratis' },
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', linkText: { fr: '', nl: '' }, campaign: '',
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
+      txtSel: null, txtTplNom: '', etqLocal: null,
       nav: null, navKey: null, navLoading: false, navErr: '', navMode: 'cat', navG: null, navC: null, navGam: null, navQ: '', navSel: null, offres: null, offresKey: '', offresLoading: false, offreUsed: '',
       libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false };
     if (!SA) return base;
@@ -1027,6 +1079,22 @@ class Component extends DCLogic {
   }
   toast(msg) { clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: '' }), 4000); }
   V(patch) { this.setState({ v: Object.assign({}, this.state.v, patch) }); }
+  /** Les modèles d'étiquette : ceux du design system, puis ceux enregistrés (réglage etiquettes_modeles ; en démo, ce navigateur). */
+  etqModeles() {
+    const SA = window.SA, ds = (window.DS_ETIQUETTES || []).map(m => Object.assign({ ds: true }, m));
+    let mes = [];
+    if (SA.live) mes = ((SA.state().params || {}).etiquettes_modeles) || [];
+    else { try { mes = this.state.etqLocal || JSON.parse(localStorage.getItem('sa.etiquettes') || '[]'); } catch (e) { mes = []; } }
+    return ds.concat((Array.isArray(mes) ? mes : []).filter(m => m && m.id && m.nom));
+  }
+  /** Pose un texte sur le visuel (promotion, formule ou texte libre), dans le style du dernier modèle utilisé. */
+  poserTexte(txt, sous) {
+    const v = this.state.v, ts = v.textes || [], M = this.etqModeles(), m = M.find(x => x.id === this._etqDernier) || M[0] || {};
+    const pick = (o) => ({ forme: o.forme, police: o.police, couleur: o.couleur, fond: o.fond, taille: o.taille, rot: o.rot, x: o.x, y: o.y });
+    const t = Object.assign({ id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), txt: String(txt || 'Texte'), sous: String(sous || '') }, pick(m));
+    if (ts.length) { t.x = Math.min(90, (+t.x || 50) + 6 * ts.length); t.y = Math.min(90, (+t.y || 50) + 6 * ts.length); }
+    this.setState({ v: Object.assign({}, v, { textes: ts.concat(t) }), txtSel: t.id, mode: 'studio' });
+  }
   /** Le catalogue du webshop, avec les prix de `shop` (une seule boutique) ou sans prix (''). */
   loadNav(shop) {
     const SA = window.SA;
@@ -1345,10 +1413,12 @@ class Component extends DCLogic {
     const offres = (O.promotions || []).map(x => { const k = 'p' + x.id, used = s.offreUsed === k, [tag, tb, tf] = TAG[x.type] || TAG.offre;
       return { tag, tagBg: tb, tagFg: tf, libelle: x.libelle, op: x.ici ? 1 : 0.6,
         note: (x.ici ? '' : 'Pas dans ' + (shopNom || 'la boutique choisie') + ' · ') + x.portee + (x.au ? ' · jusqu\u2019au ' + SA.dShort(x.au) : ''), noteFg: x.ici ? '#666666' : '#8A4B00',
-        btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, x.court, x.nom, x.libelle) }; })
+        btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, x.court, x.nom, x.libelle),
+        poser: () => !locked && this.poserTexte(x.court || x.nom, x.court ? x.nom : '') }; })
       .concat((O.formules || []).map((f, i) => { const k = 'f' + i, used = s.offreUsed === k, [tag, tb, tf] = TAG.formule;
         return { tag, tagBg: tb, tagFg: tf, libelle: f.libelle, op: 1, note: (f.prix != null ? eur(f.prix) + (shopNom ? ' à ' + shopNom : '') : 'prix selon la boutique') + (f.choix && f.choix.length ? ' · au choix : ' + f.choix.join(', ') : ''), noteFg: '#666666',
-          btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, f.court, 'Formule ' + f.nom, f.libelle) }; }));
+          btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, f.court, 'Formule ' + f.nom, f.libelle),
+          poser: () => !locked && this.poserTexte(f.prix != null ? eur(f.prix) : f.court || f.nom, 'Formule ' + f.nom) }; }));
     const KIND = { produit: 'Produit', categorie: 'Sous-catégorie', groupe: 'Catégorie', gamme: 'Gamme' };
     const selView = sel ? { kind: KIND[sel.kind] || '', name: sel.name, image: sel.image || '', hasImg: !!sel.image,
       prix: sel.kind !== 'produit' ? 'Pas de prix : ' + (KIND[sel.kind] || '').toLowerCase() + ' entière' + (sel.kind === 'categorie' || sel.kind === 'groupe' ? ' · lien vers sa page du webshop' : '')
@@ -1498,6 +1568,42 @@ class Component extends DCLogic {
           fonds: [{ id: null, nom: 'Fond du style', hex: 'transparent', dash: true }].concat(fonds).map(f => ({ nom: f.nom, hex: f.hex, ring: (cur || null) === f.id ? '#8D1D2C' : 'rgba(34,34,34,0.18)', ringW: (cur || null) === f.id ? '3px' : '1px',
             border: f.dash ? '1px dashed rgba(34,34,34,0.35)' : '1px solid rgba(34,34,34,0.12)', label: f.dash ? 'Style' : '', pick: () => !locked && this.V({ fond: f.id }) })) };
       })(),
+      // Textes posés sur le visuel (promotion, formule, prix) : forme, police et couleurs du design system, position.
+      ...(() => {
+        const SAx = window.SA, ts = v.textes || [], sel = ts.find(t => t.id === s.txtSel) || null;
+        const upd = (patch) => { if (!locked && sel) this.V({ textes: ts.map(t => t.id === sel.id ? Object.assign({}, t, patch) : t) }); };
+        const FONDS = window.DS_FONDS || [], POL = window.DS_POLICES || [], FOR = window.DS_FORMES || [];
+        const hex = (k) => (FONDS.find(f => f.id === k) || {}).hex || '';
+        const sw = (f, on, fn) => ({ nom: f.nom, hex: f.hex || 'transparent', dashLabel: f.id ? '' : '∅', ring: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)', ringW: on ? '3px' : '1px', pick: fn });
+        const pick = (o) => ({ forme: o.forme, police: o.police, couleur: o.couleur, fond: o.fond, taille: o.taille, rot: o.rot, x: o.x, y: o.y });
+        const M = this.etqModeles();
+        const garder = (mes, msg) => {
+          if (SAx.live) return SAx.api('POST', '/parametres', { etiquettes_modeles: mes }).then(r => { const st2 = SAx.state(); st2.params = (r && r.params) || Object.assign({}, st2.params, { etiquettes_modeles: mes }); this.setState({ txtTplNom: '', etqLocal: null }); this.toast(msg); }).catch(e => this.toast('Modèle non enregistré : ' + (e.message || e)));
+          try { localStorage.setItem('sa.etiquettes', JSON.stringify(mes)); } catch (e) {}
+          this.setState({ etqLocal: mes, txtTplNom: '' }); this.toast(msg);
+        };
+        const POS = [['↖', 18, 18], ['↑', 50, 14], ['↗', 82, 18], ['←', 18, 50], ['●', 50, 50], ['→', 82, 50], ['↙', 18, 82], ['↓', 50, 86], ['↘', 82, 82]];
+        return { hasTxts: ts.length > 0, hasTxtSel: !!sel,
+          txtList: ts.map(t => { const on = t.id === s.txtSel; return { label: String(t.txt || t.sous || 'Texte').slice(0, 26), bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', pick: () => this.setState({ txtSel: on ? null : t.id }) }; }),
+          txtAdd: () => !locked && this.poserTexte(String(v.promo || '').trim() || 'Nouveau', ''),
+          txtVal: sel ? sel.txt || '' : '', setTxtVal: (e) => upd({ txt: e.target.value }), sousVal: sel ? sel.sous || '' : '', setSousVal: (e) => upd({ sous: e.target.value }),
+          txtFormes: FOR.map(f => { const [bg, fg] = seg(!!sel && (sel.forme || 'etiquette') === f.id); return { label: f.nom, bg, fg, pick: () => upd({ forme: f.id }) }; }),
+          txtPolices: POL.map(p => { const on = !!sel && sel.police === p.id; return { label: p.nom, detail: p.detail, font: p.font, weight: p.weight, tt: p.tt, border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)', bw: on ? '2px' : '1px', pick: () => upd({ police: p.id }) }; }),
+          txtCouleurs: FONDS.map(f => sw(f, !!sel && sel.couleur === f.id, () => upd({ couleur: f.id }))),
+          txtFonds: [{ id: null, nom: 'Aucun', hex: null }].concat(FONDS).map(f => sw(f, !!sel && (sel.fond || null) === f.id, () => upd({ fond: f.id }))),
+          txtFondNote: sel && sel.forme === 'texte' ? 'Texte seul : pas de fond (choisissez Étiquette, Pastille ou Bandeau pour un fond).' : '',
+          txtTaille: sel ? +sel.taille || 56 : 56, txtTailleLabel: (sel ? +sel.taille || 56 : 56) + ' px', setTxtTaille: (e) => upd({ taille: +e.target.value }),
+          txtRot: sel ? +sel.rot || 0 : 0, txtRotLabel: (sel ? +sel.rot || 0 : 0) + '°', setTxtRot: (e) => upd({ rot: +e.target.value }),
+          txtPos: POS.map(([lab, x, y]) => { const on = !!sel && +sel.x === x && +sel.y === y; return { lab, pick: () => upd({ x, y }), bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#444444' }; }),
+          txtDel: () => { if (!locked && sel) { this.V({ textes: ts.filter(t => t.id !== sel.id) }); this.setState({ txtSel: null }); } },
+          txtModeles: M.map(m => ({ nom: m.nom, bg: hex(m.forme === 'texte' ? null : m.fond) || '#FFFFFF', fg: hex(m.couleur) || '#222222', font: ((POL.find(p => p.id === m.police) || {}).font) || "'Gotham'",
+            tt: ((POL.find(p => p.id === m.police) || {}).tt) || 'none', radius: m.forme === 'pastille' ? '999px' : m.forme === 'bandeau' ? '2px' : '8px', border: m.forme === 'texte' || (m.fond === 'blanc' || m.fond === 'creme') ? '1px solid rgba(34,34,34,0.18)' : '1px solid transparent',
+            apply: () => { if (locked) return; this._etqDernier = m.id; if (sel) upd(pick(m)); else this.poserTexte(String(v.promo || '').trim() || m.nom, ''); },
+            canDel: !m.ds && !locked, del: () => garder(M.filter(x => !x.ds && x.id !== m.id), 'Modèle « ' + m.nom + ' » supprimé.') })),
+          txtTplNom: s.txtTplNom || '', setTxtTplNom: (e) => this.setState({ txtTplNom: e.target.value }), canTplSave: !!sel && !locked && !!String(s.txtTplNom || '').trim(), notCanTplSave: !(!!sel && !locked && !!String(s.txtTplNom || '').trim()), tplSaveOp: (!!sel && !locked && !!String(s.txtTplNom || '').trim()) ? 1 : 0.4,
+          txtTplSave: () => { const nom = String(s.txtTplNom || '').trim(); if (!sel || !nom) return; const m = Object.assign({ id: 'm' + Date.now().toString(36), nom }, pick(sel));
+            this._etqDernier = m.id; garder(M.filter(x => !x.ds).concat(m), 'Modèle d’étiquette « ' + nom + ' » enregistré : il est proposé pour les prochains posts.'); } };
+      })(),
       // Illustration du design system : un calque au-dessus du visuel (position, taille, couleur du trait).
       ...(() => {
         const all = (window.DS_ILLUS || []).filter(x => x.cat === 'Illustrations'), subs = [...new Set(all.map(x => x.sub))];
@@ -1529,8 +1635,11 @@ class Component extends DCLogic {
       ],
       fonts: [['script', 'Script', "'Playwrite DEVA'"], ['display', 'DISPLAY', "'Vank'"], ['sans', 'Sans', "'Gotham'"]].map(([k, label, family]) => { const [bg, fg] = seg(v.phraseFont === k); return { label, family, bg, fg, pick: () => this.V({ phraseFont: k }) }; }),
       colors: [['auto', 'Automatique', '#FFFFFF', 'A'], ['ruby', 'Ruby', '#8D1D2C', ''], ['noir', 'Noir', '#232220', ''], ['abricot', 'Abricot', '#F2C9A0', ''], ['blanc', 'Blanc', '#FFFFFF', ''], ['gris', 'Gris', '#8A847C', '']].map(([k, label, c, txt]) => ({ label, c, txt, ring: v.phraseColor === k ? '#222222' : 'transparent', pick: () => this.V({ phraseColor: k }) })),
-      studioControl: Object.assign({}, vL, { photos: s.photos, showPrice: v.showPrice && !!String(v.price || '').trim(), showPromo: v.showPromo && !!String(v.promo || '').trim(), showTitle: v.showTitle && !!String(v.title || '').trim(), showPhrase: v.showPhrase && !!String(v.phrase || '').trim() }),
+      studioControl: Object.assign({}, vL, { txtSel: s.txtSel, photos: s.photos, showPrice: v.showPrice && !!String(v.price || '').trim(), showPromo: v.showPromo && !!String(v.promo || '').trim(), showTitle: v.showTitle && !!String(v.title || '').trim(), showPhrase: v.showPhrase && !!String(v.phrase || '').trim() }),
       onStudioApi: (api) => { this._api = api; },
+      // Un texte posé glissé sur l'aperçu : sa nouvelle position ; un clic le sélectionne.
+      onLabelMove: (id, x, y) => { if (!locked) this.setState(st => ({ v: Object.assign({}, st.v, { textes: (st.v.textes || []).map(t => t.id === id ? Object.assign({}, t, { x, y }) : t) }) })); },
+      onLabelSelect: (id) => this.setState({ txtSel: id }),
       // ciblage
       shopBadges: SA.SHOPS.concat(tests).map(sh => { const on = t.includes(sh.id), test = !!sh.test;
         return { name: sh.name + (test ? ' (test)' : ''), mark: on ? '✓' : '', dotBg: on ? (test ? '#D97B29' : '#1F8A60') : '#D8D0C4', bg: on ? (test ? '#8A4B00' : '#232220') : '#FFFFFF', fg: on ? '#FFFFFF' : '#8A847C',

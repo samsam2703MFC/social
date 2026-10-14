@@ -135,3 +135,21 @@ window.DS_TRAITS = [
   { id: 'abricot', nom: 'Abricot', hex: '#F2C9A0' },
   { id: 'creme', nom: 'Crème', hex: '#F5EFE4' },
 ];
+
+// Textes posés sur le visuel (promotion, formule, prix…) : polices du design system.
+window.DS_POLICES = [
+  { id: 'titre', nom: 'Titre', detail: 'Vank', font: "'Vank','Gotham'", weight: 400, tt: 'uppercase', ls: '0' },
+  { id: 'gras', nom: 'Gras', detail: 'Gotham Medium', font: "'Gotham'", weight: 500, tt: 'uppercase', ls: '0.06em' },
+  { id: 'texte', nom: 'Texte', detail: 'Gotham Light', font: "'Gotham'", weight: 300, tt: 'none', ls: '0' },
+  { id: 'script', nom: 'Manuscrit', detail: 'Playwrite', font: "'Playwrite DEVA','Gotham'", weight: 300, tt: 'none', ls: '0' },
+];
+// Formes d'un texte posé : étiquette (rectangle arrondi), pastille (rond), bandeau (toute la largeur), texte seul.
+window.DS_FORMES = [{ id: 'etiquette', nom: 'Étiquette' }, { id: 'pastille', nom: 'Pastille' }, { id: 'bandeau', nom: 'Bandeau' }, { id: 'texte', nom: 'Texte seul' }];
+// Modèles d'étiquette du design system (couleurs : DS_FONDS).
+window.DS_ETIQUETTES = [
+  { id: 'ds-pastille-ruby', nom: 'Pastille Ruby', forme: 'pastille', police: 'titre', couleur: 'blanc', fond: 'ruby', taille: 72, rot: -8, x: 80, y: 24 },
+  { id: 'ds-etiquette-abricot', nom: 'Étiquette Abricot', forme: 'etiquette', police: 'gras', couleur: 'noir', fond: 'abricot', taille: 48, rot: 0, x: 50, y: 84 },
+  { id: 'ds-bandeau-noir', nom: 'Bandeau Noir', forme: 'bandeau', police: 'titre', couleur: 'creme', fond: 'noir', taille: 56, rot: 0, x: 50, y: 10 },
+  { id: 'ds-pastille-creme', nom: 'Pastille Crème', forme: 'pastille', police: 'titre', couleur: 'ruby', fond: 'creme', taille: 64, rot: 6, x: 20, y: 76 },
+  { id: 'ds-manuscrit-ruby', nom: 'Manuscrit Ruby', forme: 'texte', police: 'script', couleur: 'ruby', fond: null, taille: 52, rot: -4, x: 30, y: 30 },
+];

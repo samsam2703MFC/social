@@ -295,6 +295,14 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   (`DS_ILLUS`, catégorie Illustrations) se pose sur le visuel : position (9 repères + ↔ ↕),
   taille, trait d'origine ou recoloré dans la palette (`DS_TRAITS`, masque CSS ; « Auto » :
   abricot sur un style foncé). Le tout est gardé avec le post (`visual.v.format`, `fond`, `illus`).
+- **Textes sur le visuel** — une promotion, un bundle ou une formule (« Sur le visuel » dans
+  « Promotions, bundles et formules liés »), ou un texte libre (« + Texte »), posé sur la photo :
+  forme (étiquette, pastille, bandeau, texte seul), police du design system (`DS_POLICES` :
+  Vank, Gotham Medium, Gotham Light, Playwrite), couleur du texte et du fond dans la palette
+  (`DS_FONDS`), taille, rotation, position (9 repères, ou glissé sur l'aperçu). Modèles
+  d'étiquette : ceux du design system (`DS_ETIQUETTES`) et ceux enregistrés depuis le
+  générateur (réglage `etiquettes_modeles`, `POST /parametres`, nettoyé par
+  `socEtiquettesModeles`). Gardés avec le post (`visual.v.textes`) et exportés dans l'image.
 - **Texte du lien** — le lien publié suit un texte d'introduction : « Commandez ici 👉
   https://… » (`socMessage`). Meta n'accepte pas de lien caché sous un mot dans le texte d'une
   publication : l'adresse reste visible juste après ce texte. Le texte se règle par post (champ

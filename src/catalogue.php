@@ -143,6 +143,37 @@ function socWebshopPlanCache(): array
     return $plan;
 }
 
+/* --- textes sur le visuel ----------------------------------------------------------------- */
+
+/**
+ * Les modèles d'étiquette enregistrés depuis le générateur (réglage `etiquettes_modeles`) : un style
+ * de texte posé sur le visuel (forme, police, couleurs de la palette, taille, rotation, position).
+ * Champs connus seulement, valeurs bornées, 40 modèles au plus.
+ */
+function socEtiquettesModeles(mixed $liste): array
+{
+    $formes = ['etiquette', 'pastille', 'bandeau', 'texte'];
+    $polices = ['titre', 'gras', 'texte', 'script'];
+    $couleurs = ['creme', 'beige', 'beige-clair', 'blanc', 'abricot', 'ruby', 'noir', 'popup', 'ambre'];
+    $out = [];
+    foreach (is_array($liste) ? $liste : [] as $m) {
+        if (!is_array($m)) { continue; }
+        $nom = trim(mb_substr((string) ($m['nom'] ?? ''), 0, 60));
+        $id = preg_replace('/[^\w-]/', '', (string) ($m['id'] ?? ''));
+        if ($nom === '' || $id === '') { continue; }
+        $borne = static fn ($v, int $a, int $b, int $d) => is_numeric($v) ? max($a, min($b, (int) round((float) $v))) : $d;
+        $out[] = ['id' => substr($id, 0, 40), 'nom' => $nom,
+            'forme' => in_array($m['forme'] ?? '', $formes, true) ? $m['forme'] : 'etiquette',
+            'police' => in_array($m['police'] ?? '', $polices, true) ? $m['police'] : 'titre',
+            'couleur' => in_array($m['couleur'] ?? '', $couleurs, true) ? $m['couleur'] : 'blanc',
+            'fond' => in_array($m['fond'] ?? '', $couleurs, true) ? $m['fond'] : null,
+            'taille' => $borne($m['taille'] ?? null, 16, 220, 56), 'rot' => $borne($m['rot'] ?? null, -45, 45, 0),
+            'x' => $borne($m['x'] ?? null, 0, 100, 50), 'y' => $borne($m['y'] ?? null, 0, 100, 50)];
+        if (count($out) >= 40) { break; }
+    }
+    return $out;
+}
+
 /* --- images du webshop ---------------------------------------------------------------------- */
 
 /**

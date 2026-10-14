@@ -87,11 +87,11 @@ function socRoute(string $method, string $path): array
     }
     if ($method === 'POST' && $path === '/parametres') {
         // Les réglages non secrets modifiables depuis l'écran.
-        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'marketing_api' => 'string', 'webshop_url' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool', 'lien_texte' => 'array'];
+        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'marketing_api' => 'string', 'webshop_url' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool', 'lien_texte' => 'array', 'etiquettes_modeles' => 'etiquettes'];
         $faits = [];
         foreach (body() as $k => $v) {
             if (!isset($permis[$k])) { continue; }
-            $v = match ($permis[$k]) { 'float' => (float) $v, 'array' => (array) $v, 'bool' => (bool) $v, default => trim((string) $v) };
+            $v = match ($permis[$k]) { 'float' => (float) $v, 'array' => (array) $v, 'bool' => (bool) $v, 'etiquettes' => socEtiquettesModeles($v), default => trim((string) $v) };
             socSettingPut((string) $k, $v, false); $faits[] = $k;
         }
         if ($faits) { socLog(socUser(), 'Paramètres', 'Modifiés : ' . implode(', ', $faits)); }

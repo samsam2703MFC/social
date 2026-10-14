@@ -837,6 +837,8 @@
 
             <!-- ILLUSTRATION du design system (calque au-dessus du visuel) : couleurs d'origine, ou trait recoloré dans la palette (masque) -->
             <sc-if value="{{ illusImg }}" hint-placeholder-val="{{ false }}"><img src="{{ illusSrc }}" alt="" style="position:absolute;left:{{ illusX }}%;top:{{ illusY }}%;width:{{ illusW }}px;height:auto;transform:translate(-50%,-50%);pointer-events:none;z-index:6;"></sc-if>
+            <!-- TEXTES posés sur le visuel (promotion, formule, prix) : polices et couleurs du design system ; on les glisse sur l'aperçu -->
+            <sc-for list="{{ etiquettes }}" as="et" hint-placeholder-count="0"><div onPointerDown="{{ et.down }}" style="position:absolute;left:{{ et.x }}%;top:{{ et.y }}%;transform:translate(-50%,-50%) rotate({{ et.rot }}deg);z-index:7;cursor:{{ et.cursor }};touch-action:none;user-select:none;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:{{ et.gap }}px;background:{{ et.bg }};color:{{ et.fg }};border-radius:{{ et.radius }};padding:{{ et.pad }};width:{{ et.w }};height:{{ et.h }};box-sizing:border-box;outline:{{ et.outline }};outline-offset:8px;"><span style="font-family:{{ et.font }};font-weight:{{ et.weight }};font-size:{{ et.size }}px;line-height:1.02;text-transform:{{ et.tt }};letter-spacing:{{ et.ls }};white-space:pre;">{{ et.txt }}</span><sc-if value="{{ et.hasSous }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Gotham';font-weight:500;font-size:{{ et.sousSize }}px;line-height:1.1;letter-spacing:0.16em;text-transform:uppercase;white-space:pre;">{{ et.sous }}</span></sc-if></div></sc-for>
             <sc-if value="{{ illusMask }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:{{ illusX }}%;top:{{ illusY }}%;width:{{ illusW }}px;aspect-ratio:{{ illusRatio }};transform:translate(-50%,-50%);background:{{ illusColor }};-webkit-mask:url('{{ illusSrc }}') center/contain no-repeat;mask:url('{{ illusSrc }}') center/contain no-repeat;pointer-events:none;z-index:6;"></div></sc-if>
           </div>
         </div>
@@ -1146,6 +1148,18 @@ class Component extends DCLogic {
     paysage: { w: 2057, h: 1080, out: [1200, 630], ratio: '1200/630', label: 'Paysage 1,91:1', tip: 'Toute la largeur du fil sur ordinateur, sans bandes sur les côtés. Plus petit sur mobile ; Instagram l’accepte tel quel.' },
   };
   format() { const k = (this.merged() || {}).format; return this.FORMATS[k] || this.FORMATS.carre; }
+  /** Glisser un texte posé sur l'aperçu : la position (en % de la planche) remonte à l'écran qui l'héberge. */
+  dragLabel(ev, id) {
+    const art = this._art, move = this.props.onLabelMove;
+    if (typeof this.props.onLabelSelect === 'function') this.props.onLabelSelect(id);
+    if (!art || typeof move !== 'function') return;
+    ev.preventDefault();
+    const r = art.getBoundingClientRect(), pct = (v, a, b) => Math.round(Math.min(100, Math.max(0, (v - a) / b * 100)));
+    let raf = 0, last = null;
+    const onMove = (e) => { last = e; if (raf) return; raf = requestAnimationFrame(() => { raf = 0; move(id, pct(last.clientX, r.left, r.width), pct(last.clientY, r.top, r.height)); }); };
+    const onUp = () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+    window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp);
+  }
   /** Le ton d'un style (clair : texte foncé ; foncé : texte clair ; null : le fond est la photo). */
   ton(style) { const T = window.DS_TONS || {}; return Object.prototype.hasOwnProperty.call(T, style) ? T[style] : 'clair'; }
   /** La couleur du fond choisi, si elle est dans la palette et du même ton que le style ; sinon rien (le fond du style). */
@@ -1277,6 +1291,24 @@ class Component extends DCLogic {
     const dims = F.out[0] + ' × ' + F.out[1];
     return {
       artW: F.w, artH: F.h, artRatio: F.ratio, formatTip: F.tip, exportDims: dims, formatKey: fKey,
+      etiquettes: (Array.isArray(s.textes) ? s.textes : []).filter(t => t && String(t.txt || t.sous || '').trim()).map(t => {
+        const P = (window.DS_POLICES || []).find(x => x.id === t.police) || (window.DS_POLICES || [])[0] || { font: "'Gotham'", weight: 500, tt: 'none', ls: '0' };
+        const hex = (k) => ((window.DS_FONDS || []).find(f => f.id === k) || {}).hex || null;
+        const forme = t.forme || 'etiquette', size = Math.min(220, Math.max(16, +t.taille || 56)), sous = String(t.sous || '').trim();
+        const fond = forme === 'texte' ? null : hex(t.fond);
+        // Pastille : un rond assez grand pour le texte (largeur estimée d'après la police) et le sous-texte.
+        const em = P.id === 'titre' ? 0.5 : P.id === 'script' ? 0.62 : 0.66, nTxt = String(t.txt || '').length, nSous = sous.length;
+        const D = Math.round(Math.max(size * 2.4, nTxt * size * em + size * 0.9, nSous * size * 0.3 * 0.86 + size * 0.9) + (sous ? size * 0.45 : 0));
+        const sel = !s.exporting && s.txtSel === t.id;
+        return { txt: String(t.txt || ''), sous, hasSous: !!sous, sousSize: Math.max(14, Math.round(size * 0.3)), size, font: P.font, weight: P.weight, tt: P.tt, ls: P.ls,
+          fg: hex(t.couleur) || '#FFFFFF', bg: fond || 'transparent', gap: Math.round(size * 0.14),
+          radius: forme === 'pastille' ? '50%' : forme === 'etiquette' ? Math.round(size * 0.24) + 'px' : '0',
+          pad: forme === 'etiquette' ? Math.round(size * 0.32) + 'px ' + Math.round(size * 0.55) + 'px' : forme === 'bandeau' ? Math.round(size * 0.34) + 'px 40px' : '0',
+          w: forme === 'pastille' ? D + 'px' : forme === 'bandeau' ? '112%' : 'auto', h: forme === 'pastille' ? D + 'px' : 'auto',
+          x: forme === 'bandeau' ? 50 : Math.min(100, Math.max(0, +t.x || 50)), y: Math.min(100, Math.max(0, t.y != null ? +t.y : 50)), rot: Math.max(-45, Math.min(45, +t.rot || 0)),
+          outline: sel ? '3px dashed rgba(141,29,44,0.75)' : 'none', cursor: typeof this.props.onLabelMove === 'function' ? 'move' : 'default',
+          down: (e) => this.dragLabel(e, t.id) };
+      }),
       illusImg: !!il && !traitHex, illusMask: !!il && !!traitHex, illusSrc: il ? il.src : '', illusColor: traitHex || 'transparent',
       illusX: il ? Math.min(100, Math.max(0, il.x != null ? +il.x : 82)) : 50, illusY: il ? Math.min(100, Math.max(0, il.y != null ? +il.y : 18)) : 50,
       illusW: il ? Math.round(Math.min(F.w, F.h) * Math.min(80, Math.max(5, il.taille != null ? +il.taille : 28)) / 100) : 0, illusRatio: il ? ratios[il.src] || '1/1' : '1/1',

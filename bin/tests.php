@@ -1205,6 +1205,16 @@ $plan = socWebshopPlanCache();
 check('plan du webshop tiré du catalogue lu : sous-catégorie → catégorie, produit → sous-catégorie', ($plan['cats'][32100] ?? null) === 31 && ($plan['prods'][11] ?? null) === 32100 && ($plan['cats'][23000] ?? null) === 26, json_encode($plan));
 check('le plan part avec l’état (liens du webshop à l’écran)', (socStateGet()['webshopPlan']['cats'][32100] ?? null) === 31);
 
+echo "Générateur : modèles d'étiquette (textes posés sur le visuel)\n";
+$GLOBALS['SOC_BODY'] = ['etiquettes_modeles' => [
+    ['id' => 'm1', 'nom' => 'Promo cookies', 'forme' => 'pastille', 'police' => 'titre', 'couleur' => 'blanc', 'fond' => 'ruby', 'taille' => 999, 'rot' => -8, 'x' => 80, 'y' => 24, 'pirate' => '<script>'],
+    ['id' => 'm2', 'nom' => '', 'forme' => 'etiquette'], ['id' => 'm<3>', 'nom' => 'Étiquette', 'forme' => 'inconnue', 'police' => 'comic', 'couleur' => '#ff00ff', 'fond' => 'abricot']]];
+[$code, $b] = socRoute('POST', '/parametres'); unset($GLOBALS['SOC_BODY']);
+$em = socSetting('etiquettes_modeles');
+check('modèles enregistrés : champs connus, valeurs bornées, palette et polices de la marque seulement', $code === 200 && count($em) === 2 && $em[0]['taille'] === 220 && !isset($em[0]['pirate'])
+    && $em[1]['id'] === 'm3' && $em[1]['forme'] === 'etiquette' && $em[1]['police'] === 'titre' && $em[1]['couleur'] === 'blanc' && $em[1]['fond'] === 'abricot' && ($b['params']['etiquettes_modeles'][0]['nom'] ?? '') === 'Promo cookies', json_encode($em));
+socSettingPut('etiquettes_modeles', null, false);
+
 echo "Images du webshop servies par le module (le visuel composé s'exporte)\n";
 $media = static function (string $u): array { $_GET = ['u' => $u]; try { return socRoute('GET', '/media/webshop'); } catch (HttpError $e) { return [$e->status, $e->getMessage()]; } finally { $_GET = []; } };
 [$code, $f] = $media('https://cdn.r2.dev/webshop/p11.webp');
