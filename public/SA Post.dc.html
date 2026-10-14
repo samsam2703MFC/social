@@ -306,7 +306,7 @@
             <!-- Textes sur le visuel : promotion, formule ou prix posé sur la photo, dans la typo et les couleurs de la marque -->
             <div style="display:flex;flex-direction:column;gap:8px;">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                <span style="font-size:12px;color:#666666;">Textes sur le visuel</span>
+                <span style="font-size:12px;color:#666666;" title="Chaque texte se réécrit : champ ci-dessous, ou double-clic sur le texte dans l'aperçu">Textes sur le visuel</span>
                 <sc-for list="{{ txtList }}" as="tl" hint-placeholder-count="0"><button onClick="{{ tl.pick }}" style="border:0.5px solid rgba(34,34,34,0.18);background:{{ tl.bg }};color:{{ tl.fg }};border-radius:999px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tl.label }}</button></sc-for>
                 <button onClick="{{ txtAdd }}" disabled="{{ locked }}" style="border:0.5px dashed rgba(34,34,34,0.35);background:#FFFFFF;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;">+ Texte</button>
               </div>
@@ -317,7 +317,7 @@
               <sc-if value="{{ hasTxtSel }}" hint-placeholder-val="{{ false }}">
                 <div style="border:0.5px solid rgba(34,34,34,0.12);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:9px;background:#FBF8F4;">
                   <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <input type="text" value="{{ txtVal }}" onChange="{{ setTxtVal }}" disabled="{{ locked }}" placeholder="Texte (ex. −1,40 €, 13,00 €, 2+1)" style="flex:1 1 160px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;outline:none;">
+                    <input ref="{{ txtRef }}" type="text" value="{{ txtVal }}" onChange="{{ setTxtVal }}" disabled="{{ locked }}" placeholder="Texte (ex. −1,40 €, 13,00 €, 2+1)" style="flex:1 1 160px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;outline:none;">
                     <input type="text" value="{{ sousVal }}" onChange="{{ setSousVal }}" disabled="{{ locked }}" placeholder="Sous-texte (facultatif)" style="flex:1 1 160px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;outline:none;">
                   </div>
                   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -735,7 +735,7 @@
 
           <!-- visuel : instance unique du studio -->
           <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
-            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-label-move="{{ onLabelMove }}" on-label-select="{{ onLabelSelect }}" hint-size="100%,420px"></dc-import>
+            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-label-move="{{ onLabelMove }}" on-label-select="{{ onLabelSelect }}" on-label-edit="{{ onLabelEdit }}" hint-size="100%,420px"></dc-import>
           </sc-if>
           <sc-if value="{{ isBrut }}" hint-placeholder-val="{{ false }}">
             <sc-if value="{{ pv.hasMedia }}" hint-placeholder-val="{{ false }}">
@@ -1094,6 +1094,12 @@ class Component extends DCLogic {
     const t = Object.assign({ id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), txt: String(txt || 'Texte'), sous: String(sous || '') }, pick(m));
     if (ts.length) { t.x = Math.min(90, (+t.x || 50) + 6 * ts.length); t.y = Math.min(90, (+t.y || 50) + 6 * ts.length); }
     this.setState({ v: Object.assign({}, v, { textes: ts.concat(t) }), txtSel: t.id, mode: 'studio' });
+    // Le texte vient de l'API (nom de promotion, formule) : son champ s'ouvre, prêt à être corrigé.
+    this.editerTexte();
+  }
+  /** Ouvre le champ du texte sélectionné, texte sélectionné (après le rendu). */
+  editerTexte() {
+    setTimeout(() => { const el = this._txtIn; if (!el) return; try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus({ preventScroll: true }); el.select(); } catch (e) {} }, 80);
   }
   /** Le catalogue du webshop, avec les prix de `shop` (une seule boutique) ou sans prix (''). */
   loadNav(shop) {
@@ -1640,6 +1646,9 @@ class Component extends DCLogic {
       // Un texte posé glissé sur l'aperçu : sa nouvelle position ; un clic le sélectionne.
       onLabelMove: (id, x, y) => { if (!locked) this.setState(st => ({ v: Object.assign({}, st.v, { textes: (st.v.textes || []).map(t => t.id === id ? Object.assign({}, t, { x, y }) : t) }) })); },
       onLabelSelect: (id) => this.setState({ txtSel: id }),
+      // Double-clic sur un texte de l'aperçu : son champ s'ouvre, texte sélectionné, prêt à être réécrit.
+      onLabelEdit: (id) => { if (!locked) { this.setState({ txtSel: id }); this.editerTexte(); } },
+      txtRef: (el) => { this._txtIn = el; },
       // ciblage
       shopBadges: SA.SHOPS.concat(tests).map(sh => { const on = t.includes(sh.id), test = !!sh.test;
         return { name: sh.name + (test ? ' (test)' : ''), mark: on ? '✓' : '', dotBg: on ? (test ? '#D97B29' : '#1F8A60') : '#D8D0C4', bg: on ? (test ? '#8A4B00' : '#232220') : '#FFFFFF', fg: on ? '#FFFFFF' : '#8A847C',
