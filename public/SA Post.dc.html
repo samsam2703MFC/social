@@ -628,18 +628,26 @@
                     <input type="checkbox" checked="{{ f.on }}" onChange="{{ f.toggle }}" disabled="{{ locked }}" style="accent-color:#8D1D2C;width:15px;height:15px;margin:0;flex:0 0 auto;">
                     <sc-if value="{{ f.isLabel }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;padding:8px 0;">{{ f.label }}</span></sc-if>
                     <sc-if value="{{ f.isInput }}" hint-placeholder-val="{{ true }}"><input type="text" value="{{ f.value }}" onChange="{{ f.set }}" disabled="{{ locked }}" placeholder="{{ f.label }}" style="flex:1 1 auto;min-width:0;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;" style-focus="border-color:#8D1D2C;"></sc-if>
+                    <sc-if value="{{ f.c1.hasDot }}" hint-placeholder-val="{{ false }}"><button onClick="{{ f.c1.dotPick }}" disabled="{{ locked }}" title="{{ f.c1.dotTip }}" style="flex:0 0 auto;width:22px;height:22px;border-radius:50%;cursor:pointer;padding:0;font-size:9px;font-weight:600;color:#666666;background:{{ f.c1.dotBg }};border:2px solid {{ f.c1.dotRing }};box-shadow:inset 0 0 0 1px rgba(34,34,34,0.15);">{{ f.c1.dotTxt }}</button></sc-if>
                     <sc-if value="{{ f.hasSecond }}" hint-placeholder-val="{{ false }}"><input type="text" value="{{ f.value2 }}" onChange="{{ f.set2 }}" disabled="{{ locked }}" placeholder="{{ f.label2 }}" style="flex:1 1 auto;min-width:0;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;" style-focus="border-color:#8D1D2C;"></sc-if>
+                    <sc-if value="{{ f.c2.hasDot }}" hint-placeholder-val="{{ false }}"><button onClick="{{ f.c2.dotPick }}" disabled="{{ locked }}" title="{{ f.c2.dotTip }}" style="flex:0 0 auto;width:22px;height:22px;border-radius:50%;cursor:pointer;padding:0;font-size:9px;font-weight:600;color:#666666;background:{{ f.c2.dotBg }};border:2px solid {{ f.c2.dotRing }};box-shadow:inset 0 0 0 1px rgba(34,34,34,0.15);">{{ f.c2.dotTxt }}</button></sc-if>
                   </div>
                 </sc-for>
               </div>
+              <sc-if value="{{ hasCouleurPal }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#FCFAF7;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:8px 10px;">
+                  <span style="font-size:12px;color:#444444;">Couleur · <b style="font-weight:500;">{{ couleurNom }}</b></span>
+                  <sc-for list="{{ couleurPal }}" as="cp" hint-placeholder-count="10"><button onClick="{{ cp.pick }}" title="{{ cp.nom }}" style="width:24px;height:24px;border-radius:50%;cursor:pointer;padding:0;font-size:9px;font-weight:600;color:#666666;background:{{ cp.hex }};border:2px solid {{ cp.ring }};box-shadow:inset 0 0 0 1px rgba(34,34,34,0.15);">{{ cp.txt }}</button></sc-for>
+                  <button onClick="{{ couleurTous }}" disabled="{{ locked }}" title="Remettre toutes les couleurs des textes à celles du style" style="border:none;background:transparent;color:#8D1D2C;font-size:11px;font-weight:500;cursor:pointer;margin-left:auto;">Tout en automatique</button>
+                  <button onClick="{{ couleurFermer }}" style="border:none;background:transparent;color:#8A847C;font-size:13px;cursor:pointer;padding:0 2px;">×</button>
+                </div>
+              </sc-if>
               <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:4px;">
                 <span style="font-size:12px;color:#666666;">Phrase</span>
                 <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
                   <sc-for list="{{ fonts }}" as="ft" hint-placeholder-count="3"><button onClick="{{ ft.pick }}" style="border:none;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:{{ ft.family }};background:{{ ft.bg }};color:{{ ft.fg }};">{{ ft.label }}</button></sc-for>
                 </div>
-                <div style="display:flex;gap:6px;align-items:center;">
-                  <sc-for list="{{ colors }}" as="co" hint-placeholder-count="6"><button onClick="{{ co.pick }}" title="{{ co.label }}" style="width:24px;height:24px;border-radius:50%;cursor:pointer;background:{{ co.c }};border:2px solid {{ co.ring }};padding:0;font-size:9px;font-weight:500;color:#666666;box-shadow:inset 0 0 0 1px rgba(34,34,34,0.12);">{{ co.txt }}</button></sc-for>
-                </div>
+
               </div>
             </div>
           </sc-if>
@@ -1213,7 +1221,7 @@ class Component extends DCLogic {
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
       txtSel: null, txtTplNom: '', etqLocal: null, qc: [], visNom: '', visLocal: null, kitBusy: false, offre: null, mentionAuto: true, iaBusy: false, iaRes: null, iaErr: '', iaConsigne: '',
       objectif: '', inspi: (() => { try { const x = localStorage.getItem('sa.inspi'); return x === null ? null : x === '1'; } catch (e) { return null; } })(),
-      cutBusy: null, pvVue: 'post', tel: false, grilleData: {}, grilleSnap: null, vidBusy: false, vidAnim: null, idees: null, ideesTout: false, ideesBusy: false, ideesErr: '', reco: null, recoLu: false, recoBusy: false, recoErr: '', ideeId: '', ideeCat: null, ideeOffre: null,
+      cutBusy: null, couleurRole: null, couleurNom: '', pvVue: 'post', tel: false, grilleData: {}, grilleSnap: null, vidBusy: false, vidAnim: null, idees: null, ideesTout: false, ideesBusy: false, ideesErr: '', reco: null, recoLu: false, recoBusy: false, recoErr: '', ideeId: '', ideeCat: null, ideeOffre: null,
       nav: null, navKey: null, navLoading: false, navErr: '', navMode: 'cat', navG: null, navC: null, navGam: null, navQ: '', navSel: null, offres: null, offresKey: '', offresLoading: false, offreUsed: '',
       libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false };
     if (!SA) return base;
@@ -1509,6 +1517,22 @@ class Component extends DCLogic {
       this.setState({ vidBusy: false, v: Object.assign({}, this.state.v, { format: av }) });
       this.toast('Vidéo impossible : ' + (e.message || e));
     }
+  }
+  /** Les couleurs des textes du visuel : automatique (celle du style), la palette de la marque, le gris de la marque. */
+  PALETTE_TEXTE() { return [{ id: 'auto', nom: 'Automatique (couleur du style)', hex: '#FFFFFF' }].concat((window.DS_FONDS || []).map(f => ({ id: f.id, nom: f.nom, hex: f.hex })), [{ id: 'gris', nom: 'Gris', hex: '#8A847C' }]); }
+  /** La couleur choisie pour un texte (la phrase garde son réglage historique `phraseColor`). */
+  couleurDe(role) { const v = this.state.v; return role === 'phrase' ? (v.phraseColor || 'auto') : ((v.couleurs || {})[role] || 'auto'); }
+  couleurTexte(role, id) {
+    const v = this.state.v;
+    if (role === 'phrase') { this.V({ phraseColor: id }); return; }
+    const c = Object.assign({}, v.couleurs || {}); if (id === 'auto') delete c[role]; else c[role] = id;
+    this.V({ couleurs: c });
+  }
+  /** La pastille de couleur d'un texte : sa couleur actuelle ; un clic ouvre la palette de ce texte. */
+  pastille(role, nom) {
+    const id = this.couleurDe(role), c = this.PALETTE_TEXTE().find(x => x.id === id) || this.PALETTE_TEXTE()[0], ouvert = this.state.couleurRole === role;
+    return { hasDot: true, dotBg: c.hex, dotTxt: id === 'auto' ? 'A' : '', dotRing: ouvert ? '#8D1D2C' : 'transparent', dotTip: 'Couleur · ' + nom + ' : ' + c.nom,
+      dotPick: () => this.setState({ couleurRole: ouvert ? null : role, couleurNom: nom }) };
   }
   /** Un lien produit ouvre-t-il sa fiche par défaut ? (réglage `lien_fiche`, oui sans réglage) */
   ficheDefaut() { const P = ((window.SA && window.SA.state && window.SA.state()) || {}).params || {}; return P.lien_fiche !== false; }
@@ -2092,7 +2116,7 @@ class Component extends DCLogic {
         const COL = { erreur: ['#FDECEC', '#8D1D2C', '✕'], attention: ['#FFF4E5', '#8A4B00', '!'], conseil: ['#F4EFE8', '#444444', 'i'] };
         return { qcItems: (s.qc || []).map(q => ({ msg: q.msg, bg: COL[q.niveau][0], fg: COL[q.niveau][1], ico: COL[q.niveau][2] })), qcOk: !(s.qc || []).length && s.mode === 'studio', hasQc: (s.qc || []).length > 0 }; })(),
       // Modèles de visuel complets et kit multi-format.
-      ...(() => { const M = this.visModeles(), cle = ['style', 'format', 'fond', 'logo', 'fondu', 'cutMode', 'illus', 'textes', 'showLogo', 'showEyebrow', 'showTitle', 'showPhrase', 'showPrice', 'showPromo', 'showSite', 'eyebrow', 'phrase', 'unit', 'site', 'phraseFont', 'phraseColor'];
+      ...(() => { const M = this.visModeles(), cle = ['style', 'format', 'fond', 'logo', 'fondu', 'cutMode', 'illus', 'textes', 'showLogo', 'showEyebrow', 'showTitle', 'showPhrase', 'showPrice', 'showPromo', 'showSite', 'eyebrow', 'phrase', 'unit', 'site', 'phraseFont', 'phraseColor', 'couleurs'];
         return { visModeles: M.map(m => ({ nom: m.nom, apply: () => { if (locked) return; const w = Object.assign({}, m.v); this.V(w); this.toast('Modèle « ' + m.nom + ' » appliqué : le produit, le prix et la photo restent ceux du post.'); },
             del: () => !locked && this.visGarder(M.filter(x => x.id !== m.id), 'Modèle « ' + m.nom + ' » supprimé.') })), hasVisModeles: M.length > 0, noVisModeles: M.length === 0,
           visNom: s.visNom || '', setVisNom: (e) => this.setState({ visNom: e.target.value }), visSaveOp: String(s.visNom || '').trim() && !locked ? 1 : 0.4,
@@ -2191,15 +2215,19 @@ class Component extends DCLogic {
       stylesMontage: this.STYLES2.map(([k, name, n]) => Object.assign(chip(v.style === k), { name, slots: n + ' photos', pick: () => !locked && this.V({ style: k }) })),
       vFields: [
         vf("Logo L'Atelier By", 'title', 'showLogo', { isInput: false, isLabel: true }),
-        vf('Mention saison · date', 'eyebrow', 'showEyebrow'),
-        vf('Nom du produit', 'title', 'showTitle'),
-        vf("Phrase d'accroche", 'phrase', 'showPhrase'),
-        vf('Prix', 'price', 'showPrice', { hasSecond: true, label2: isNlEd ? 'Unité (NL)' : 'Unité', value2: gv('unit'), set2: (e) => sv('unit', e.target.value) }),
-        vf('Offre (4+1)', 'promo', 'showPromo', { hasSecond: true, label2: isNlEd ? 'de 5de gratis' : 'la 5ᵉ offerte', value2: gv('promoSub'), set2: (e) => sv('promoSub', e.target.value) }),
-        vf('Site web', 'site', 'showSite'),
-      ],
+        vf('Mention saison · date', 'eyebrow', 'showEyebrow', { c1: this.pastille('eyebrow', 'Mention saison') }),
+        vf('Nom du produit', 'title', 'showTitle', { c1: this.pastille('title', 'Nom du produit') }),
+        vf("Phrase d'accroche", 'phrase', 'showPhrase', { c1: this.pastille('phrase', 'Phrase d’accroche') }),
+        vf('Prix', 'price', 'showPrice', { hasSecond: true, label2: isNlEd ? 'Unité (NL)' : 'Unité', value2: gv('unit'), set2: (e) => sv('unit', e.target.value), c1: this.pastille('price', 'Prix'), c2: this.pastille('unit', 'Unité') }),
+        vf('Offre (4+1)', 'promo', 'showPromo', { hasSecond: true, label2: isNlEd ? 'de 5de gratis' : 'la 5ᵉ offerte', value2: gv('promoSub'), set2: (e) => sv('promoSub', e.target.value), c1: this.pastille('promo', 'Offre'), c2: this.pastille('promoSub', 'Sous-texte de l’offre') }),
+        vf('Site web', 'site', 'showSite', { c1: this.pastille('site', 'Site web') }),
+      ].map(f => Object.assign({ c1: { hasDot: false }, c2: { hasDot: false } }, f)),
+      ...(() => { const r = s.couleurRole, P = this.PALETTE_TEXTE(), cur = r ? this.couleurDe(r) : 'auto';
+        return { hasCouleurPal: !!r && !locked, couleurNom: r ? s.couleurNom || '' : '',
+          couleurPal: P.map(c => ({ nom: c.nom, hex: c.hex, txt: c.id === 'auto' ? 'A' : '', ring: c.id === cur ? '#222222' : 'transparent', pick: () => this.couleurTexte(r, c.id) })),
+          couleurTous: () => { if (!locked) { this.V({ couleurs: {}, phraseColor: 'auto' }); this.toast('Couleurs des textes : celles du style.'); } },
+          couleurFermer: () => this.setState({ couleurRole: null }) }; })(),
       fonts: [['script', 'Script', "'Playwrite DEVA'"], ['display', 'DISPLAY', "'Vank'"], ['sans', 'Sans', "'Gotham'"]].map(([k, label, family]) => { const [bg, fg] = seg(v.phraseFont === k); return { label, family, bg, fg, pick: () => this.V({ phraseFont: k }) }; }),
-      colors: [['auto', 'Automatique', '#FFFFFF', 'A'], ['ruby', 'Ruby', '#8D1D2C', ''], ['noir', 'Noir', '#232220', ''], ['abricot', 'Abricot', '#F2C9A0', ''], ['blanc', 'Blanc', '#FFFFFF', ''], ['gris', 'Gris', '#8A847C', '']].map(([k, label, c, txt]) => ({ label, c, txt, ring: v.phraseColor === k ? '#222222' : 'transparent', pick: () => this.V({ phraseColor: k }) })),
       studioControl: Object.assign({}, vL, { txtSel: s.txtSel, photos: s.photos, showPrice: v.showPrice && !!String(v.price || '').trim(), showPromo: v.showPromo && !!String(v.promo || '').trim(), showTitle: v.showTitle && !!String(v.title || '').trim(), showPhrase: v.showPhrase && !!String(v.phrase || '').trim() }),
       onStudioApi: (api) => { this._api = api; },
       // Un texte posé glissé sur l'aperçu : sa nouvelle position ; un clic le sélectionne.

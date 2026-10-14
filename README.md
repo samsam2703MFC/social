@@ -397,6 +397,13 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
 - **Kit multi-format** — « Télécharger le kit (4 formats) » : le même visuel en carré, portrait,
   story et paysage, aux dimensions de Meta, dans un zip (`nom-kit.zip`, JSZip 3.10.1 MIT
   embarqué dans `public/vendor/`, chargé au premier clic).
+- **Couleur de chaque texte** — dans « Textes sur le visuel », une pastille à côté de chaque
+  texte (surtitre, nom du produit, phrase, prix, unité, offre, sous-texte de l'offre, site) ouvre
+  la palette de la marque (`DS_FONDS`, plus le gris) ; « A » = la couleur du style. Gardé avec le
+  post (`visual.v.couleurs`, la phrase dans `phraseColor`) et dans les modèles de visuel ; tous
+  les styles et formats (classes `pf-t-…` sur les textes, variables `--c-…` posées par
+  `applyTheme`). « Tout en automatique » rend les couleurs du style. Le contrôle du visuel
+  signale un contraste trop faible.
 - **Logo du visuel** — selon le style, ou au choix : Foncé (`img/logo.png`, apostrophe dorée),
   Clair (`img/logo-white.png`), ou recoloré dans la palette (noir, ruby, abricot, crème : masque
   CSS sur le logo blanc ; `DS_LOGOS`). Gardé avec le post (`visual.v.logo`).

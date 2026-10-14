@@ -253,7 +253,13 @@ function socVisuelsModeles(mixed $liste): array
             'logo' => $mot($v['logo'] ?? 'auto', ['auto', 'fonce', 'clair', 'noir', 'ruby', 'abricot', 'creme'], 'auto'),
             'fondu' => $num($v['fondu'] ?? null, 0, 100, 60), 'cutMode' => $mot($v['cutMode'] ?? 'auto', ['auto', 'cut', 'full'], 'auto'),
             'phraseFont' => $mot($v['phraseFont'] ?? 'script', ['script', 'display', 'sans'], 'script'),
-            'phraseColor' => $mot($v['phraseColor'] ?? 'auto', ['auto', 'ruby', 'noir', 'abricot', 'blanc', 'gris'], 'auto')];
+            'phraseColor' => $mot($v['phraseColor'] ?? 'auto', array_merge(['auto', 'gris'], $couleurs), 'auto')];
+        // La couleur choisie pour chaque texte du visuel (palette de la marque ; absente : celle du style).
+        $w['couleurs'] = [];
+        foreach (['eyebrow', 'title', 'price', 'unit', 'promo', 'promoSub', 'site'] as $k) {
+            $c = $mot(((array) ($v['couleurs'] ?? []))[$k] ?? null, array_merge(['gris'], $couleurs), null);
+            if ($c !== null) { $w['couleurs'][$k] = $c; }
+        }
         foreach (['showLogo', 'showEyebrow', 'showTitle', 'showPhrase', 'showPrice', 'showPromo', 'showSite'] as $k) { if (array_key_exists($k, $v)) { $w[$k] = (bool) $v[$k]; } }
         foreach (['eyebrow' => 80, 'phrase' => 160, 'unit' => 40, 'site' => 60] as $k => $n) { if (isset($v[$k])) { $w[$k] = $txt($v[$k], $n); } }
         $il = is_array($v['illus'] ?? null) ? $v['illus'] : null;
