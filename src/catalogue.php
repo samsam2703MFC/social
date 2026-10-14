@@ -143,6 +143,60 @@ function socWebshopPlanCache(): array
     return $plan;
 }
 
+/* --- offres exactes à la publication ------------------------------------------------------ */
+
+/** Une publication arrêtée parce qu'une donnée du post n'est plus exacte (prix, promotion). */
+final class SocBlocage extends RuntimeException {}
+
+/**
+ * Les données d'offre d'un post sont-elles encore exactes ? Rend les écarts (liste vide : tout
+ * est exact). Relu dans TFBuddy (caches 30 et 15 min) :
+ *  - le prix du produit choisi pour une boutique (catalogue.prix, catalogue.shop) face à son prix
+ *    de vente actuel ;
+ *  - la promotion du post (offre.id) : toujours active, dans ses dates au jour de publication, et
+ *    valable dans la boutique publiée (`$shopId` ; vide : toutes celles du post).
+ * Si TFBuddy ne répond pas, rien n'est affirmé : la liste reste vide et `$injoignable` le dit.
+ */
+function socVerifierOffres(array $post, ?string $shopId = null, ?bool &$injoignable = null): array
+{
+    $injoignable = false;
+    $ecarts = [];
+    $noms = []; foreach (socShops() as $sh) { $noms[(string) $sh['id']] = (string) $sh['name']; }
+    $cat = is_array($post['catalogue'] ?? null) ? $post['catalogue'] : null;
+    try {
+        if ($cat && ($cat['kind'] ?? '') === 'produit' && isset($cat['prix']) && is_numeric($cat['prix']) && !empty($cat['shop'])) {
+            $shop = (string) $cat['shop'];
+            $nav = socNavCatalogue($shop);
+            $p = null; foreach ((array) ($nav['produits'] ?? []) as $x) { if ((int) $x['id'] === (int) ($cat['id'] ?? 0)) { $p = $x; break; } }
+            $nom = (string) ($cat['name'] ?? 'le produit');
+            if ($p === null) { $ecarts[] = '« ' . $nom . ' » n’est plus en vente sur le webshop de ' . ($noms[$shop] ?? $shop); }
+            elseif ($p['prix'] === null || abs((float) $p['prix'] - (float) $cat['prix']) > 0.004) {
+                $ecarts[] = 'prix de « ' . $nom . ' » changé dans TFBuddy : ' . socEur($cat['prix']) . ' → ' . ($p['prix'] !== null ? socEur($p['prix']) : 'non renseigné');
+            }
+        }
+        $of = is_array($post['offre'] ?? null) ? $post['offre'] : null;
+        if ($of && !empty($of['id']) && ($of['genre'] ?? 'promotion') === 'promotion' && !Tfb::configured('admin')) { $injoignable = true; $of = null; }
+        if ($of && !empty($of['id']) && ($of['genre'] ?? 'promotion') === 'promotion') {
+            $x = null; foreach (socPromotions() as $pr) { if ((int) $pr['id'] === (int) $of['id']) { $x = $pr; break; } }
+            $nom = (string) ($of['nom'] ?? $of['libelle'] ?? 'la promotion');
+            $jour = (string) ($post['date'] ?? date('Y-m-d'));
+            if ($x === null) { $ecarts[] = 'la promotion « ' . $nom . ' » n’est plus active dans TFBuddy'; }
+            else {
+                if (!empty($x['au']) && $x['au'] < $jour) { $ecarts[] = 'la promotion « ' . $nom . ' » se termine le ' . date('d/m/Y', strtotime($x['au'])) . ', avant la publication'; }
+                if (!empty($x['du']) && $x['du'] > $jour) { $ecarts[] = 'la promotion « ' . $nom . ' » ne commence que le ' . date('d/m/Y', strtotime($x['du'])); }
+                $cibles = $shopId !== null && $shopId !== '' ? [$shopId] : array_map('strval', (array) ($post['shops'] ?? []));
+                if (empty($x['tous'])) {
+                    $hors = array_values(array_filter($cibles, static fn ($id) => ctype_digit($id) && !in_array($id, (array) $x['shops'], true)));
+                    if ($hors) { $ecarts[] = 'la promotion « ' . $nom . ' » n’est pas valable à ' . implode(', ', array_map(static fn ($id) => $noms[$id] ?? $id, $hors)); }
+                }
+            }
+        }
+    } catch (TfbError | HttpError $e) {
+        $injoignable = true;
+    }
+    return $ecarts;
+}
+
 /* --- textes sur le visuel ----------------------------------------------------------------- */
 
 /**
@@ -234,11 +288,13 @@ function socPromotions(bool $forcer = false): array
     $cache = socSetting('tfb_cache_promos');
     if (!$forcer && is_array($cache) && ($cache['le'] ?? 0) > time() - SOC_PROMO_CACHE && is_array($cache['items'] ?? null)) { return $cache['items']; }
     if (!Tfb::configured('admin')) { return []; }
-    $liste = [];
+    $liste = []; $lus = 0; $derniere = null;
     foreach (['bundles', 'buy-x-get-y', 'quantity', 'scheduled-product-discount'] as $t) {
-        try { foreach (Tfb::liste(Tfb::get('/admin/promotions/' . $t . '?limit=100')) as $x) { if (is_array($x) && !empty($x['id'])) { $liste[(int) $x['id']] = $x; } } }
-        catch (Throwable $e) { /* type indisponible */ }
+        try { foreach (Tfb::liste(Tfb::get('/admin/promotions/' . $t . '?limit=100')) as $x) { if (is_array($x) && !empty($x['id'])) { $liste[(int) $x['id']] = $x; } } $lus++; }
+        catch (Throwable $e) { $derniere = $e; /* type indisponible */ }
     }
+    // Aucune liste lue : TFBuddy ne répond pas (ne pas en conclure qu'il n'y a plus de promotion).
+    if ($lus === 0) { throw new TfbError('promotions illisibles' . ($derniere ? ' : ' . $derniere->getMessage() : '')); }
     $out = [];
     foreach ($liste as $id => $x) {
         if (strtoupper((string) ($x['status'] ?? '')) !== 'ACTIVE') { continue; }

@@ -104,7 +104,10 @@
                 <button onClick="{{ navUnsel }}" style="border:none;background:transparent;color:#666666;font-size:12px;text-decoration:underline;cursor:pointer;">Retirer</button>
               </div>
               <div style="display:flex;flex-direction:column;gap:6px;">
-                <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Promotions, bundles et formules liés</span>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                  <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Promotions, bundles et formules liés</span>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#444444;cursor:pointer;" title="« Utiliser » ajoute au texte la mention tirée de l'API : dates et boutiques de l'offre"><input type="checkbox" checked="{{ mentionAuto }}" onChange="{{ setMentionAuto }}" disabled="{{ locked }}" style="accent-color:#8D1D2C;margin:0;">Ajouter la mention (dates, boutiques)</label>
+                </div>
                 <sc-if value="{{ offresLoading }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Lecture des promotions…</span></sc-if>
                 <sc-if value="{{ noOffres }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A847C;">{{ noOffresLabel }}</span></sc-if>
                 <sc-for list="{{ offres }}" as="of" hint-placeholder-count="0">
@@ -649,6 +652,43 @@
             <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ templates }}" as="tp" hint-placeholder-count="4"><button onClick="{{ tp.use }}" style="border:none;background:#F4EFE8;color:#444444;border-radius:999px;padding:5px 10px;font-size:11px;cursor:pointer;">Modèle · {{ tp.name }}</button></sc-for></div>
             <span style="font-size:11px;color:{{ lenColor }};">{{ lenLabel }}</span>
           </div>
+          <!-- Assistant de rédaction (Claude) et relecture de marque -->
+          <div style="border:0.5px solid rgba(141,29,44,0.25);background:#FBF6F3;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span style="font-size:12px;font-weight:500;color:#8D1D2C;margin-right:4px;">✨ Assistant de rédaction</span>
+              <button onClick="{{ iaProposer }}" disabled="{{ iaOff }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;opacity:{{ iaOp }};">Proposer 3 textes</button>
+              <button onClick="{{ iaCourt }}" disabled="{{ iaRwOff }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ iaRwOp }};">Plus court</button>
+              <button onClick="{{ iaGourmand }}" disabled="{{ iaRwOff }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ iaRwOp }};">Plus gourmand</button>
+              <button onClick="{{ iaUrgent }}" disabled="{{ iaRwOff }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ iaRwOp }};">Plus urgent</button>
+              <sc-if value="{{ hasIaTags }}" hint-placeholder-val="{{ true }}"><button onClick="{{ iaAjouterTags }}" title="{{ iaTags }}" disabled="{{ locked }}" style="border:0.5px dashed rgba(34,34,34,0.3);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;"># Hashtags</button></sc-if>
+              <sc-if value="{{ iaBusy }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">{{ iaLabel }}</span></sc-if>
+            </div>
+            <sc-if value="{{ iaNonConfig }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8A4B00;">La rédaction assistée demande une clé API Anthropic : <a href="{{ iaParamHref }}" style="color:#8D1D2C;">Paramètres → Rédaction IA</a>.</span></sc-if>
+            <sc-if value="{{ iaDemo }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Démonstration : la rédaction assistée fonctionne en ligne seulement.</span></sc-if>
+            <sc-if value="{{ hasIaErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8D1D2C;">{{ iaErr }}</span></sc-if>
+            <sc-if value="{{ hasIaRes }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <sc-for list="{{ iaVariantes }}" as="iv" hint-placeholder-count="3">
+                  <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;">
+                    <span style="font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#8D1D2C;">{{ iv.angle }}</span>
+                    <sc-if value="{{ iv.hasFr }}" hint-placeholder-val="{{ true }}"><p style="margin:0;font-size:13px;line-height:1.5;white-space:pre-wrap;color:#222222;">{{ iv.fr }}</p></sc-if>
+                    <sc-if value="{{ iv.hasNl }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font-size:12px;line-height:1.5;white-space:pre-wrap;color:#555555;border-left:2px solid #F2C9A0;padding-left:8px;">{{ iv.nl }}</p></sc-if>
+                    <sc-if value="{{ iv.hasTitres }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Visuel : {{ iv.titres }}</span></sc-if>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                      <button onClick="{{ iv.useTexte }}" disabled="{{ locked }}" style="border:none;background:#232220;color:#FFFFFF;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;">Utiliser ce texte</button>
+                      <sc-if value="{{ iv.hasTitres }}" hint-placeholder-val="{{ false }}"><button onClick="{{ iv.useTitres }}" disabled="{{ locked }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;">Titres pour le visuel</button></sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+                <button onClick="{{ iaFermer }}" style="align-self:flex-start;border:none;background:transparent;color:#666666;font-size:11px;text-decoration:underline;cursor:pointer;">Fermer les propositions</button>
+              </div>
+            </sc-if>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+              <span style="font-size:11px;color:#666666;">Relecture (charte) :</span>
+              <sc-if value="{{ relectureOk }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:500;color:#1F8A60;">✓ conforme</span></sc-if>
+              <sc-for list="{{ relecture }}" as="rl" hint-placeholder-count="0"><span style="font-size:11px;border-radius:999px;padding:3px 9px;background:{{ rl.bg }};color:{{ rl.fg }};">{{ rl.txt }}</span></sc-for>
+            </div>
+          </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <label style="flex:2 1 240px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666666;"><span>Lien (optionnel) <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">link</span></span>
               <input type="text" value="{{ link }}" onChange="{{ setLink }}" disabled="{{ locked }}" placeholder="https://www.latelierby.be/…  ou  {webshop} / {webshop_produit}" style="font-size:14px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
@@ -1037,7 +1077,7 @@ class Component extends DCLogic {
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', linkText: { fr: '', nl: '' }, campaign: '',
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
-      txtSel: null, txtTplNom: '', etqLocal: null,
+      txtSel: null, txtTplNom: '', etqLocal: null, offre: null, mentionAuto: true, iaBusy: false, iaRes: null, iaErr: '', iaConsigne: '',
       nav: null, navKey: null, navLoading: false, navErr: '', navMode: 'cat', navG: null, navC: null, navGam: null, navQ: '', navSel: null, offres: null, offresKey: '', offresLoading: false, offreUsed: '',
       libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false };
     if (!SA) return base;
@@ -1051,6 +1091,7 @@ class Component extends DCLogic {
         scope: shops.length === SA.SHOPS.length ? 'all' : 'shop', status: p.status, spread: p.spread || 10, product: p.product || null, dark: !!p.dark });
       if (p.ch) base.ch = p.ch;
       if (p.catalogue) base.navSel = p.catalogue;
+      if (p.offre) base.offre = p.offre;
       if (p.montage) { base.mode = ['collage', 'frise'].includes(p.montage.kind) ? p.montage.kind : 'pano'; base.m = Object.assign(this.MONTAGE(), p.montage.m); base.photos = p.montage.photos || []; }
       else if (p.visual) { base.mode = 'studio'; base.v = Object.assign({}, v, p.visual.v, { nl: Object.assign({}, v.nl, (p.visual.v || {}).nl) }); base.photos = p.visual.photos || []; }
       else { base.mode = 'brut'; base.photos = (p.media || [{ src: p.img, kind: 'img', cut: true }]).filter(m => m.kind !== 'video').map(m => ({ src: m.src, cut: m.cut !== false, name: m.name || '' })); base.v.title = p.title; }
@@ -1154,6 +1195,33 @@ class Component extends DCLogic {
     this.setState({ v: Object.assign({}, v, { textes: ts.concat(t) }), txtSel: t.id, mode: 'studio' });
     // Le texte vient de l'API (nom de promotion, formule) : son champ s'ouvre, prêt à être corrigé.
     this.editerTexte();
+  }
+  /** La mention d'une promotion, tirée de l'API (dates, boutiques), en français ou en néerlandais. */
+  mentionOffre(x, L) {
+    const d = (iso) => iso ? String(iso).slice(8, 10) + '/' + String(iso).slice(5, 7) + '/' + String(iso).slice(0, 4) : '';
+    const et = (txt, mot) => String(txt || '').replace(/, ([^,]*)$/, ' ' + mot + ' $1');
+    // Seulement ce que l'API dit : les dates si elle en a, les boutiques (toutes, ou lesquelles).
+    if (L === 'nl') { const q = x.du && x.au ? 'van ' + d(x.du) + ' tot ' + d(x.au) : x.au ? 'tot ' + d(x.au) : x.du ? 'vanaf ' + d(x.du) : '', w = x.tous ? 'in alle winkels' : x.portee ? 'in ' + et(x.portee, 'en') : '';
+      return 'Aanbod geldig ' + [q, w].filter(Boolean).join(', ') + '.'; }
+    const q = x.du && x.au ? 'du ' + d(x.du) + ' au ' + d(x.au) : x.au ? 'jusqu’au ' + d(x.au) : x.du ? 'à partir du ' + d(x.du) : '', w = x.tous ? 'dans toutes les boutiques' : x.portee ? 'à ' + et(x.portee, 'et') : '';
+    return 'Offre valable ' + [q, w].filter(Boolean).join(', ') + '.';
+  }
+  /** L'assistant de rédaction (Claude, côté serveur) : 3 propositions, ou une réécriture selon `consigne`. */
+  async iaDemander(consigne) {
+    const SA = window.SA, s = this.state;
+    if (!SA.live) { this.setState({ iaErr: 'L’assistant de rédaction fonctionne en ligne seulement.' }); return; }
+    const t = this.targets(), sel = s.navSel, cat = s.product ? SA.CATALOGUE.find(x => x.id === s.product) : null;
+    const langues = [...new Set(t.flatMap(id => SA.langsOf(id)))];
+    const prix = sel && sel.kind === 'produit' && sel.prix != null ? SA.eur(sel.prix, 2) : '';
+    const b = { produit: sel && sel.kind === 'produit' ? sel.name : cat ? cat.name : '', produitNl: sel && sel.nameNl ? sel.nameNl : cat ? cat.nameNl || '' : '',
+      categorie: sel && sel.kind !== 'produit' && sel.kind !== 'gamme' ? sel.name : '', gamme: sel && sel.kind === 'gamme' ? sel.name : '', prix,
+      promo: s.offre ? s.offre.libelle || '' : (s.v.showPromo && s.v.promo ? s.v.promo + ' ' + (s.v.promoSub || '') : ''),
+      mention: s.offre && s.offre.genre === 'promotion' ? this.mentionOffre(s.offre, 'fr') : '', type: s.type,
+      boutiques: t.map(id => (SA.byId(SA.SHOPS, id) || { name: id }).name), langues: langues.length ? langues : ['fr'], lien: !!String(s.link || '').trim(),
+      consigne: consigne || '', texte: consigne ? (s.text || s.textNl || '') : '' };
+    this.setState({ iaBusy: true, iaErr: '', iaConsigne: consigne || '' });
+    try { const r = await SA.api('POST', '/redaction/proposer', b); this.setState({ iaBusy: false, iaRes: r }); }
+    catch (e) { this.setState({ iaBusy: false, iaErr: e.message || String(e) }); }
   }
   /** Efface un texte posé sur le visuel. */
   effacerTexte(id) {
@@ -1333,6 +1401,13 @@ class Component extends DCLogic {
     const errs = this.validate(status !== 'Brouillon', status);
     if (errs.length) { this.setState({ errors: errs }); return; }
     this.setState({ saving: true, errors: [] });
+    // Avant de publier ou programmer : le prix et la promotion du post sont-ils encore ceux de TFBuddy ?
+    if (SA.live && (status === 'Publié' || status === 'Programmé') && ((s.navSel && s.navSel.kind === 'produit' && s.navSel.prix != null) || (s.offre && s.offre.id))) {
+      try {
+        const v = await SA.api('POST', '/catalogue/verifier', { catalogue: s.navSel, offre: s.offre, shops: this.targets(), date: s.when === 'now' ? SA.TODAY : s.date });
+        if (v && v.ecarts && v.ecarts.length) { this.setState({ saving: false, errors: v.ecarts.map(e => 'Offre à revoir : ' + e + '.').concat(['Rien n’a été publié : rechoisissez le produit ou l’offre pour reprendre les données actuelles de TFBuddy.']) }); return; }
+      } catch (e) { console.error(e); }
+    }
     const t = this.targets(), cat = s.product ? SA.CATALOGUE.find(x => x.id === s.product) : null;
     const rendu = await this.renderMedia();
     if (!rendu) return;
@@ -1343,7 +1418,7 @@ class Component extends DCLogic {
       visual: s.mode === 'studio' ? { v: s.v, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
       frise: friseTiles ? { tiles: friseTiles } : null,
       montage: this.isMontage() ? { kind: s.mode, m: s.m, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
-      shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, linkText: (s.linkText.fr || s.linkText.nl) ? s.linkText : null, spread: s.spread, product: s.product, catalogue: s.navSel || null };
+      shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, linkText: (s.linkText.fr || s.linkText.nl) ? s.linkText : null, offre: s.offre || null, spread: s.spread, product: s.product, catalogue: s.navSel || null };
     if (s.dark) { post.dark = true; post.fb = false; post.ig = false; if (!s.id) { post.date = SA.TODAY; post.time = nowT; } }
     if (status === 'Publié') {
       const ko = t.filter(id => s.ch[id] && s.ch[id].ig && (SA.byId(SA.state().shops, id) || SA.byId(SA.SHOPS, id) || {}).igs !== 'connected').map(id => ({ shop: id, channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }));
@@ -1481,18 +1556,24 @@ class Component extends DCLogic {
     const offresQ = sel ? { shop: prixShop, [sel.kind]: sel.id } : null, offresKey = sel ? sel.kind + ':' + sel.id + '@' + prixShop : '';
     if (sel && s.offresKey !== offresKey && !this._offWait) { this._offWait = true; setTimeout(() => { this._offWait = false; if (this.state.offresKey !== offresKey && this.state.navSel) this.loadOffres(offresKey, offresQ); }, 0); }
     const O = s.offres || { promotions: [], formules: [] };
-    const usePromo = (key, court, sous, libelle) => { if (locked) return;
-      this.setState({ offreUsed: key, v: Object.assign({}, v, { promo: court || sous, promoSub: sous, showPromo: true }),
-        text: s.text.includes(libelle) ? s.text : (s.text.trim() ? s.text.trim() + '\n' : '') + libelle }); };
+    const usePromo = (key, court, sous, libelle, offre) => { if (locked) return;
+      // Le libellé de l'offre dans le texte, suivi de sa mention (dates, boutiques) tirée de l'API.
+      // Avant la ligne {lien} s'il y en a une (le lien reste en dernier), sinon à la fin.
+      const ajoute = (txt, bloc) => { const t = String(txt || ''); if (!bloc || t.includes(bloc)) return t;
+        const i = t.search(/\n\{lien\}\s*$/); return i >= 0 ? t.slice(0, i) + '\n' + bloc + t.slice(i) : (t.trim() ? t.trim() + '\n' : '') + bloc; };
+      const promo = offre && offre.genre === 'promotion', avecMention = promo && s.mentionAuto !== false;
+      const mFr = avecMention ? this.mentionOffre(offre, 'fr') : '', mNl = avecMention ? this.mentionOffre(offre, 'nl') : '';
+      this.setState({ offreUsed: key, offre: offre || null, v: Object.assign({}, v, { promo: court || sous, promoSub: sous, showPromo: true }),
+        text: ajoute(ajoute(s.text, libelle), mFr), textNl: s.textNl.trim() && mNl ? ajoute(s.textNl, mNl) : s.textNl }); };
     const TAG = { bundle: ['Bundle', '#232220', '#F2C9A0'], offre: ['Offre', '#8D1D2C', '#FFFFFF'], remise: ['Remise', '#D97B29', '#FFFFFF'], quantite: ['Quantité', '#8D1D2C', '#FFFFFF'], formule: ['Formule', '#E2F0E8', '#0F6B4A'] };
     const offres = (O.promotions || []).map(x => { const k = 'p' + x.id, used = s.offreUsed === k, [tag, tb, tf] = TAG[x.type] || TAG.offre;
       return { tag, tagBg: tb, tagFg: tf, libelle: x.libelle, op: x.ici ? 1 : 0.6,
         note: (x.ici ? '' : 'Pas dans ' + (shopNom || 'la boutique choisie') + ' · ') + x.portee + (x.au ? ' · jusqu\u2019au ' + SA.dShort(x.au) : ''), noteFg: x.ici ? '#666666' : '#8A4B00',
-        btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, x.court, x.nom, x.libelle),
+        btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, x.court, x.nom, x.libelle, { genre: 'promotion', id: x.id, type: x.type, nom: x.nom, libelle: x.libelle, du: x.du, au: x.au, tous: !!x.tous, shops: x.shops || [], portee: x.portee }),
         poser: () => !locked && this.poserTexte(x.court || x.nom, x.court ? x.nom : '', x.libelle) }; })
       .concat((O.formules || []).map((f, i) => { const k = 'f' + i, used = s.offreUsed === k, [tag, tb, tf] = TAG.formule;
         return { tag, tagBg: tb, tagFg: tf, libelle: f.libelle, op: 1, note: (f.prix != null ? eur(f.prix) + (shopNom ? ' à ' + shopNom : '') : 'prix selon la boutique') + (f.choix && f.choix.length ? ' · au choix : ' + f.choix.join(', ') : ''), noteFg: '#666666',
-          btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, f.court, 'Formule ' + f.nom, f.libelle),
+          btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, f.court, 'Formule ' + f.nom, f.libelle, { genre: 'formule', nom: f.nom, libelle: f.libelle, prix: f.prix, shop: prixShop || null }),
           poser: () => !locked && this.poserTexte(f.prix != null ? eur(f.prix) : f.court || f.nom, 'Formule ' + f.nom, f.libelle) }; }));
     const KIND = { produit: 'Produit', categorie: 'Sous-catégorie', groupe: 'Catégorie', gamme: 'Gamme' };
     const selView = sel ? { kind: KIND[sel.kind] || '', name: sel.name, image: sel.image || '', hasImg: !!sel.image,
@@ -1510,7 +1591,7 @@ class Component extends DCLogic {
       navCrumbs: crumbs, hasNavPick: !!pick && !locked, navPickLabel: pick ? pick.label : '', navPick: () => pick && pick.fn(),
       navLoading: s.navLoading && !nav, hasNavErr: !!s.navErr, navErr: s.navErr, navTiles: tiles,
       hasNavSel: !!sel, navSel: selView, navUnsel: () => !locked && this.setState({ navSel: null }),
-      offresLoading: s.offresLoading, offres, noOffres: !!sel && !s.offresLoading && !offres.length,
+      offresLoading: s.offresLoading, offres, mentionAuto: s.mentionAuto !== false, setMentionAuto: (e) => this.setState({ mentionAuto: e.target.checked }), noOffres: !!sel && !s.offresLoading && !offres.length,
       noOffresLabel: O.erreur ? 'Promotions illisibles : ' + O.erreur : 'Aucune promotion, aucun bundle ni formule lié' + (shopNom ? ' à ' + shopNom : '') + '.',
     };
     // photos
@@ -1749,6 +1830,33 @@ class Component extends DCLogic {
       shopRows, igUnique, igUniqueNote: 'Instagram : un seul compte pour tout le réseau (' + igHandle + '). Cocher Instagram pour une ou plusieurs boutiques publie le post une seule fois sur ce compte ; {ville} y devient la liste des boutiques visées.',
       // texte
       vars: [['{lien}', 'Le lien du post, précédé de son texte (« Commandez ici 👉 https://… »)'], ['{webshop}', 'Lien du webshop de la boutique'], ['{webshop_produit}', 'Lien du produit dans le webshop de la boutique'], ['{ville}', 'Nom de la boutique'], ['{adresse}', 'Adresse de la boutique'], ['{horaires}', "Horaires d'ouverture"], ['{prix}', 'Prix du produit choisi'], ['{produit_du_jour}', 'Produit du jour (catalogue)']].map(([code, tip]) => ({ code, tip, insert: () => !locked && this.insertVar(code) })),
+      // Assistant de rédaction (Claude, côté serveur) et relecture selon la charte de la marque.
+      ...(() => {
+        const ia = SA.ia(), R = s.iaRes, ch = SA.charte(), sel = s.navSel;
+        const LBL = { court: 'plus courte', gourmand: 'plus gourmande', urgent: 'plus urgente' };
+        const prixV = sel && sel.kind === 'produit' && sel.prix != null ? sel.prix : null;
+        const rel = (txt, L) => SA.relire(txt, { prix: prixV, lien: !!String(s.link || '').trim(), langue: L });
+        const remarques = rel(s.text, 'fr').map(r => Object.assign({ L: 'FR' }, r)).concat(needed.includes('nl') ? rel(s.textNl, 'nl').map(r => Object.assign({ L: 'NL' }, r)) : []);
+        const COL = { erreur: ['#FDECEC', '#8D1D2C'], attention: ['#FFF4E5', '#8A4B00'], conseil: ['#F4EFE8', '#444444'] };
+        const tags = (R && R.hashtags && R.hashtags.length ? R.hashtags : ch.hashtags || []).concat(ch.hashtagVille ? ['{hashtag_ville}'] : []);
+        const off = locked || s.iaBusy || !ia.configure || !SA.live, vide = !String(s.text || s.textNl || '').trim();
+        return { iaBusy: s.iaBusy, iaLabel: s.iaBusy ? (s.iaConsigne ? 'Réécriture ' + LBL[s.iaConsigne] + '…' : 'Rédaction de 3 propositions…') : '',
+          iaNonConfig: SA.live && !ia.configure, iaDemo: !SA.live, iaOff: off, iaOp: off ? 0.5 : 1, iaRwOff: off || vide, iaRwOp: off || vide ? 0.45 : 1,
+          iaProposer: () => !off && this.iaDemander(''), iaCourt: () => !(off || vide) && this.iaDemander('court'),
+          iaGourmand: () => !(off || vide) && this.iaDemander('gourmand'), iaUrgent: () => !(off || vide) && this.iaDemander('urgent'),
+          hasIaErr: !!s.iaErr, iaErr: s.iaErr, iaParamHref: SA.href('set', 'tab=ia'),
+          hasIaRes: !!(R && R.variantes && R.variantes.length), iaFermer: () => this.setState({ iaRes: null }),
+          iaVariantes: (R && R.variantes || []).map((x, i) => ({ angle: x.angle || 'Proposition ' + (i + 1), fr: x.fr, nl: x.nl, hasFr: !!x.fr, hasNl: !!x.nl,
+            titres: [x.surtitre, x.titre, x.phrase].filter(Boolean).join(' · '), hasTitres: !!(x.titre || x.surtitre || x.phrase),
+            useTexte: () => { if (locked) return; const st = {}; if (x.fr) st.text = x.fr; if (x.nl) st.textNl = x.nl; this._autoFr = null; this._autoNl = null; this.setState(st); this.toast('Texte repris : relisez-le avant de publier.'); },
+            useTitres: () => { if (!locked) this.V({ title: x.titre || v.title, eyebrow: x.surtitre || v.eyebrow, phrase: x.phrase || v.phrase, showTitle: v.showTitle || !!x.titre, showPhrase: v.showPhrase || !!x.phrase,
+              nl: Object.assign({}, v.nl, x.titreNl ? { title: x.titreNl } : {}) }); } })),
+          iaTags: tags.join(' '), hasIaTags: tags.length > 0,
+          iaAjouterTags: () => { if (locked) return; const k = isNlEd ? 'textNl' : 'text', cur = String(s[k] || ''), manque = tags.filter(h => !cur.includes(h));
+            if (manque.length) this.setState({ [k]: (cur.trim() ? cur.replace(/\s+$/, '') + '\n\n' : '') + manque.join(' ') }); },
+          relecture: remarques.map(r => ({ txt: r.L + ' · ' + r.msg, bg: COL[r.niveau][0], fg: COL[r.niveau][1] })), hasRelecture: remarques.length > 0,
+          relectureOk: !remarques.length && !vide };
+      })(),
       taRef: (el) => { this._ta = el; }, text: isNlEd ? s.textNl : s.text, setText: (e) => this.setState({ [isNlEd ? 'textNl' : 'text']: e.target.value }),
       templates: (st.templates || SA.TEMPLATES).map(tp => ({ name: tp.name, use: () => !locked && this.setState({ text: tp.text, textNl: tp.textNl || s.textNl, type: tp.type }) })),
       langTabs: ['fr', 'nl'].map(L => { const on = s.edLang === L, req = needed.includes(L), done = L === 'nl' ? !!s.textNl.trim() : !!s.text.trim();

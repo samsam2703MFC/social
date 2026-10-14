@@ -312,6 +312,24 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   (0 à 100 %, 60 % = le dessin d'origine ; `visual.v.fondu`, variable CSS `--fade`).
   Un texte posé s'efface par son × (sur l'aperçu, au survol ou sélectionné, ou sur sa
   pastille dans la liste) ; le × n'est jamais dans l'image exportée.
+- **Assistant de rédaction (Claude)** — dans « Texte du post » : « Proposer 3 textes » (FR/NL selon
+  les boutiques), « Plus court », « Plus gourmand », « Plus urgent », titres pour le visuel,
+  hashtags (marque + thématiques + `{hashtag_ville}`). Serveur seulement (`src/redaction.php`,
+  `POST /redaction/proposer`) : clé `anthropic_api_key` (secrète, Paramètres → Rédaction IA &
+  charte), modèle = réglage `ia_modele` ou le plus récent de la famille Opus accessible à la clé
+  (Models API, relu chaque jour), sortie JSON imposée par schéma, effort moyen, repli serveur
+  (`fallbacks: default`). Le prompt ne donne que les vraies données de l'écran et interdit d'en
+  inventer. Pas de SDK : le module n'a pas de dépendance (curl, comme Meta et TFBuddy).
+- **Charte éditoriale et relecture** — réglage `charte_editoriale` (ton, vouvoiement, emojis au
+  plus, mots à éviter, hashtags, accroche, signature) suivi par l'assistant et vérifié en direct
+  sous le texte (emojis, mots à éviter, tutoiement, accroche trop longue, points d'exclamation,
+  capitales, prix du texte ≠ prix de vente, place du lien).
+- **Offres exactes** — « Utiliser » ajoute au texte le libellé de l'offre et sa mention tirée de
+  l'API (« Offre valable du … au …, à Halle et Wavre. », NL aussi) ; le post garde l'offre
+  (`offre`). Avant de publier et au moment de publier (file), `socVerifierOffres` relit TFBuddy :
+  prix de vente du produit choisi changé, promotion plus active, hors de ses dates ou pas valable
+  dans la boutique → publication arrêtée (« Publication bloquée, offre à revoir : … »). TFBuddy
+  injoignable : rien n'est affirmé, la publication suit son cours.
 - **Logo du visuel** — selon le style, ou au choix : Foncé (`img/logo.png`, apostrophe dorée),
   Clair (`img/logo-white.png`), ou recoloré dans la palette (noir, ruby, abricot, crème : masque
   CSS sur le logo blanc ; `DS_LOGOS`). Gardé avec le post (`visual.v.logo`).

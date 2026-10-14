@@ -70,3 +70,4 @@ Relivraison : textes du visuel modifiables (double-clic sur l'aperçu) — 2026-
 Relivraison : texte de l'offre éditable pour les badges ; 4 styles plein cadre — 2026-10-14T15:08:57Z
 Relivraison : × pour effacer un texte du visuel ; fondu réglable en plein cadre — 2026-10-14T15:30:49Z
 Relivraison : choix du logo du visuel — 2026-10-14T15:37:24Z
+Relivraison : assistant de rédaction (Claude), charte et relecture, offres exactes — 2026-10-14T15:58:07Z

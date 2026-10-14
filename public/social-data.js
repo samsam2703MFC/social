@@ -350,7 +350,8 @@
       .replace(/\{prix\}/g, product && product.price ? product.price : '{prix}').replace(/\{produit_du_jour\}/g, product && product.name ? product.name : 'Brioche croustillante')
       .replace(/\{webshop_(produit|categorie|groupe):(\d+)\}/g, (m, k, id) => k === 'produit' ? webshopUrl(s ? s.id : '', { apiId: +id, kind: 'produit' }) : k === 'categorie' ? webshopUrl(s ? s.id : '', null, +id) : webshopUrl(s ? s.id : '', null, 0, +id))
       .replace(/\{webshop_produit\}/g, webshopUrl(s ? s.id : '', product)).replace(/\{webshop_categorie\}/g, webshopUrl(s ? s.id : '', null, product && product.categoryId))
-      .replace(/\{webshop\}/g, webshopUrl(s ? s.id : ''));
+      .replace(/\{webshop\}/g, webshopUrl(s ? s.id : ''))
+      .replace(/\{hashtag_ville\}/g, s ? '#' + String(s.name || '').replace(/[^\p{L}\p{N}]/gu, '') : '{hashtag_ville}');
   }
   /**
    * Le texte qui introduit le lien d'un post (« Commandez ici 👉 ») : celui du post, sinon le réglage
@@ -363,6 +364,35 @@
     if (p) return p;
     const d = typeof cache !== 'undefined' && cache && cache.params ? cache.params.lien_texte : null;
     return (d && String(d[L] || '').trim()) || LIEN_DEF[L] || LIEN_DEF.fr;
+  }
+  /** La charte éditoriale de la marque (Paramètres → Rédaction IA) ; en démonstration, celle par défaut. */
+  const CHARTE_DEF = { ton: 'Chaleureux, gourmand, simple et artisanal.', vouvoiement: true, emojisMax: 2, motsInterdits: [], hashtags: ['#latelierby'], hashtagVille: true, longueur: 125, signature: '' };
+  const charte = () => Object.assign({}, CHARTE_DEF, (LIVE && LIVE.charte) || {});
+  /**
+   * Relecture d'un texte selon la charte : rend [{niveau: 'erreur' | 'attention' | 'conseil', msg}].
+   * `ctx` : {prix (nombre, prix de vente connu), lien (bool), langue}.
+   */
+  function relire(texte, ctx) {
+    const c = charte(), t = String(texte || ''), out = [], L = (ctx && ctx.langue) || 'fr';
+    if (!t.trim()) return out;
+    const nn = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const emojis = (t.match(/\p{Extended_Pictographic}/gu) || []).length;
+    if (emojis > c.emojisMax) out.push({ niveau: 'attention', msg: emojis + ' emojis (la charte en permet ' + c.emojisMax + ')' });
+    (c.motsInterdits || []).forEach(m => { if (m && new RegExp('(^|[^\\p{L}])' + nn(m).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^\\p{L}])', 'u').test(nn(t))) out.push({ niveau: 'erreur', msg: '« ' + m + ' » : mot à éviter (charte)' }); });
+    if (L === 'fr' && c.vouvoiement && /(^|[^\p{L}])(tu|toi|ton|ta|tes|te|t’|t')([^\p{L}]|$)/iu.test(t.replace(/\{[^}]*\}/g, ''))) out.push({ niveau: 'attention', msg: 'tutoiement : la charte vouvoie' });
+    if (L === 'nl' && c.vouvoiement && /(^|[^\p{L}])(je|jij|jou|jouw)([^\p{L}]|$)/iu.test(t)) out.push({ niveau: 'conseil', msg: 'néerlandais : « je/jij » — la charte vouvoie (« u »)' });
+    const premiere = (t.split(/(?<=[.!?…])\s|\n/)[0] || '').trim();
+    if (premiere.length > c.longueur) out.push({ niveau: 'conseil', msg: 'accroche de ' + premiere.length + ' caractères : seuls ~' + c.longueur + ' s’affichent avant « Voir plus »' });
+    if ((t.match(/!/g) || []).length > 2 || /!!|\?\?/.test(t)) out.push({ niveau: 'conseil', msg: 'trop de points d’exclamation' });
+    const cris = (t.replace(/\{[^}]*\}/g, '').match(/\b[\p{Lu}]{5,}\b/gu) || []).filter(w => !/^(CLICK|COLLECT)$/.test(w));
+    if (cris.length) out.push({ niveau: 'conseil', msg: 'mots en capitales (' + cris.slice(0, 3).join(', ') + ') : à réserver au visuel' });
+    if (ctx && ctx.prix != null) {
+      const vus = (t.match(/(\d+[.,]\d{2})\s?€/g) || []).map(x => +x.replace(/[^\d,.]/g, '').replace(',', '.'));
+      const faux = vus.filter(x => Math.abs(x - ctx.prix) > 0.004);
+      if (faux.length && !vus.some(x => Math.abs(x - ctx.prix) <= 0.004)) out.push({ niveau: 'erreur', msg: 'prix ' + faux.map(x => x.toFixed(2).replace('.', ',') + ' €').join(', ') + ' dans le texte ≠ prix de vente ' + ctx.prix.toFixed(2).replace('.', ',') + ' €' });
+    }
+    if (ctx && ctx.lien && !/\{lien\}/.test(t)) out.push({ niveau: 'conseil', msg: 'le lien est ajouté en fin de post (placez {lien} pour le mettre ailleurs)' });
+    return out;
   }
   /** Place {lien} dans un texte (« Commandez ici 👉 https://… ») ; sans lien (ou sur Instagram), la variable disparaît. */
   function placerLien(txt, lien) {
@@ -763,7 +793,7 @@
   else window.addEventListener('focus', () => { refresh(); });
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
-    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, suivi, avatar,
+    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, charte, relire, ia: () => (LIVE && LIVE.ia) || { configure: false, modele: '' }, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.
     ctype, rattacher, webshopUrl, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,

@@ -89,6 +89,8 @@ function socFill(string $text, array $shop, ?array $product, string $lang): stri
         '{prix}' => (string) ($product['price'] ?? ''), '{produit_du_jour}' => $pname,
         '{webshop_produit}' => socWebshopUrl($sid, $product), '{webshop_categorie}' => socWebshopUrl($sid, null, (int) ($product['categoryId'] ?? 0)),
         '{webshop}' => socWebshopUrl($sid),
+        // Le hashtag de la boutique (#Halle, #SaintGilles) : son nom sans espace ni ponctuation.
+        '{hashtag_ville}' => '#' . preg_replace('/[^\p{L}\p{N}]/u', '', (string) $shop['name']),
     ]);
 }
 
@@ -322,9 +324,14 @@ function socRunQueue(?string $postId = null, int $max = 60): array
             if ($post === null) { throw new MetaError('post supprimé', 0); }
             if ($shop === null) { throw new MetaError('boutique inconnue ou fermée', 0); }
             if (!Meta::configured()) { throw new MetaError('token Meta absent : à saisir dans Paramètres → API Meta → Clés d’accès Meta', 190); }
+            // Les offres du post encore exactes (prix, promotion) dans TFBuddy, sinon la publication s'arrête.
+            if ((string) $r['shop_id'] !== 'marque' && ($ecarts = socVerifierOffres($post, (string) $r['shop_id']))) { throw new SocBlocage(implode(' ; ', $ecarts)); }
             $msg = socMessage($post, $shop, (string) $r['canal']);
             $mid = $r['canal'] === 'ig' ? socPublishIg($post, $shop, $msg) : socPublishFb($post, $shop, $msg);
             Db::exec("UPDATE social_publication SET statut = 'publie', meta_id = ?, erreur = NULL, code_erreur = NULL, maj_le = ? WHERE id = ?", [$mid, date('Y-m-d H:i:s'), $r['id']]);
+        } catch (SocBlocage $e) {
+            Db::exec("UPDATE social_publication SET statut = 'echec', erreur = ?, code_erreur = 0, maj_le = ? WHERE id = ?",
+                [mb_substr('Publication bloquée, offre à revoir : ' . $e->getMessage(), 0, 500), date('Y-m-d H:i:s'), $r['id']]);
         } catch (MetaError $e) {
             Db::exec("UPDATE social_publication SET statut = 'echec', erreur = ?, code_erreur = ?, maj_le = ? WHERE id = ?",
                 [mb_substr(socMotif($e, (string) $r['canal']), 0, 500), $e->metaCode, date('Y-m-d H:i:s'), $r['id']]);

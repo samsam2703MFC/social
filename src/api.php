@@ -28,6 +28,7 @@ require_once __DIR__ . '/calendriers.php';
 require_once __DIR__ . '/suivi.php';
 require_once __DIR__ . '/operations.php';
 require_once __DIR__ . '/catalogue.php';
+require_once __DIR__ . '/redaction.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -71,7 +72,7 @@ function socRoute(string $method, string $path): array
     }
     if ($method === 'POST' && $path === '/parametres/cles') {
         // Les clés Meta, écrites en base (social_parametre). Un champ vide n'efface rien.
-        $map = ['systemToken' => 'meta_system_token', 'appSecret' => 'meta_app_secret', 'verifyToken' => 'meta_verify_token'];
+        $map = ['systemToken' => 'meta_system_token', 'appSecret' => 'meta_app_secret', 'verifyToken' => 'meta_verify_token', 'anthropicKey' => 'anthropic_api_key'];
         if (preg_match('/^\d{5,20}$/', trim((string) (body()['appId'] ?? '')))) { socSettingPut('meta_app_id', trim((string) body()['appId']), false); }
         $faits = [];
         foreach ($map as $k => $cle) {
@@ -87,11 +88,11 @@ function socRoute(string $method, string $path): array
     }
     if ($method === 'POST' && $path === '/parametres') {
         // Les réglages non secrets modifiables depuis l'écran.
-        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'marketing_api' => 'string', 'webshop_url' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool', 'lien_texte' => 'array', 'etiquettes_modeles' => 'etiquettes'];
+        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'marketing_api' => 'string', 'webshop_url' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool', 'lien_texte' => 'array', 'etiquettes_modeles' => 'etiquettes', 'charte_editoriale' => 'charte', 'ia_modele' => 'string'];
         $faits = [];
         foreach (body() as $k => $v) {
             if (!isset($permis[$k])) { continue; }
-            $v = match ($permis[$k]) { 'float' => (float) $v, 'array' => (array) $v, 'bool' => (bool) $v, 'etiquettes' => socEtiquettesModeles($v), default => trim((string) $v) };
+            $v = match ($permis[$k]) { 'float' => (float) $v, 'array' => (array) $v, 'bool' => (bool) $v, 'etiquettes' => socEtiquettesModeles($v), 'charte' => socCharteNettoyer($v), default => trim((string) $v) };
             socSettingPut((string) $k, $v, false); $faits[] = $k;
         }
         if ($faits) { socLog(socUser(), 'Paramètres', 'Modifiés : ' . implode(', ', $faits)); }
@@ -122,6 +123,16 @@ function socRoute(string $method, string $path): array
     // et les promotions, bundles et formules liés à la sélection (src/catalogue.php).
     if ($method === 'GET' && $path === '/catalogue/nav') { return [200, socNavCatalogue((string) ($_GET['shop'] ?? ''), !empty($_GET['forcer']))]; }
     if ($method === 'GET' && $path === '/catalogue/offres') { return [200, socNavOffres($_GET)]; }
+    if ($method === 'POST' && $path === '/catalogue/verifier') {
+        // Avant de publier : le prix et la promotion du post sont-ils encore ceux de TFBuddy ?
+        $ecarts = socVerifierOffres((array) body(), null, $injoignable);
+        return [200, ['ecarts' => $ecarts, 'injoignable' => $injoignable]];
+    }
+    if ($method === 'POST' && $path === '/redaction/proposer') { return [200, socRedactionProposer(body())]; }
+    if ($method === 'POST' && $path === '/redaction/tester') {
+        try { $m = SocIa::modele(true); } catch (SocIaError $e) { throw new HttpError($e->http === 401 || $e->http === 403 ? 409 : ($e->http ?: 502), $e->getMessage()); }
+        return [200, ['ok' => true, 'modele' => $m] + socIaStatut()];
+    }
     if ($method === 'GET' && $path === '/media/webshop') { return [200, socMediaWebshop((string) ($_GET['u'] ?? ''))]; }
     // Supprimer un post : du module (et, avec meta, de Facebook / Instagram), ou une publication lue chez Meta.
     if ($method === 'POST' && $path === '/posts/supprimer') {

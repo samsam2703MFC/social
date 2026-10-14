@@ -33,7 +33,7 @@
     </sc-for>
     <!-- Paramètres : tout le paramétrage Meta (et du module), chaque entrée ouvre son onglet ou sa section -->
     <div style="display:flex;flex-direction:column;gap:1px;margin:2px 0 4px 30px;border-left:1px solid rgba(34,34,34,0.10);padding-left:6px;">
-      <sc-for list="{{ setItems }}" as="si" hint-placeholder-count="11">
+      <sc-for list="{{ setItems }}" as="si" hint-placeholder-count="12">
         <a href="{{ si.href }}" style="display:block;padding:5px 8px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:{{ si.w }};color:{{ si.fg }};background:{{ si.bg }};" style-hover="background:#F4EFE8;">{{ si.label }}</a>
       </sc-for>
     </div>
@@ -111,7 +111,7 @@ class Component extends DCLogic {
       navDisplay: SA && SA.embed ? 'none' : 'flex',
       // Sous « Paramètres » : chaque réglage (Meta en tête), ouvert sur son onglet ou sa section (?tab=…&section=…).
       setItems: [['conn', '', 'Connexions Meta'], ['api', 'cles', 'Clés d’accès & token'], ['api', 'ids', 'Identifiants par boutique'], ['api', 'pf', 'Portefeuille Business Manager'],
-        ['api', 'version', 'Version & permissions'], ['api', 'dsa', 'Transparence UE (DSA)'], ['tpl', '', 'Modèles de posts'], ['grp', '', 'Groupes de boutiques'],
+        ['api', 'version', 'Version & permissions'], ['api', 'dsa', 'Transparence UE (DSA)'], ['ia', '', 'Rédaction IA & charte'], ['tpl', '', 'Modèles de posts'], ['grp', '', 'Groupes de boutiques'],
         ['rights', '', 'Droits'], ['log', '', 'Journal d’activité'], ['tfb', '', 'API TFBuddy']]
         .filter(([tab]) => tab !== 'tfb' || (SA && SA.live))
         .map(([tab, sec, label]) => {

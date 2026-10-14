@@ -278,6 +278,35 @@
       </section>
     </sc-if>
 
+    <!-- RÉDACTION IA & CHARTE -->
+    <sc-if value="{{ isIa }}" hint-placeholder-val="{{ false }}">
+      <section id="sec-ia" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+        <span style="font-size:13px;font-weight:500;">Clé API Anthropic (rédaction assistée par Claude)</span>
+        <span style="font-size:12px;color:#666666;line-height:1.5;">La clé reste sur le serveur (jamais dans l’écran). Elle sert à « Proposer 3 textes », aux réécritures et aux titres du visuel dans Créer un post. Modèle : le plus récent de la famille Opus accessible à la clé, sauf réglage ci-dessous. {{ iaEtat }}</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input type="password" autocomplete="off" value="{{ iaKey }}" onChange="{{ setIaKey }}" placeholder="{{ iaKeyPh }}" style="flex:1 1 280px;font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;">
+          <button onClick="{{ saveIaKey }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Enregistrer la clé</button>
+          <button onClick="{{ testIa }}" disabled="{{ iaTestDis }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">{{ iaTestLabel }}</button>
+        </div>
+        <label style="font-size:12px;color:#444444;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">Modèle imposé (facultatif) <input value="{{ iaModele }}" onChange="{{ setIaModele }}" placeholder="vide : le plus récent de la famille Opus" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 8px;width:300px;"></label>
+      </section>
+      <section id="sec-charte" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+        <span style="font-size:13px;font-weight:500;">Charte éditoriale de la marque</span>
+        <span style="font-size:12px;color:#666666;line-height:1.5;">Suivie par l’assistant de rédaction et vérifiée par la relecture de Créer un post (emojis, mots à éviter, vouvoiement, longueur de l’accroche, prix du texte face au prix de vente).</span>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Ton de la marque<textarea rows="3" value="{{ chTon }}" onChange="{{ setChTon }}" style="font-size:13px;line-height:1.45;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;resize:vertical;font-family:inherit;"></textarea></label>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px;color:#444444;">
+          <label style="display:flex;gap:6px;align-items:center;"><input type="checkbox" checked="{{ chVous }}" onChange="{{ setChVous }}" style="accent-color:#8D1D2C;">Vouvoiement</label>
+          <label style="display:flex;gap:6px;align-items:center;">Emojis au plus <input type="number" min="0" max="10" value="{{ chEmojis }}" onChange="{{ setChEmojis }}" style="width:56px;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 6px;"></label>
+          <label style="display:flex;gap:6px;align-items:center;">Accroche (caractères) <input type="number" min="60" max="400" value="{{ chLong }}" onChange="{{ setChLong }}" style="width:64px;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 6px;"></label>
+          <label style="display:flex;gap:6px;align-items:center;"><input type="checkbox" checked="{{ chTagVille }}" onChange="{{ setChTagVille }}" style="accent-color:#8D1D2C;">Hashtag de la boutique (#Halle…)</label>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Mots et expressions à éviter (séparés par des virgules)<input value="{{ chMots }}" onChange="{{ setChMots }}" placeholder="ex. pas cher, discount, meilleur de Belgique" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 10px;"></label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Hashtags de la marque<input value="{{ chTags }}" onChange="{{ setChTags }}" placeholder="#latelierby" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 10px;"></label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Signature (facultatif, en fin de texte)<input value="{{ chSign }}" onChange="{{ setChSign }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 10px;"></label>
+        <div><button onClick="{{ saveCharte }}" style="background:#232220;color:#FFFFFF;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Enregistrer la charte</button></div>
+      </section>
+    </sc-if>
+
     <sc-if value="{{ isTfb }}" hint-placeholder-val="{{ false }}">
       <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
         <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Compte de l'API TFBuddy</span><span style="font-size:11px;color:#666666;">Source principale des données du module · stocké en base (social_parametre) · swagger : <span style="font-family:ui-monospace,monospace;">{{ tfbSwagger }}</span></span></div>
@@ -348,7 +377,7 @@ class Component extends DCLogic {
     const st = SA.state(), alerts = SA.alerts();
     const groups = st.groups || SA.GROUPS, templates = st.templates || SA.TEMPLATES;
     const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
-    const tabsDef = [['conn', 'Connexions', alerts.length], ['api', 'API Meta', 0], ['tpl', 'Modèles de posts', 0], ['grp', 'Groupes de boutiques', 0], ['rights', 'Droits', 0], ['log', "Journal d'activité", 0]].concat(SA.live ? [['tfb', 'API TFBuddy', (() => { const r = (st.tfbAudit || {}).resume || {}; return (r.refuse || 0) + (r.erreur || 0) + (r.injoignable || 0); })()]] : []);
+    const tabsDef = [['conn', 'Connexions', alerts.length], ['api', 'API Meta', 0], ['ia', 'Rédaction IA & charte', 0], ['tpl', 'Modèles de posts', 0], ['grp', 'Groupes de boutiques', 0], ['rights', 'Droits', 0], ['log', "Journal d'activité", 0]].concat(SA.live ? [['tfb', 'API TFBuddy', (() => { const r = (st.tfbAudit || {}).resume || {}; return (r.refuse || 0) + (r.erreur || 0) + (r.injoignable || 0); })()]] : []);
     const fixConn = (shopId, key, label) => {
       const k = shopId + key; this.setState({ busy: Object.assign({}, this.state.busy, { [k]: true }) });
       if (SA.live) {
@@ -399,7 +428,25 @@ class Component extends DCLogic {
     const logRows = st.activity.filter(l => !s.logF || (s.logF === 'Échec' ? l.what.indexOf('Échec') === 0 : l.what === s.logF)).map(l => { const c = LOGC[l.what] || ['#F4EFE8', '#444444']; return Object.assign({ bg: c[0], fg: c[1] }, l, { at: l.at.slice(8, 10) + '/' + l.at.slice(5, 7) + ' ' + l.at.slice(11) }); });
     return {
       tabs: tabsDef.map(([k, label, badge]) => ({ label, badge, hasBadge: badge > 0, fg: s.tab === k ? '#8D1D2C' : '#444444', line: s.tab === k ? '#8D1D2C' : 'transparent', pick: () => this.setState({ tab: k }) })),
-      isConn: s.tab === 'conn', isApi: s.tab === 'api', live: !!SA.live, isTfb: s.tab === 'tfb',
+      isConn: s.tab === 'conn', isApi: s.tab === 'api', live: !!SA.live, isTfb: s.tab === 'tfb', isIa: s.tab === 'ia',
+      // Rédaction IA : clé (serveur), modèle, charte éditoriale.
+      ...(() => {
+        const ia = SA.ia(), ch = Object.assign({}, SA.charte(), s.charte || {}), put = (k) => (e) => this.setState({ charte: Object.assign({}, ch, { [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }) });
+        return { iaEtat: !SA.live ? 'Démonstration : réglage indisponible.' : ia.configure ? 'Clé enregistrée' + (ia.modele ? ' · modèle : ' + ia.modele : '') + '.' : 'Aucune clé enregistrée.',
+          iaKey: s.iaKey || '', setIaKey: (e) => this.setState({ iaKey: e.target.value }), iaKeyPh: ia.configure ? '•••••• (clé enregistrée — saisir pour la remplacer)' : 'sk-ant-…',
+          saveIaKey: () => { if (!String(s.iaKey || '').trim()) { this.toast('Saisissez la clé.'); return; }
+            SA.api('POST', '/parametres/cles', { anthropicKey: String(s.iaKey).trim() }).then(() => { this.setState({ iaKey: '' }); this.toast('Clé API Anthropic enregistrée sur le serveur.'); return SA.refresh(); }).catch(e => this.toast('Enregistrement impossible : ' + e.message)); },
+          iaTestDis: !ia.configure || !!s.iaTesting, iaTestLabel: s.iaTesting ? 'Test…' : 'Tester la clé',
+          testIa: () => { this.setState({ iaTesting: true }); SA.api('POST', '/redaction/tester', {}).then(r => { this.setState({ iaTesting: false }); this.toast('Clé valide · modèle : ' + r.modele); SA.refresh(); }).catch(e => { this.setState({ iaTesting: false }); this.toast('Test refusé : ' + e.message); }); },
+          iaModele: s.iaModele != null ? s.iaModele : ((st.params || {}).ia_modele || ''),
+          setIaModele: (e) => { const v = e.target.value; this.setState({ iaModele: v }); clearTimeout(this._im); this._im = setTimeout(() => SA.api('POST', '/parametres', { ia_modele: v.trim() }).then(() => this.toast(v.trim() ? 'Modèle imposé : ' + v.trim() : 'Modèle : le plus récent de la famille Opus.')).catch(err => this.toast(err.message)), 800); },
+          chTon: ch.ton || '', setChTon: put('ton'), chVous: !!ch.vouvoiement, setChVous: put('vouvoiement'), chEmojis: ch.emojisMax, setChEmojis: put('emojisMax'),
+          chLong: ch.longueur, setChLong: put('longueur'), chTagVille: !!ch.hashtagVille, setChTagVille: put('hashtagVille'),
+          chMots: Array.isArray(ch.motsInterdits) ? ch.motsInterdits.join(', ') : ch.motsInterdits || '', setChMots: put('motsInterdits'),
+          chTags: Array.isArray(ch.hashtags) ? ch.hashtags.join(' ') : ch.hashtags || '', setChTags: put('hashtags'), chSign: ch.signature || '', setChSign: put('signature'),
+          saveCharte: () => { const c = Object.assign({}, ch, { hashtags: String(Array.isArray(ch.hashtags) ? ch.hashtags.join(' ') : ch.hashtags || '').split(/[\s,;]+/).filter(Boolean) });
+            SA.api('POST', '/parametres', { charte_editoriale: c }).then(() => { this.setState({ charte: null }); this.toast('Charte éditoriale enregistrée.'); return SA.refresh(); }).catch(e => this.toast('Enregistrement impossible : ' + e.message)); } };
+      })(),
       ...(() => {
         // Onglet API TFBuddy : compte, boutiques de l'API, audit des routes (GET /audit/api).
         if (!SA.live) return {};

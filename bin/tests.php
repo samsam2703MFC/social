@@ -1205,6 +1205,71 @@ $plan = socWebshopPlanCache();
 check('plan du webshop tiré du catalogue lu : sous-catégorie → catégorie, produit → sous-catégorie', ($plan['cats'][32100] ?? null) === 31 && ($plan['prods'][11] ?? null) === 32100 && ($plan['cats'][23000] ?? null) === 26, json_encode($plan));
 check('le plan part avec l’état (liens du webshop à l’écran)', (socStateGet()['webshopPlan']['cats'][32100] ?? null) === 31);
 
+echo "Offres exactes : prix et promotion vérifiés à la publication\n";
+$cookie = ['kind' => 'produit', 'id' => 11, 'name' => 'Cookie chocolat', 'prix' => 2.8, 'shop' => '4'];
+check('prix et promotion inchangés : rien à revoir', socVerifierOffres(['shops' => ['4'], 'date' => date('Y-m-d'), 'catalogue' => $cookie, 'offre' => ['genre' => 'promotion', 'id' => 15, 'nom' => 'Lot sandwich']]) === []);
+check('prix changé dans TFBuddy : écart signalé (ancien → actuel)', socVerifierOffres(['catalogue' => ['prix' => 2.5] + $cookie]) === ['prix de « Cookie chocolat » changé dans TFBuddy : 2,50 € → 2,80 €']);
+$e17 = socVerifierOffres(['shops' => ['4'], 'offre' => ['genre' => 'promotion', 'id' => 17, 'nom' => '3 Cookies !']]);
+check('promotion d’une autre boutique : pas valable à Halle', count($e17) === 1 && str_contains($e17[0], 'n’est pas valable à Halle'), json_encode($e17));
+check('promotion terminée ou inactive : plus active', socVerifierOffres(['shops' => ['4'], 'offre' => ['id' => 19, 'nom' => 'Terminée']]) === ['la promotion « Terminée » n’est plus active dans TFBuddy']);
+$GLOBALS['SOC_BODY'] = ['catalogue' => ['prix' => 2.5] + $cookie, 'shops' => ['4']]; [$code, $b] = socRoute('POST', '/catalogue/verifier'); unset($GLOBALS['SOC_BODY']);
+check('POST /catalogue/verifier : les écarts pour l’écran', $code === 200 && count($b['ecarts']) === 1 && $b['injoignable'] === false);
+$pv = ['id' => 'pv1', 'date' => date('Y-m-d', strtotime('+1 day')), 'time' => '09:00', 'type' => 'Produit', 'title' => 'Cookie', 'img' => 'uploads/x.png', 'media' => [['src' => 'uploads/x.png', 'kind' => 'img']],
+    'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => false]], 'fb' => true, 'ig' => false, 'status' => 'Programmé', 'text' => 'Cookie à 2,50 €', 'spread' => 0, 'catalogue' => ['prix' => 2.5] + $cookie];
+socStateSave(['changes' => ['posts' => ['upsert' => [$pv]]]]);
+Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'pv1'");
+$appels = [];
+socRunQueue('pv1');
+$lig = Db::row("SELECT statut, erreur FROM social_publication WHERE content_id = 'pv1'");
+check('publication arrêtée : prix changé, rien n’est envoyé à Meta', ($lig['statut'] ?? '') === 'echec' && str_starts_with((string) $lig['erreur'], 'Publication bloquée, offre à revoir : prix de « Cookie chocolat »')
+    && !array_filter($appels, static fn ($a) => $a[0] === 'POST'), json_encode($lig));
+$tfbAvant = Tfb::$transport;
+Tfb::$transport = static fn () => [503, '{}'];
+socSettingPut('tfb_cache_promos', null, false); $navAvant = socSetting('tfb_cache_nav'); socSettingPut('tfb_cache_nav', null, false);
+$e = socVerifierOffres(['shops' => ['4'], 'catalogue' => $cookie, 'offre' => ['genre' => 'promotion', 'id' => 15]], null, $inj);
+check('TFBuddy injoignable : rien n’est affirmé (pas de blocage), l’écran le sait', $e === [] && $inj === true);
+Tfb::$transport = $tfbAvant; socSettingPut('tfb_cache_nav', $navAvant, false);
+
+echo "Rédaction assistée (API Anthropic simulée)\n";
+$iaAppels = []; $iaMode = 'ok';
+SocIa::$transport = static function (string $m, string $url, array $h, ?string $body) use (&$iaAppels, &$iaMode): array {
+    $iaAppels[] = [$m, $url, $h, $body !== null ? json_decode($body, true) : null];
+    if (str_contains($url, '/v1/models')) { return [200, json_encode(['data' => [['id' => 'claude-fable-9'], ['id' => 'claude-opus-9'], ['id' => 'claude-opus-8']]])]; }
+    if ($iaMode === 'refus') { return [200, json_encode(['stop_reason' => 'refusal', 'content' => []])]; }
+    if ($iaMode === 'cle') { return [401, json_encode(['type' => 'error', 'error' => ['type' => 'authentication_error', 'message' => 'invalid x-api-key']])]; }
+    return [200, json_encode(['stop_reason' => 'end_turn', 'content' => [['type' => 'text', 'text' => json_encode(['variantes' => [
+        ['angle' => 'Gourmandise', 'fr' => "Le cookie chocolat vous attend chez {ville}.\n{lien}", 'nl' => 'Niet gevraagd', 'titre' => 'Cookie chocolat', 'titreNl' => 'Chocoladekoek', 'surtitre' => 'Fait maison', 'phrase' => 'croquant dehors, fondant dedans']],
+        'hashtags' => ['cookie', '#gourmandise']])]]])];
+};
+$proposer = static function (array $b): array { $GLOBALS['SOC_BODY'] = $b; try { return socRoute('POST', '/redaction/proposer'); } catch (HttpError $e) { return [$e->status, $e->getMessage()]; } finally { unset($GLOBALS['SOC_BODY']); } };
+socSettingPut('anthropic_api_key', null, true);
+[$code, $msg] = $proposer(['produit' => 'Cookie chocolat']);
+check('sans clé : refus 409 avec la marche à suivre', $code === 409 && str_contains((string) $msg, 'Paramètres → Rédaction IA'));
+socSettingPut('anthropic_api_key', 'sk-test-cle', true);
+socSettingPut('ia_modele_auto', null, false);
+[$code, $r] = $proposer(['produit' => 'Cookie chocolat', 'prix' => '2,80 €', 'langues' => ['fr'], 'boutiques' => ['Halle'], 'lien' => true]);
+$msgs = array_values(array_filter($iaAppels, static fn ($a) => str_ends_with($a[1], '/v1/messages')));
+$req = $msgs[0][3] ?? [];
+check('modèle : le plus récent de la famille Opus accessible à la clé', $code === 200 && ($req['model'] ?? '') === 'claude-opus-9' && $r['modele'] === 'claude-opus-9', json_encode($req['model'] ?? null));
+check('requête : sortie JSON imposée, effort moyen, repli serveur, clé dans l’en-tête', ($req['output_config']['format']['type'] ?? '') === 'json_schema' && ($req['output_config']['effort'] ?? '') === 'medium'
+    && ($req['fallbacks'] ?? '') === 'default' && in_array('anthropic-beta: server-side-fallback-2026-07-01', $msgs[0][2], true) && in_array('x-api-key: sk-test-cle', $msgs[0][2], true));
+check('charte et vraies données dans le message (aucun fait inventé demandé)', str_contains((string) $req['system'], 'Vouvoiement') && str_contains((string) $req['system'], 'N’invente aucun fait')
+    && str_contains((string) $req['messages'][0]['content'], 'Prix de vente : 2,80 €') && str_contains((string) $req['system'], '{lien}'));
+check('réponse : langue non demandée vidée, hashtags de la marque + thématiques', $r['variantes'][0]['nl'] === '' && $r['variantes'][0]['titre'] === 'Cookie chocolat'
+    && $r['hashtags'] === ['#latelierby', '#cookie', '#gourmandise'], json_encode($r));
+check('clé secrète : ni dans les paramètres ni dans l’état', socParams()['anthropic_api_key'] === ['defini' => true] && !str_contains(json_encode(socStateGet()), 'sk-test-cle') && socStateGet()['ia']['configure'] === true);
+$iaMode = 'refus'; [$code] = $proposer(['produit' => 'X']);
+$iaMode = 'cle'; [$code2, $msg2] = $proposer(['produit' => 'X']);
+check('refus du modèle : 422 ; clé refusée : 409 lisible', $code === 422 && $code2 === 409 && str_contains((string) $msg2, 'clé API Anthropic refusée'));
+$iaMode = 'ok';
+$GLOBALS['SOC_BODY'] = ['charte_editoriale' => ['ton' => str_repeat('a', 900), 'vouvoiement' => false, 'emojisMax' => 99, 'motsInterdits' => 'pas cher, discount', 'hashtags' => ['latelierby', '#Halle'], 'pirate' => 1]];
+socRoute('POST', '/parametres'); unset($GLOBALS['SOC_BODY']);
+$ch = socCharte();
+check('charte : champs connus, bornés, mots et hashtags normalisés', mb_strlen($ch['ton']) === 600 && $ch['vouvoiement'] === false && $ch['emojisMax'] === 10 && $ch['motsInterdits'] === ['pas cher', 'discount']
+    && $ch['hashtags'] === ['#latelierby', '#Halle'] && !isset($ch['pirate']), json_encode($ch));
+check('{hashtag_ville} : le hashtag de chaque boutique', socFill('{hashtag_ville}', ['id' => '4', 'name' => 'Saint-Gilles'], null, 'fr') === '#SaintGilles');
+socSettingPut('charte_editoriale', null, false); socSettingPut('anthropic_api_key', null, true);
+
 echo "Générateur : modèles d'étiquette (textes posés sur le visuel)\n";
 $GLOBALS['SOC_BODY'] = ['etiquettes_modeles' => [
     ['id' => 'm1', 'nom' => 'Promo cookies', 'forme' => 'pastille', 'police' => 'titre', 'couleur' => 'blanc', 'fond' => 'ruby', 'taille' => 999, 'rot' => -8, 'x' => 80, 'y' => 24, 'pirate' => '<script>'],
