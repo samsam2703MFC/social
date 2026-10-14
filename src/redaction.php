@@ -154,6 +154,7 @@ function socRedactionProposer(array $b): array
         'Produit' => $str('produit', 120), 'Nom néerlandais du produit' => $str('produitNl', 120), 'Catégorie' => $str('categorie', 80),
         'Gamme' => $str('gamme', 80), 'Prix de vente' => $str('prix', 40), 'Promotion' => $str('promo', 300),
         'Mention de l’offre (à reprendre telle quelle)' => $str('mention', 300), 'Type de post' => $str('type', 60),
+        'Opération commerciale' => $str('operation', 300), 'Objectif du post' => $str('objectif', 300),
         'Boutiques visées' => $boutiques ? implode(', ', $boutiques) : '', 'Texte actuel (à réécrire)' => $str('texte', 2000),
     ], static fn ($v) => $v !== '');
 
@@ -173,6 +174,7 @@ function socRedactionProposer(array $b): array
         '- Le néerlandais est celui de Belgique (Flandre, Bruxelles), naturel et idiomatique, pas une traduction mot à mot.',
         '- Pas de hashtags dans les textes : ils sont rendus à part.',
         '- Le titre du visuel fait 2 à 5 mots (il s’affiche en grandes capitales) ; le sur-titre 2 à 6 mots ; la phrase manuscrite 4 à 10 mots.',
+        ($t = socRecoConseilsTexte()) ? 'Ce qui marche sur nos comptes (mesuré sur les 90 derniers jours, à suivre sans forcer) :' . "\n- " . implode("\n- ", $t) : '',
     ]);
     $user = "Données du post :\n" . implode("\n", array_map(static fn ($k, $v) => '- ' . $k . ' : ' . $v, array_keys($faits), $faits))
         . "\n\nLangues à rédiger : " . implode(' et ', array_map(static fn ($l) => $l === 'nl' ? 'néerlandais' : 'français', $langues))

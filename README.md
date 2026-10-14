@@ -330,6 +330,23 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   prix de vente du produit choisi changé, promotion plus active, hors de ses dates ou pas valable
   dans la boutique → publication arrêtée (« Publication bloquée, offre à revoir : … »). TFBuddy
   injoignable : rien n'est affirmé, la publication suit son cours.
+- **Idées de posts · ce qui marche** — en tête de « Créer un post » (nouveau post, en ligne ;
+  `src/recommandations.php`). **Idées** (`GET /idees`) : promotion active (TFBuddy) sans post
+  depuis 30 jours, opération du Marketing du BO en cours ou dans les 3 semaines sans post ni
+  publication rattachée, gamme qui commence dans les 3 semaines, et le créneau creux de chaque
+  boutique (BO, `GET /api/cockpit/creux`, lecture seule, cookie du cockpit transmis, gardé 6 h
+  dans `creux_cache`). « Créer ce post » préremplit boutiques, date et heure, opération, offre
+  (libellé et mention), élément du catalogue et l'**objectif** donné à l'assistant de rédaction
+  (champ modifiable sous ses boutons). Une source muette est nommée, les autres suivent.
+  **Ce qui marche** (`GET /recommandations`, `?cache=1` : l'analyse gardée seulement,
+  `?forcer=1` : relire) : les publications des 90 derniers jours de toutes les Pages et de tous
+  les comptes Instagram (celles du module comprises), chacune rapportée à l'habitude de son
+  compte — indice = (interactions + 1) / (médiane du compte + 1), interactions = réactions +
+  commentaires + partages —, groupées par jour, créneau, type, longueur du texte, prix ou promo,
+  question, emoji, lien, réseau, style et format du visuel. Un groupe parle à partir de 4
+  publications, un écart à partir de ×1,3. Le meilleur jour et le meilleur créneau donnent
+  « Programmer samedi à 09:15 ». Seuls les agrégats sont gardés (`reco_cache`, 12 h). Les
+  tendances du texte (longueur, question, emoji, prix, lien) sont données à l'assistant.
 - **Story 9:16** — quatrième format (1080 × 1920, stories Facebook et Instagram). Le haut et le
   bas (≈ 250 px, consigne de Meta) sont couverts par l'interface d'Instagram : en story, chaque
   style se resserre au centre (`.pf-root`, bandes de `--sh` = 200 px) ; le fond, la photo plein

@@ -36,6 +36,55 @@
       </sc-if>
     </header>
 
+    <!-- Idées de posts (promotions, opérations, gammes, heures creuses) et ce qui marche (publications des 90 derniers jours) -->
+    <sc-if value="{{ hasInspi }}" hint-placeholder-val="{{ false }}">
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Idées de posts · ce qui marche</span>
+          <button onClick="{{ inspiToggle }}" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;">{{ inspiLabel }}</button>
+        </div>
+        <sc-if value="{{ inspiOpen }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;">
+            <div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:8px;">
+              <span style="font-size:12px;font-weight:500;color:#232220;">Idées de posts</span>
+              <sc-if value="{{ ideesBusy }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Recherche des promotions, opérations, gammes et heures creuses…</span></sc-if>
+              <sc-if value="{{ hasIdeesErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8D1D2C;">{{ ideesErr }}</span></sc-if>
+              <sc-if value="{{ ideesVide }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;line-height:1.45;">Rien d’urgent : chaque promotion active, opération proche et gamme qui commence a déjà son post.</span></sc-if>
+              <sc-for list="{{ idees }}" as="ix" hint-placeholder-count="3">
+                <div style="border:0.5px solid {{ ix.ring }};background:{{ ix.bg }};border-radius:8px;padding:9px 11px;display:flex;gap:10px;align-items:flex-start;">
+                  <span style="flex:0 0 auto;font-size:10px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;border-radius:999px;padding:3px 8px;background:{{ ix.tagBg }};color:{{ ix.tagFg }};">{{ ix.tag }}</span>
+                  <div style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px;">
+                    <span style="font-size:13px;font-weight:500;color:#222222;">{{ ix.titre }}</span>
+                    <span style="font-size:11px;color:#666666;line-height:1.45;">{{ ix.detail }}</span>
+                  </div>
+                  <button onClick="{{ ix.use }}" disabled="{{ locked }}" style="flex:0 0 auto;border:none;background:{{ ix.btnBg }};color:#FFFFFF;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:500;cursor:pointer;">{{ ix.btn }}</button>
+                </div>
+              </sc-for>
+              <sc-if value="{{ hasMuettes }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8A4B00;">Sans réponse pour l’instant : {{ muettes }}.</span></sc-if>
+            </div>
+            <div style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:8px;">
+              <span style="font-size:12px;font-weight:500;color:#232220;">Ce qui marche · 90 derniers jours</span>
+              <sc-if value="{{ recoAFaire }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:11px;color:#666666;line-height:1.45;">Compare les publications de toutes les Pages et de tous les comptes Instagram, chacune à l’habitude de son propre compte (lecture chez Meta, une vingtaine de secondes).</span>
+                <button onClick="{{ recoAnalyser }}" style="align-self:flex-start;border:0.5px solid #8D1D2C;background:#FFFFFF;color:#8D1D2C;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:500;cursor:pointer;">Analyser les publications</button>
+              </sc-if>
+              <sc-if value="{{ recoBusy }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Lecture des publications chez Meta…</span></sc-if>
+              <sc-if value="{{ hasRecoErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8D1D2C;">{{ recoErr }}</span></sc-if>
+              <sc-if value="{{ hasConseil }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#FBF6F3;border:0.5px solid rgba(141,29,44,0.25);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;">
+                  <span style="font-size:12px;color:#222222;line-height:1.45;"><b style="font-weight:500;">Meilleur moment :</b> {{ conseilTxt }}</span>
+                  <button onClick="{{ conseilUse }}" disabled="{{ locked }}" style="align-self:flex-start;border:none;background:#8D1D2C;color:#FFFFFF;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;">{{ conseilBtn }}</button>
+                </div>
+              </sc-if>
+              <sc-for list="{{ constats }}" as="cs" hint-placeholder-count="0"><span style="font-size:12px;color:#222222;line-height:1.5;display:flex;gap:6px;"><b style="color:#8D1D2C;flex:0 0 auto;font-weight:500;">↗</b><span>{{ cs.texte }}</span></span></sc-for>
+              <sc-if value="{{ recoPeu }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;line-height:1.45;">Pas encore assez de publications comparables pour conclure (au moins {{ recoMin }} par groupe).</span></sc-if>
+              <sc-if value="{{ hasReco }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;color:#8A847C;line-height:1.45;">{{ recoNote }} <button onClick="{{ recoRelire }}" style="border:none;background:transparent;color:#8D1D2C;font-size:10px;cursor:pointer;padding:0;">Relire maintenant</button></span></sc-if>
+            </div>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+
     <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
 
       <!-- ================= FORMULAIRE UNIQUE ================= -->
@@ -682,6 +731,7 @@
               <sc-if value="{{ hasIaTags }}" hint-placeholder-val="{{ true }}"><button onClick="{{ iaAjouterTags }}" title="{{ iaTags }}" disabled="{{ locked }}" style="border:0.5px dashed rgba(34,34,34,0.3);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;"># Hashtags</button></sc-if>
               <sc-if value="{{ iaBusy }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">{{ iaLabel }}</span></sc-if>
             </div>
+            <input type="text" value="{{ objectif }}" onChange="{{ setObjectif }}" disabled="{{ locked }}" placeholder="Objectif du post pour l’assistant (facultatif) — ex. faire venir l’après-midi en semaine" style="font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 9px;outline:none;background:#FFFFFF;">
             <sc-if value="{{ iaNonConfig }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8A4B00;">La rédaction assistée demande une clé API Anthropic : <a href="{{ iaParamHref }}" style="color:#8D1D2C;">Paramètres → Rédaction IA</a>.</span></sc-if>
             <sc-if value="{{ iaDemo }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Démonstration : la rédaction assistée fonctionne en ligne seulement.</span></sc-if>
             <sc-if value="{{ hasIaErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8D1D2C;">{{ iaErr }}</span></sc-if>
@@ -1098,6 +1148,8 @@ class Component extends DCLogic {
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', linkText: { fr: '', nl: '' }, campaign: '',
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
       txtSel: null, txtTplNom: '', etqLocal: null, qc: [], visNom: '', visLocal: null, kitBusy: false, offre: null, mentionAuto: true, iaBusy: false, iaRes: null, iaErr: '', iaConsigne: '',
+      objectif: '', inspi: (() => { try { const x = localStorage.getItem('sa.inspi'); return x === null ? null : x === '1'; } catch (e) { return null; } })(),
+      idees: null, ideesBusy: false, ideesErr: '', reco: null, recoLu: false, recoBusy: false, recoErr: '', ideeId: '', ideeCat: null, ideeOffre: null,
       nav: null, navKey: null, navLoading: false, navErr: '', navMode: 'cat', navG: null, navC: null, navGam: null, navQ: '', navSel: null, offres: null, offresKey: '', offresLoading: false, offreUsed: '',
       libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false };
     if (!SA) return base;
@@ -1124,6 +1176,7 @@ class Component extends DCLogic {
   }
   async componentDidMount() {
     this.montagePreview();
+    this.chargerInspi();
     let lib = null;
     try {
       lib = await new Promise((res, rej) => {
@@ -1268,6 +1321,42 @@ class Component extends DCLogic {
     const q = x.du && x.au ? 'du ' + d(x.du) + ' au ' + d(x.au) : x.au ? 'jusqu’au ' + d(x.au) : x.du ? 'à partir du ' + d(x.du) : '', w = x.tous ? 'dans toutes les boutiques' : x.portee ? 'à ' + et(x.portee, 'et') : '';
     return 'Offre valable ' + [q, w].filter(Boolean).join(', ') + '.';
   }
+  /** Idées de posts (tout de suite) et ce qui marche (l'analyse gardée, sans relire Meta) : en ligne, pour un nouveau post. */
+  chargerInspi() {
+    const SA = window.SA;
+    if (!SA || !SA.live || this.state.id || this._inspiLu) return;
+    this._inspiLu = true;
+    this.setState({ ideesBusy: true });
+    SA.api('GET', '/idees').then(r => { if (!this._dead) this.setState({ idees: r, ideesBusy: false }); })
+      .catch(e => { if (!this._dead) this.setState({ ideesBusy: false, ideesErr: e.message || String(e) }); });
+    SA.api('GET', '/recommandations?cache=1').then(r => { if (!this._dead) this.setState({ reco: (r && r.reco) || null, recoLu: true }); })
+      .catch(() => { if (!this._dead) this.setState({ recoLu: true }); });
+  }
+  /** Ce qui marche : lit les publications des 90 derniers jours chez Meta (gardé 12 h côté serveur ; `forcer` : relire). */
+  analyserReco(forcer) {
+    const SA = window.SA;
+    if (!SA.live || this.state.recoBusy) return;
+    this.setState({ recoBusy: true, recoErr: '' });
+    SA.api('GET', '/recommandations' + (forcer ? '?forcer=1' : '')).then(r => { if (!this._dead) this.setState({ reco: (r && r.reco) || null, recoBusy: false }); })
+      .catch(e => { if (!this._dead) this.setState({ recoBusy: false, recoErr: e.message || String(e) }); });
+  }
+  /**
+   * Une idée → le post : boutiques, date et heure, opération, offre, objectif pour l'assistant ;
+   * l'élément du catalogue (et l'offre dans le texte) suivent dès que le catalogue de la boutique est lu.
+   */
+  appliquerIdee(x) {
+    const SA = window.SA, p = x.prefill || {};
+    const ok = (p.shops || []).filter(id => SA.byId(SA.SHOPS, id) || (SA.TEST_SHOPS || []).some(t => t.id === id));
+    const st = { ideeId: x.id, objectif: p.objectif || '', ideeCat: p.catalogue || null, ideeOffre: p.offre ? p.offre.id : null, offre: p.offre || this.state.offre, offreUsed: '' };
+    Object.assign(st, ok.length ? { scope: ok.length === SA.SHOPS.length ? 'all' : 'shop', group: null, sel: ok } : { scope: 'all', group: null, sel: SA.SHOPS.map(z => z.id) });
+    if (p.date) Object.assign(st, { when: 'later', date: p.date });
+    if (p.time) st.time = p.time;
+    if (p.campaign) st.campaign = p.campaign;
+    if (x.genre === 'gamme') st.type = 'Gamme saisonnière';
+    this.setState(st);
+    this.toast('Idée appliquée : ' + [ok.length ? ok.map(id => (SA.byId(SA.SHOPS, id) || { name: id }).name).join(', ') : 'tout le réseau', p.date ? SA.dLabel(p.date) + (p.time ? ' à ' + p.time : '') : '',
+      p.campaign ? 'opération rattachée' : '', p.catalogue ? 'catalogue choisi' : ''].filter(Boolean).join(' · ') + '. Ajoutez la photo, puis « Proposer 3 textes ».');
+  }
   /** L'assistant de rédaction (Claude, côté serveur) : 3 propositions, ou une réécriture selon `consigne`. */
   async iaDemander(consigne) {
     const SA = window.SA, s = this.state;
@@ -1280,7 +1369,8 @@ class Component extends DCLogic {
       promo: s.offre ? s.offre.libelle || '' : (s.v.showPromo && s.v.promo ? s.v.promo + ' ' + (s.v.promoSub || '') : ''),
       mention: s.offre && s.offre.genre === 'promotion' ? this.mentionOffre(s.offre, 'fr') : '', type: s.type,
       boutiques: t.map(id => (SA.byId(SA.SHOPS, id) || { name: id }).name), langues: langues.length ? langues : ['fr'], lien: !!String(s.link || '').trim(),
-      consigne: consigne || '', texte: consigne ? (s.text || s.textNl || '') : '' };
+      consigne: consigne || '', texte: consigne ? (s.text || s.textNl || '') : '', objectif: s.objectif || '',
+      operation: (() => { const o = s.campaign ? (SA.state().campaigns || []).find(c => c.id === s.campaign) : null; return o ? o.name + (o.description ? ' — ' + o.description : '') : ''; })() };
     this.setState({ iaBusy: true, iaErr: '', iaConsigne: consigne || '' });
     try { const r = await SA.api('POST', '/redaction/proposer', b); this.setState({ iaBusy: false, iaRes: r }); }
     catch (e) { this.setState({ iaBusy: false, iaErr: e.message || String(e) }); }
@@ -1640,6 +1730,26 @@ class Component extends DCLogic {
         return { tag, tagBg: tb, tagFg: tf, libelle: f.libelle, op: 1, note: (f.prix != null ? eur(f.prix) + (shopNom ? ' à ' + shopNom : '') : 'prix selon la boutique') + (f.choix && f.choix.length ? ' · au choix : ' + f.choix.join(', ') : ''), noteFg: '#666666',
           btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, f.court, 'Formule ' + f.nom, f.libelle, { genre: 'formule', nom: f.nom, libelle: f.libelle, prix: f.prix, shop: prixShop || null }),
           poser: () => !locked && this.poserTexte(f.prix != null ? eur(f.prix) : f.court || f.nom, 'Formule ' + f.nom, f.libelle) }; }));
+    // Une idée appliquée : son élément du catalogue dès que le catalogue de la boutique est lu, puis son offre
+    // (libellé et mention dans le texte, promo sur le visuel), par le même chemin que « Utiliser ».
+    if (s.ideeCat && nav && s.navKey === prixShop && !s.navLoading && !this._ideeWait) {
+      const ic = s.ideeCat; let it = null;
+      if (ic.kind === 'produit') { const p = P.find(x => x.id === ic.id); if (p) it = prodItem(p); }
+      else if (ic.kind === 'gamme') { const g = GA.find(x => x.id === ic.id); if (g) it = { kind: 'gamme', id: g.id, name: g.name, image: g.image }; }
+      else if (ic.kind === 'categorie') { const c = C.find(x => x.id === ic.id); if (c) it = { kind: 'categorie', id: c.id, name: c.name, image: c.image || (grpById[c.groupe] || {}).image }; }
+      this._ideeWait = true;
+      setTimeout(() => { this._ideeWait = false; this.setState({ ideeCat: null }, () => { const n = this.state.navSel; if (it && !(n && n.kind === it.kind && n.id === it.id)) choose(it); }); }, 0);
+    }
+    if (s.ideeOffre != null && !s.ideeCat && !this._ideeWait) {
+      const pret = !sel || (s.offresKey === offresKey && s.offres && !s.offresLoading);
+      if (pret) {
+        const x = (O.promotions || []).find(z => z.id === s.ideeOffre), o = s.offre || {};
+        this._ideeWait = true;
+        setTimeout(() => { this._ideeWait = false; this.setState({ ideeOffre: null });
+          if (x) usePromo('p' + x.id, x.court, x.nom, x.libelle, { genre: 'promotion', id: x.id, type: x.type, nom: x.nom, libelle: x.libelle, du: x.du, au: x.au, tous: !!x.tous, shops: x.shops || [], portee: x.portee });
+          else if (o.id === s.ideeOffre) usePromo('', o.court, o.nom, o.libelle, o); }, 0);
+      }
+    }
     const KIND = { produit: 'Produit', categorie: 'Sous-catégorie', groupe: 'Catégorie', gamme: 'Gamme' };
     const selView = sel ? { kind: KIND[sel.kind] || '', name: sel.name, image: sel.image || '', hasImg: !!sel.image,
       prix: sel.kind !== 'produit' ? 'Pas de prix : ' + (KIND[sel.kind] || '').toLowerCase() + ' entière' + (sel.kind === 'categorie' || sel.kind === 'groupe' ? ' · lien vers sa page du webshop' : '')
@@ -1780,6 +1890,26 @@ class Component extends DCLogic {
       vFormats: this.FORMATS.map(([k, label, tip]) => { const [bg, fg] = seg((v.format || 'carre') === k); return { label, tip, bg, fg, pick: () => !locked && this.V({ format: k }) }; }),
       vFormatTip: (this.FORMATS.find(f => f[0] === (v.format || 'carre')) || this.FORMATS[0])[2],
       // Contrôle qualité du visuel (lu dans le studio après chaque rendu).
+      // Idées de posts et ce qui marche.
+      ...(() => { const I = s.idees, R = s.reco, open = s.inspi != null ? s.inspi : !s.id, c = R && R.conseil;
+        const x1 = (n) => '×' + Number(n || 0).toFixed(1).replace('.', ',');
+        const TAGI = { promo: ['Promotion', '#8D1D2C', '#FFFFFF'], operation: ['Opération', '#232220', '#F2C9A0'], gamme: ['Gamme', '#F2C9A0', '#6B4420'], creux: ['Heures creuses', '#E2F0E8', '#0F6B4A'] };
+        const idees = ((I && I.idees) || []).map(x => { const [tag, tb, tf] = TAGI[x.genre] || TAGI.promo, on = s.ideeId === x.id;
+          return { tag, tagBg: tb, tagFg: tf, titre: x.titre, detail: x.detail, btn: on ? 'Appliquée ✓' : 'Créer ce post', btnBg: on ? '#1F8A60' : '#8D1D2C',
+            ring: on ? '#1F8A60' : 'rgba(34,34,34,0.12)', bg: on ? '#F3FAF6' : '#FFFFFF', use: () => !locked && this.appliquerIdee(x) }; });
+        return { hasInspi: !!SA.live && !locked && !s.id, inspiOpen: open, inspiLabel: open ? 'Masquer' : 'Afficher',
+          inspiToggle: () => { this.setState({ inspi: !open }); try { localStorage.setItem('sa.inspi', open ? '0' : '1'); } catch (e) {} },
+          ideesBusy: !!s.ideesBusy, hasIdeesErr: !!s.ideesErr, ideesErr: 'Idées indisponibles : ' + s.ideesErr, ideesVide: !!I && !idees.length, idees,
+          hasMuettes: !!(I && I.muettes && I.muettes.length), muettes: I && I.muettes ? I.muettes.join(', ') : '',
+          recoAFaire: !!s.recoLu && !R && !s.recoBusy, recoBusy: !!s.recoBusy, hasRecoErr: !!s.recoErr, recoErr: 'Analyse impossible : ' + s.recoErr,
+          recoAnalyser: () => this.analyserReco(false), recoRelire: () => this.analyserReco(true),
+          hasConseil: !!c && !s.recoBusy, conseilTxt: c ? c.jour.toLowerCase() + ', ' + c.creneau.charAt(0).toLowerCase() + c.creneau.slice(1) + ' (jour ' + x1(c.indiceJour) + ', heure ' + x1(c.indiceCreneau) + ' l’habitude)' : '',
+          conseilBtn: c ? 'Programmer ' + SA.dLabel(c.date) + ' à ' + c.heure : '',
+          conseilUse: () => { if (!locked && c) { this.setState({ when: 'later', date: c.date, time: c.heure }); this.toast('Programmé ' + SA.dLabel(c.date) + ' à ' + c.heure + ' : le moment où vos publications marchent le mieux.'); } },
+          constats: R && !s.recoBusy ? (R.constats || []).map(x => ({ texte: x.texte })) : [], recoPeu: !!R && !s.recoBusy && !(R.constats || []).length, recoMin: R ? R.min : 4, hasReco: !!R && !s.recoBusy,
+          recoNote: R ? 'D’après ' + R.comparees + ' publications comparées sur ' + R.publications + ' (' + R.comptesCompares + ' comptes, ' + SA.dShort(R.du) + ' → ' + SA.dShort(R.au)
+            + ') · interactions = réactions + commentaires + partages, rapportées à l’habitude de chaque compte · des tendances, pas des preuves · analyse du ' + R.le + '.' : '',
+          objectif: s.objectif || '', setObjectif: (e) => this.setState({ objectif: e.target.value }) }; })(),
       ...(() => { clearTimeout(this._qcT); this._qcT = setTimeout(() => this.qcLire(), 600);
         const COL = { erreur: ['#FDECEC', '#8D1D2C', '✕'], attention: ['#FFF4E5', '#8A4B00', '!'], conseil: ['#F4EFE8', '#444444', 'i'] };
         return { qcItems: (s.qc || []).map(q => ({ msg: q.msg, bg: COL[q.niveau][0], fg: COL[q.niveau][1], ico: COL[q.niveau][2] })), qcOk: !(s.qc || []).length && s.mode === 'studio', hasQc: (s.qc || []).length > 0 }; })(),

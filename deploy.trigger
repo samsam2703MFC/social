@@ -72,3 +72,4 @@ Relivraison : × pour effacer un texte du visuel ; fondu réglable en plein cadr
 Relivraison : choix du logo du visuel — 2026-10-14T15:37:24Z
 Relivraison : assistant de rédaction (Claude), charte et relecture, offres exactes — 2026-10-14T15:58:07Z
 Relivraison : story 9:16, contrôle du visuel, modèles de visuel, kit 4 formats — 2026-10-14T16:21:16Z
+Relivraison : idées de posts et ce qui marche — 2026-10-14T16:30:39Z

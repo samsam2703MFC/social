@@ -29,6 +29,7 @@ require_once __DIR__ . '/suivi.php';
 require_once __DIR__ . '/operations.php';
 require_once __DIR__ . '/catalogue.php';
 require_once __DIR__ . '/redaction.php';
+require_once __DIR__ . '/recommandations.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -129,6 +130,9 @@ function socRoute(string $method, string $path): array
         return [200, ['ecarts' => $ecarts, 'injoignable' => $injoignable]];
     }
     if ($method === 'POST' && $path === '/redaction/proposer') { return [200, socRedactionProposer(body())]; }
+    // Ce qui marche (publications des 90 derniers jours, lues chez Meta, gardées 12 h) et idées de posts (src/recommandations.php).
+    if ($method === 'GET' && $path === '/recommandations') { return [200, ['reco' => socRecommandations(!empty($_GET['cache']), !empty($_GET['forcer']))]]; }
+    if ($method === 'GET' && $path === '/idees') { return [200, socIdees()]; }
     if ($method === 'POST' && $path === '/redaction/tester') {
         try { $m = SocIa::modele(true); } catch (SocIaError $e) { throw new HttpError($e->http === 401 || $e->http === 403 ? 409 : ($e->http ?: 502), $e->getMessage()); }
         return [200, ['ok' => true, 'modele' => $m] + socIaStatut()];

@@ -1268,7 +1268,102 @@ $ch = socCharte();
 check('charte : champs connus, bornés, mots et hashtags normalisés', mb_strlen($ch['ton']) === 600 && $ch['vouvoiement'] === false && $ch['emojisMax'] === 10 && $ch['motsInterdits'] === ['pas cher', 'discount']
     && $ch['hashtags'] === ['#latelierby', '#Halle'] && !isset($ch['pirate']), json_encode($ch));
 check('{hashtag_ville} : le hashtag de chaque boutique', socFill('{hashtag_ville}', ['id' => '4', 'name' => 'Saint-Gilles'], null, 'fr') === '#SaintGilles');
-socSettingPut('charte_editoriale', null, false); socSettingPut('anthropic_api_key', null, true);
+socSettingPut('charte_editoriale', null, false);
+
+echo "Ce qui marche : chaque publication comparée à l'habitude de son compte\n";
+$pub = static fn (string $compte, string $date, string $time, string $type, string $texte, ?int $e) => ['compte' => $compte, 'canal' => str_starts_with($compte, 'ig') ? 'Instagram' : 'Facebook',
+    'date' => $date, 'time' => $time, 'type' => $type, 'texte' => $texte, 'e' => $e, 'module' => null];
+$pubs = [];
+// Deux Pages de tailles très différentes : la photo du mardi après-midi, la vidéo (avec une question) du samedi matin.
+foreach (['2026-09-15', '2026-09-22', '2026-09-29', '2026-10-06', '2026-10-13'] as $d) {
+    $pubs[] = $pub('fb:A', $d, '14:00', 'Photo', 'Brioche du jour.', 100); $pubs[] = $pub('fb:B', $d, '14:00', 'Photo', 'Brioche du jour.', 10);
+}
+foreach (['2026-09-12', '2026-09-19', '2026-09-26', '2026-10-03', '2026-10-10'] as $d) {
+    $pubs[] = $pub('fb:A', $d, '09:30', 'Vidéo ou reel', 'Vous l’avez goûtée ?', 300); $pubs[] = $pub('fb:B', $d, '09:00', 'Vidéo ou reel', 'Vous l’avez goûtée ?', 30);
+}
+$pubs[] = $pub('fb:C', '2026-10-01', '12:00', 'Photo', 'x', 5000); $pubs[] = $pub('fb:C', '2026-10-02', '12:00', 'Photo', 'x', 9000);  // 2 publications : pas de référence
+foreach ([1, 2, 3] as $i) { $pubs[] = $pub('ig:D', '2026-10-0' . $i, '10:00', 'Photo', 'x', null); }                                 // sans chiffres
+$an = socRecoAnalyser($pubs);
+$cst = array_column($an['constats'], null, 'dimension');
+check('analyse : une grosse et une petite Page se comparent à leur propre habitude ; un compte de 2 publications ou sans chiffres n’est pas comparé',
+    $an['publications'] === 25 && $an['comparees'] === 20 && $an['comptesCompares'] === 2 && $an['sansChiffres'] === 3, json_encode(array_diff_key($an, ['dimensions' => 1])));
+check('constat : vidéo ou reel ≈ ×1,5 l’habitude, photo ≈ ×0,5 ; aussi le jour, le créneau et la question', ($cst['type']['mieux'] ?? '') === 'Vidéo ou reel' && $cst['type']['moins'] === 'Photo'
+    && str_contains($cst['type']['texte'], '×1,5') && str_contains($cst['type']['texte'], '(10 publications)') && ($cst['jour']['mieux'] ?? '') === 'Samedi'
+    && ($cst['creneau']['mieux'] ?? '') === 'Matin (avant 11 h)' && ($cst['question']['mieux'] ?? '') === 'Pose une question', json_encode($an['constats']));
+$cs = $an['conseil'] ?? [];
+check('prochain créneau conseillé : le prochain samedi, à l’heure médiane des bonnes publications du matin (09:15)', ($cs['jour'] ?? '') === 'Samedi' && ($cs['heure'] ?? '') === '09:15'
+    && date('N', strtotime($cs['date'])) === '6' && $cs['date'] > date('Y-m-d') && $cs['date'] <= date('Y-m-d', strtotime('+7 days')), json_encode($cs));
+$an2 = socRecoAnalyser($pubs, 11);
+check('groupes trop petits (moins que le minimum) : aucun constat ni conseil', $an2['constats'] === [] && $an2['conseil'] === null);
+$rp = socRecoPub(['account' => 'fb:A', 'channel' => 'Facebook', 'date' => '2026-10-01', 'time' => '10:00', 'type' => 'Album · 4 photos', 'text' => 'x', 'metaId' => '111_9',
+    'stats' => ['reactions' => 7, 'comments' => 2, 'shares' => null]], ['111_9' => ['style' => 'ruby', 'format' => 'story', 'type' => 'Produit']]);
+$rp2 = socRecoPub(['account' => 'ig:D', 'channel' => 'Instagram', 'date' => '2026-10-01', 'time' => '10:00', 'type' => 'Reel', 'text' => '', 'metaId' => '9', 'stats' => ['reactions' => null, 'comments' => null, 'shares' => null]], []);
+check('publication lue : partages absents = 0, sans réactions ni commentaires = pas de chiffres, types regroupés, visuel du module retrouvé',
+    $rp['e'] === 9 && $rp['type'] === 'Album ou carrousel' && $rp['module']['style'] === 'ruby' && $rp2['e'] === null && $rp2['type'] === 'Vidéo ou reel' && $rp2['module'] === null);
+socSettingPut('reco_cache', null, false);
+$_GET = ['cache' => '1']; [$code, $b] = socRoute('GET', '/recommandations'); $_GET = [];
+check('GET /recommandations?cache=1 sans analyse gardée : rien (pas de lecture chez Meta)', $code === 200 && $b['reco'] === null);
+socSettingPut('reco_cache', ['le' => time() - 86400 * 3, 'data' => $an], false);
+$_GET = ['cache' => '1']; [$code, $b] = socRoute('GET', '/recommandations'); $_GET = [];
+check('… avec une analyse gardée (même ancienne) : elle, telle quelle', $code === 200 && ($b['reco']['comparees'] ?? 0) === 20);
+check('tendances du texte pour l’assistant : question, longueur, emoji, prix, lien seulement', socRecoConseilsTexte() !== [] && !array_filter(socRecoConseilsTexte(), static fn ($t) => str_starts_with($t, 'Samedi') || str_starts_with($t, 'Vidéo')));
+$iaAppels = [];
+[$code] = $proposer(['produit' => 'Cookie chocolat', 'langues' => ['fr'], 'objectif' => 'Faire venir des clients du lundi au vendredi, 13 – 18 h', 'operation' => 'Automne']);
+$req = (array_values(array_filter($iaAppels, static fn ($a) => str_ends_with($a[1], '/v1/messages')))[0][3] ?? []);
+check('assistant : l’objectif de l’idée, l’opération et ce qui marche sur nos comptes sont dans la demande', $code === 200 && str_contains((string) $req['messages'][0]['content'], 'Objectif du post : Faire venir des clients')
+    && str_contains((string) $req['messages'][0]['content'], 'Opération commerciale : Automne') && str_contains((string) $req['system'], 'Ce qui marche sur nos comptes') && str_contains((string) $req['system'], 'Pose une question'));
+socSettingPut('reco_cache', null, false); socSettingPut('anthropic_api_key', null, true);
+
+echo "Idées de posts : promotions sans post, opérations, gammes, heures creuses (BO)\n";
+$auj = date('Y-m-d'); $j = static fn (int $n) => date('Y-m-d', strtotime($auj . ' ' . ($n >= 0 ? '+' : '') . $n . ' days'));
+socSettingPut('tfb_cache_promos', ['le' => time(), 'items' => [
+    ['id' => 901, 'type' => 'offre', 'nom' => 'Cookies 4+1', 'libelle' => '4+1 sur les cookies', 'court' => '4+1', 'du' => $j(-3), 'au' => $j(4), 'tous' => false, 'shops' => ['4'], 'produits' => [3200006], 'categories' => []],
+    ['id' => 902, 'type' => 'remise', 'nom' => 'Déjà annoncée', 'libelle' => '−10 %', 'court' => '−10 %', 'du' => null, 'au' => null, 'tous' => true, 'shops' => [], 'produits' => [], 'categories' => []],
+    ['id' => 903, 'type' => 'bundle', 'nom' => 'Noël', 'libelle' => 'Coffret', 'court' => '', 'du' => $j(40), 'au' => $j(60), 'tous' => true, 'shops' => [], 'produits' => [], 'categories' => []]]], false);
+socStateSave(['changes' => ['posts' => ['upsert' => [['id' => 'pidee1', 'date' => $j(-2), 'time' => '08:00', 'type' => 'Promo', 'title' => 'Promo', 'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => false]],
+    'fb' => true, 'ig' => false, 'status' => 'Brouillon', 'text' => 'x', 'offre' => ['genre' => 'promotion', 'id' => 902]]]]]]);
+$GLOBALS['BO_CAMPAGNES'][] = ['id' => 3, 'name' => 'Saint-Nicolas', 'scope' => 'BOUTIQUES', 'status_code' => 'planned', 'starts_on' => $j(6), 'ends_on' => $j(12), 'budget_amount' => 0.0];
+$GLOBALS['BO_CAMPAGNES'][] = ['id' => 4, 'name' => 'Pâques', 'scope' => 'RESEAU', 'status_code' => 'planned', 'starts_on' => $j(90), 'ends_on' => $j(100), 'budget_amount' => 0.0];
+socOperations(true);
+$caisse = socNavBoutiques()[0];
+$navAvant = socSetting('tfb_cache_nav');
+socSettingPut('tfb_cache_nav', ['v' => 1, 'shops' => [$caisse => ['le' => time(), 'data' => ['groupes' => [], 'categories' => [], 'produits' => [], 'gammes' => [
+    ['id' => 77, 'name' => 'Hivernale', 'du' => date('d/m', strtotime($j(10))), 'au' => '28/02', 'n' => 12], ['id' => 78, 'name' => 'Printanière', 'du' => '21/03', 'au' => '20/06', 'n' => 9]]]]]], false);
+$boAvant = BoMarketing::$transport; $creuxAppels = [];
+BoMarketing::$transport = static function (string $url) use ($boAvant, &$creuxAppels, $caisse): array {
+    if (!str_contains($url, '/api/cockpit/creux')) { return $boAvant($url); }
+    $creuxAppels[] = $url;
+    if (str_contains($url, 'shop=' . socReseau()[0]['id'] . '&')) { return [400, json_encode(['error' => 'magasin manquant ou inconnu'])]; }
+    return [200, json_encode(['reseau' => [
+        ['id' => '4', 'nom' => 'Atelier by - Halle', 'moyenne' => 153.1, 'bloc' => ['jours' => [1, 2, 3, 4, 5], 'heureDe' => 13, 'heureA' => 17, 'nom' => 'Lundi → vendredi, 13 – 18 h', 'caH' => 80.6, 'potentiel' => 2995]],
+        ['id' => '5', 'nom' => 'Wavre', 'moyenne' => 100, 'bloc' => null], ['id' => '999', 'nom' => 'Inconnue', 'moyenne' => 90, 'bloc' => ['jours' => [2], 'heureDe' => 15, 'heureA' => 16, 'nom' => 'Mardi', 'caH' => 1, 'potentiel' => 10]]]])];
+};
+socSettingPut('creux_cache', null, false);
+[$code, $b] = socRoute('GET', '/idees');
+$id = array_column($b['idees'] ?? [], null, 'id');
+check('promotion active sans post : idée préremplie (offre, boutiques, produit) ; déjà annoncée ou lointaine : non', $code === 200 && isset($id['promo-901']) && !isset($id['promo-902']) && !isset($id['promo-903'])
+    && $id['promo-901']['prefill']['offre']['id'] === 901 && $id['promo-901']['prefill']['shops'] === ['4'] && $id['promo-901']['prefill']['catalogue'] === ['kind' => 'produit', 'id' => 3200006]
+    && str_contains($id['promo-901']['detail'], 'plus que 4 jours'), json_encode($b));
+check('opération du BO proche sans post : idée 2 jours avant son début, rattachée ; dans 3 mois ou sans date : non', isset($id['op-bo-3']) && $id['op-bo-3']['prefill']['campaign'] === 'bo-3'
+    && $id['op-bo-3']['prefill']['date'] === $j(4) && !isset($id['op-bo-4']) && !isset($id['op-bo-2']), json_encode(array_keys($id)));
+check('gamme qui commence dans 10 jours : idée à sa date, gamme choisie ; une gamme loin dans l’année : non', isset($id['gamme-77']) && $id['gamme-77']['prefill']['date'] === $j(10)
+    && $id['gamme-77']['prefill']['catalogue'] === ['kind' => 'gamme', 'id' => 77] && (!isset($id['gamme-78']) || abs(strtotime('2026-03-21') - time()) < 86400 * 21));
+$cx = $id['creux-4'] ?? [];
+check('heures creuses (BO) : la boutique, un jour du creux, 2 h avant ; boutique inconnue du module ou sans creux : non ; boutique inconnue du BO : la suivante',
+    ($cx['prefill']['shops'] ?? null) === ['4'] && $cx['prefill']['time'] === '11:00' && (int) date('N', strtotime($cx['prefill']['date'])) <= 5 && $cx['prefill']['date'] > $auj
+    && str_contains($cx['detail'], '2 995 €') && !isset($id['creux-999']) && !isset($id['creux-5']) && count($creuxAppels) === 2 && str_contains($creuxAppels[1], '_cache=900'), json_encode([$cx, $creuxAppels]));
+socRoute('GET', '/idees');
+check('heures creuses gardées 6 h (pas de nouvel appel au BO)', count($creuxAppels) === 2 && $b['muettes'] === []);
+socSettingPut('creux_cache', null, false); socSettingPut('tfb_cache_promos', null, false);
+BoMarketing::$transport = static fn (string $url) => str_contains($url, '/api/cockpit/creux') ? [401, '{"error":"auth"}'] : $boAvant($url);
+$tfbAvant2 = Tfb::$transport; Tfb::$transport = static fn () => [503, ''];
+[$code, $b] = socRoute('GET', '/idees');
+check('sources muettes (TFBuddy, BO) : nommées, le reste suit', $code === 200 && in_array('promotions (TFBuddy)', $b['muettes'], true) && in_array('heures creuses (BO)', $b['muettes'], true)
+    && isset(array_column($b['idees'], null, 'id')['op-bo-3']), json_encode($b['muettes']));
+Tfb::$transport = $tfbAvant2;
+BoMarketing::$transport = $boAvant; array_splice($GLOBALS['BO_CAMPAGNES'], 2); socOperations(true);
+socSettingPut('tfb_cache_nav', $navAvant, false); socSettingPut('creux_cache', null, false);
+socStateSave(['changes' => ['posts' => ['delete' => ['pidee1']]]]);
 
 echo "Générateur : modèles d'étiquette (textes posés sur le visuel)\n";
 $GLOBALS['SOC_BODY'] = ['etiquettes_modeles' => [
