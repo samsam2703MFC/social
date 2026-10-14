@@ -303,6 +303,12 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   d'étiquette : ceux du design system (`DS_ETIQUETTES`) et ceux enregistrés depuis le
   générateur (réglage `etiquettes_modeles`, `POST /parametres`, nettoyé par
   `socEtiquettesModeles`). Gardés avec le post (`visual.v.textes`) et exportés dans l'image.
+  « Texte de l'offre » : le libellé de la promotion, du bundle ou de la formule, modifiable ; on
+  en reprend tout ou le passage sélectionné (« → Texte », « → Sous-texte ») pour le badge.
+- **Styles plein cadre** — en plus de « Plein cadre » : Plein · bandeau (bandeau ruby en bas),
+  Plein · encart (encart crème arrondi), Plein · titre haut (titre en haut, prix en pastille
+  ruby), Plein · filet (filet crème intérieur, titre et prix centrés en bas). La photo occupe
+  tout le visuel ; fond : la photo.
 - **Texte du lien** — le lien publié suit un texte d'introduction : « Commandez ici 👉
   https://… » (`socMessage`). Meta n'accepte pas de lien caché sous un mot dans le texte d'une
   publication : l'adresse reste visible juste après ce texte. Le texte se règle par post (champ

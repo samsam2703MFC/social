@@ -125,7 +125,7 @@ window.DS_FONDS = [
   { id: 'ambre', nom: 'Ambre foncé', hex: '#6B4420', ton: 'fonce' },
 ];
 // Le ton de chaque style du studio (les autres sont clairs) ; Plein cadre : le fond est la photo.
-window.DS_TONS = { ruby: 'fonce', noir: 'fonce', encadre: 'fonce', nuit: 'fonce', plein: null };
+window.DS_TONS = { ruby: 'fonce', noir: 'fonce', encadre: 'fonce', nuit: 'fonce', plein: null, pleinbandeau: null, pleinencart: null, pleinhaut: null, pleinfilet: null };
 // Couleurs du trait d'une illustration (recolorée par masque) : la palette de la marque.
 window.DS_TRAITS = [
   { id: 'origine', nom: 'D’origine', hex: null },

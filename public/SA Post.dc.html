@@ -320,6 +320,17 @@
                     <input ref="{{ txtRef }}" type="text" value="{{ txtVal }}" onChange="{{ setTxtVal }}" disabled="{{ locked }}" placeholder="Texte (ex. −1,40 €, 13,00 €, 2+1)" style="flex:1 1 160px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;outline:none;">
                     <input type="text" value="{{ sousVal }}" onChange="{{ setSousVal }}" disabled="{{ locked }}" placeholder="Sous-texte (facultatif)" style="flex:1 1 160px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;outline:none;">
                   </div>
+                  <div style="display:flex;flex-direction:column;gap:6px;">
+                    <span style="font-size:11px;color:#444444;">Texte de l’offre <span style="color:#666666;">— modifiable ; sélectionnez un passage puis « → Texte » ou « → Sous-texte » pour le badge</span></span>
+                    <sc-if value="{{ hasSrcOffres }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:5px;flex-wrap:wrap;"><sc-for list="{{ srcOffres }}" as="so" hint-placeholder-count="2"><button onClick="{{ so.pick }}" title="{{ so.tip }}" style="border:0.5px solid rgba(34,34,34,0.18);background:{{ so.bg }};color:{{ so.fg }};border-radius:999px;padding:4px 9px;font-size:11px;cursor:pointer;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ so.label }}</button></sc-for></div></sc-if>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:stretch;">
+                      <textarea ref="{{ srcRef }}" rows="2" value="{{ srcVal }}" onChange="{{ setSrcVal }}" disabled="{{ locked }}" placeholder="Le libellé de la promotion, du bundle ou de la formule (choisissez une offre ci-dessus, ou écrivez)" style="flex:1 1 260px;font-size:13px;line-height:1.4;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;outline:none;resize:vertical;font-family:var(--font-ui);"></textarea>
+                      <div style="display:flex;flex-direction:column;gap:4px;">
+                        <button onClick="{{ srcVersTexte }}" disabled="{{ locked }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;">→ Texte</button>
+                        <button onClick="{{ srcVersSous }}" disabled="{{ locked }}" style="border:0.5px solid #8D1D2C;background:#FFFFFF;color:#8D1D2C;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;">→ Sous-texte</button>
+                      </div>
+                    </div>
+                  </div>
                   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                     <span style="font-size:11px;color:#666666;width:52px;">Forme</span>
                     <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap;"><sc-for list="{{ txtFormes }}" as="tf" hint-placeholder-count="4"><button onClick="{{ tf.pick }}" style="border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:500;cursor:pointer;background:{{ tf.bg }};color:{{ tf.fg }};">{{ tf.label }}</button></sc-for></div>
@@ -403,6 +414,31 @@
               <div style="width:20px;height:6px;background:#F2C9A0;"></div>
             </div>
             <span style="font-size:11px;color:#222222;text-align:center;">Plein cadre</span>
+          </button>
+          <button onClick="{{ pickPleinbandeau }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPleinbandeau }};background:linear-gradient(180deg,#A39D94 0%,#8A847C 60%);display:flex;flex-direction:column;justify-content:flex-end;box-sizing:border-box;overflow:hidden;">
+              <div style="background:#8D1D2C;padding:8px 10px;display:flex;justify-content:space-between;align-items:flex-end;"><div style="width:36px;height:7px;background:#FFFFFF;"></div><div style="width:14px;height:6px;background:#F2C9A0;"></div></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Plein · bandeau</span>
+          </button>
+          <button onClick="{{ pickPleinencart }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPleinencart }};background:linear-gradient(160deg,#B8B2A8 0%,#8A847C 100%);padding:8px;display:flex;flex-direction:column;justify-content:flex-end;box-sizing:border-box;">
+              <div style="width:56%;background:#F5EFE4;border-radius:5px;padding:6px;display:flex;flex-direction:column;gap:3px;"><div style="width:80%;height:5px;background:#232220;"></div><div style="width:40%;height:4px;background:#8D1D2C;"></div></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Plein · encart</span>
+          </button>
+          <button onClick="{{ pickPleinhaut }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPleinhaut }};background:linear-gradient(180deg,#2E2C2A 0%,#8A847C 50%,#A39D94 100%);padding:9px;display:flex;flex-direction:column;align-items:center;gap:4px;box-sizing:border-box;position:relative;">
+              <div style="width:44px;height:7px;background:#FFFFFF;"></div><div style="width:28px;height:4px;background:#F2C9A0;"></div>
+              <div style="position:absolute;right:7px;bottom:7px;width:20px;height:20px;border-radius:50%;background:#8D1D2C;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Plein · titre haut</span>
+          </button>
+          <button onClick="{{ pickPleinfilet }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPleinfilet }};background:linear-gradient(180deg,#A39D94 0%,#8A847C 50%,#2E2C2A 100%);padding:5px;box-sizing:border-box;">
+              <div style="width:100%;height:100%;border:1.5px solid #F5EFE4;border-radius:3px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;padding:6px;"><div style="width:40px;height:6px;background:#FFFFFF;"></div><div style="width:16px;height:5px;background:#F2C9A0;"></div></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Plein · filet</span>
           </button>
           <button onClick="{{ pickDuo }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
             <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selDuo }};background:linear-gradient(90deg,#8A847C 0%,#8A847C 44%,#F5EFE4 44%,#F5EFE4 100%);padding:12px 10px 12px 0;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;box-sizing:border-box;">
@@ -968,7 +1004,7 @@ class Component extends DCLogic {
   FORMATS = [['carre', 'Carré 1:1', '1080 × 1080 · entier dans le fil Facebook et Instagram, sur mobile comme sur ordinateur. Sur un écran d’ordinateur peu haut, Facebook peut le réduire et ajouter des bandes de couleur sur les côtés.'],
     ['portrait', 'Portrait 4:5', '1080 × 1350 · le plus grand sur mobile (Facebook et Instagram). Sur ordinateur, Facebook le réduit davantage : bandes de couleur sur les côtés.'],
     ['paysage', 'Paysage 1,91:1', '1200 × 630 · toute la largeur du fil sur ordinateur, sans bandes sur les côtés. Plus petit sur mobile ; Instagram l’accepte tel quel.']];
-  STYLES1 = [['epure', 'Épuré', '#F5EFE4'], ['abricot', 'Abricot', '#F2C9A0'], ['ruby', 'Ruby', '#8D1D2C'], ['noir', 'Noir', '#232220'], ['plein', 'Plein cadre', '#8A847C'], ['duo', 'Duo', '#EAE4DC']];
+  STYLES1 = [['epure', 'Épuré', '#F5EFE4'], ['abricot', 'Abricot', '#F2C9A0'], ['ruby', 'Ruby', '#8D1D2C'], ['noir', 'Noir', '#232220'], ['plein', 'Plein cadre', '#8A847C'], ['pleinbandeau', 'Plein · bandeau', '#8D1D2C'], ['pleinencart', 'Plein · encart', '#F5EFE4'], ['pleinhaut', 'Plein · titre haut', '#2E2C2A'], ['pleinfilet', 'Plein · filet', '#A39D94'], ['duo', 'Duo', '#EAE4DC']];
   STYLES2 = [['mosaique', 'Mosaïque', 12], ['grille', 'Grille 2×2', 4], ['trio', 'Trio', 3], ['collage', 'Collage', 5], ['bandes', 'Bandes', 3], ['galerie', 'Galerie 3×3', 9], ['frise', 'Frise', 4], ['puzzle', 'Puzzle', 5], ['pastilles', 'Pastilles', 4], ['epinglees', 'Épinglées', 3], ['etagere', 'Étagère', 6], ['diagonale', 'Diagonale', 3], ['vedette', 'Vedette', 5], ['damier', 'Damier', 8], ['encadre', 'Encadré', 4], ['nuit', 'Nuit', 3]];
   // Montages Instagram : réglages par défaut (B · carrousel panoramique, C · collage 4:5).
   MONTAGE() { return { n: 3, tpl: 'trio', title: '', band: '', price: '', sign: "L'Atelier By" }; }
@@ -1088,14 +1124,21 @@ class Component extends DCLogic {
     return ds.concat((Array.isArray(mes) ? mes : []).filter(m => m && m.id && m.nom));
   }
   /** Pose un texte sur le visuel (promotion, formule ou texte libre), dans le style du dernier modèle utilisé. */
-  poserTexte(txt, sous) {
+  poserTexte(txt, sous, source) {
     const v = this.state.v, ts = v.textes || [], M = this.etqModeles(), m = M.find(x => x.id === this._etqDernier) || M[0] || {};
     const pick = (o) => ({ forme: o.forme, police: o.police, couleur: o.couleur, fond: o.fond, taille: o.taille, rot: o.rot, x: o.x, y: o.y });
-    const t = Object.assign({ id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), txt: String(txt || 'Texte'), sous: String(sous || '') }, pick(m));
+    // `source` : le libellé complet de l'offre (promotion, bundle, formule), gardé modifiable à côté du texte.
+    const t = Object.assign({ id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), txt: String(txt || 'Texte'), sous: String(sous || ''), source: String(source || '') }, pick(m));
     if (ts.length) { t.x = Math.min(90, (+t.x || 50) + 6 * ts.length); t.y = Math.min(90, (+t.y || 50) + 6 * ts.length); }
     this.setState({ v: Object.assign({}, v, { textes: ts.concat(t) }), txtSel: t.id, mode: 'studio' });
     // Le texte vient de l'API (nom de promotion, formule) : son champ s'ouvre, prêt à être corrigé.
     this.editerTexte();
+  }
+  /** Le passage sélectionné dans « Texte de l'offre » (sinon tout le texte), pour le texte ou le sous-texte du badge. */
+  passageOffre(sel) {
+    const v = String((sel && sel.source) || ''), el = this._srcIn;
+    if (el && el.selectionEnd > el.selectionStart && el.value === v) return v.slice(el.selectionStart, el.selectionEnd).trim();
+    return v.trim();
   }
   /** Ouvre le champ du texte sélectionné, texte sélectionné (après le rendu). */
   editerTexte() {
@@ -1420,11 +1463,11 @@ class Component extends DCLogic {
       return { tag, tagBg: tb, tagFg: tf, libelle: x.libelle, op: x.ici ? 1 : 0.6,
         note: (x.ici ? '' : 'Pas dans ' + (shopNom || 'la boutique choisie') + ' · ') + x.portee + (x.au ? ' · jusqu\u2019au ' + SA.dShort(x.au) : ''), noteFg: x.ici ? '#666666' : '#8A4B00',
         btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, x.court, x.nom, x.libelle),
-        poser: () => !locked && this.poserTexte(x.court || x.nom, x.court ? x.nom : '') }; })
+        poser: () => !locked && this.poserTexte(x.court || x.nom, x.court ? x.nom : '', x.libelle) }; })
       .concat((O.formules || []).map((f, i) => { const k = 'f' + i, used = s.offreUsed === k, [tag, tb, tf] = TAG.formule;
         return { tag, tagBg: tb, tagFg: tf, libelle: f.libelle, op: 1, note: (f.prix != null ? eur(f.prix) + (shopNom ? ' à ' + shopNom : '') : 'prix selon la boutique') + (f.choix && f.choix.length ? ' · au choix : ' + f.choix.join(', ') : ''), noteFg: '#666666',
           btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, f.court, 'Formule ' + f.nom, f.libelle),
-          poser: () => !locked && this.poserTexte(f.prix != null ? eur(f.prix) : f.court || f.nom, 'Formule ' + f.nom) }; }));
+          poser: () => !locked && this.poserTexte(f.prix != null ? eur(f.prix) : f.court || f.nom, 'Formule ' + f.nom, f.libelle) }; }));
     const KIND = { produit: 'Produit', categorie: 'Sous-catégorie', groupe: 'Catégorie', gamme: 'Gamme' };
     const selView = sel ? { kind: KIND[sel.kind] || '', name: sel.name, image: sel.image || '', hasImg: !!sel.image,
       prix: sel.kind !== 'produit' ? 'Pas de prix : ' + (KIND[sel.kind] || '').toLowerCase() + ' entière' + (sel.kind === 'categorie' || sel.kind === 'groupe' ? ' · lien vers sa page du webshop' : '')
@@ -1592,7 +1635,14 @@ class Component extends DCLogic {
         return { hasTxts: ts.length > 0, hasTxtSel: !!sel,
           txtList: ts.map(t => { const on = t.id === s.txtSel; return { label: String(t.txt || t.sous || 'Texte').slice(0, 26), bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', pick: () => this.setState({ txtSel: on ? null : t.id }) }; }),
           txtAdd: () => !locked && this.poserTexte(String(v.promo || '').trim() || 'Nouveau', ''),
-          txtVal: sel ? sel.txt || '' : '', setTxtVal: (e) => upd({ txt: e.target.value }), sousVal: sel ? sel.sous || '' : '', setSousVal: (e) => upd({ sous: e.target.value }),
+          txtVal: sel ? sel.txt || '' : '', setTxtVal: (e) => upd({ txt: e.target.value }),
+          // Le texte de l'offre (libellé de la promotion, du bundle ou de la formule) : modifiable ; on en reprend
+          // tout, ou le passage sélectionné, pour le texte ou le sous-texte du badge.
+          srcVal: sel ? sel.source || '' : '', setSrcVal: (e) => upd({ source: e.target.value }), srcRef: (el) => { this._srcIn = el; },
+          srcOffres: (O.promotions || []).map(x => ({ tag: (TAG[x.type] || TAG.offre)[0], txt: x.libelle })).concat((O.formules || []).map(f => ({ tag: 'Formule', txt: f.libelle })))
+            .filter(o => o.txt).map(o => { const on = !!sel && sel.source === o.txt; return { label: o.tag + ' · ' + (o.txt.length > 46 ? o.txt.slice(0, 45) + '…' : o.txt), tip: o.txt, bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#444444', pick: () => upd({ source: o.txt }) }; }),
+          hasSrcOffres: !!((O.promotions || []).length || (O.formules || []).length),
+          srcVersTexte: () => { const x = this.passageOffre(sel); if (x) upd({ txt: x }); }, srcVersSous: () => { const x = this.passageOffre(sel); if (x) upd({ sous: x }); }, sousVal: sel ? sel.sous || '' : '', setSousVal: (e) => upd({ sous: e.target.value }),
           txtFormes: FOR.map(f => { const [bg, fg] = seg(!!sel && (sel.forme || 'etiquette') === f.id); return { label: f.nom, bg, fg, pick: () => upd({ forme: f.id }) }; }),
           txtPolices: POL.map(p => { const on = !!sel && sel.police === p.id; return { label: p.nom, detail: p.detail, font: p.font, weight: p.weight, tt: p.tt, border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)', bw: on ? '2px' : '1px', pick: () => upd({ police: p.id }) }; }),
           txtCouleurs: FONDS.map(f => sw(f, !!sel && sel.couleur === f.id, () => upd({ couleur: f.id }))),
