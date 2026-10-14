@@ -276,6 +276,19 @@
                 <span style="font-size:11px;color:#666666;">0 % : photo sans dégradé · 100 % : dégradé le plus sombre (texte le plus lisible).</span>
               </sc-if>
             </div>
+            <!-- Logo : version d'origine (foncé, clair) ou recolorée dans la palette -->
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;color:#666666;">Logo</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:stretch;">
+                <sc-for list="{{ logos }}" as="lg" hint-placeholder-count="7"><button onClick="{{ lg.pick }}" title="{{ lg.nom }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;border:{{ lg.ringW }} solid {{ lg.ring }};background:#FFFFFF;border-radius:8px;padding:5px;cursor:pointer;width:86px;box-sizing:border-box;">
+                  <span style="width:74px;height:28px;border-radius:5px;background:{{ lg.apercu }};display:flex;align-items:center;justify-content:center;">
+                    <sc-if value="{{ lg.isImg }}" hint-placeholder-val="{{ true }}"><img src="{{ lg.src }}" alt="" style="height:11px;width:auto;"></sc-if>
+                    <sc-if value="{{ lg.isMask }}" hint-placeholder-val="{{ false }}"><span style="height:11px;width:64px;display:block;background:{{ lg.hex }};-webkit-mask:url('img/logo-white.png') center/contain no-repeat;mask:url('img/logo-white.png') center/contain no-repeat;"></span></sc-if>
+                    <sc-if value="{{ lg.isAuto }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;color:#666666;">auto</span></sc-if>
+                  </span>
+                  <span style="font-size:10px;color:#444444;">{{ lg.nom }}</span></button></sc-for>
+              </div>
+            </div>
             <!-- Illustration : un dessin du design system posé sur le visuel -->
             <div style="display:flex;flex-direction:column;gap:8px;">
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -1019,7 +1032,7 @@ class Component extends DCLogic {
   state = this.initState();
   initState() {
     const SA = window.SA;
-    const v = { style: 'epure', format: 'carre', textes: [], fondu: 60, cutMode: 'auto', showLogo: true, showEyebrow: true, showTitle: true, showPhrase: true, showPrice: true, showPromo: false, showSite: true,
+    const v = { style: 'epure', format: 'carre', textes: [], fondu: 60, logo: 'auto', cutMode: 'auto', showLogo: true, showEyebrow: true, showTitle: true, showPhrase: true, showPrice: true, showPromo: false, showSite: true,
       nl: { eyebrow: 'Seizoenseditie · Herfst 2026', title: '', phrase: '', unit: 'Per stuk', promoSub: 'de 5de gratis' },
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', linkText: { fr: '', nl: '' }, campaign: '',
@@ -1624,6 +1637,10 @@ class Component extends DCLogic {
       hasFondu: ['plein', 'pleinbandeau', 'pleinhaut', 'pleinfilet'].includes(v.style),
       fondu: v.fondu != null ? v.fondu : 60, fonduLabel: (v.fondu != null ? v.fondu : 60) + ' %', setFondu: (e) => !locked && this.V({ fondu: +e.target.value }),
       fonduReset: () => !locked && this.V({ fondu: 60 }),
+      // Logo du visuel : selon le style, foncé, clair, ou recoloré dans la palette de la marque.
+      logos: (window.DS_LOGOS || []).map(L => { const on = (v.logo || 'auto') === L.id;
+        return { nom: L.nom, isAuto: L.id === 'auto', isImg: !!L.src, isMask: !!L.hex, src: L.src || '', hex: L.hex || 'transparent', apercu: L.apercu || '#FFFFFF',
+          ring: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)', ringW: on ? '2px' : '1px', pick: () => !locked && this.V({ logo: L.id }) }; }),
       // Fond : la palette du design system, dans le ton du style (texte toujours lisible).
       ...(() => {
         const T = window.DS_TONS || {}, ton = Object.prototype.hasOwnProperty.call(T, v.style) ? T[v.style] : 'clair';

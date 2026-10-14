@@ -312,6 +312,9 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   (0 à 100 %, 60 % = le dessin d'origine ; `visual.v.fondu`, variable CSS `--fade`).
   Un texte posé s'efface par son × (sur l'aperçu, au survol ou sélectionné, ou sur sa
   pastille dans la liste) ; le × n'est jamais dans l'image exportée.
+- **Logo du visuel** — selon le style, ou au choix : Foncé (`img/logo.png`, apostrophe dorée),
+  Clair (`img/logo-white.png`), ou recoloré dans la palette (noir, ruby, abricot, crème : masque
+  CSS sur le logo blanc ; `DS_LOGOS`). Gardé avec le post (`visual.v.logo`).
 - **Texte du lien** — le lien publié suit un texte d'introduction : « Commandez ici 👉
   https://… » (`socMessage`). Meta n'accepte pas de lien caché sous un mot dans le texte d'une
   publication : l'adresse reste visible juste après ce texte. Le texte se règle par post (champ

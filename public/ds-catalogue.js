@@ -153,3 +153,15 @@ window.DS_ETIQUETTES = [
   { id: 'ds-pastille-creme', nom: 'Pastille Crème', forme: 'pastille', police: 'titre', couleur: 'ruby', fond: 'creme', taille: 64, rot: 6, x: 20, y: 76 },
   { id: 'ds-manuscrit-ruby', nom: 'Manuscrit Ruby', forme: 'texte', police: 'script', couleur: 'ruby', fond: null, taille: 52, rot: -4, x: 30, y: 30 },
 ];
+
+// Logo du visuel : selon le style, les deux fichiers d'origine (foncé à l'apostrophe dorée, blanc),
+// ou recoloré dans la palette de la marque (masque CSS sur le logo blanc).
+window.DS_LOGOS = [
+  { id: 'auto', nom: 'Selon le style' },
+  { id: 'fonce', nom: 'Foncé', src: 'img/logo.png', apercu: '#F5EFE4' },
+  { id: 'clair', nom: 'Clair', src: 'img/logo-white.png', apercu: '#232220' },
+  { id: 'noir', nom: 'Noir', hex: '#232220', apercu: '#F5EFE4' },
+  { id: 'ruby', nom: 'Ruby', hex: '#8D1D2C', apercu: '#F5EFE4' },
+  { id: 'abricot', nom: 'Abricot', hex: '#F2C9A0', apercu: '#232220' },
+  { id: 'creme', nom: 'Crème', hex: '#F5EFE4', apercu: '#8D1D2C' },
+];
