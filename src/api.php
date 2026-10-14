@@ -27,6 +27,7 @@ require_once __DIR__ . '/metacampagnes.php';
 require_once __DIR__ . '/calendriers.php';
 require_once __DIR__ . '/suivi.php';
 require_once __DIR__ . '/operations.php';
+require_once __DIR__ . '/catalogue.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -117,6 +118,10 @@ function socRoute(string $method, string $path): array
     }
     if ($method === 'GET' && $path === '/operations') { $o = socOperations(); return [200, ['operations' => $o, 'erreur' => socOperationsErreur(), 'api' => BoMarketing::base()]]; }
     if ($method === 'GET' && $path === '/meta/calendriers') { return [200, socCalendriersLire((string) ($_GET['du'] ?? ''), (string) ($_GET['au'] ?? ''))]; }
+    // Créer un post : le catalogue du webshop (catégorie → sous-catégorie → produit, gammes), prix d'UNE boutique,
+    // et les promotions, bundles et formules liés à la sélection (src/catalogue.php).
+    if ($method === 'GET' && $path === '/catalogue/nav') { return [200, socNavCatalogue((string) ($_GET['shop'] ?? ''), !empty($_GET['forcer']))]; }
+    if ($method === 'GET' && $path === '/catalogue/offres') { return [200, socNavOffres($_GET)]; }
     // Supprimer un post : du module (et, avec meta, de Facebook / Instagram), ou une publication lue chez Meta.
     if ($method === 'POST' && $path === '/posts/supprimer') {
         $b = body();

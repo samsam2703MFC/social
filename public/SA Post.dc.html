@@ -51,24 +51,75 @@
           </div>
         </section>
 
-        <!-- 2 Catalogue -->
+        <!-- 2 Catalogue : catégorie → sous-catégorie → produit, ou gamme ; prix d'UNE boutique ; promotions, bundles, formules -->
         <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
-          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">2 · Produit ou gamme du catalogue</span>
-            <span style="font-size:12px;color:#666666;">Pré-remplit photo, nom, prix et texte</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">2 · Produit, catégorie ou gamme du catalogue</span>
+            <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+              <button onClick="{{ navModeCat }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ navCatBg }};color:{{ navCatFg }};">Par catégorie</button>
+              <button onClick="{{ navModeGam }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ navGamBg }};color:{{ navGamFg }};">Par gamme</button>
+            </div>
           </div>
-          <input value="{{ catQ }}" onChange="{{ setCatQ }}" placeholder="{{ catPh }}" style="font-family:var(--font-ui);font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 10px;width:100%;box-sizing:border-box;">
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;">
-            <sc-for list="{{ catalogue }}" as="c" hint-placeholder-count="0">
-              <button onClick="{{ c.pick }}" style="display:flex;flex-direction:column;align-items:stretch;padding:0;border-radius:8px;border:2px solid {{ c.ring }};background:#FFFFFF;cursor:pointer;overflow:hidden;text-align:left;">
-                <span style="display:block;height:58px;background:#F4EFE8;position:relative;"><img src="{{ c.img }}" alt="" style="position:absolute;left:8px;top:5px;width:calc(100% - 16px);height:48px;object-fit:contain;"></span>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <input value="{{ navQ }}" onChange="{{ setNavQ }}" placeholder="{{ navPh }}" style="flex:1 1 240px;font-family:var(--font-ui);font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 10px;box-sizing:border-box;">
+            <span style="font-size:11px;font-weight:500;border-radius:999px;padding:5px 10px;background:{{ navPrixBg }};color:{{ navPrixFg }};">{{ navPrixNote }}</span>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;font-size:12px;">
+            <sc-for list="{{ navCrumbs }}" as="cr" hint-placeholder-count="2">
+              <button onClick="{{ cr.go }}" style="border:none;background:transparent;padding:2px 2px;font-size:12px;cursor:pointer;color:{{ cr.fg }};font-weight:{{ cr.w }};">{{ cr.label }}</button><span style="color:#B8B2A8;display:{{ cr.sepDisp }};">›</span>
+            </sc-for>
+            <sc-if value="{{ hasNavPick }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ navPick }}" style="margin-left:auto;border:0.5px solid rgba(141,29,44,0.4);background:#FBF3F4;color:#8D1D2C;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;">{{ navPickLabel }}</button>
+            </sc-if>
+          </div>
+          <sc-if value="{{ navLoading }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Lecture du catalogue du webshop…</span></sc-if>
+          <sc-if value="{{ hasNavErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8D1D2C;">{{ navErr }}</span></sc-if>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;max-height:430px;overflow-y:auto;padding:2px;">
+            <sc-for list="{{ navTiles }}" as="tl" hint-placeholder-count="8">
+              <button onClick="{{ tl.open }}" title="{{ tl.tip }}" style="display:flex;flex-direction:column;align-items:stretch;padding:0;border-radius:8px;border:2px solid {{ tl.ring }};background:#FFFFFF;cursor:pointer;overflow:hidden;text-align:left;">
+                <span style="display:block;height:76px;background:#F4EFE8;position:relative;overflow:hidden;">
+                  <sc-if value="{{ tl.hasImg }}" hint-placeholder-val="{{ true }}"><img src="{{ tl.image }}" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:{{ tl.fit }};opacity:{{ tl.op }};"></sc-if>
+                  <sc-if value="{{ tl.noImg }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:26px;color:#C9BFB3;">{{ tl.ini }}</span></sc-if>
+                  <span style="position:absolute;left:5px;top:5px;font-size:9px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;background:rgba(255,255,255,0.92);color:#444444;border-radius:4px;padding:2px 5px;">{{ tl.kind }}</span>
+                  <sc-if value="{{ tl.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:5px;top:5px;font-size:9px;font-weight:500;background:#232220;color:#F2C9A0;border-radius:4px;padding:2px 5px;">{{ tl.badge }}</span></sc-if>
+                </span>
                 <span style="padding:6px 8px 7px;display:flex;flex-direction:column;gap:1px;">
-                  <span style="font-size:11px;font-weight:500;line-height:1.25;color:#222222;">{{ c.name }}</span>
-                  <span style="font-size:10px;color:#666666;">{{ c.meta }}</span>
+                  <span style="font-size:11px;font-weight:500;line-height:1.25;color:#222222;">{{ tl.name }}</span>
+                  <span style="font-size:10px;color:{{ tl.metaFg }};font-weight:{{ tl.metaW }};">{{ tl.meta }}</span>
                 </span>
               </button>
             </sc-for>
           </div>
+          <sc-if value="{{ hasNavSel }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:10px;border:0.5px solid rgba(141,29,44,0.35);background:#FCFAF7;border-radius:10px;padding:12px;">
+              <div style="display:flex;gap:12px;align-items:center;">
+                <span style="width:64px;height:64px;border-radius:8px;background:#F4EFE8;overflow:hidden;flex:0 0 auto;display:flex;align-items:center;justify-content:center;">
+                  <sc-if value="{{ navSel.hasImg }}" hint-placeholder-val="{{ true }}"><img src="{{ navSel.image }}" alt="" style="width:100%;height:100%;object-fit:cover;"></sc-if>
+                </span>
+                <span style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;">
+                  <span style="font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#8D1D2C;">{{ navSel.kind }}</span>
+                  <span style="font-size:14px;font-weight:500;">{{ navSel.name }}</span>
+                  <span style="font-size:12px;color:{{ navSel.prixFg }};">{{ navSel.prix }}</span>
+                </span>
+                <button onClick="{{ navUnsel }}" style="border:none;background:transparent;color:#666666;font-size:12px;text-decoration:underline;cursor:pointer;">Retirer</button>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Promotions, bundles et formules liés</span>
+                <sc-if value="{{ offresLoading }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Lecture des promotions…</span></sc-if>
+                <sc-if value="{{ noOffres }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A847C;">{{ noOffresLabel }}</span></sc-if>
+                <sc-for list="{{ offres }}" as="of" hint-placeholder-count="0">
+                  <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);opacity:{{ of.op }};">
+                    <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.04em;border-radius:4px;padding:3px 6px;background:{{ of.tagBg }};color:{{ of.tagFg }};flex:0 0 auto;">{{ of.tag }}</span>
+                    <span style="display:flex;flex-direction:column;gap:1px;min-width:0;flex:1;">
+                      <span style="font-size:12px;font-weight:500;">{{ of.libelle }}</span>
+                      <span style="font-size:11px;color:{{ of.noteFg }};">{{ of.note }}</span>
+                    </span>
+                    <button onClick="{{ of.use }}" style="border:none;background:{{ of.btnBg }};color:#FFFFFF;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;flex:0 0 auto;">{{ of.btn }}</button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
         </section>
 
         <!-- 3 Visuel -->
@@ -808,6 +859,7 @@ class Component extends DCLogic {
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', campaign: '',
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
+      nav: null, navKey: null, navLoading: false, navErr: '', navMode: 'cat', navG: null, navC: null, navGam: null, navQ: '', navSel: null, offres: null, offresKey: '', offresLoading: false, offreUsed: '',
       libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false };
     if (!SA) return base;
     SA.SHOPS.forEach(s => { base.ch[s.id] = { fb: s.fb === 'connected', ig: s.igs === 'connected' }; });
@@ -819,6 +871,7 @@ class Component extends DCLogic {
       Object.assign(base, { id: p.id, type: p.type, text: p.text || '', textNl: p.textNl || '', link: p.link || '', campaign: p.campaign || '', date: p.date, time: p.time, sel: shops,
         scope: shops.length === SA.SHOPS.length ? 'all' : 'shop', status: p.status, spread: p.spread || 10, product: p.product || null, dark: !!p.dark });
       if (p.ch) base.ch = p.ch;
+      if (p.catalogue) base.navSel = p.catalogue;
       if (p.montage) { base.mode = ['collage', 'frise'].includes(p.montage.kind) ? p.montage.kind : 'pano'; base.m = Object.assign(this.MONTAGE(), p.montage.m); base.photos = p.montage.photos || []; }
       else if (p.visual) { base.mode = 'studio'; base.v = Object.assign({}, v, p.visual.v, { nl: Object.assign({}, v.nl, (p.visual.v || {}).nl) }); base.photos = p.visual.photos || []; }
       else { base.mode = 'brut'; base.photos = (p.media || [{ src: p.img, kind: 'img', cut: true }]).filter(m => m.kind !== 'video').map(m => ({ src: m.src, cut: m.cut !== false, name: m.name || '' })); base.v.title = p.title; }
@@ -904,6 +957,28 @@ class Component extends DCLogic {
   }
   toast(msg) { clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast: '' }), 4000); }
   V(patch) { this.setState({ v: Object.assign({}, this.state.v, patch) }); }
+  /** Le catalogue du webshop, avec les prix de `shop` (une seule boutique) ou sans prix (''). */
+  loadNav(shop) {
+    const SA = window.SA;
+    this.setState({ navLoading: true, navErr: '', navKey: shop });
+    SA.catalogueNav(shop).then(nav => {
+      if (this.state.navKey !== shop) return;
+      const st = { nav, navLoading: false }, sel = this.state.navSel;
+      // Un produit choisi suit la boutique : son prix, ou plus de prix si plusieurs boutiques.
+      if (sel && sel.kind === 'produit') {
+        const p = nav.produits.find(x => x.id === sel.id), prix = nav.prix && p && p.prix != null ? p.prix : null;
+        st.navSel = Object.assign({}, sel, { prix, shop: nav.prix ? shop : null });
+        st.v = Object.assign({}, this.state.v, { price: prix != null ? String(prix.toFixed(2)).replace('.', ',') : '', showPrice: prix != null });
+      }
+      this.setState(st);
+    }).catch(e => this.setState({ navLoading: false, navErr: 'Catalogue illisible : ' + (e.message || e) }));
+  }
+  /** Les promotions, bundles et formules liés à la sélection. */
+  loadOffres(key, q) {
+    this.setState({ offresKey: key, offresLoading: true, offres: null });
+    window.SA.catalogueOffres(q).then(r => { if (this.state.offresKey === key) this.setState({ offres: r, offresLoading: false }); })
+      .catch(e => { if (this.state.offresKey === key) this.setState({ offres: { promotions: [], formules: [], erreur: e.message || String(e) }, offresLoading: false }); });
+  }
   targets() { const SA = window.SA; return this.state.sel.filter(id => SA.byId(SA.SHOPS, id)); }
   readFile(file) {
     return new Promise((res) => {
@@ -1034,7 +1109,7 @@ class Component extends DCLogic {
       visual: s.mode === 'studio' ? { v: s.v, photos: s.photos.filter(p => !/^data:/.test(p.src) || p.src.length < 400000) } : null,
       frise: friseTiles ? { tiles: friseTiles } : null,
       montage: this.isMontage() ? { kind: s.mode, m: s.m, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
-      shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, spread: s.spread, product: s.product };
+      shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, spread: s.spread, product: s.product, catalogue: s.navSel || null };
     if (s.dark) { post.dark = true; post.fb = false; post.ig = false; if (!s.id) { post.date = SA.TODAY; post.time = nowT; } }
     if (status === 'Publié') {
       const ko = t.filter(id => s.ch[id] && s.ch[id].ig && (SA.byId(SA.state().shops, id) || SA.byId(SA.SHOPS, id) || {}).igs !== 'connected').map(id => ({ shop: id, channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }));
@@ -1086,6 +1161,120 @@ class Component extends DCLogic {
           : !fbOk ? 'Page non connectée' : !igOk ? 'Instagram : ' + SA.CONN[live.igs].label.toLowerCase() : 'Connecté',
         noteFg: test ? '#8A4B00' : fbOk && igOk ? '#0F6B4A' : '#8A4B00' };
     });
+    // ===== Catalogue : catégorie → sous-catégorie → produit, ou gamme =====
+    // Prix d'UNE boutique du réseau ; plusieurs boutiques (ou aucune) : pas de prix.
+    const prixShop = tRes.length === 1 ? tRes[0] : '';
+    if (s.navKey !== prixShop && !this._navWait) { this._navWait = true; setTimeout(() => { this._navWait = false; if (this.state.navKey !== prixShop) this.loadNav(prixShop); }, 0); }
+    const nav = s.nav, P = nav ? nav.produits : [], G = nav ? nav.groupes : [], C = nav ? nav.categories : [], GA = nav ? nav.gammes : [];
+    const grpById = {}, catById = {}; G.forEach(g => { grpById[g.id] = g; }); C.forEach(c => { catById[c.id] = c; });
+    const nnorm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const eur = (n) => n != null ? SA.eur(n, 2) : '';
+    const shopNom = prixShop ? (SA.byId(SA.SHOPS, prixShop) || { name: prixShop }).name : '';
+    const illus = (p) => p.image || (catById[p.cat] || {}).image || (grpById[p.groupe] || {}).image || '';
+    const sel = s.navSel;
+    const choose = (it) => {
+      if (locked) return;
+      if (sel && sel.kind === it.kind && sel.id === it.id) { this.setState({ navSel: null }); return; }
+      const st = { navSel: it, offreUsed: '' };
+      const nomNl = it.nameNl || it.name;
+      // Le texte proposé suit le choix tant qu'il n'a pas été retouché à la main.
+      const libreFr = !s.text.trim() || s.text === this._autoFr, libreNl = !s.textNl.trim() || s.textNl === this._autoNl;
+      const auto = (fr, nl) => { if (libreFr && fr) { st.text = fr; this._autoFr = fr; } if (libreNl && nl) { st.textNl = nl; this._autoNl = nl; } };
+      if (it.image) st.photos = [{ src: it.image, cut: false, name: it.name }].concat(s.photos.filter(p => p.src !== it.image));
+      if (it.kind === 'produit') {
+        const ref = SA.CATALOGUE.find(c => c.apiId === it.id && c.kind === 'produit');
+        st.product = ref ? ref.id : 'p' + it.id; st.type = 'Produit';
+        st.v = Object.assign({}, v, { title: it.name, showTitle: true, price: it.prix != null ? String(it.prix.toFixed(2)).replace('.', ',') : '', showPrice: it.prix != null, nl: Object.assign({}, v.nl, { title: nomNl }) });
+        auto(it.name + (it.prix != null ? ' : ' + eur(it.prix) : '') + ' chez L\u2019Atelier By {ville}. Ouvert {horaires}.',
+          nomNl + (it.prix != null ? ': ' + eur(it.prix) : '') + ' bij L\u2019Atelier By {ville}. Open {horaires}.');
+      } else if (it.kind === 'gamme') {
+        const ref = SA.CATALOGUE.find(c => c.apiId === it.id && c.kind === 'gamme');
+        st.product = ref ? ref.id : 'g' + it.id; st.type = 'Gamme saisonnière';
+        st.v = Object.assign({}, v, { title: it.name, showTitle: true, price: '', showPrice: false, nl: Object.assign({}, v.nl, { title: it.name }) });
+        auto('La ' + it.name + ' est arrivée chez L\u2019Atelier By {ville}. À découvrir {horaires}.', 'Het ' + it.name + ' is er bij L\u2019Atelier By {ville}. Ontdek het {horaires}.');
+      } else {
+        // Une catégorie ou une sous-catégorie entière : son illustration, pas de prix ; le lien du webshop vers la sous-catégorie.
+        st.product = null; st.type = 'Produit';
+        st.v = Object.assign({}, v, { title: it.name, showTitle: true, price: '', showPrice: false, nl: Object.assign({}, v.nl, { title: it.name }) });
+        auto('Nos ' + it.name.toLowerCase() + ' vous attendent chez L\u2019Atelier By {ville}. Ouvert {horaires}.', 'Onze ' + it.name.toLowerCase() + ' wachten op u bij L\u2019Atelier By {ville}. Open {horaires}.');
+        if (it.kind === 'categorie' && !s.link.trim()) st.link = '{webshop_categorie:' + it.id + '}';
+      }
+      this.setState(st);
+    };
+    const prodItem = (p) => ({ kind: 'produit', id: p.id, name: p.name, nameNl: p.nameNl, image: illus(p), prix: nav && nav.prix ? p.prix : null, shop: nav && nav.prix ? prixShop : null, cat: p.cat });
+    const isSel = (kind, id) => !!sel && sel.kind === kind && sel.id === id;
+    const tile = (o) => Object.assign({ hasImg: !!o.image, noImg: !o.image, ini: (o.name || '?').replace(/[^\p{L}\p{N}]/gu, '').slice(0, 1).toUpperCase(), fit: 'cover', op: 1,
+      hasBadge: !!o.badge, metaFg: '#666666', metaW: 400, tip: '' }, o);
+    const prodTile = (p) => { const c = catById[p.cat] || {}; return tile({ kind: 'Produit', name: p.name, image: illus(p), op: p.image ? 1 : 0.55, badge: p.formules ? 'Formules' : '',
+      meta: nav && nav.prix ? (p.prix != null ? eur(p.prix) : 'prix non renseigné') : c.name || '', metaFg: nav && nav.prix && p.prix != null ? '#8D1D2C' : '#666666', metaW: nav && nav.prix ? 500 : 400,
+      tip: p.image ? '' : 'Pas de photo sur le webshop : illustration de la catégorie', ring: isSel('produit', p.id) ? '#8D1D2C' : 'rgba(34,34,34,0.10)', open: () => choose(prodItem(p)) }); };
+    let tiles = [], pick = null;
+    const crumbs = [{ label: s.navMode === 'gamme' ? 'Gammes' : 'Catégories', go: () => this.setState({ navG: null, navC: null, navGam: null, navQ: '' }) }];
+    const q = nnorm(s.navQ);
+    if (nav && q) {
+      const hit = (x) => nnorm(x).includes(q);
+      tiles = G.filter(g => hit(g.name)).map(g => tile({ kind: 'Catégorie', name: g.name, image: g.image, meta: g.n + ' produits', ring: 'rgba(34,34,34,0.10)', open: () => this.setState({ navMode: 'cat', navG: g.id, navC: null, navQ: '' }) }))
+        .concat(C.filter(c => hit(c.name)).map(c => tile({ kind: 'Sous-catégorie', name: c.name, image: c.image || (grpById[c.groupe] || {}).image, meta: c.n + ' produits', ring: 'rgba(34,34,34,0.10)', open: () => this.setState({ navMode: 'cat', navG: c.groupe, navC: c.id, navQ: '' }) })))
+        .concat(GA.filter(g => hit(g.name)).map(g => tile({ kind: 'Gamme', name: g.name, image: g.image, meta: g.n + ' produits', ring: 'rgba(34,34,34,0.10)', open: () => this.setState({ navMode: 'gamme', navGam: g.id, navQ: '' }) })))
+        .concat(P.filter(p => hit(p.name + ' ' + p.nameNl)).slice(0, 40).map(prodTile));
+      crumbs.push({ label: 'Recherche « ' + s.navQ + ' »' });
+    } else if (nav && s.navMode === 'cat') {
+      const g = grpById[s.navG], c = catById[s.navC];
+      if (!g) tiles = G.map(x => tile({ kind: 'Catégorie', name: x.name, image: x.image, meta: x.n + ' produit' + (x.n > 1 ? 's' : '') + ' · ' + x.cats.length + ' sous-cat.', ring: isSel('groupe', x.id) ? '#8D1D2C' : 'rgba(34,34,34,0.10)', open: () => this.setState({ navG: x.id, navC: null }) }));
+      else if (!c) {
+        crumbs.push({ label: g.name });
+        tiles = g.cats.map(id => catById[id]).filter(Boolean).map(x => tile({ kind: 'Sous-catégorie', name: x.name, image: x.image || g.image, op: x.image ? 1 : 0.55, meta: x.n + ' produit' + (x.n > 1 ? 's' : ''), ring: isSel('categorie', x.id) ? '#8D1D2C' : 'rgba(34,34,34,0.10)', open: () => this.setState({ navC: x.id }) }));
+        pick = { label: 'Choisir toute la catégorie « ' + g.name + ' »', fn: () => choose({ kind: 'groupe', id: g.id, name: g.name, image: g.image }) };
+      } else {
+        crumbs.push({ label: g.name, go: () => this.setState({ navC: null }) }, { label: c.name });
+        tiles = P.filter(p => p.cat === c.id).map(prodTile);
+        pick = { label: 'Choisir toute la sous-catégorie « ' + c.name + ' »', fn: () => choose({ kind: 'categorie', id: c.id, name: c.name, image: c.image || g.image }) };
+      }
+    } else if (nav) {
+      const ga = GA.find(x => x.id === s.navGam);
+      if (!ga) tiles = GA.slice().sort((a, b) => (b.n > 0) - (a.n > 0) || (b.webshop - a.webshop)).map(x => tile({ kind: 'Gamme', name: x.name, image: x.image, meta: (x.du && x.au ? 'du ' + x.du + ' au ' + x.au + ' · ' : '') + x.n + ' produit' + (x.n > 1 ? 's' : ''),
+        tip: x.description, ring: isSel('gamme', x.id) ? '#8D1D2C' : 'rgba(34,34,34,0.10)', open: () => this.setState({ navGam: x.id }) }));
+      else {
+        crumbs.push({ label: ga.name });
+        tiles = P.filter(p => (p.gammes || []).includes(ga.id)).map(prodTile);
+        pick = { label: 'Choisir toute la gamme « ' + ga.name + ' »', fn: () => choose({ kind: 'gamme', id: ga.id, name: ga.name, image: ga.image }) };
+      }
+    }
+    crumbs.forEach((c, i) => { const last = i === crumbs.length - 1; Object.assign(c, { fg: last ? '#222222' : '#8D1D2C', w: last ? 500 : 400, sepDisp: last ? 'none' : 'inline', go: c.go || (() => {}) }); });
+    // Les offres de la sélection : promotions et bundles (API), formules (webshop).
+    const offresQ = sel ? { shop: prixShop, [sel.kind]: sel.id } : null, offresKey = sel ? sel.kind + ':' + sel.id + '@' + prixShop : '';
+    if (sel && s.offresKey !== offresKey && !this._offWait) { this._offWait = true; setTimeout(() => { this._offWait = false; if (this.state.offresKey !== offresKey && this.state.navSel) this.loadOffres(offresKey, offresQ); }, 0); }
+    const O = s.offres || { promotions: [], formules: [] };
+    const usePromo = (key, court, sous, libelle) => { if (locked) return;
+      this.setState({ offreUsed: key, v: Object.assign({}, v, { promo: court || sous, promoSub: sous, showPromo: true }),
+        text: s.text.includes(libelle) ? s.text : (s.text.trim() ? s.text.trim() + '\n' : '') + libelle }); };
+    const TAG = { bundle: ['Bundle', '#232220', '#F2C9A0'], offre: ['Offre', '#8D1D2C', '#FFFFFF'], remise: ['Remise', '#D97B29', '#FFFFFF'], quantite: ['Quantité', '#8D1D2C', '#FFFFFF'], formule: ['Formule', '#E2F0E8', '#0F6B4A'] };
+    const offres = (O.promotions || []).map(x => { const k = 'p' + x.id, used = s.offreUsed === k, [tag, tb, tf] = TAG[x.type] || TAG.offre;
+      return { tag, tagBg: tb, tagFg: tf, libelle: x.libelle, op: x.ici ? 1 : 0.6,
+        note: (x.ici ? '' : 'Pas dans ' + (shopNom || 'la boutique choisie') + ' · ') + x.portee + (x.au ? ' · jusqu\u2019au ' + SA.dShort(x.au) : ''), noteFg: x.ici ? '#666666' : '#8A4B00',
+        btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, x.court, x.nom, x.libelle) }; })
+      .concat((O.formules || []).map((f, i) => { const k = 'f' + i, used = s.offreUsed === k, [tag, tb, tf] = TAG.formule;
+        return { tag, tagBg: tb, tagFg: tf, libelle: f.libelle, op: 1, note: (f.prix != null ? eur(f.prix) + (shopNom ? ' à ' + shopNom : '') : 'prix selon la boutique') + (f.choix && f.choix.length ? ' · au choix : ' + f.choix.join(', ') : ''), noteFg: '#666666',
+          btn: used ? 'Dans le post ✓' : 'Utiliser', btnBg: used ? '#1F8A60' : '#8D1D2C', use: () => usePromo(k, f.court, 'Formule ' + f.nom, f.libelle) }; }));
+    const KIND = { produit: 'Produit', categorie: 'Sous-catégorie', groupe: 'Catégorie', gamme: 'Gamme' };
+    const selView = sel ? { kind: KIND[sel.kind] || '', name: sel.name, image: sel.image || '', hasImg: !!sel.image,
+      prix: sel.kind !== 'produit' ? 'Pas de prix : ' + (KIND[sel.kind] || '').toLowerCase() + ' entière' + (sel.kind === 'categorie' ? ' · lien vers sa page du webshop' : '')
+        : nav && nav.prix ? (sel.prix != null ? 'Prix de vente à ' + shopNom + ' : ' + eur(sel.prix) : 'Prix non renseigné à ' + shopNom)
+        : tRes.length > 1 ? 'Plusieurs boutiques : pas de prix (il dépend de la boutique)' : 'Choisissez une boutique pour afficher son prix de vente',
+      prixFg: sel.kind === 'produit' && nav && nav.prix && sel.prix != null ? '#8D1D2C' : '#666666' } : {};
+    const navVals = {
+      navModeCat: () => this.setState({ navMode: 'cat', navQ: '' }), navModeGam: () => this.setState({ navMode: 'gamme', navQ: '' }),
+      navCatBg: s.navMode === 'cat' ? '#8D1D2C' : 'transparent', navCatFg: s.navMode === 'cat' ? '#FFFFFF' : '#444444', navGamBg: s.navMode === 'gamme' ? '#8D1D2C' : 'transparent', navGamFg: s.navMode === 'gamme' ? '#FFFFFF' : '#444444',
+      navQ: s.navQ, setNavQ: (e) => this.setState({ navQ: e.target.value }),
+      navPh: nav ? 'Rechercher parmi ' + P.length + ' produits, ' + C.length + ' sous-catégories et ' + GA.length + ' gammes…' : 'Rechercher dans le catalogue…',
+      navPrixNote: prixShop ? 'Prix de vente : ' + shopNom : tRes.length > 1 ? 'Plusieurs boutiques : pas de prix' : 'Aucune boutique : pas de prix',
+      navPrixBg: prixShop ? '#FBF3F4' : '#F4EFE8', navPrixFg: prixShop ? '#8D1D2C' : '#666666',
+      navCrumbs: crumbs, hasNavPick: !!pick && !locked, navPickLabel: pick ? pick.label : '', navPick: () => pick && pick.fn(),
+      navLoading: s.navLoading && !nav, hasNavErr: !!s.navErr, navErr: s.navErr, navTiles: tiles,
+      hasNavSel: !!sel, navSel: selView, navUnsel: () => !locked && this.setState({ navSel: null }),
+      offresLoading: s.offresLoading, offres, noOffres: !!sel && !s.offresLoading && !offres.length,
+      noOffresLabel: O.erreur ? 'Promotions illisibles : ' + O.erreur : 'Aucune promotion, aucun bundle ni formule lié' + (shopNom ? ' à ' + shopNom : '') + '.',
+    };
     // photos
     const photos = s.photos.map((p, i) => ({ src: p.src, n: i + 1, ring: i === 0 ? '#8D1D2C' : 'transparent',
       first: () => { if (locked || i === 0) return; const l = s.photos.slice(); const [x] = l.splice(i, 1); l.unshift(x); this.setState({ photos: l }); },
@@ -1147,16 +1336,7 @@ class Component extends DCLogic {
       })(),
       types: SA.POST_TYPES.map(n => Object.assign(chip(s.type === n), { name: n, pick: () => !locked && this.setState({ type: n }) })),
       // Le catalogue vient de l'API (plusieurs centaines de produits) : recherche, 24 résultats, la sélection en tête.
-      catQ: this.state.catQ || '', setCatQ: (e) => this.setState({ catQ: e.target.value }), catPh: 'Rechercher parmi ' + SA.CATALOGUE.length + ' produits et gammes…',
-      catalogue: (s.product && !(() => { const q = String(this.state.catQ || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); const hit = SA.CATALOGUE.filter(c => !q || norm(c.name + ' ' + (c.nameNl || '') + ' ' + (c.gamme || '')).includes(q)); return hit.slice(0, 24); })().some(c => c.id === s.product) ? [SA.CATALOGUE.find(c => c.id === s.product)].filter(Boolean) : []).concat((() => { const q = String(this.state.catQ || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); const hit = SA.CATALOGUE.filter(c => !q || norm(c.name + ' ' + (c.nameNl || '') + ' ' + (c.gamme || '')).includes(q)); return hit.slice(0, 24); })()).map(c => ({ img: c.img, name: c.name, meta: (c.kind === 'gamme' ? 'Gamme · ' : '') + c.price + ' €', ring: s.product === c.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)',
-        pick: () => { if (locked) return; if (s.product === c.id) { this.setState({ product: null }); return; }
-          const camp = c.gamme === 'Gamme Automne' || c.id === 'g-automne' ? 'bo-12' : s.campaign;
-          this.setState({ product: c.id, campaign: camp, type: c.kind === 'gamme' ? 'Gamme saisonnière' : 'Produit',
-            photos: [{ src: c.img, cut: true, name: c.name }].concat(s.photos.filter(p => p.src !== c.img)),
-            v: Object.assign({}, v, { title: c.name, showTitle: true, price: c.kind === 'produit' ? c.price : '', showPrice: c.kind === 'produit', nl: Object.assign({}, v.nl, { title: SA.pname(c, 'nl') }) }),
-            m: Object.assign({}, s.m, { title: s.m.title.trim() ? s.m.title : c.name, price: s.m.price.trim() ? s.m.price : (c.price ? c.price + ' €' : '') }),
-            textNl: s.textNl.trim() ? s.textNl : (c.kind === 'gamme' ? 'Het ' + SA.pname(c, 'nl') + ' is er bij L\u2019Atelier By {ville}. Ontdek het {horaires}.' : SA.pname(c, 'nl') + ': {prix} € bij L\u2019Atelier By {ville}. Open {horaires}.'),
-            text: s.text.trim() ? s.text : (c.kind === 'gamme' ? 'La ' + c.name + ' est arrivée chez L\u2019Atelier By {ville}. À découvrir {horaires}.' : c.name + ' : {prix} € chez L\u2019Atelier By {ville}. Ouvert {horaires}.') }); } })),
+      ...navVals,
       // visuel
       isStudio: s.mode === 'studio', isBrut: s.mode === 'brut', msBg, msFg, mbBg, mbFg,
       modeStudio: () => !locked && this.setState({ mode: 'studio' }), modeBrut: () => !locked && this.setState({ mode: 'brut' }),

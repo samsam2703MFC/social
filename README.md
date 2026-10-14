@@ -73,6 +73,20 @@ boutiques (`/public/shops`, `/shops`), catalogue et prix
 `date_from`/`date_to`). Comptes admin et consultant dans `social_parametre`
 (repris une fois du BO), modifiables dans **Paramètres → API TFBuddy**.
 
+**Créer un post → catalogue** (`src/catalogue.php`, `GET /catalogue/nav?shop=`, `GET /catalogue/offres`) :
+on choisit par **catégorie** (groupe de catégories du webshop, ex. « Traiteur ») → **sous-catégorie**
+(« Sandwiches garnis ») → **produit**, ou par **gamme** (« Automnale »), ou on retient toute une
+catégorie, sous-catégorie ou gamme. Source : l'appel du webshop
+`GET /shops/{id}/products/available?webshop_active=1&alias_type=webshop&include=webshop,portions,availability_periods,webshop_availability`
+(photo du produit, illustrations des catégories et sous-catégories, gammes, `portion_price` = prix de
+vente de la boutique) et `GET /product-availability-periods` (photo des gammes) — mis en cache 30 min.
+Le **prix** n'est donné que si **une seule** boutique est ciblée ; plusieurs : pas de prix. Les
+**promotions et bundles** actifs (`GET /admin/promotions/{bundles|buy-x-get-y|quantity|scheduled-product-discount}/{id}`,
+cache 15 min) sont liés quand ils visent le produit, sa sous-catégorie ou l'un des produits de la
+sélection, avec leur portée (toutes les boutiques ou lesquelles) ; les **formules** d'un produit viennent
+de `GET /webshop/shops/{id}/products/{p}/menus`. « Utiliser » met l'offre dans le bandeau promo du
+visuel et dans le texte. Démonstration : un instantané réel du webshop de Halle (`public/demo-catalogue.json`).
+
 Les boutiques ne viennent pas que de l'API : une Page Facebook du portefeuille Meta
 (relu chaque heure) qui n'est ni celle de la marque ni celle d'une boutique de
 l'API devient un **magasin test**, hors caisse (« L'Atelier by - Gembloux » →

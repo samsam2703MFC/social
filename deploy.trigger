@@ -60,3 +60,4 @@ Relivraison : Gembloux magasin test, hors du circuit — 2026-10-13T16:51:57Z �
 Relivraison : paramétrage Meta dans le rail (sous Paramètres) — 2026-10-13T16:59:05Z
 Sonde : promotions et bundles TFBuddy (Créer un post) — 2026-10-14T07:09:51Z — sonde
 Sonde : détail des promotions TFBuddy — 2026-10-14T07:12:39Z — sonde
+Relivraison : Créer un post — catalogue par catégorie, sous-catégorie, produit, gamme ; prix d'une boutique ; promotions — 2026-10-14T07:26:20Z

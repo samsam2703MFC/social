@@ -220,7 +220,42 @@ Tfb::$transport = static function (string $m, string $url, array $h, ?string $bo
             '/api/v1/recipes/{param1}' => ['get' => []], '/api/v1/franchisee-shop/{id}/transactions/{date}' => ['get' => []],
             '/api/v1/broken' => ['get' => []], '/api/v1/consultant/shops/sales-kpis' => ['get' => []], '/api/v1/shops/{id}/x' => ['post' => []]]])];
     }
+    // Les formules d'un produit (route publique du webshop).
+    if (preg_match('#^/api/v1/webshop/shops/(4|5)/products/12/menus$#', $p)) {
+        return [200, json_encode([['id' => 4, 'menu_name' => 'Sandwich + boisson', 'name' => 'Avec boisson', 'price_mode' => 'BASE_PLUS', 'price_modifier' => 1.5,
+            'slots' => [['label' => 'Boisson'], ['label' => 'Dessert']]]])];
+    }
     if (!$auth) { return [401, '{"message":"Unauthenticated"}']; }
+    // Créer un post : le catalogue du webshop (catégorie → sous-catégorie → produit) et les promotions.
+    if (preg_match('#^/api/v1/shops/(4|5)/products/available$#', $p, $mm) && str_contains($url, 'alias_type=webshop')) {
+        $img = static fn (string $q) => ['attachment_id' => 1, 'url' => 'https://cdn.r2.dev/webshop/' . $q . '.webp'];
+        $biscuit = ['id' => 31, 'name' => 'Biscuiterie', 'webshop_image' => $img('g31')]; $traiteur = ['id' => 26, 'name' => 'Traiteur', 'webshop_image' => $img('g26')];
+        $nl = str_contains($url, 'lang_code=nl');
+        return [200, json_encode([
+            ['id' => 11, 'name' => $nl ? 'Chocoladekoek' : 'Cookie chocolat', 'is_active' => 1, 'id_category' => 32100, 'category_name' => 'Cookies', 'portion_price' => $mm[1] === '4' ? '2.80' : '3.00',
+                'category' => ['id' => 32100, 'name' => 'Cookies', 'webshop_image' => $img('c32100'), 'groups' => [$biscuit]], 'webshop_image' => $img('p11'), 'webshop' => ['price_gross' => 2.8],
+                'availability_periods' => [['id' => 14, 'name' => 'Gamme Automne']], 'has_menu_options' => false],
+            ['id' => 12, 'name' => 'Sandwich jambon', 'is_active' => 1, 'id_category' => 23000, 'category_name' => 'Sandwiches garnis', 'portion_price' => '4.90',
+                'category' => ['id' => 23000, 'name' => 'Sandwiches garnis', 'webshop_image' => null, 'groups' => [$traiteur]], 'webshop_image' => null, 'webshop' => ['price_gross' => 4.9],
+                'availability_periods' => [], 'has_menu_options' => true],
+            ['id' => 13, 'name' => 'Ancien', 'is_active' => 0, 'id_category' => 23000, 'category' => ['id' => 23000, 'name' => 'Sandwiches garnis', 'groups' => [$traiteur]]],
+        ])];
+    }
+    if (preg_match('#^/api/v1/admin/promotions/(bundles|buy-x-get-y|quantity|scheduled-product-discount)(?:/(\d+))?$#', $p, $mm)) {
+        $det = [
+            15 => ['id' => 15, 'name' => 'Lot sandwich', 'promotion_type' => 'BUNDLE_PROMOTION', 'status' => 'ACTIVE', 'shop_scope_type' => 'ALL_SHOPS', 'shop_ids' => [],
+                'bundle_promotion' => ['bundle_price' => '5.90'], 'items' => [['id_product' => 12, 'product_name' => 'Sandwich jambon', 'quantity' => '1.0000']]],
+            17 => ['id' => 17, 'name' => '3 Cookies !', 'promotion_type' => 'BUY_X_GET_Y', 'status' => 'ACTIVE', 'shop_scope_type' => 'SELECTED_SHOPS', 'shop_ids' => [5],
+                'trigger' => ['quantity' => 2, 'category_ids' => [32100], 'categories' => [['name' => 'Cookies']], 'product_ids' => [], 'products' => []],
+                'reward' => ['quantity' => 1, 'category_ids' => [32100], 'categories' => [['name' => 'Cookies']], 'product_ids' => [], 'products' => [], 'type' => 'FIXED_AMOUNT_DISCOUNT', 'value' => '1.40']],
+            18 => ['id' => 18, 'name' => 'Inactive', 'promotion_type' => 'BUY_X_GET_Y', 'status' => 'INACTIVE', 'shop_scope_type' => 'ALL_SHOPS', 'trigger' => ['product_ids' => [11]], 'reward' => ['product_ids' => [11]]],
+            19 => ['id' => 19, 'name' => 'Terminée', 'promotion_type' => 'BUY_X_GET_Y', 'status' => 'ACTIVE', 'valid_to' => '2020-01-01 00:00:00', 'shop_scope_type' => 'ALL_SHOPS',
+                'trigger' => ['quantity' => 1, 'product_ids' => [11]], 'reward' => ['quantity' => 1, 'product_ids' => [11], 'type' => 'FREE']],
+        ];
+        if (!empty($mm[2])) { return isset($det[(int) $mm[2]]) ? [200, json_encode(['data' => $det[(int) $mm[2]]])] : [404, '{}']; }
+        $liste = match ($mm[1]) { 'bundles' => [15], 'buy-x-get-y' => [17, 18, 19, 15], default => [] };
+        return [200, json_encode(['items' => array_map(static fn ($i) => array_intersect_key($det[$i], array_flip(['id', 'name', 'promotion_type', 'status'])), $liste), 'pagination' => ['page' => 1]])];
+    }
     if ($p === '/api/v1/shops') { return [200, json_encode(['data' => [['id' => 4, 'name' => 'Halle', 'active' => true], ['id' => 5, 'name' => 'Wavre', 'active' => true]]])]; }
     if ($p === '/api/v1/shops/4' || $p === '/api/v1/consultant/shops') { return [200, '{"id":4}']; }
     if ($p === '/api/v1/products') { return [403, '{"message":"Forbidden"}']; }
@@ -1113,6 +1148,30 @@ check('… et Gembloux redevient une boutique hors caisse', in_array('Gembloux',
 socShopPut('marque', ['ids' => $marqueAvant]);
 Db::exec("DELETE FROM social_boutique WHERE shop_id LIKE 'pg%'");
 socSettingPut('meta_portefeuille', $pfAvant);
+
+echo "Créer un post : catalogue du webshop (catégorie → sous-catégorie → produit), prix d'une boutique, promotions\n";
+socSettingPut('tfb_cache_nav', null, false); socSettingPut('tfb_cache_promos', null, false);
+$nav = socNavCatalogue('');
+$cat = array_column($nav['categories'], null, 'id'); $grp = array_column($nav['groupes'], null, 'id'); $pr = array_column($nav['produits'], null, 'id');
+check('catégories (groupes) → sous-catégories → produits actifs, avec les illustrations du webshop', count($nav['groupes']) === 2 && count($nav['categories']) === 2 && count($nav['produits']) === 2
+    && $grp[31]['image'] === 'https://cdn.r2.dev/webshop/g31.webp' && $grp[31]['cats'] === [32100] && $cat[32100]['image'] === 'https://cdn.r2.dev/webshop/c32100.webp'
+    && $pr[11]['image'] === 'https://cdn.r2.dev/webshop/p11.webp' && $pr[11]['cat'] === 32100 && $pr[11]['groupe'] === 31 && $pr[11]['nameNl'] === 'Chocoladekoek' && $pr[12]['formules'] === true, json_encode($nav));
+check('sans boutique (ou plusieurs) : pas de prix', $nav['prix'] === false && $pr[11]['prix'] === null && $nav['shop'] === null);
+check('gammes actives seulement, nombre de produits', array_column($nav['gammes'], 'id') === [14] && $nav['gammes'][0]['n'] === 1 && $pr[11]['gammes'] === [14], json_encode($nav['gammes']));
+$n4 = socNavCatalogue('4'); $n5 = socNavCatalogue('5');
+check('une boutique : son prix de vente (Halle 2,80 €, Wavre 3,00 €)', $n4['prix'] === true && array_column($n4['produits'], 'prix', 'id')[11] === 2.8 && array_column($n5['produits'], 'prix', 'id')[11] === 3.0 && $n4['shop'] === '4');
+check('magasin test ou boutique inconnue : pas de prix', socNavCatalogue('pg12345678901234')['prix'] === false);
+$o = socNavOffres(['shop' => '4', 'produit' => '11']);
+check('produit : promotion liée par sa catégorie, avec libellé et portée (ici : pas à Halle)', count($o['promotions']) === 1 && $o['promotions'][0]['id'] === 17 && $o['promotions'][0]['ici'] === false
+    && $o['promotions'][0]['libelle'] === '2 Cookies achetés → −1,40 € sur 1 de plus' && $o['promotions'][0]['court'] === '−1,40 €' && $o['promotions'][0]['portee'] === 'Wavre', json_encode($o));
+check('promotions inactives ou terminées : écartées', !in_array(18, array_column($o['promotions'], 'id'), true) && !in_array(19, array_column($o['promotions'], 'id'), true));
+$o2 = socNavOffres(['shop' => '4', 'produit' => '12']);
+check('bundle du produit et ses formules (prix de la boutique + supplément)', ($o2['promotions'][0]['libelle'] ?? '') === 'Bundle : 1 × Sandwich jambon = 5,90 €' && $o2['promotions'][0]['ici'] === true
+    && count($o2['formules']) === 1 && $o2['formules'][0]['prix'] === 6.4 && str_contains($o2['formules'][0]['libelle'], '+1,50 €'), json_encode($o2));
+$o3 = socNavOffres(['categorie' => '32100']); $o4 = socNavOffres(['groupe' => '26']); $o5 = socNavOffres(['gamme' => '14']);
+check('sous-catégorie, catégorie, gamme : les promotions de leurs produits', array_column($o3['promotions'], 'id') === [17] && array_column($o4['promotions'], 'id') === [15] && array_column($o5['promotions'], 'id') === [17]);
+$_GET = ['shop' => '5']; [$code, $b] = socRoute('GET', '/catalogue/nav'); $_GET = [];
+check('GET /catalogue/nav?shop=5', $code === 200 && $b['prix'] === true && count($b['produits']) === 2);
 
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');

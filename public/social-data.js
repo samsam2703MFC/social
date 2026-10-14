@@ -588,6 +588,43 @@
         .map(channel => ({ shopName: (byId(SHOPS, id) || { name: id }).name, channel })));
     return new Promise(r => setTimeout(() => r(local({ ok: true, id: p.id, supprimees: faits, erreurs: [], demo: true })), 300));
   }
+  /**
+   * Créer un post : le catalogue du webshop — catégorie → sous-catégorie → produit, gammes —, avec le prix
+   * de vente d'UNE boutique (`shop` ; vide : plusieurs boutiques, pas de prix). GET /catalogue/nav.
+   * Démonstration : un instantané du webshop de Halle (demo-catalogue.json).
+   */
+  let DEMO_CAT = null;
+  const demoCat = () => DEMO_CAT || (DEMO_CAT = fetch('demo-catalogue.json').then(r => r.json()));
+  function catalogueNav(shop) {
+    if (LIVE) return api('GET', '/catalogue/nav?shop=' + encodeURIComponent(shop || ''));
+    return demoCat().then(d => {
+      const nav = JSON.parse(JSON.stringify(d.nav));
+      nav.shop = shop || null; nav.prix = !!shop;
+      if (!shop) nav.produits.forEach(p => { p.prix = null; });
+      return nav;
+    });
+  }
+  /**
+   * Les promotions, bundles et formules liés à la sélection (q : {shop, produit | categorie | groupe | gamme}).
+   * GET /catalogue/offres ; démonstration : les promotions réelles de l'instantané, même règle de lien.
+   */
+  function catalogueOffres(q) {
+    if (LIVE) return api('GET', '/catalogue/offres?' + Object.keys(q).filter(k => q[k] != null && q[k] !== '').map(k => k + '=' + encodeURIComponent(q[k])).join('&'));
+    return demoCat().then(d => {
+      const prods = d.nav.produits, pid = +q.produit || 0, cid = +q.categorie || 0, gid = +q.groupe || 0, gam = +q.gamme || 0;
+      let mp = [], mc = [];
+      if (pid) { mp = [pid]; const p = prods.find(x => x.id === pid); if (p && p.cat) mc = [p.cat]; }
+      else if (cid) { mc = [cid]; mp = prods.filter(x => x.cat === cid).map(x => x.id); }
+      else if (gid) { const l = prods.filter(x => x.groupe === gid); mp = l.map(x => x.id); mc = [...new Set(l.map(x => x.cat))]; }
+      else if (gam) { const l = prods.filter(x => (x.gammes || []).includes(gam)); mp = l.map(x => x.id); mc = [...new Set(l.map(x => x.cat))]; }
+      // L'instantané cite les boutiques par leur n° de caisse ; la démonstration, par leur nom.
+      const CAISSES = { 2: 'Corbais', 3: 'Gosselies', 4: 'Halle', 5: 'Sombreffe' }, nomShop = (id) => CAISSES[id] || (byId(SHOPS, id) || { name: id }).name;
+      const ici = q.shop ? nomShop(q.shop) : null;
+      const promotions = d.promotions.filter(x => x.produits.some(i => mp.includes(i)) || x.categories.some(i => mc.includes(i)))
+        .map(x => Object.assign({}, x, { ici: x.tous || !ici || x.shops.map(nomShop).includes(ici), portee: x.tous ? 'Toutes les boutiques' : x.shops.map(nomShop).join(', ') }));
+      return { promotions, formules: pid ? (d.formules[String(pid)] || []) : [], shop: q.shop || null, erreur: null, demo: true };
+    });
+  }
   /** Suivi des boutiques : abonnés gagnés / perdus face au budget, lus en direct chez Meta (GET /suivi/abonnes). */
   /**
    * Les chiffres d'une publication Meta (vues, personnes touchées, clics, réactions…),
@@ -661,7 +698,7 @@
   else window.addEventListener('focus', () => { refresh(); });
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
-    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, supprimerPost, suivi, avatar,
+    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.
     ctype, rattacher, webshopUrl, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
