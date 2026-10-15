@@ -84,3 +84,4 @@ Relivraison : Mon calendrier = calendrier + suivi + créer un post — 2026-10-1
 Relivraison : Créer un post (boutique) avec tous les réglages du visuel — 2026-10-15T15:00:52Z
 Relivraison : menu boutique (Mes réseaux, sans Mes promotions) — 2026-10-15T17:40:24Z
 Relivraison : Mes réseaux · vues et abonnés en graphiques — 2026-10-15T18:02:19Z
+Relivraison : vues et abonnés, jours incomplets chez Meta — 2026-10-15T18:07:31Z
