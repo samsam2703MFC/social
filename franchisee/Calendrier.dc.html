@@ -24,14 +24,23 @@
   <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
     <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }}</div></sc-if>
     <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
+    <!-- Mon calendrier : calendrier, suivi de la boutique, création d'un post -->
+    <dc-import name="FOnglets" active="{{ onglet }}" on-pick="{{ onOnglet }}" hint-size="100%,44px"></dc-import>
 
     <!-- En-tête -->
     <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
       <div style="display:flex;flex-direction:column;gap:4px;">
-        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Calendrier Meta · L’Atelier By {{ shopName }} · Facebook et Instagram</span>
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">{{ eyebrow }}</span>
         <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">{{ periodTitle }}</h1>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <sc-if value="{{ isSuivi }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:11px;color:#666666;">{{ sv.periodLabel }}</span>
+          <div style="display:inline-flex;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:3px;gap:2px;">
+            <sc-for list="{{ svPeriods }}" as="pp" hint-placeholder-count="3"><button onClick="{{ pp.pick }}" style="border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer;background:{{ pp.bg }};color:{{ pp.fg }};">{{ pp.label }}</button></sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isCal }}" hint-placeholder-val="{{ true }}">
         <div style="display:inline-flex;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:3px;gap:2px;">
           <sc-for list="{{ views }}" as="v" hint-placeholder-count="3"><button onClick="{{ v.pick }}" style="border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer;background:{{ v.bg }};color:{{ v.fg }};">{{ v.label }}</button></sc-for>
         </div>
@@ -40,11 +49,13 @@
           <button onClick="{{ goToday }}" style="height:34px;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:13px;font-weight:500;">Aujourd’hui</button>
           <button onClick="{{ next }}" aria-label="Suivant" style="width:34px;height:34px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:15px;">›</button>
         </div>
+        </sc-if>
         <a href="{{ pubHref }}" style="height:36px;padding:0 16px;border-radius:8px;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;display:flex;align-items:center;text-decoration:none;">Publier un post</a>
       </div>
     </header>
     <sc-if value="{{ hasMessage }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-left:3px solid #8D1D2C;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.55;color:#3A3530;">{{ message }}</div></sc-if>
 
+    <sc-if value="{{ isCal }}" hint-placeholder-val="{{ true }}">
     <!-- Indicateurs -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
       <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="5">
@@ -85,7 +96,10 @@
             <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));">
               <sc-for list="{{ cells }}" as="c" hint-placeholder-count="35">
                 <div style="min-height:110px;border-top:0.5px solid rgba(34,34,34,0.08);border-left:0.5px solid rgba(34,34,34,0.06);padding:6px;display:flex;flex-direction:column;gap:4px;background:{{ c.bg }};box-sizing:border-box;min-width:0;">
-                  <span style="font-size:12px;font-weight:{{ c.w }};width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{{ c.numBg }};color:{{ c.fg }};">{{ c.day }}</span>
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
+                    <span style="font-size:12px;font-weight:{{ c.w }};width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{{ c.numBg }};color:{{ c.fg }};">{{ c.day }}</span>
+                    <sc-if value="{{ c.canAdd }}" hint-placeholder-val="{{ false }}"><a href="{{ c.addHref }}" title="Créer un post ce jour-là" style="width:20px;height:20px;border-radius:6px;border:0.5px solid rgba(141,29,44,0.35);color:#8D1D2C;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;text-decoration:none;">+</a></sc-if>
+                  </div>
                   <sc-for list="{{ c.items }}" as="p" hint-placeholder-count="0">
                     <button onClick="{{ p.open }}" title="{{ p.tip }}" style="text-align:left;border:0.5px solid {{ p.border }};border-left:3px solid {{ p.bar }};border-radius:5px;padding:3px 5px;background:{{ p.bg }};cursor:pointer;display:flex;gap:5px;align-items:center;min-width:0;opacity:{{ p.op }};">
                       <img src="{{ p.img }}" alt="" style="width:22px;height:22px;border-radius:3px;object-fit:cover;background:#F5EFE4;flex:0 0 auto;">
@@ -108,7 +122,7 @@
               <div style="background:{{ c.bg }};border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:8px;min-height:380px;display:flex;flex-direction:column;gap:8px;min-width:0;">
                 <div style="display:flex;flex-direction:column;gap:2px;padding:2px 2px 6px;border-bottom:0.5px solid rgba(34,34,34,0.08);">
                   <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ c.dow }}</span>
-                  <span style="font-size:20px;font-weight:300;color:{{ c.fg }};">{{ c.day }}</span>
+                  <span style="display:flex;align-items:center;justify-content:space-between;gap:4px;"><span style="font-size:20px;font-weight:300;color:{{ c.fg }};">{{ c.day }}</span><sc-if value="{{ c.canAdd }}" hint-placeholder-val="{{ false }}"><a href="{{ c.addHref }}" title="Créer un post ce jour-là" style="width:22px;height:22px;border-radius:6px;border:0.5px solid rgba(141,29,44,0.35);color:#8D1D2C;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;text-decoration:none;">+</a></sc-if></span>
                 </div>
                 <sc-for list="{{ c.items }}" as="p" hint-placeholder-count="0">
                   <button onClick="{{ p.open }}" title="{{ p.tip }}" style="text-align:left;padding:0;border-radius:8px;border:0.5px solid {{ p.border }};border-top:3px solid {{ p.bar }};background:#FFFFFF;overflow:hidden;cursor:pointer;opacity:{{ p.op }};display:flex;flex-direction:column;">
@@ -212,6 +226,47 @@
       </aside>
     </div>
     </sc-if>
+
+    <!-- SUIVI : abonnés de la Page face au budget publicitaire et aux publications, jour par jour -->
+    <sc-if value="{{ isSuivi }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <sc-if value="{{ sv.loading }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:40px 20px;text-align:center;font-size:13px;color:#666666;">Lecture de votre Page chez Meta…</div></sc-if>
+        <sc-if value="{{ sv.hasMessage }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:28px 20px;text-align:center;font-size:13px;color:#666666;line-height:1.5;">{{ sv.message }}</div></sc-if>
+        <sc-if value="{{ sv.ready }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+            <sc-for list="{{ sv.kpis }}" as="k" hint-placeholder-count="5">
+              <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;">
+                <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ k.label }}</span>
+                <span style="font-size:24px;font-weight:300;line-height:1.1;color:{{ k.color }};">{{ k.value }}</span>
+                <span style="font-size:11px;color:#666666;">{{ k.sub }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">
+              <span style="font-size:14px;font-weight:500;">Jour par jour</span>
+              <span style="font-size:11px;color:#666666;">bordeaux = budget publicitaire · bleu = publications de la Page · vert = abonnés gagnés · rouge = perdus</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <div style="display:flex;align-items:flex-end;gap:3px;height:110px;">
+                <sc-for list="{{ sv.days }}" as="d" hint-placeholder-count="0"><span onClick="{{ d.open }}" title="{{ d.tip }}" style="flex:1 1 0;min-width:2px;height:{{ d.spendH }};background:#8D1D2C;border-radius:3px 3px 0 0;opacity:0.85;cursor:pointer;"></span></sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:3px;height:20px;border-top:1px solid rgba(34,34,34,0.25);border-bottom:1px solid rgba(34,34,34,0.08);">
+                <sc-for list="{{ sv.days }}" as="d" hint-placeholder-count="0"><span onClick="{{ d.open }}" title="{{ d.tip }}" style="flex:1 1 0;min-width:2px;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><span style="width:{{ d.pubW }};height:{{ d.pubW }};border-radius:50%;background:#1877F2;"></span></span></sc-for>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:3px;height:64px;">
+                <sc-for list="{{ sv.days }}" as="d" hint-placeholder-count="0"><span onClick="{{ d.open }}" title="{{ d.tip }}" style="flex:1 1 0;min-width:2px;display:flex;flex-direction:column;height:64px;cursor:pointer;"><span style="height:{{ d.upH }};background:#1F8A60;border-radius:0 0 3px 3px;"></span><span style="height:{{ d.downH }};background:#C9474F;border-radius:0 0 3px 3px;margin-top:1px;"></span></span></sc-for>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:#8A847C;"><span>{{ sv.from }}</span><span>cliquez un jour pour l’ouvrir au calendrier</span><span>{{ sv.to }}</span></div>
+            </div>
+            <sc-for list="{{ sv.insights }}" as="t" hint-placeholder-count="2"><span style="font-size:13px;color:#222222;line-height:1.5;">{{ t }}</span></sc-for>
+            <sc-if value="{{ sv.hasMotif }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.45;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:6px 8px;">{{ sv.motif }}</span></sc-if>
+          </div>
+        </sc-if>
+        <span style="font-size:11px;color:#666666;line-height:1.45;">Chiffres lus en direct chez Meta pour la Page Facebook de votre boutique ; les publications sont celles de votre calendrier (lues chez Meta et publiées depuis cet espace). Le budget est celui des publicités du réseau qui mettent votre boutique en avant.</span>
+      </div>
+    </sc-if>
+    </sc-if>
   </main>
   <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;max-width:min(640px,92vw);">{{ toast }}</div>
@@ -220,24 +275,27 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { view: 'month', cursor: null, selId: null, toast: '', tick: 0, hide: [], mp: null, mpLoading: false, mpErr: '', ps: null };
+  state = { view: 'month', cursor: null, selId: null, toast: '', tick: 0, hide: [], mp: null, mpLoading: false, mpErr: '', ps: null, jours: 28, sv: null, svLoading: false, svErr: '' };
   componentDidMount() {
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sf-change', this._h);
     const SF = window.SF, st = SF && SF.state(); if (!st) return;
-    const q = new URLSearchParams(location.search), vue = { semaine: 'week', liste: 'list', mois: 'month' }[q.get('vue') || ''];
+    const q = new URLSearchParams(location.search), vue = { semaine: 'week', liste: 'list', mois: 'month', suivi: 'suivi' }[q.get('vue') || ''];
     const patch = { cursor: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : st.today };
-    if (vue) patch.view = vue;
+    if (vue && (vue !== 'suivi' || st.rules.voirSuivi !== false)) patch.view = vue;
+    if ([7, 28, 90].includes(+q.get('jours'))) patch.jours = +q.get('jours');
     if (q.get('post')) patch.selId = q.get('post');
     this.setState(patch, () => this.loadMeta(false));
     if (q.get('ok')) this.toast(q.get('ok') === 'valider' ? 'Envoyé : le réseau valide votre post avant publication.' : 'Programmé : il partira à l’heure prévue.');
   }
-  componentDidUpdate() { this.loadMeta(false); this.loadStats(); }
+  componentDidUpdate() { this.loadMeta(false); this.loadStats(); this.loadSuivi(); }
   componentWillUnmount() { clearTimeout(this._tt); window.removeEventListener('sf-change', this._h); }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 5000); }
 
   /** La période affichée : le mois en semaines entières, ou la semaine. */
   period() {
     const SF = window.SF, s = this.state, cur = s.cursor || SF.state().today;
+    // Suivi : les N derniers jours jusqu'à hier (comme les chiffres de Meta) ; ses publications viennent de la même lecture.
+    if (s.view === 'suivi') { const au = SF.addDays(SF.state().today, -1); return [SF.addDays(au, -(s.jours - 1)), au]; }
     if (s.view === 'week') { const off = (SF.d2(cur).getDay() + 6) % 7, a = SF.addDays(cur, -off); return [a, SF.addDays(a, 6)]; }
     const c = SF.d2(cur), first = new Date(c.getFullYear(), c.getMonth(), 1), off = (first.getDay() + 6) % 7, a = SF.addDays(SF.iso(first), -off);
     const last = new Date(c.getFullYear(), c.getMonth() + 1, 0);
@@ -246,7 +304,8 @@ class Component extends DCLogic {
   /** L'adresse garde la vue et la date (avec la boutique) : un lien partagé rouvre le même calendrier. */
   syncUrl() {
     const s = this.state; if (!s.cursor) return;
-    try { const u = new URL(location.href); u.searchParams.set('vue', { week: 'semaine', list: 'liste', month: 'mois' }[s.view]); u.searchParams.set('date', s.cursor);
+    try { const u = new URL(location.href); u.searchParams.set('vue', { week: 'semaine', list: 'liste', month: 'mois', suivi: 'suivi' }[s.view]); u.searchParams.set('date', s.cursor);
+      if (s.view === 'suivi') u.searchParams.set('jours', s.jours); else u.searchParams.delete('jours');
       if (s.selId) u.searchParams.set('post', s.selId); else u.searchParams.delete('post'); u.searchParams.delete('ok');
       if (u.toString() !== location.href) history.replaceState(history.state, '', u.toString()); } catch (e) {}
   }
@@ -262,6 +321,15 @@ class Component extends DCLogic {
     SF.calendrier(du, au).then(r => { this._mc[key] = r; if (this._mk === key) this.setState({ mp: r, mpLoading: false }); if (force) this.toast((r.posts || []).length + ' publication(s) relue(s) chez Meta.'); })
       .catch(e => { if (this._mk === key) this.setState({ mpLoading: false, mpErr: e.message || 'erreur' }); });
   }
+  /** Le suivi de la boutique (abonnés de sa Page face au budget), lu chez Meta quand l'onglet est ouvert. */
+  loadSuivi() {
+    const SF = window.SF, s = this.state; if (!SF || !SF.state() || s.view !== 'suivi' || this._sk === s.jours) return;
+    const k = this._sk = s.jours; this._sc = this._sc || {};
+    if (this._sc[k]) { this.setState({ sv: this._sc[k], svErr: '' }); return; }
+    this.setState({ svLoading: true, svErr: '' });
+    SF.suivi(k).then(r => { this._sc[k] = r; if (this._sk === k) this.setState({ sv: r, svLoading: false }); })
+      .catch(e => { if (this._sk === k) this.setState({ svLoading: false, svErr: e.message || 'erreur' }); });
+  }
   /** Les chiffres (vues…) de la publication Meta ouverte, lus à l'ouverture de sa fiche. */
   loadStats() {
     const SF = window.SF, s = this.state; if (!SF || !s.selId || !/^m(fb|ig)-/.test(s.selId) || this._psk === s.selId) return;
@@ -273,9 +341,56 @@ class Component extends DCLogic {
       .catch(e => { if (this._psk === p.id) this.setState({ ps: { id: p.id, err: e.message || 'erreur' } }); });
   }
 
+  /**
+   * Le suivi de la boutique : abonnés gagnés et perdus de sa Page, jour par jour, face au budget publicitaire
+   * du réseau et à ses publications (lues chez Meta et publiées depuis l'espace) sur la même période.
+   */
+  suiviVals(st, META) {
+    const SF = window.SF, s = this.state, r = s.sv;
+    const base = { loading: s.svLoading, hasMessage: false, message: '', ready: false, kpis: [], days: [], insights: [], periodLabel: '', from: '', to: '', hasMotif: false, motif: '' };
+    if (s.svErr) return Object.assign(base, { hasMessage: true, message: 'Suivi illisible pour l’instant : ' + s.svErr });
+    const x = r && (r.lignes || [])[0];
+    if (!r || !x) return Object.assign(base, { hasMessage: !!r && !s.svLoading, message: (r && r.message) || 'Aucune donnée pour votre boutique.' });
+    const fmt = (n, d = 0) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const money = (v, d = 0) => fmt(v, d) + (r.devise === 'EUR' ? ' €' : ' ' + r.devise);
+    const signed = (n) => n == null ? '—' : (n > 0 ? '▲ +' : n < 0 ? '▼ ' : '') + fmt(n);
+    const col = (n) => n == null ? '#8A847C' : n > 0 ? '#0F6B4A' : n < 0 ? '#8D1D2C' : '#444444';
+    const fb = x.facebook || {}, ig = x.instagram || null, dep = x.depenseJours || {};
+    const days = []; for (let d = r.du; d <= r.au; d = SF.addDays(d, 1)) days.push(d);
+    // Les publications de la Page, par jour : lues chez Meta, et celles parties depuis l'espace (le module).
+    const pubs = {};
+    META.filter(p => p.channel === 'Facebook' && p.status === 'Publié').concat(st.posts.filter(p => p.status === 'Publié' && p.fb))
+      .forEach(p => { if (p.date >= r.du && p.date <= r.au) (pubs[p.date] = pubs[p.date] || []).push(p.title || p.type || 'Publication'); });
+    const flow = (d) => { const f = (fb.serie || {})[d], i = ig ? (ig.serie || {})[d] : null; return f || i ? { g: ((f && f.gagnes) || 0) + ((i && i.gagnes) || 0), p: (f && f.perdus) || 0 } : null; };
+    const maxS = Math.max(1, ...Object.values(dep)), maxF = Math.max(1, ...days.map(d => { const v = flow(d); return v ? Math.max(v.g, v.p) : 0; }));
+    const ds = days.map(d => { const v = dep[d] || 0, fl = flow(d), n = (pubs[d] || []).length;
+      return { v, fl, n, spendH: Math.round(v / maxS * 110) + 'px', upH: fl ? Math.round(fl.g / maxF * 34) + 'px' : '0px', downH: fl ? Math.round(fl.p / maxF * 28) + 'px' : '0px',
+        pubW: n ? Math.min(13, 5 + n * 2) + 'px' : '0px', open: () => this.setState({ view: 'week', cursor: d, calView: 'week' }),
+        tip: SF.dLabel(d) + ' · budget ' + money(v, 2) + (fl ? ' · +' + fl.g + ' / −' + fl.p + ' abonnés' : ' · abonnés non mesurés') + (n ? ' · ' + n + ' publication(s) : ' + pubs[d].join(' · ') : ' · aucune publication') }; });
+    const moy = (a) => a.length ? a.reduce((t, d) => t + d.fl.g - d.fl.p, 0) / a.length : null;
+    const mA = moy(ds.filter(d => d.v > 0 && d.fl)), mS = moy(ds.filter(d => d.v === 0 && d.fl));
+    const mP = moy(ds.filter(d => d.n > 0 && d.fl)), mN = moy(ds.filter(d => d.n === 0 && d.fl));
+    const insights = [mA == null && mS == null ? 'Les abonnés jour par jour ne sont pas encore disponibles : le total actuel et le budget s’affichent.'
+      : 'Les jours avec publicité, votre boutique gagne ' + (mA == null ? '—' : fmt(mA, 1)) + ' abonnés par jour ; sans publicité, ' + (mS == null ? '—' : fmt(mS, 1)) + '.'
+        + (mA != null && mS != null && mA > mS ? ' La publicité vous apporte ' + fmt(mA - mS, 1) + ' abonnés de plus par jour.' : '')]
+      .concat(mP != null && mN != null ? ['Les jours où votre Page publie : ' + fmt(mP, 1) + ' abonnés nets en moyenne ; les autres jours : ' + fmt(mN, 1) + '.'
+        + (mP > mN ? ' Publier vous fait gagner ' + fmt(mP - mN, 1) + ' abonné(s) de plus par jour.' : '')] : []);
+    const nPubs = Object.values(pubs).reduce((t, l) => t + l.length, 0);
+    const kpis = [
+      { label: 'Facebook', value: fmt(fb.followers), sub: fb.net == null ? 'abonnés' : 'abonnés · +' + fmt(fb.gagnes) + ' / −' + fmt(fb.perdus) + ' sur ' + r.jours + ' j', color: '#222222' },
+      { label: 'Gagnés nets · ' + r.jours + ' j', value: signed(x.abonnesNet), sub: ig ? 'Facebook + Instagram' : 'Page Facebook de la boutique', color: col(x.abonnesNet) },
+      { label: 'Publications de ma Page', value: fmt(nPubs), sub: Object.keys(pubs).length + ' jour(s) avec publication · ' + r.jours + ' j', color: '#1877F2' },
+      { label: 'Budget publicitaire', value: money(x.depense), sub: Object.keys(dep).length + ' jour(s) de diffusion', color: '#222222' },
+      { label: 'Coût par abonné', value: x.coutParAbonne == null ? '—' : money(x.coutParAbonne, 2), sub: 'budget ÷ abonnés nets', color: '#222222' },
+    ];
+    const motifs = [fb.motif, ig && ig.motif].filter(Boolean);
+    return Object.assign(base, { ready: true, kpis, days: ds, insights, from: SF.dShort(r.du), to: SF.dShort(r.au), hasMotif: motifs.length > 0, motif: motifs.join(' · '),
+      periodLabel: (r.demo ? 'Démonstration · ' : '') + 'du ' + SF.dShort(r.du) + ' au ' + SF.dShort(r.au) });
+  }
+
   renderVals() {
     const SF = window.SF, st = SF && SF.state(), s = this.state;
-    if (!st) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', cells: [], dows: [], kpis: [], upcoming: [], chips: [], views: [], weekCols: [], listRows: [], listHead: [], legend: [] };
+    if (!st) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', cells: [], dows: [], kpis: [], upcoming: [], chips: [], views: [], weekCols: [], listRows: [], listHead: [], legend: [], svPeriods: [], sv: { kpis: [], days: [], insights: [] } };
     const cursor = s.cursor || st.today, [du, au] = this.period(), mp = s.mp, nowMs = SF.at(st.today, st.now);
     const fmt = (n) => n == null ? '—' : Number(n).toLocaleString('fr-BE');
     const ini = (t, bg) => 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52"><rect width="52" height="52" rx="26" fill="' + bg + '"/><text x="26" y="33" font-family="Arial" font-size="18" font-weight="700" fill="#fff" text-anchor="middle">' + t + '</text></svg>');
@@ -302,13 +417,16 @@ class Component extends DCLogic {
     const byDay = (iso) => shown.filter(p => p.date === iso).sort((a, b) => a.time.localeCompare(b.time)).map(view);
 
     // Mois
+    // « + » : créer un post ce jour-là, dans les règles du réseau (délai minimum, horizon, jours ouverts).
+    const r0 = st.rules, minJ = SF.iso(new Date(Date.now() + r0.delaiMinHeures * 3600000)), maxJ = SF.addDays(st.today, r0.horizonJours);
+    const addOf = (d) => { const ok = d >= minJ && d <= maxJ && (r0.jours || []).includes(SF.d2(d).getDay()); return { canAdd: ok, addHref: ok ? SF.href('pub', 'date=' + d) : '' }; };
     const m0 = SF.d2(cursor), cells = [];
     for (let d = du; d <= au; d = SF.addDays(d, 1)) {
       const dd = SF.d2(d), inMonth = dd.getMonth() === m0.getMonth(), today = d === st.today;
-      cells.push({ day: dd.getDate(), bg: inMonth ? '#FFFFFF' : '#FAF8F5', fg: today ? '#FFFFFF' : inMonth ? '#222222' : '#B8B2A8', numBg: today ? '#8D1D2C' : 'transparent', w: today ? 700 : 400, items: byDay(d) });
+      cells.push(Object.assign({ day: dd.getDate(), bg: inMonth ? '#FFFFFF' : '#FAF8F5', fg: today ? '#FFFFFF' : inMonth ? '#222222' : '#B8B2A8', numBg: today ? '#8D1D2C' : 'transparent', w: today ? 700 : 400, items: byDay(d) }, addOf(d)));
     }
     const weekCols = s.view === 'week' ? Array.from({ length: 7 }, (_, i) => { const d = SF.addDays(du, i), dd = SF.d2(d);
-      return { dow: SF.DAYS[dd.getDay()], day: dd.getDate(), bg: d === st.today ? '#FBF3F4' : '#FFFFFF', fg: d === st.today ? '#8D1D2C' : '#222222', items: byDay(d) }; }) : [];
+      return Object.assign({ dow: SF.DAYS[dd.getDay()], day: dd.getDate(), bg: d === st.today ? '#FBF3F4' : '#FFFFFF', fg: d === st.today ? '#8D1D2C' : '#222222', items: byDay(d) }, addOf(d)); }) : [];
     const listRows = shown.filter(p => s.view === 'list' ? p.date.slice(0, 7) === cursor.slice(0, 7) : inP(p)).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
       .map(p => Object.assign(view(p), { dateLabel: SF.dLabel(p.date), rowBg: p.id === s.selId ? '#FBF3F4' : '#FFFFFF' }));
 
@@ -377,8 +495,15 @@ class Component extends DCLogic {
     const shift = (n) => { if (s.view === 'week') { this.setState({ cursor: SF.addDays(cursor, 7 * n) }); return; } const d = new Date(m0.getFullYear(), m0.getMonth() + n, 1); this.setState({ cursor: SF.iso(d) }); };
     const seg = (on) => on ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
     const lu = mp && mp.le ? String(mp.le) : '';
+    const suivi = s.view === 'suivi';
     return {
-      ok: true, hasError: false, shopName: st.shop.name, periodTitle: label,
+      ok: true, hasError: false, shopName: st.shop.name, periodTitle: suivi ? 'SUIVI DE MA BOUTIQUE' : label,
+      // Les onglets de « Mon calendrier » : le calendrier et le suivi changent sans recharger la page.
+      onglet: suivi ? 'suivi' : 'cal', isCal: !suivi, isSuivi: suivi,
+      onOnglet: (k) => { if (k === 'suivi' && !suivi) this.setState({ view: 'suivi', calView: s.view, selId: null }); else if (k === 'cal' && suivi) this.setState({ view: s.calView || 'month' }); },
+      eyebrow: suivi ? 'Suivi · L’Atelier By ' + st.shop.name + ' · vos abonnés, vos publications et les publicités du réseau' : 'Calendrier Meta · L’Atelier By ' + st.shop.name + ' · Facebook et Instagram',
+      svPeriods: [7, 28, 90].map(j => { const [bg, fg] = seg(s.jours === j); return { label: j + ' j', bg, fg, pick: () => this.setState({ jours: j }) }; }),
+      sv: suivi ? this.suiviVals(st, META) : { kpis: [], days: [], insights: [] },
       views: [['month', 'Mois'], ['week', 'Semaine'], ['list', 'Liste']].map(([k, l]) => { const [bg, fg] = seg(s.view === k); return { label: l, bg, fg, pick: () => this.setState({ view: k }) }; }),
       prev: () => shift(-1), next: () => shift(1), goToday: () => this.setState({ cursor: st.today }),
       pubHref: SF.href('pub'), hasMessage: !!(st.rules.message || '').trim(), message: st.rules.message,
