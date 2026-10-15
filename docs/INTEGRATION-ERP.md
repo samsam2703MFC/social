@@ -35,7 +35,7 @@ fournit. Chaque entrée est facultative ; sans elle, le comportement « BO » s'
 | `utilisateur` | `social_parametre.utilisateur` | le nom de l'utilisateur connecté |
 | `journal` | copie dans `ceo_journal_entry` (le module garde son journal `social_activite`) | le journal de l'ERP |
 | `boutiques` | API TFBuddy `/public/shops` + `ceo_shop` (zone, franchisé) + `brand_guard_pages` (Page Facebook) + caisse (position) | reçoit la liste calculée et la rend complétée ou remplacée |
-| `franchise_session` | **seul accès des gérants** : sans lui, l'espace franchisé n'est ouvert qu'en aperçu par le franchiseur, ou sur la seule boutique de la règle « accès ouvert » (`accesLibre`, en attendant l'ERP) — pas de page de connexion propre à l'espace | le gérant déjà connecté à l'ERP entre directement dans son espace : `['shops' => [...], 'name' => '…']` ; l'ERP l'y envoie par `/social_franchisee/Calendrier.dc.html?shop={id}` |
+| `franchise_session` | **seul accès des gérants** : sans lui, l'espace franchisé n'est ouvert qu'en aperçu par le franchiseur, ou sur la seule boutique de la règle « accès ouvert » (`accesLibre`, en attendant l'ERP) — pas de page de connexion propre à l'espace | le gérant déjà connecté à l'ERP entre directement dans son espace : `['shops' => [...], 'name' => '…']` ; l'ERP l'y envoie par `/social_franchisee/calendrier?shop={id}` |
 
 La recette (`bin/tests.php`, section « Transport dans l'ERP ») vérifie chacun de ces
 points.
@@ -62,11 +62,14 @@ Autres dépendances, sans adaptation nécessaire :
 2. **Écrans franchiseur** : servir `public/`. Ils appellent l'API en relatif
    (`api/v1/social`) ; pour une autre adresse, définir `window.SOCIAL_API_BASE` avant
    `social-data.js`.
-3. **Espace franchisé** : `bin/franchisee-build.sh DEST API_BASE MEDIA_BASE` assemble un
+3. **Espace franchisé** : `bin/franchisee-build.sh DEST API_BASE MEDIA_BASE [PROPRES]` assemble un
    dossier statique ; `API_BASE` = l'adresse de l'API, `MEDIA_BASE` = l'adresse de
    `public/` (pour les visuels `uploads/…`). Il doit être servi par le **même hôte** que
    l'API (session de l'ERP, cookie de l'aperçu). Le menu de l'ERP ouvre
-   `Calendrier.dc.html?shop={id}` ; chaque lien de l'espace garde `?shop=`.
+   `calendrier?shop={id}` ; chaque lien de l'espace garde `?shop=`. Les adresses propres
+   (`calendrier`, `publier`, `operations`, `instagram`) sont réécrites vers les fichiers `.dc.html`
+   par `.htaccess` (Apache, mod_rewrite) : un autre serveur fait la même réécriture, ou l'espace
+   s'assemble avec `PROPRES=0` (liens en `Calendrier.dc.html?shop={id}`, toujours valables).
 4. **Médias** : `public/uploads/` (ou `SOCIAL_UPLOADS_DIR`) doit rester joignable depuis
    Internet à l'adresse `social_parametre.url_publique` : Meta y télécharge les visuels.
 5. **Tâches planifiées** : `php bin/cron.php queue` (chaque minute), `sync` (horaire),

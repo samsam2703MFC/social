@@ -9,7 +9,17 @@
   if (window.SF) return;
   const CFG = Object.assign({ api: '/social/api/v1/social', media: '/social/' }, window.SF_CONFIG || {});
   const Q = new URLSearchParams(location.search);
-  const PAGES = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', camp: 'Campagnes.dc.html', suivi: 'Suivi.dc.html', ig: 'Instagram.dc.html' };
+  // Les pages, sous leur adresse propre (sans « .dc.html ») quand le serveur la sert (`propres`, écrit par
+  // bin/franchisee-build.sh ; .htaccess) : /social_franchisee/calendrier, publier, operations, instagram.
+  const FICHIERS = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', camp: 'Campagnes.dc.html', ig: 'Instagram.dc.html' };
+  const PROPRES = { cal: 'calendrier', pub: 'publier', camp: 'operations', ig: 'instagram' };
+  const PAGES = CFG.propres ? PROPRES : FICHIERS;
+  PAGES.suivi = PAGES.cal;  // le suivi est un onglet du calendrier (?vue=suivi)
+  // Une ancienne adresse (lien de l'ERP, favori) s'affiche sous son nom propre ; elle reste valable.
+  if (CFG.propres) {
+    try { const f = decodeURIComponent(location.pathname.split('/').pop()), k = Object.keys(FICHIERS).find(x => FICHIERS[x] === f);
+      if (k) history.replaceState(history.state, '', location.pathname.replace(/[^/]*$/, PROPRES[k]) + location.search + location.hash); } catch (e) {}
+  }
   const HORS_SESSION = 'Ouvrez votre espace boutique depuis l’ERP : vous y êtes déjà connecté.';
   let DEMO = Q.has('demo');
   try { if (!DEMO && sessionStorage.getItem('sf.demo') === '1' && !Q.has('live')) DEMO = true; if (DEMO) sessionStorage.setItem('sf.demo', '1'); else sessionStorage.removeItem('sf.demo'); } catch (e) {}

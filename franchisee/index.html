@@ -9,6 +9,7 @@
 </head>
 <body>
 <p>Espace boutique — <a href="Calendrier.dc.html">ouvrir mes réseaux</a></p>
-<script>location.replace('Calendrier.dc.html' + location.search);</script>
+<script src="config.js"></script>
+<script>location.replace(((window.SF_CONFIG || {}).propres ? 'calendrier' : 'Calendrier.dc.html') + location.search);</script>
 </body>
 </html>

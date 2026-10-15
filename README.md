@@ -474,7 +474,7 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   ni compte, ni code d'accès. Le gérant entre depuis l'ERP, où il est déjà connecté :
   l'ERP rend ses boutiques par le point d'accroche `franchise_session` de
   `config/hote.php` (voir `docs/INTEGRATION-ERP.md`), et le lien qu'il ouvre porte la
-  boutique (`/social_franchisee/Calendrier.dc.html?shop=4`) — une boutique qui n'est
+  boutique (`/social_franchisee/calendrier?shop=4`) — une boutique qui n'est
   pas à lui est refusée. Sans session de l'ERP, l'espace affiche « Ouvrez votre espace
   boutique depuis l'ERP ». Seul autre accès : « Voir comme cette boutique » (écran
   franchiseur), un aperçu dans un cookie signé limité à une boutique, qui se ferme
@@ -484,15 +484,21 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   boutique** (ex. 4 : `/social_franchisee/` arrive sur `?shop=4`, les autres boutiques
   restent refusées) ; dès que l'ERP est branché, elle ne joue plus. L'ancienne table `social_acces_franchise`
   (codes d'accès) n'est plus créée ni lue ; une base qui l'a encore peut la garder.
+- **Des adresses propres, sans « .dc.html »** : `/social_franchisee/calendrier`, `publier`,
+  `operations` (Opérations du réseau), `instagram` (grille) — réécrites vers les fichiers par
+  `franchisee/.htaccess` (mod_rewrite ; en local : `php -S … -t DEST bin/franchisee-router.php`).
+  `bin/franchisee-build.sh` les active (`propres: true` dans `config.js`, 4ᵉ argument `0` pour un hôte
+  sans réécriture : les liens restent alors en `.dc.html`). Les anciennes adresses en `.dc.html`
+  restent valables (liens de l'ERP, favoris) et s'affichent sous leur nom propre au chargement.
 - **La boutique est dans l'adresse** : chaque lien de l'espace porte `?shop=<id>`
-  (ex. `Calendrier.dc.html?shop=4`), l'adresse du navigateur l'affiche toujours
+  (ex. `calendrier?shop=4`), l'adresse du navigateur l'affiche toujours
   (ajoutée ou corrigée au chargement). Le calendrier y ajoute sa vue, sa date et la publication ouverte
   (`&vue=semaine&date=2026-10-15&post=mfb-…`) : un lien partagé rouvre le même écran.
 - **Mes réseaux (ex-« Mon calendrier ») est un menu déroulant** (`FNav.dc.html`, déplié sur ses pages,
   replié ailleurs, ouvert ou fermé à la main et gardé par le navigateur) **et une rangée d'onglets**
   (`FOnglets.dc.html`) : **Calendrier**, **Vues et abonnés** (si « voir les vues et les abonnés » est
   ouvert), **Suivi de ma boutique** (si « voir le suivi » est ouvert) et **Créer un post**.
-  Calendrier, vues et suivi changent sans recharger la page (`Calendrier.dc.html?vue=analyse&jours=28`,
+  Calendrier, vues et suivi changent sans recharger la page (`calendrier?vue=analyse&jours=28`,
   `?vue=suivi&jours=28`) ; l'ancienne adresse `Suivi.dc.html` y mène.
   « Mes promotions » est retiré du menu : les posts et promotions de la boutique sont au
   calendrier (l'ancienne adresse `Promotions.dc.html` ouvre sa vue liste) et ceux à
@@ -502,7 +508,7 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   perdus, avec deux constats (jours avec / sans publicité, jours avec / sans
   publication) ; un clic sur un jour l'ouvre au calendrier, en semaine. Chaque jour où
   l'on peut encore publier (délai, horizon, jours ouverts) a son « + » : « Créer un
-  post » s'ouvre à cette date (`Publier.dc.html?date=…`).
+  post » s'ouvre à cette date (`publier?date=…`).
 - **Vues et abonnés** (`GET /franchise/vues?jours=7|28|90`, `src/vues.php`, règle `voirAnalyse`,
   lu en direct chez Meta, rien en base, sans le budget publicitaire) : pour la Page de la boutique
   et son Instagram (celui du réseau en Instagram unique, signalé comme tel), sur les 7, 28 ou 90
@@ -530,7 +536,7 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   personnes touchées et clics (`GET /franchise/calendrier/stats`, refusé pour une
   publication qui n'est pas à ses comptes). Rien des autres boutiques, ni le détail
   technique des erreurs Meta ; rien n'est copié en base.
-- **Grille Instagram** (`Instagram.dc.html`, `GET /franchise/instagram?shop=`) : comme
+- **Grille Instagram** (`instagram`, fichier `Instagram.dc.html`, `GET /franchise/instagram?shop=`) : comme
   la Grille du franchiseur, en lecture seule — le profil (photo, abonnés) et ses 30
   dernières publications lues en direct (j'aime, commentaires, frises publiées), et
   au-dessus, du plus récent au plus ancien, ce qui y est programmé (une frise = 3 cases,

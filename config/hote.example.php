@@ -33,7 +33,7 @@ return [
     // 'boutiques' => static fn (array $liste): array => $liste,
 
     // Le franchisé déjà connecté à l'ERP : SEUL accès des gérants à leur espace (/social_franchisee),
-    // ouvert par l'ERP sur Calendrier.dc.html?shop={id}. null = pas de franchisé connecté.
+    // ouvert par l'ERP sur /social_franchisee/calendrier?shop={id}. null = pas de franchisé connecté.
     // 'franchise_session' => static fn (): ?array => Erp\Auth::isOwner()
     //     ? ['shops' => Erp\Auth::user()->shopIds(), 'name' => Erp\Auth::user()->fullName()] : null,
 ];

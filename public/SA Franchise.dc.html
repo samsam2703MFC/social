@@ -268,10 +268,10 @@ class Component extends DCLogic {
   async viewAs(shopId) {
     const SA = window.SA, url = this.franchise().url || '/social_franchisee/';
     if (!shopId) return;
-    if (!SA.live) { window.open(url + 'Calendrier.dc.html?demo=1&shop=' + encodeURIComponent(shopId), '_blank'); return; }
+    if (!SA.live) { window.open(url + 'calendrier?demo=1&shop=' + encodeURIComponent(shopId), '_blank'); return; }
     // Le navigateur bloque une fenêtre ouverte après un appel réseau : on l'ouvre d'abord.
     const w = window.open('about:blank', '_blank');
-    try { await SA.api('POST', '/franchise/admin/apercu', { shop: shopId }); if (w) w.location = url + 'Calendrier.dc.html?shop=' + encodeURIComponent(shopId); }
+    try { await SA.api('POST', '/franchise/admin/apercu', { shop: shopId }); if (w) w.location = url + 'calendrier?shop=' + encodeURIComponent(shopId); }
     catch (e) { if (w) w.close(); this.toast('Aperçu impossible : ' + e.message); }
   }
 
@@ -356,7 +356,7 @@ class Component extends DCLogic {
       // Le lien que l'ERP ouvre pour chaque boutique (la boutique dans l'adresse).
       libre: r.accesLibre || '', setLibre: (ev) => RS('accesLibre', ev.target.value),
       libreNote: r.accesLibre ? 'L’adresse ' + fr.url + ' ouvre directement l’espace de ' + ((SA.byId(SA.SHOPS, r.accesLibre) || {}).name || r.accesLibre) + ' (?shop=' + r.accesLibre + '), sans connexion — les autres boutiques restent fermées.' : 'Sans l’ERP, l’espace reste fermé (seul l’aperçu « Voir comme cette boutique » l’ouvre).',
-      accessRows: SA.SHOPS.map(sh => ({ name: sh.name, link: fr.url + 'Calendrier.dc.html?shop=' + encodeURIComponent(sh.id), view: () => this.viewAs(sh.id) })),
+      accessRows: SA.SHOPS.map(sh => ({ name: sh.name, link: fr.url + 'calendrier?shop=' + encodeURIComponent(sh.id), view: () => this.viewAs(sh.id) })),
       shopOptions: SA.SHOPS.map(x => ({ id: x.id, name: x.name })), asShop: s.asShop, setAsShop: (ev) => this.setState({ asShop: ev.target.value }),
       viewAs: () => this.viewAs(s.asShop || (SA.SHOPS[0] || {}).id),
       hasToast: !!s.toast, toast: s.toast,

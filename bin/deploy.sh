@@ -120,6 +120,9 @@ code=$(curl -s -o /dev/null -w '%{http_code}' "$LOCAL_BASE/uploads/__absent__.pn
 [[ "$code" == "404" ]] && log "OK  un visuel absent rend 404" || warn "uploads absent → HTTP $code (404 attendu)"
 code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1${FR_ALIAS}/Calendrier.dc.html")
 [[ "$code" == "200" ]] && log "OK  espace franchisé servi ($FR_ALIAS)" || { warn "$FR_ALIAS → HTTP $code"; fail=1; }
+# Les adresses propres (sans « .dc.html ») : réécrites par franchisee/.htaccess (mod_rewrite).
+code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1${FR_ALIAS}/publier")
+[[ "$code" == "200" ]] && log "OK  adresses propres ($FR_ALIAS/publier)" || { warn "$FR_ALIAS/publier → HTTP $code (réécriture absente ?)"; fail=1; }
 # Pas de connexion propre à l'espace : sans session de l'ERP, 401 — ou 200 si l'accès ouvert (en attendant l'ERP) est réglé.
 code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$LOCAL_BASE/api/v1/social/franchise/etat")
 [[ "$code" == "401" || "$code" == "200" ]] && log "OK  API de l'espace franchisé (sans session ERP : HTTP $code)" || { warn "franchise/etat sans session → HTTP $code (401 ou 200 attendu)"; fail=1; }
