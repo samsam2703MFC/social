@@ -82,3 +82,4 @@ Relivraison : espace franchisé — calendrier Meta, grille Instagram, Publier, 
 Relivraison : espace franchisé — accès par l'ERP, accès ouvert sur une boutique — 2026-10-15T12:36:41Z
 Relivraison : Mon calendrier = calendrier + suivi + créer un post — 2026-10-15T13:08:58Z
 Relivraison : Créer un post (boutique) avec tous les réglages du visuel — 2026-10-15T15:00:52Z
+Relivraison : menu boutique (Mes réseaux, sans Mes promotions) — 2026-10-15T17:40:24Z
