@@ -85,3 +85,4 @@ Relivraison : Créer un post (boutique) avec tous les réglages du visuel — 20
 Relivraison : menu boutique (Mes réseaux, sans Mes promotions) — 2026-10-15T17:40:24Z
 Relivraison : Mes réseaux · vues et abonnés en graphiques — 2026-10-15T18:02:19Z
 Relivraison : vues et abonnés, jours incomplets chez Meta — 2026-10-15T18:07:31Z
+Relivraison : grille Instagram, graphiques des abonnés — 2026-10-15T18:24:40Z
