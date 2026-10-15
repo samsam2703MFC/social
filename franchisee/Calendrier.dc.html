@@ -24,7 +24,7 @@
   <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
     <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }}</div></sc-if>
     <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
-    <!-- Mon calendrier : calendrier, suivi de la boutique, création d'un post -->
+    <!-- Mes réseaux : calendrier, suivi de la boutique, création d'un post -->
     <dc-import name="FOnglets" active="{{ onglet }}" on-pick="{{ onOnglet }}" hint-size="100%,44px"></dc-import>
 
     <!-- En-tête -->
@@ -498,7 +498,7 @@ class Component extends DCLogic {
     const suivi = s.view === 'suivi';
     return {
       ok: true, hasError: false, shopName: st.shop.name, periodTitle: suivi ? 'SUIVI DE MA BOUTIQUE' : label,
-      // Les onglets de « Mon calendrier » : le calendrier et le suivi changent sans recharger la page.
+      // Les onglets de « Mes réseaux » : le calendrier et le suivi changent sans recharger la page.
       onglet: suivi ? 'suivi' : 'cal', isCal: !suivi, isSuivi: suivi,
       onOnglet: (k) => { if (k === 'suivi' && !suivi) this.setState({ view: 'suivi', calView: s.view, selId: null }); else if (k === 'cal' && suivi) this.setState({ view: s.calView || 'month' }); },
       eyebrow: suivi ? 'Suivi · L’Atelier By ' + st.shop.name + ' · vos abonnés, vos publications et les publicités du réseau' : 'Calendrier Meta · L’Atelier By ' + st.shop.name + ' · Facebook et Instagram',

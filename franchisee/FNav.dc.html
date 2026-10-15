@@ -70,8 +70,9 @@ class Component extends DCLogic {
     if (!st) return { ok: false, items: [], shops: [] };
     const active = ['pub', 'suivi'].includes(this.props.active) ? 'cal' : this.props.active || 'cal', r = st.rules, q = st.quota || { used: 0, max: r.quotaSemaine };
     const refused = st.posts.filter(p => p.own && p.status === 'Refusé').length, pending = st.posts.filter(p => p.own && p.status === 'À valider').length;
-    // « Mon calendrier » regroupe le calendrier, le suivi de la boutique et la création d'un post (onglets).
-    const defs = [['cal', 'Mon calendrier', refused, '#8D1D2C'], ['promo', 'Mes promotions', pending, '#D97B29']].concat(r.voirCampagnes ? [['camp', 'Opérations du réseau', 0, '#8D1D2C']] : []).concat(st.grilleInstagram || st.instagramUnique ? [['ig', st.instagramUnique ? 'Grille Instagram du réseau' : 'Grille Instagram', 0, '#8D1D2C']] : []);
+    // « Mes réseaux » regroupe le calendrier, le suivi de la boutique et la création d'un post (onglets).
+    // « Mes promotions » est retiré : les posts à valider ou refusés se signalent sur « Mes réseaux ».
+    const defs = [['cal', 'Mes réseaux', refused || pending, refused ? '#8D1D2C' : '#D97B29']].concat(r.voirCampagnes ? [['camp', 'Opérations du réseau', 0, '#8D1D2C']] : []).concat(st.grilleInstagram || st.instagramUnique ? [['ig', st.instagramUnique ? 'Grille Instagram du réseau' : 'Grille Instagram', 0, '#8D1D2C']] : []);
     const jours = [1, 2, 3, 4, 5, 6, 0].filter(j => (r.jours || []).includes(j)).map(j => SF.DAYS[j]);
     const name = (st.me && st.me.name) || 'Gérant';
     return {

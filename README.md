@@ -236,7 +236,7 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   de la pub (abonnés par jour avec et sans budget) et classement. Permissions :
   `read_insights` et `instagram_manage_insights` pour l'historique ; sans elles,
   le total actuel et le budget s'affichent avec le motif.
-  Dans l'espace franchisé, l'onglet **Suivi de ma boutique** (Mon calendrier) montre la même chose pour la
+  Dans l'espace franchisé, l'onglet **Suivi de ma boutique** (Mes réseaux) montre la même chose pour la
   seule Page de la boutique (`GET /franchise/suivi`, règle « Voir le suivi de sa
   boutique ») ; le compte Instagram, commun à tout le réseau, n'y est pas attribué.
 - **Publicités** — l'assistant envoie sa description complète ; le serveur crée
@@ -480,17 +480,20 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   (ex. `Calendrier.dc.html?shop=4`), l'adresse du navigateur l'affiche toujours
   (ajoutée ou corrigée au chargement). Le calendrier y ajoute sa vue, sa date et la publication ouverte
   (`&vue=semaine&date=2026-10-15&post=mfb-…`) : un lien partagé rouvre le même écran.
-- **Mon calendrier regroupe trois onglets** (`FOnglets.dc.html`, une seule entrée du
+- **Mes réseaux (ex-« Mon calendrier ») regroupe trois onglets** (`FOnglets.dc.html`, une seule entrée du
   menu) : **Calendrier**, **Suivi de ma boutique** (si « voir le suivi » est ouvert) et
   **Créer un post**. Calendrier et suivi changent sans recharger la page
   (`Calendrier.dc.html?vue=suivi&jours=28`) ; l'ancienne adresse `Suivi.dc.html` y mène.
+  « Mes promotions » est retiré du menu : les posts et promotions de la boutique sont au
+  calendrier (l'ancienne adresse `Promotions.dc.html` ouvre sa vue liste) et ceux à
+  valider ou refusés se signalent par la pastille de « Mes réseaux ».
   Le suivi superpose, jour par jour, le budget publicitaire, les **publications de la
   Page** (points bleus : lues chez Meta et parties de l'espace) et les abonnés gagnés /
   perdus, avec deux constats (jours avec / sans publicité, jours avec / sans
   publication) ; un clic sur un jour l'ouvre au calendrier, en semaine. Chaque jour où
   l'on peut encore publier (délai, horizon, jours ouverts) a son « + » : « Créer un
   post » s'ouvre à cette date (`Publier.dc.html?date=…`).
-- **Mon calendrier = calendrier Meta de la boutique** (`GET /franchise/calendrier?du=&au=`,
+- **Onglet Calendrier = calendrier Meta de la boutique** (`GET /franchise/calendrier?du=&au=`,
   `src/franchise.php` → `socCalendriersLire` limité à ses comptes) : les publications de
   *sa* Page Facebook (et de son Instagram, ou de celui du réseau en Instagram unique si
   « voir les posts du réseau » est ouvert), lues en direct chez Meta pour la période

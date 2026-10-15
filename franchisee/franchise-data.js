@@ -9,7 +9,7 @@
   if (window.SF) return;
   const CFG = Object.assign({ api: '/social/api/v1/social', media: '/social/' }, window.SF_CONFIG || {});
   const Q = new URLSearchParams(location.search);
-  const PAGES = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', promo: 'Promotions.dc.html', camp: 'Campagnes.dc.html', suivi: 'Suivi.dc.html', ig: 'Instagram.dc.html' };
+  const PAGES = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', camp: 'Campagnes.dc.html', suivi: 'Suivi.dc.html', ig: 'Instagram.dc.html' };
   const HORS_SESSION = 'Ouvrez votre espace boutique depuis l’ERP : vous y êtes déjà connecté.';
   let DEMO = Q.has('demo');
   try { if (!DEMO && sessionStorage.getItem('sf.demo') === '1' && !Q.has('live')) DEMO = true; if (DEMO) sessionStorage.setItem('sf.demo', '1'); else sessionStorage.removeItem('sf.demo'); } catch (e) {}
