@@ -89,3 +89,4 @@ Relivraison : grille Instagram, graphiques des abonnés — 2026-10-15T18:24:40Z
 Relivraison : grille Instagram, jours des désabonnements — 2026-10-15T18:27:01Z
 Relivraison : Publier, promotions et bundles du produit — 2026-10-15T18:42:22Z
 Relivraison : offre visible sur le visuel des modèles « offre » — 2026-10-15T18:47:55Z
+Relivraison : espace boutique, adresses sans .dc.html — 2026-10-15T19:33:12Z
