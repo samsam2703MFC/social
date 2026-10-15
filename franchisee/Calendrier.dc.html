@@ -601,8 +601,19 @@ class Component extends DCLogic {
         xl: dates() }, survol(k, lignes)));
     };
 
-    const vF = days.map(d => fb && fb.vues.serie && fb.vues.serie[d] != null ? +fb.vues.serie[d] : null);
-    const vI = days.map(d => ig && ig.vues.serie && ig.vues.serie[d] != null ? +ig.vues.serie[d] : null);
+    const brutF = days.map(d => fb && fb.vues.serie && fb.vues.serie[d] != null ? +fb.vues.serie[d] : null);
+    const brutI = days.map(d => ig && ig.vues.serie && ig.vues.serie[d] != null ? +ig.vues.serie[d] : null);
+    // Un jour anormalement bas (moins de 10 % du jour médian) est un chiffre que Meta n'a pas encore (ou pas
+    // entièrement) compté — souvent les 2 ou 3 derniers jours : laissé en blanc et hors des moyennes, signalé.
+    const incomplets = (vals) => { const ok = vals.filter(v => v != null).sort((a, b) => a - b), med = ok.length ? ok[Math.floor(ok.length / 2)] : 0;
+      return vals.map(v => v != null && med >= 100 && v < med * 0.1); };
+    const bF = incomplets(brutF), bI = incomplets(brutI);
+    const vF = brutF.map((v, i) => bF[i] ? null : v), vI = brutI.map((v, i) => bI[i] ? null : v);
+    const plages = (bad) => { const out = []; let a = -1;
+      bad.concat([false]).forEach((x, i) => { if (x && a < 0) a = i; if (!x && a >= 0) { const d1 = SF.d2(days[a]), d2 = SF.d2(days[i - 1]);
+        out.push(a === i - 1 ? court(days[a]) : d1.getMonth() === d2.getMonth() ? d1.getDate() + '–' + court(days[i - 1]) : court(days[a]) + ' – ' + court(days[i - 1])); a = -1; } });
+      return out.length ? 'Chiffres incomplets chez Meta (anormalement bas), laissés en blanc et hors des moyennes : ' + out.join(', ').replace(/\.?$/, '.') + (bad.slice(-4).some(Boolean) ? ' Meta compte souvent les derniers jours avec quelques jours de retard.' : '') : ''; };
+    const brut = (raw, bad, i, mot) => bad[i] ? [fmt(raw[i]) + ' ' + mot + ' — chiffre incomplet chez Meta'] : [fmt(raw[i]) + ' ' + mot];
     const visites = fb && fb.vues.metrique === 'visites', motVue = visites ? 'visites' : 'vues';
     const aF = fb ? fb.abonnes : null, aI = ig ? ig.abonnes : null, sF = (aF && aF.serie) || null, sI = (aI && aI.serie) || null;
     const net = (d) => sF && sF[d] ? (+sF[d].gagnes || 0) - (+sF[d].perdus || 0) : 0;
@@ -618,12 +629,12 @@ class Component extends DCLogic {
     const cards = [];
     if (fb) cards.push(courbe('fbv', { title: (visites ? 'Visites' : 'Vues') + ' de votre Page Facebook, jour par jour', serie: visites ? 'visites de la Page' : 'vues de la Page',
       sub: fmt(fb.vues.total) + ' ' + motVue + ' sur ' + n + ' jours' + (nb(vF) ? ' · ' + fmt(somme(vF) / nb(vF)) + ' par jour en moyenne' : '') + ' · ' + fb.name,
-      note: joindre(fb.vues.motif, visites ? 'Meta ne donne plus les vues de cette Page : ce sont les visites de la Page.' : ''), vide: fb.vues.motif || 'Meta ne donne pas encore les vues jour par jour de votre Page.' },
-      vF, C.fb, pF, (i) => [fmt(vF[i]) + ' ' + motVue].concat(titres(pF[days[i]]))));
+      note: joindre(fb.vues.motif, visites ? 'Meta ne donne plus les vues de cette Page : ce sont les visites de la Page.' : '', plages(bF)), vide: fb.vues.motif || 'Meta ne donne pas encore les vues jour par jour de votre Page.' },
+      vF, C.fb, pF, (i) => brut(brutF, bF, i, motVue).concat(titres(pF[days[i]]))));
     if (ig) cards.push(courbe('igv', { title: nomIg + ' · comptes touchés, jour par jour', serie: 'comptes touchés', zero: true,
-      sub: joindre(ig.vues.total != null ? fmt(ig.vues.total) + ' vues sur la période ·' : '', ig.name), note: joindre(ig.vues.motif, reseauNote),
+      sub: joindre(ig.vues.total != null ? fmt(ig.vues.total) + ' vues sur la période ·' : '', ig.name), note: joindre(ig.vues.motif, plages(bI), reseauNote),
       vide: joindre(ig.vues.motif || 'Meta ne donne pas encore les comptes touchés jour par jour de cet Instagram.', reseauNote) },
-      vI, C.ig, pI, (i) => [fmt(vI[i]) + ' comptes touchés'].concat(titres(pI[days[i]]))));
+      vI, C.ig, pI, (i) => brut(brutI, bI, i, 'comptes touchés').concat(titres(pI[days[i]]))));
     // Vues par publication : les plus vues d'abord (une barre par publication, couleur du compte).
     const avecVues = pubs.filter(p => p.vues != null), top = (avecVues.length ? avecVues : pubs).slice(0, 10), maxV = Math.max(1, ...avecVues.map(p => p.vues));
     const pm = r.comptes.map(c => c.publicationsMotif).filter(Boolean);
@@ -653,10 +664,10 @@ class Component extends DCLogic {
       .concat([{ label: 'Publication la plus vue', value: best ? fmt(best.vues) : '—', sub: best ? '« ' + (best.title || best.type) + ' » · ' + SF.dShort(best.date) : pubs.length ? 'vues non partagées' : 'aucune publication', dot: best ? (best.channel === 'Instagram' ? C.ig : C.fb) : '#B8B2A8' }]);
 
     // Ce qu'il faut retenir
-    const insights = [];
+    const insights = [], cite = (p) => '« ' + String(p.title || p.type || '').replace(/[\s.!?…]+$/, '') + ' »';
     if (nb(vF)) {
       let bi = 0; vF.forEach((v, i) => { if (v != null && v > (vF[bi] || 0)) bi = i; });
-      insights.push('Votre meilleur jour : ' + SF.dLabel(days[bi]) + ', ' + fmt(vF[bi]) + ' ' + motVue + (pF[days[bi]] ? ', le jour de « ' + (pF[days[bi]][0].title || pF[days[bi]][0].type) + ' ».' : '.'));
+      insights.push('Votre meilleur jour : ' + SF.dLabel(days[bi]) + ', ' + fmt(vF[bi]) + ' ' + motVue + (pF[days[bi]] ? ', le jour de ' + cite(pF[days[bi]][0]) + '.' : '.'));
       const avec = vF.filter((v, i) => v != null && pF[days[i]]), sans = vF.filter((v, i) => v != null && !pF[days[i]]);
       if (avec.length && sans.length) { const a = somme(avec) / avec.length, b = somme(sans) / sans.length;
         insights.push('Les jours où votre Page publie, elle fait ' + fmt(a) + ' ' + motVue + ' en moyenne, contre ' + fmt(b) + ' les autres jours' + (b > 0 && a > b * 1.1 ? ' : publier multiplie vos ' + motVue + ' par ' + fmt(a / b, 1) + '.' : '.')); }
@@ -670,9 +681,9 @@ class Component extends DCLogic {
     if (!insights.length) insights.push('Meta ne partage pas encore les chiffres jour par jour de vos comptes : les totaux s’affichent.');
 
     // Les chiffres en tableau (lecture sans graphique)
-    const rows = days.slice().reverse().map(d => ({ jour: SF.dLabel(d), vf: fmt(fb && fb.vues.serie ? fb.vues.serie[d] : null), vi: fmt(ig && ig.vues.serie ? ig.vues.serie[d] : null),
+    const rows = days.map((d, i) => ({ jour: SF.dLabel(d), vf: fmt(brutF[i]) + (bF[i] ? ' (incomplet)' : ''), vi: fmt(brutI[i]) + (bI[i] ? ' (incomplet)' : ''),
       g: fmt(sF && sF[d] ? sF[d].gagnes : null), p: fmt(sF && sF[d] ? sF[d].perdus : null), gi: fmt(sI && sI[d] ? sI[d].gagnes : null),
-      pubs: (pF[d] || []).concat(pI[d] || []).map(p => p.title || p.type).join(' · ') || '—' }));
+      pubs: (pF[d] || []).concat(pI[d] || []).map(p => p.title || p.type).join(' · ') || '—' })).reverse();
     const le = String(r.le || '');
     return Object.assign(base, { ready: true, kpis, cards, insights, rows,
       head: ['Jour', visites ? 'Visites Page' : 'Vues Page', 'Touchés IG', 'Gagnés Page', 'Perdus Page', 'Nouveaux IG', 'Publications'],
