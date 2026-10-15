@@ -34,7 +34,8 @@
       showEyebrow: !!(vis.eyebrow || per), eyebrow: [L === 'nl' ? (vis.eyebrowNl || vis.eyebrow || '') : (vis.eyebrow || ''), promo !== 'aucune' ? per : ''].filter(Boolean).join(' · '),
       showTitle: !!title, title,
       showPhrase: !!v.libre, phrase: v.libre, phraseFont: 'script', phraseColor: 'auto',
-      showPrice: !!price && promo !== 'offre', price: price || '', unit: L === 'nl' ? 'Per stuk' : 'La pièce',
+      // Le prix reste avec une offre (4+1…) : le visuel pose l'offre à côté du prix (« 20,90 € la pièce | 4+1 offre ») — sans lui, elle disparaissait.
+      showPrice: !!price, price: price || '', unit: L === 'nl' ? 'Per stuk' : 'La pièce',
       showPromo: !!promoTxt, promo: promoTxt, promoSub: promo === 'offre' ? (L === 'nl' ? 'actie' : 'offre') : (promo === 'remise' ? (L === 'nl' ? 'korting' : 'de remise') : ''),
       showSite: true, site: 'www.latelierby.be', photos: photo ? [photo] : [],
     };
