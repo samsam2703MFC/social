@@ -80,3 +80,4 @@ Relivraison : couleur de chaque texte du visuel — 2026-10-14T20:23:48Z
 Relivraison : clic sur un texte du visuel → sa couleur — 2026-10-15T08:03:35Z
 Relivraison : espace franchisé — calendrier Meta, grille Instagram, Publier, ?shop= dans l'adresse — 2026-10-15T10:06:32Z
 Relivraison : espace franchisé — accès par l'ERP, accès ouvert sur une boutique — 2026-10-15T12:36:41Z
+Relivraison : Mon calendrier = calendrier + suivi + créer un post — 2026-10-15T13:08:58Z
