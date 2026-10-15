@@ -177,6 +177,16 @@ function socRoute(string $method, string $path): array
         if (socShop($sid) === null && !($sid === 'marque' && socIgUnique())) { throw new HttpError(404, 'boutique inconnue'); }
         return [200, socIgGrille($sid)];
     }
+    // À droite de la grille : les abonnés du compte jour par jour (30 jours) et les comptes touchés, lus en direct.
+    if ($method === 'GET' && $path === '/instagram/abonnes') {
+        $sid = (string) ($_GET['shop'] ?? '');
+        $shop = $sid === 'marque' ? socBrand() : socShop($sid);
+        if ($shop === null) { throw new HttpError(404, 'boutique inconnue'); }
+        $ig = (string) ($shop['ids']['instagram_user_id'] ?? '');
+        if ($ig === '') { return [200, ['followers' => null, 'serie' => null, 'reach' => null, 'motif' => null, 'message' => 'aucun compte Instagram rattaché']]; }
+        if (!Meta::configured()) { throw new HttpError(409, 'token Meta absent : saisissez-le dans Paramètres → API Meta → Clés d’accès Meta'); }
+        return [200, socIgAbonnes(['id' => $ig, 'token' => socIgToken($ig, (string) ($shop['ids']['page_id'] ?? ''))], (int) ($_GET['jours'] ?? 30)) + ['message' => null]];
+    }
     if ($method === 'POST' && $path === '/instagram/grille') {
         // Relecture immédiate chez Instagram (le cron le fait toutes les heures).
         $sid = (string) (body()['shop'] ?? '');

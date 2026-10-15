@@ -12,6 +12,7 @@
   <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
   <script src="config.js"></script>
   <script src="franchise-data.js"></script>
+  <script src="graphes.js"></script>
   <style>
     html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
     /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
@@ -529,90 +530,32 @@ class Component extends DCLogic {
     if (s.vaErr) return Object.assign(base, { hasMessage: true, message: 'Analyse illisible pour l’instant : ' + s.vaErr });
     if (!r) return base;
     if (r.message || !(r.comptes || []).length) return Object.assign(base, { hasMessage: !s.vaLoading, message: r.message || 'Aucun compte Meta n’est relié à votre boutique.' });
-    // Couleurs : chaque compte garde la sienne (Facebook, Instagram) ; gagnés / perdus : paire lisible par tous (daltonisme vérifié).
-    const C = { fb: '#1877F2', ig: '#C13584', mark: '#232220', up: '#1F8A60', down: '#D97B29' };
-    const fmt = (v, d = 0) => v == null ? '—' : Number(v).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d });
-    const axe = (v) => Math.abs(v) >= 10000 ? fmt(v / 1000, Math.abs(v) >= 100000 ? 0 : 1) + ' k' : fmt(v);
-    const signe = (v) => v == null ? '—' : v > 0 ? '+' + fmt(v) : v < 0 ? '−' + fmt(-v) : '0';
-    const MO = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'], JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
-    const court = (d) => { const x = SF.d2(d); return x.getDate() + ' ' + MO[x.getMonth()]; };
+    // Les graphiques (public/graphes.js) : couleurs, graduations, survol et infobulles communs aux écrans.
+    const Gr = window.Graphes, C = Gr.C, fmt = Gr.fmt, signe = Gr.signe, court = Gr.court, lg = Gr.lg;
+    const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
     const days = []; for (let d = r.du; d <= r.au; d = SF.addDays(d, 1)) days.push(d);
     const n = days.length;
     const fb = r.comptes.find(c => c.type === 'facebook') || null, ig = r.comptes.find(c => c.type === 'instagram') || null;
     const pubs = r.publications || [];
     const parJour = (c) => { const o = {}; if (c) pubs.filter(p => p.account === c.key && p.date >= r.du && p.date <= r.au).forEach(p => (o[p.date] = o[p.date] || []).push(p)); return o; };
     const pF = parJour(fb), pI = parJour(ig);
-    const hov = s.hov && s.hov.i < n ? s.hov : null;
-    // Géométrie commune : graduations à gauche (44 px), dates en bas (24 px) ; un jour = une bande, le point au milieu.
-    const PT = 12, PB = 24, fOf = (i) => (i + 0.5) / n, xAt = (f) => 'calc(44px + (100% - 54px) * ' + f.toFixed(4) + ')';
-    const nice = (lo, hi, k = 4) => { if (!(hi > lo)) hi = lo + 1; const raw = (hi - lo) / k, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
-      const step = Math.max(1, (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p), a = Math.floor(lo / step) * step, b = Math.ceil(hi / step) * step, t = [];
-      for (let v = a; v <= b + step / 2; v += step) t.push(Math.round(v) || 0);
-      return { lo: a, hi: b, ticks: t }; };
-    const dates = () => { const k = Math.min(n, 5), out = []; for (let j = 0; j < k; j++) { const i = k === 1 ? 0 : Math.round(j * (n - 1) / (k - 1)); out.push({ left: xAt(fOf(i)), label: court(days[i]) }); } return out; };
-    const idx = (e) => { const b = e.currentTarget.getBoundingClientRect(); return Math.max(0, Math.min(n - 1, Math.floor((e.clientX - b.left) / Math.max(1, b.width) * n))); };
-    const survol = (k, lignes) => ({
-      move: (e) => { const i = idx(e), h = this.state.hov; if (!h || h.i !== i || h.k !== k) this.setState({ hov: { k, i } }); },
-      leave: () => { if (this.state.hov) this.setState({ hov: null }); },
-      // Un jour cliqué s'ouvre au calendrier (semaine).
-      click: (e) => { const i = idx(e); this.setState({ view: 'week', cursor: days[i], calView: 'week', hov: null }); },
-      hasCross: !!hov, crossLeft: hov ? xAt(fOf(hov.i)) : '0px', hasTip: !!hov && hov.k === k,
-      tipX: hov && fOf(hov.i) > 0.6 ? 'translateX(calc(-100% - 12px))' : 'translateX(12px)',
-      tipTitle: hov ? SF.dLabel(days[hov.i]) : '', tipLines: hov && hov.k === k ? lignes(hov.i) : [] });
+    // Un jour = une bande ; au survol, un repère commun à tous les graphiques ; un jour cliqué s'ouvre au calendrier (semaine).
+    const G = Gr({ n, titre: (i) => SF.dLabel(days[i]), court: (i) => court(days[i]), get: () => this.state.hov, set: (h) => this.setState({ hov: h }),
+      ouvrir: (i) => this.setState({ view: 'week', cursor: days[i], calView: 'week', hov: null }) });
+    const carte = G.carte;
     const titres = (l) => l && l.length ? l.slice(0, 2).map(p => 'Publié : « ' + (p.title || p.type) + ' »').concat(l.length > 2 ? ['… et ' + (l.length - 2) + ' autre(s)'] : []) : ['aucune publication ce jour-là'];
-    const carte = (o) => Object.assign({ isLine: false, isBars: false, isTop: false, legend: [], grid: [], dots: [], xl: [], bars: [], rows: [], hasNote: !!o.note, note: o.note || '', empty: false,
-      hasCross: false, hasTip: false, tipLines: [], move: () => {}, leave: () => {}, click: () => {} }, o);
-    const lg = { ligne: (c, n2) => ({ c, n: n2, w: '14px', h: '2px', r: '1px', ring: 'none' }), point: (n2) => ({ c: C.mark, n: n2, w: '8px', h: '8px', r: '50%', ring: '0 0 0 2px #FFFFFF, 0 0 0 2.5px rgba(34,34,34,0.25)' }),
-      barre: (c, n2) => ({ c, n: n2, w: '10px', h: '10px', r: '3px', ring: 'none' }) };
-
-    /** Une courbe jour par jour (une série) : `vals` un nombre ou null par jour ; `marques` les jours à repérer. */
-    const courbe = (k, o, vals, color, marques, lignes) => {
-      const ok = vals.filter(v => v != null);
-      if (!ok.length) return carte({ title: o.title, sub: o.sub, note: o.vide });
-      const zero = o.zero !== false, H = 200, PH = H - PT - PB;
-      const sc = zero ? nice(0, Math.max(...ok)) : nice(Math.min(...ok), Math.max(...ok));
-      const y = (v) => 1 - (v - sc.lo) / (sc.hi - sc.lo);
-      let line = '', area = '', seg = [];
-      const fin = () => { if (!seg.length) return; line += seg.map((p, j) => (j ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' ') + ' ';
-        if (zero && seg.length > 1) area += 'M' + seg[0][0] + ' 100 ' + seg.map(p => 'L' + p[0] + ' ' + p[1]).join(' ') + ' L' + seg[seg.length - 1][0] + ' 100 Z ';
-        seg = []; };
-      vals.forEach((v, i) => { if (v == null) fin(); else seg.push([(fOf(i) * 1000).toFixed(1), (y(v) * 100).toFixed(2)]); });
-      fin();
-      const dots = [];
-      vals.forEach((v, i) => { if (v != null && marques[days[i]]) dots.push({ left: xAt(fOf(i)), top: (PT + y(v) * PH).toFixed(1) + 'px', size: '8px', bg: C.mark }); });
-      if (hov && vals[hov.i] != null) dots.push({ left: xAt(fOf(hov.i)), top: (PT + y(vals[hov.i]) * PH).toFixed(1) + 'px', size: '10px', bg: color });
-      return carte(Object.assign({ isLine: true, title: o.title, sub: o.sub, note: o.note, H: H + 'px', PH: PH + 'px', line, area, color, fill: color + '1A',
-        legend: [lg.ligne(color, o.serie), lg.point('jour avec publication')],
-        grid: sc.ticks.map(t => ({ top: (PT + y(t) * PH).toFixed(1) + 'px', labTop: (PT + y(t) * PH - 6).toFixed(1) + 'px', label: axe(t), line: zero && t === sc.lo ? 'rgba(34,34,34,0.30)' : 'rgba(34,34,34,0.08)' })),
-        dots, xl: dates() }, survol(k, lignes)));
-    };
+    /** Une courbe jour par jour ; `marques` : les publications par jour (un point noir). */
+    const courbe = (k, o, vals, color, marques, lignes) => G.courbe(k, o, vals, color, (i) => !!marques[days[i]], lignes);
     /** Les abonnés jour par jour en barres : gagnés au-dessus de la ligne de base, perdus en dessous (si Meta les donne). */
-    const barres = (k, o, serie, perdus, lignes) => {
-      const g = days.map(d => serie && serie[d] ? +serie[d].gagnes || 0 : null), p = days.map(d => perdus && serie && serie[d] ? +serie[d].perdus || 0 : 0);
-      if (!g.some(v => v != null)) return carte({ title: o.title, sub: o.sub, note: o.vide });
-      const H = 160, PH = H - PT - PB, sc = nice(-Math.max(0, ...p), Math.max(1, ...g.filter(v => v != null)), perdus ? 4 : 3);
-      const y = (v) => (sc.hi - v) / (sc.hi - sc.lo) * PH, y0 = y(0);
-      const bars = days.map((d, i) => { const hu = g[i] ? y0 - y(g[i]) : 0, hd = p[i] ? y(-p[i]) - y0 : 0;
-        return { upTop: (y0 - hu).toFixed(1) + 'px', upH: hu.toFixed(1) + 'px', downTop: (y0 + 1).toFixed(1) + 'px', downH: hd.toFixed(1) + 'px', upC: C.up, downC: C.down,
-          colBg: hov && hov.i === i ? 'rgba(34,34,34,0.06)' : 'transparent' }; });
-      return carte(Object.assign({ isBars: true, title: o.title, sub: o.sub, note: o.note, H: H + 'px', PH: PH + 'px', bars,
-        legend: perdus ? [lg.barre(C.up, 'gagnés'), lg.barre(C.down, 'perdus')] : [],
-        grid: sc.ticks.map(t => ({ top: (PT + y(t)).toFixed(1) + 'px', labTop: (PT + y(t) - 6).toFixed(1) + 'px', label: perdus ? signe(t) : axe(t), line: t === 0 ? 'rgba(34,34,34,0.30)' : 'rgba(34,34,34,0.08)' })),
-        xl: dates() }, survol(k, lignes)));
-    };
+    const barres = (k, o, serie, perdus, lignes) => G.barres(k, Object.assign({ legend: perdus ? [lg.barre(C.up, 'gagnés'), lg.barre(C.down, 'perdus')] : [] }, o),
+      days.map(d => serie && serie[d] ? +serie[d].gagnes || 0 : null), perdus ? days.map(d => serie && serie[d] ? +serie[d].perdus || 0 : 0) : null, lignes);
 
     const brutF = days.map(d => fb && fb.vues.serie && fb.vues.serie[d] != null ? +fb.vues.serie[d] : null);
     const brutI = days.map(d => ig && ig.vues.serie && ig.vues.serie[d] != null ? +ig.vues.serie[d] : null);
-    // Un jour anormalement bas (moins de 10 % du jour médian) est un chiffre que Meta n'a pas encore (ou pas
-    // entièrement) compté — souvent les 2 ou 3 derniers jours : laissé en blanc et hors des moyennes, signalé.
-    const incomplets = (vals) => { const ok = vals.filter(v => v != null).sort((a, b) => a - b), med = ok.length ? ok[Math.floor(ok.length / 2)] : 0;
-      return vals.map(v => v != null && med >= 100 && v < med * 0.1); };
-    const bF = incomplets(brutF), bI = incomplets(brutI);
+    // Les jours que Meta n'a pas encore (ou pas entièrement) comptés : en blanc, hors des moyennes, signalés.
+    const bF = Gr.incomplets(brutF), bI = Gr.incomplets(brutI);
     const vF = brutF.map((v, i) => bF[i] ? null : v), vI = brutI.map((v, i) => bI[i] ? null : v);
-    const plages = (bad) => { const out = []; let a = -1;
-      bad.concat([false]).forEach((x, i) => { if (x && a < 0) a = i; if (!x && a >= 0) { const d1 = SF.d2(days[a]), d2 = SF.d2(days[i - 1]);
-        out.push(a === i - 1 ? court(days[a]) : d1.getMonth() === d2.getMonth() ? d1.getDate() + '–' + court(days[i - 1]) : court(days[a]) + ' – ' + court(days[i - 1])); a = -1; } });
-      return out.length ? 'Chiffres incomplets chez Meta (anormalement bas), laissés en blanc et hors des moyennes : ' + out.join(', ').replace(/\.?$/, '.') + (bad.slice(-4).some(Boolean) ? ' Meta compte souvent les derniers jours avec quelques jours de retard.' : '') : ''; };
+    const plages = (bad) => Gr.plages(bad, days);
     const brut = (raw, bad, i, mot) => bad[i] ? [fmt(raw[i]) + ' ' + mot + ' — chiffre incomplet chez Meta'] : [fmt(raw[i]) + ' ' + mot];
     const visites = fb && fb.vues.metrique === 'visites', motVue = visites ? 'visites' : 'vues';
     const aF = fb ? fb.abonnes : null, aI = ig ? ig.abonnes : null, sF = (aF && aF.serie) || null, sI = (aI && aI.serie) || null;
@@ -650,7 +593,7 @@ class Component extends DCLogic {
       vide: aF.followers != null ? fmt(aF.followers) + ' abonnés aujourd’hui. ' + (aF.motif || 'Meta ne donne pas encore l’historique des abonnés de votre Page.') : (aF.motif || 'Abonnés illisibles pour l’instant.') },
       tot, C.fb, pF, (i) => [fmt(tot[i]) + ' abonnés', sF && sF[days[i]] ? '+' + fmt(sF[days[i]].gagnes) + ' / −' + fmt(sF[days[i]].perdus) + ' ce jour-là' : 'pas de chiffre ce jour-là'].concat(titres(pF[days[i]]).slice(0, 1))));
     if (fb && sF) cards.push(barres('fbg', { title: 'Abonnés gagnés et perdus, jour par jour', sub: 'Page Facebook · +' + fmt(aF.gagnes) + ' gagnés, −' + fmt(aF.perdus) + ' perdus sur ' + n + ' jours', note: '' },
-      sF, true, (i) => { const x = sF[days[i]]; return x ? ['+' + fmt(x.gagnes) + ' gagnés', '−' + fmt(x.perdus) + ' perdus', 'net ' + signe((+x.gagnes || 0) - (+x.perdus || 0))] : ['pas de chiffre ce jour-là']; }));
+      sF, true, (i) => { const x = sF[days[i]]; return x ? ['+' + fmt(x.gagnes) + ' gagnés', signe(-(+x.perdus || 0)) + ' perdus', 'net ' + signe((+x.gagnes || 0) - (+x.perdus || 0))] : ['pas de chiffre ce jour-là']; }));
     if (ig) cards.push(barres('igg', { title: nomIg + ' · nouveaux abonnés, jour par jour', sub: fmt(aI.followers) + ' abonnés aujourd’hui' + (aI.gagnes != null ? ' · +' + fmt(aI.gagnes) + ' nouveaux' : '') + ' · ' + ig.name,
       note: joindre(aI.motif, sI ? 'Instagram ne donne pas les désabonnements jour par jour.' : '', reseauNote), vide: joindre(aI.motif || 'Meta ne donne pas encore les nouveaux abonnés de cet Instagram.', reseauNote) },
       sI, false, (i) => { const x = sI && sI[days[i]]; return x ? ['+' + fmt(x.gagnes) + ' nouveaux abonnés'] : ['pas de chiffre ce jour-là']; }));

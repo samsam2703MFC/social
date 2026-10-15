@@ -90,6 +90,6 @@ Franchiseur (session `auth`) :
 
 Espace franchisé (session de l'ERP via `franchise_session`, ou aperçu du franchiseur ; limitée à ses boutiques) :
 `POST /franchise/deconnexion` (ferme l'aperçu) ·
-`GET /franchise/etat` · `POST /franchise/posts` · `POST /franchise/posts/{id}/annuler` · `GET /franchise/suivi?jours=7|28|90` · `GET /franchise/vues?jours=7|28|90` · `GET /franchise/instagram` ·
+`GET /franchise/etat` · `POST /franchise/posts` · `POST /franchise/posts/{id}/annuler` · `GET /franchise/suivi?jours=7|28|90` · `GET /franchise/vues?jours=7|28|90` · `GET /franchise/instagram` · `GET /franchise/instagram/abonnes` ·
 `GET /franchise/operations` · `GET /franchise/calendrier?du=&au=` · `GET /franchise/calendrier/stats?id=&compte=` · `GET /franchise/media/webshop?u=`
 (toutes avec `?shop=` : la boutique, vérifiée contre la session).

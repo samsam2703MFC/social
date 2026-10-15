@@ -169,6 +169,14 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   Contrôles : alignement de chaque frise (programmée ou déjà en ligne), posts « à
   valider » qui la décaleraient s'ils étaient refusés, demi-heure autour des
   frises. Glisser une case programmée sur une autre échange leurs créneaux.
+  À droite de la grille, **les abonnés du compte sur 30 jours** (`GET /instagram/abonnes?shop=`,
+  `socIgAbonnes` dans `src/vues.php`, lu en direct, rien en base) : abonnés, gagnés, net ;
+  **courbe de l'évolution du total** (le total d'aujourd'hui moins les gains et pertes des jours
+  suivants — tracée seulement si Meta donne les désabonnements), **gagnés / perdus jour par jour**
+  (`follows_and_unfollows`, un jour par requête, toutes envoyées en un seul lot Graph `batch` ;
+  repli : nouveaux abonnés seuls, `follower_count`) et **comptes touchés** (`reach`, jours
+  incomplets chez Meta laissés en blanc). Jours de publication marqués, repère et infobulle au
+  survol (`public/graphes.js`, moteur des graphiques partagé avec l'espace franchisé).
 - **Dark posts** (pub uniquement) — dans « Créer un post », destination
   « Réservé à la publicité » : le post n'est jamais publié (statut « Dark post »,
   hors file, hors grille Instagram) et ouvre l'assistant des publicités. En
@@ -527,7 +535,10 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   dernières publications lues en direct (j'aime, commentaires, frises publiées), et
   au-dessus, du plus récent au plus ancien, ce qui y est programmé (une frise = 3 cases,
   ses posts « à valider » signalés). Compte du réseau en Instagram unique, sinon celui
-  de la boutique.
+  de la boutique. À droite, les mêmes graphiques que la grille du franchiseur (évolution des
+  abonnés, gagnés / perdus, comptes touchés ; `GET /franchise/instagram/abonnes`, règle
+  `voirAnalyse`) et les **interactions des 12 dernières publications** (j'aime + commentaires,
+  moyenne et part des abonnés ; un clic montre la publication dans la grille).
 - **Publier** reprend le générateur dans le cadre du modèle : la **photo du webshop**
   du produit (Cloudflare R2, rapatriée par `GET /franchise/media/webshop` pour que le
   visuel s'exporte), l'illustration du catalogue ou sa photo (si le modèle l'ouvre) ;

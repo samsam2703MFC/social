@@ -722,6 +722,28 @@ function sfInstagram(string $shop): array
     return $out;
 }
 
+/**
+ * À droite de la grille Instagram : les abonnés du compte de la grille (celui du réseau en Instagram
+ * unique, sinon celui de la boutique) jour par jour sur 30 jours — nouveaux, désabonnements, total —
+ * et les comptes touchés. Règle « voir les vues et les abonnés ». Motifs sans détail technique.
+ */
+function sfInstagramAbonnes(string $shop): array
+{
+    if (!sfRegles()['voirAnalyse']) { throw new HttpError(403, 'Le réseau ne partage pas les abonnés dans cet espace.'); }
+    $unique = socIgUnique();
+    $s = $unique ? socBrand() : socShop($shop);
+    $ig = (string) ($s['ids']['instagram_user_id'] ?? '');
+    $vide = ['reseau' => $unique, 'followers' => null, 'serie' => null, 'gagnes' => null, 'perdus' => null, 'reach' => null, 'motif' => null, 'le' => date('Y-m-d H:i')];
+    if ($ig === '') { return ['message' => 'Votre boutique n’a pas de compte Instagram relié par le réseau.'] + $vide; }
+    if (!Meta::configured()) { return ['message' => 'Le réseau n’a pas encore relié ses comptes Meta.'] + $vide; }
+    $r = socIgAbonnes(['id' => $ig, 'token' => socIgToken($ig, (string) ($s['ids']['page_id'] ?? ''))], 30);
+    $m = $r['motif'];
+    $r['motif'] = $m === null ? null : (str_contains($m, 'illisible') ? 'Instagram illisible pour l’instant chez Meta.'
+        : (str_contains($m, 'désabonnements') && !str_contains($m, 'permission') ? 'Meta ne donne pas les désabonnements jour par jour de ce compte : seuls les nouveaux abonnés s’affichent.'
+        : 'Meta ne partage pas l’historique des abonnés de ce compte pour l’instant.'));
+    return ['reseau' => $unique, 'message' => null] + $r;
+}
+
 /* --- routes ------------------------------------------------------------------------------- */
 
 /** Les routes de l'espace franchisé (session franchisé) — null si la route n'en est pas une. */
@@ -740,6 +762,7 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/franchise/suivi') { return [200, sfSuivi($shop, (int) ($_GET['jours'] ?? 28))]; }
     if ($method === 'GET' && $path === '/franchise/vues') { return [200, sfVues($shop, (int) ($_GET['jours'] ?? 28))]; }
     if ($method === 'GET' && $path === '/franchise/instagram') { return [200, sfInstagram($shop)]; }
+    if ($method === 'GET' && $path === '/franchise/instagram/abonnes') { return [200, sfInstagramAbonnes($shop)]; }
     if ($method === 'GET' && $path === '/franchise/calendrier') { return [200, sfCalendrier($shop, (string) ($_GET['du'] ?? ''), (string) ($_GET['au'] ?? ''))]; }
     if ($method === 'GET' && $path === '/franchise/calendrier/stats') { return [200, sfCalStats($shop, (string) ($_GET['id'] ?? ''), (string) ($_GET['compte'] ?? ''))]; }
     if ($method === 'GET' && $path === '/franchise/operations') { return [200, sfOperations($shop)]; }

@@ -133,3 +133,64 @@ function socVuesPublications(array $c, int $t0, int $t1): array
     }
     return ['publications' => $out, 'motif' => $motif];
 }
+
+/**
+ * Les abonnés d'un compte Instagram jour par jour, sur les 30 derniers jours au plus (limite de Meta) :
+ * nouveaux abonnés et désabonnements (`follows_and_unfollows`, un jour par requête, envoyées en un seul
+ * lot Graph `batch`) ; à défaut, les nouveaux abonnés seuls (`follower_count`). Et les comptes touchés
+ * jour par jour (`reach`). `$c` : ['id' => compte Instagram, 'token' => token de sa Page].
+ * Rend ['followers', 'username', 'picture', 'du', 'au', 'jours', 'serie' => [jour => ['gagnes', 'perdus']],
+ * 'gagnes', 'perdus' (null : non donnés par Meta), 'reach' => [jour => n] | null, 'motif', 'le'].
+ */
+function socIgAbonnes(array $c, int $jours = 30): array
+{
+    $jours = max(7, min(30, $jours));
+    $au = date('Y-m-d', strtotime('-1 day'));  // les insights d'un jour sont complets le lendemain
+    $du = date('Y-m-d', strtotime($au . ' -' . ($jours - 1) . ' days'));
+    $b = socSuiviInstagram($c, $du, $au);       // total actuel et nouveaux abonnés par jour (follower_count)
+    $out = ['followers' => $b['followers'], 'username' => $b['username'], 'picture' => $b['picture'], 'du' => $du, 'au' => $au, 'jours' => $jours,
+        'serie' => $b['serie'], 'gagnes' => $b['gagnes'], 'perdus' => null, 'reach' => null, 'motif' => $b['motif'], 'le' => date('Y-m-d H:i')];
+    if ($b['followers'] === null && $b['motif'] !== null) { return $out; }  // compte illisible
+    // Désabonnements : Meta ne les donne qu'en total sur une période ; un jour par requête, toutes dans un lot.
+    $jourDe = []; $lot = [];
+    for ($d = $du; $d <= $au; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
+        $jourDe[] = $d;
+        $lot[] = ['method' => 'GET', 'relative_url' => $c['id'] . '/insights?' . http_build_query(['metric' => 'follows_and_unfollows', 'period' => 'day',
+            'metric_type' => 'total_value', 'breakdown' => 'follow_type', 'since' => strtotime($d), 'until' => strtotime($d . ' +1 day')])];
+    }
+    $flux = []; $refus = null;
+    try {
+        $rep = Meta::call('POST', '', ['batch' => $lot, 'include_headers' => false], $c['token']);
+        foreach ($jourDe as $j => $d) {
+            $x = $rep[$j] ?? null;
+            $corps = is_array($x) ? json_decode((string) ($x['body'] ?? ''), true) : null;
+            if (!is_array($x) || (int) ($x['code'] ?? 0) !== 200 || !is_array($corps) || isset($corps['error'])) {
+                $refus ??= (string) ($corps['error']['message'] ?? 'réponse illisible');
+                continue;
+            }
+            $g = 0; $p = 0; $lu = false;
+            foreach ((array) ($corps['data'] ?? []) as $m) {
+                if (($m['name'] ?? '') !== 'follows_and_unfollows') { continue; }
+                $lu = true;
+                foreach ((array) ($m['total_value']['breakdowns'][0]['results'] ?? []) as $res) {
+                    $type = strtoupper((string) ($res['dimension_values'][0] ?? '')); $v = (int) ($res['value'] ?? 0);
+                    if ($type === 'FOLLOWER') { $g += $v; } elseif ($type === 'NON_FOLLOWER') { $p += $v; }
+                }
+            }
+            if ($lu) { $flux[$d] = ['gagnes' => $g, 'perdus' => $p]; }
+        }
+    } catch (MetaError $e) { $refus = $e->getMessage(); }
+    if (count($flux) * 2 >= count($jourDe)) {
+        $out['serie'] = $flux;
+        $out['gagnes'] = array_sum(array_column($flux, 'gagnes')); $out['perdus'] = array_sum(array_column($flux, 'perdus'));
+    } else {
+        $out['motif'] = trim(($out['motif'] ? $out['motif'] . ' · ' : '') . 'désabonnements non donnés par Meta' . ($refus !== null ? ' (' . $refus . ')' : ''));
+    }
+    try {
+        $r = Meta::call('GET', $c['id'] . '/insights', ['metric' => 'reach', 'period' => 'day', 'metric_type' => 'time_series',
+            'since' => strtotime($du), 'until' => strtotime($au . ' +1 day')], $c['token']);
+        $s = array_filter(socSuiviSerie((array) ($r['data'][0] ?? [])), static fn ($j) => $j >= $du && $j <= $au, ARRAY_FILTER_USE_KEY);
+        if ($s) { $out['reach'] = $s; }
+    } catch (MetaError $e) { /* sans les comptes touchés */ }
+    return $out;
+}

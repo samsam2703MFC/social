@@ -12,6 +12,7 @@
   <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
   <script src="config.js"></script>
   <script src="franchise-data.js"></script>
+  <script src="graphes.js"></script>
   <style>html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
     /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
     section{padding-top:0;padding-bottom:0;} a{color:#8D1D2C;} button{font-family:var(--font-ui);}</style>
@@ -80,6 +81,89 @@
             </div>
           </div>
         </sc-if>
+        <!-- À droite de la grille : abonnés (évolution, gagnés / perdus), comptes touchés, interactions par publication -->
+        <sc-if value="{{ ab.hasAb }}" hint-placeholder-val="{{ true }}">
+          <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">
+              <span style="font-size:15px;font-weight:600;">Abonnés · 30 derniers jours</span>
+              <span style="font-size:11px;color:#666666;">{{ ab.lu }}</span>
+            </div>
+            <sc-if value="{{ ab.loading }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;padding:10px 0;">Lecture des abonnés chez Meta…</span></sc-if>
+            <sc-if value="{{ ab.hasMessage }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:8px 10px;line-height:1.45;">{{ ab.message }}</span></sc-if>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
+              <sc-for list="{{ ab.kpis }}" as="k" hint-placeholder-count="3">
+                <div style="background:#F7F3EE;border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:2px;min-width:0;">
+                  <span style="font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ k.label }}</span>
+                  <span style="font-size:20px;font-weight:300;line-height:1.15;color:#222222;">{{ k.value }}</span>
+                  <span style="font-size:11px;color:#666666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ k.sub }}">{{ k.sub }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ ab.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;line-height:1.45;">{{ ab.note }}</span></sc-if>
+          </div>
+        </sc-if>
+            <sc-for list="{{ ab.cards }}" as="ch" hint-placeholder-count="0">
+              <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px 16px;flex-wrap:wrap;">
+                  <span style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:14px;font-weight:500;color:#222222;">{{ ch.title }}</span><span style="font-size:11px;color:#666666;line-height:1.4;">{{ ch.sub }}</span></span>
+                  <span style="display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;">
+                    <sc-for list="{{ ch.legend }}" as="l" hint-placeholder-count="2"><span style="display:flex;align-items:center;gap:6px;font-size:11px;color:#444444;"><span style="width:{{ l.w }};height:{{ l.h }};border-radius:{{ l.r }};background:{{ l.c }};box-shadow:{{ l.ring }};flex:0 0 auto;"></span>{{ l.n }}</span></sc-for>
+                  </span>
+                </div>
+
+                <!-- courbe : une seule série, jour par jour -->
+                <sc-if value="{{ ch.isLine }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:relative;height:{{ ch.H }};user-select:none;">
+                    <sc-for list="{{ ch.grid }}" as="g" hint-placeholder-count="4">
+                      <span style="position:absolute;left:44px;right:10px;top:{{ g.top }};border-top:1px solid {{ g.line }};"></span>
+                      <span style="position:absolute;left:0;width:38px;text-align:right;top:{{ g.labTop }};font-size:10px;line-height:12px;color:#8A847C;">{{ g.label }}</span>
+                    </sc-for>
+                    <svg viewBox="0 0 1000 100" preserveAspectRatio="none" style="position:absolute;left:44px;top:12px;width:calc(100% - 54px);height:{{ ch.PH }};overflow:visible;">
+                      <path d="{{ ch.area }}" fill="{{ ch.fill }}" stroke="none"></path>
+                      <path d="{{ ch.line }}" fill="none" stroke="{{ ch.color }}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path>
+                    </svg>
+                    <sc-if value="{{ ch.hasCross }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;height:{{ ch.PH }};left:{{ ch.crossLeft }};border-left:1px solid rgba(34,34,34,0.35);pointer-events:none;"></span></sc-if>
+                    <sc-for list="{{ ch.dots }}" as="d" hint-placeholder-count="0"><span style="position:absolute;left:{{ d.left }};top:{{ d.top }};width:{{ d.size }};height:{{ d.size }};transform:translate(-50%,-50%);border-radius:50%;background:{{ d.bg }};box-shadow:0 0 0 2px #FFFFFF;pointer-events:none;"></span></sc-for>
+                    <sc-for list="{{ ch.xl }}" as="x" hint-placeholder-count="5"><span style="position:absolute;bottom:0;left:{{ x.left }};transform:translateX(-50%);font-size:10px;line-height:12px;color:#8A847C;white-space:nowrap;">{{ x.label }}</span></sc-for>
+                    <div onPointerMove="{{ ch.move }}" onPointerLeave="{{ ch.leave }}" onClick="{{ ch.click }}" style="position:absolute;left:44px;right:10px;top:0;bottom:0;cursor:pointer;touch-action:pan-y;"></div>
+                    <sc-if value="{{ ch.hasTip }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;top:2px;left:{{ ch.crossLeft }};transform:{{ ch.tipX }};background:#232220;color:#FFFFFF;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.45;pointer-events:none;z-index:5;min-width:150px;max-width:260px;box-shadow:0 4px 14px rgba(0,0,0,0.18);">
+                        <div style="font-weight:600;margin-bottom:2px;">{{ ch.tipTitle }}</div>
+                        <sc-for list="{{ ch.tipLines }}" as="t" hint-placeholder-count="2"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t }}</div></sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+
+                <!-- barres jour par jour : gagnés au-dessus de la ligne de base, perdus en dessous -->
+                <sc-if value="{{ ch.isBars }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:relative;height:{{ ch.H }};user-select:none;">
+                    <sc-for list="{{ ch.grid }}" as="g" hint-placeholder-count="3">
+                      <span style="position:absolute;left:44px;right:10px;top:{{ g.top }};border-top:1px solid {{ g.line }};"></span>
+                      <span style="position:absolute;left:0;width:38px;text-align:right;top:{{ g.labTop }};font-size:10px;line-height:12px;color:#8A847C;">{{ g.label }}</span>
+                    </sc-for>
+                    <div style="position:absolute;left:44px;right:10px;top:12px;height:{{ ch.PH }};display:flex;">
+                      <sc-for list="{{ ch.bars }}" as="b" hint-placeholder-count="0">
+                        <span style="position:relative;flex:1 1 0;min-width:0;height:100%;background:{{ b.colBg }};">
+                          <span style="position:absolute;left:1px;right:1px;top:{{ b.upTop }};height:{{ b.upH }};background:{{ b.upC }};border-radius:4px 4px 0 0;"></span>
+                          <span style="position:absolute;left:1px;right:1px;top:{{ b.downTop }};height:{{ b.downH }};background:{{ b.downC }};border-radius:0 0 4px 4px;"></span>
+                        </span>
+                      </sc-for>
+                    </div>
+                    <sc-for list="{{ ch.xl }}" as="x" hint-placeholder-count="5"><span style="position:absolute;bottom:0;left:{{ x.left }};transform:translateX(-50%);font-size:10px;line-height:12px;color:#8A847C;white-space:nowrap;">{{ x.label }}</span></sc-for>
+                    <div onPointerMove="{{ ch.move }}" onPointerLeave="{{ ch.leave }}" onClick="{{ ch.click }}" style="position:absolute;left:44px;right:10px;top:0;bottom:0;cursor:pointer;touch-action:pan-y;"></div>
+                    <sc-if value="{{ ch.hasTip }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;top:2px;left:{{ ch.crossLeft }};transform:{{ ch.tipX }};background:#232220;color:#FFFFFF;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.45;pointer-events:none;z-index:5;min-width:150px;max-width:260px;box-shadow:0 4px 14px rgba(0,0,0,0.18);">
+                        <div style="font-weight:600;margin-bottom:2px;">{{ ch.tipTitle }}</div>
+                        <sc-for list="{{ ch.tipLines }}" as="t" hint-placeholder-count="2"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t }}</div></sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ ch.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.45;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:6px 8px;">{{ ch.note }}</span></sc-if>
+              </div>
+            </sc-for>
         <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:16px;display:flex;flex-direction:column;gap:8px;">
           <span style="font-size:15px;font-weight:600;">Bientôt sur le profil</span>
           <sc-if value="{{ noSoon }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Rien de programmé pour l’instant.</span></sc-if>
@@ -109,12 +193,73 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { data: null, loading: true, err: '', sel: null };
+  state = { data: null, loading: true, err: '', sel: null, ab: null, abLoading: false, abErr: '', hovJ: null, hovP: null };
   componentDidMount() { this.load(); }
   load() {
     const SF = window.SF; if (!SF || !SF.state()) { this.setState({ loading: false }); return; }
     this.setState({ loading: true, err: '' });
     SF.instagram().then(r => this.setState({ data: r, loading: false })).catch(e => this.setState({ loading: false, err: e.message || 'erreur' }));
+    // À droite : les abonnés jour par jour, lus à part (la grille s'affiche sans les attendre).
+    if (SF.state().rules.voirAnalyse === false) return;
+    this.setState({ abLoading: true, abErr: '' });
+    SF.instagramAbonnes().then(a => this.setState({ ab: a, abLoading: false })).catch(e => this.setState({ abLoading: false, abErr: e.message || 'erreur' }));
+  }
+
+  /**
+   * À droite de la grille : l'évolution des abonnés (le total d'aujourd'hui moins ce qui a changé ensuite),
+   * les gagnés / perdus de chaque jour, les comptes touchés (30 jours, lus chez Meta) et les interactions des
+   * dernières publications de la grille. Les jours de publication sont marqués d'un point noir.
+   */
+  abVals(r, reseau) {
+    const SF = window.SF, Gr = window.Graphes, s = this.state, a = s.ab, st = SF.state();
+    const base = { hasAb: st.rules.voirAnalyse !== false, loading: s.abLoading, hasMessage: false, message: '', kpis: [], cards: [], lu: '', hasNote: false, note: '' };
+    if (!Gr) return Object.assign(base, { hasAb: false });
+    const C = Gr.C, fmt = Gr.fmt, signe = Gr.signe, court = Gr.court, lg = Gr.lg, cards = [];
+    const pubs = {}; (r.media || []).forEach(m => { const d = String(m.at || '').slice(0, 10); (pubs[d] = pubs[d] || []).push(m); });
+    const pubL = (d) => (pubs[d] || []).slice(0, 1).map(m => 'Publié : « ' + String(m.caption || m.type || 'publication').replace(/\s+/g, ' ').slice(0, 50) + ' »');
+    if (s.abErr) Object.assign(base, { hasMessage: true, message: 'Abonnés illisibles pour l’instant : ' + s.abErr });
+    else if (a && a.message) Object.assign(base, { hasMessage: true, message: a.message });
+    else if (a) {
+      const days = []; for (let d = a.du; d <= a.au; d = SF.addDays(d, 1)) days.push(d);
+      const n = days.length, serie = a.serie || {}, perdus = a.perdus != null;
+      const G = Gr({ n, titre: (i) => SF.dLabel(days[i]), court: (i) => court(days[i]), etiquettes: 4, get: () => this.state.hovJ, set: (h) => this.setState({ hovJ: h }) });
+      const net = (d) => serie[d] ? (+serie[d].gagnes || 0) - (perdus ? +serie[d].perdus || 0 : 0) : 0;
+      // Le total jour par jour : seulement si Meta donne aussi les désabonnements (sinon la courbe serait fausse).
+      const tot = days.map(() => null);
+      if (a.followers != null && perdus) { tot[n - 1] = a.followers; for (let i = n - 1; i > 0; i--) tot[i - 1] = tot[i] - net(days[i]); }
+      const marque = (i) => !!pubs[days[i]];
+      cards.push(G.courbe('tot', { title: 'Abonnés : évolution', serie: 'abonnés', zero: false, H: 180,
+        sub: fmt(a.followers) + ' aujourd’hui' + (perdus ? ' · ' + signe(a.gagnes - a.perdus) + ' en ' + n + ' jours' : ''),
+        vide: (a.followers != null ? fmt(a.followers) + ' abonnés aujourd’hui. ' : '') + (a.motif || 'Meta ne donne pas les désabonnements de ce compte : l’évolution du total ne peut pas être tracée.') },
+        tot, C.ig, marque, (i) => [fmt(tot[i]) + ' abonnés', serie[days[i]] ? '+' + fmt(serie[days[i]].gagnes) + (perdus ? ' / −' + fmt(serie[days[i]].perdus) : '') + ' ce jour-là' : 'pas de chiffre ce jour-là'].concat(pubL(days[i]))));
+      cards.push(G.barres('gp', { title: perdus ? 'Gagnés et perdus, jour par jour' : 'Nouveaux abonnés, jour par jour', H: 140,
+        sub: '+' + fmt(a.gagnes) + ' gagnés' + (perdus ? ', −' + fmt(a.perdus) + ' perdus' : '') + ' sur ' + n + ' jours',
+        legend: perdus ? [lg.barre(C.up, 'gagnés'), lg.barre(C.down, 'perdus')] : [], note: perdus ? '' : a.motif || '', vide: a.motif || 'Meta ne partage pas encore l’historique des abonnés de ce compte.' },
+        days.map(d => serie[d] ? +serie[d].gagnes || 0 : null), perdus ? days.map(d => serie[d] ? +serie[d].perdus || 0 : 0) : null,
+        (i) => { const x = serie[days[i]]; return x ? ['+' + fmt(x.gagnes) + ' gagnés'].concat(perdus ? [signe(-(+x.perdus || 0)) + ' perdus', 'net ' + signe(x.gagnes - x.perdus)] : []).concat(pubL(days[i])) : ['pas de chiffre ce jour-là']; }));
+      // Comptes touchés : les jours que Meta n'a pas encore comptés restent en blanc.
+      const brut = days.map(d => a.reach && a.reach[d] != null ? +a.reach[d] : null), bad = Gr.incomplets(brut), vals = brut.map((v, i) => bad[i] ? null : v), ok = vals.filter(v => v != null);
+      cards.push(G.courbe('reach', { title: 'Comptes touchés, jour par jour', serie: 'comptes touchés', H: 160,
+        sub: ok.length ? fmt(ok.reduce((t, v) => t + v, 0) / ok.length) + ' par jour en moyenne' : '', note: Gr.plages(bad, days), vide: 'Meta ne partage pas encore les comptes touchés de ce compte.' },
+        vals, C.ig, marque, (i) => [fmt(brut[i]) + ' comptes touchés' + (bad[i] ? ' — chiffre incomplet chez Meta' : '')].concat(pubL(days[i]))));
+      const lu = String(a.le || '');
+      Object.assign(base, { lu: a.demo ? 'Démonstration' : lu ? 'lu chez Meta le ' + SF.dShort(lu.slice(0, 10)) + ' à ' + lu.slice(11, 16) : '',
+        kpis: [{ label: 'Abonnés', value: fmt(a.followers), sub: reseau ? 'compte du réseau' : 'compte de la boutique' },
+          { label: 'Gagnés', value: a.gagnes != null ? '+' + fmt(a.gagnes) : '—', sub: 'nouveaux abonnés' },
+          { label: perdus ? 'Net' : 'Perdus', value: perdus ? signe(a.gagnes - a.perdus) : '—', sub: perdus ? '−' + fmt(a.perdus) + ' désabonnements' : 'non donnés par Meta' }],
+        hasNote: reseau, note: 'Compte commun à tout le réseau : ses abonnés ne sont pas ceux de votre seule boutique. Les points noirs marquent les jours de publication.' });
+    }
+    // Interactions (j'aime + commentaires) des 12 dernières publications de la grille, de la plus ancienne à la plus récente.
+    const media = (r.media || []).filter(m => m.likes != null || m.comments != null).slice(0, 12).reverse();
+    if (media.length) {
+      const GP = Gr({ n: media.length, titre: (i) => SF.dLabel(String(media[i].at).slice(0, 10)) + ' · ' + (media[i].type || 'Publication'), court: (i) => court(String(media[i].at).slice(0, 10)), etiquettes: 4,
+        get: () => this.state.hovP, set: (h) => this.setState({ hovP: h }), ouvrir: (i) => this.setState({ sel: { m: media[i].id }, hovP: null }) });
+      const vals = media.map(m => (m.likes || 0) + (m.comments || 0)), moy = vals.reduce((t, v) => t + v, 0) / vals.length, abonnes = (a && a.followers) || r.followers;
+      cards.push(GP.barres('int', { title: 'Interactions par publication', H: 150, up: C.ig,
+        sub: 'les ' + media.length + ' dernières · ' + fmt(moy) + ' en moyenne' + (abonnes ? ' (' + fmt(moy / abonnes * 100, 1) + ' % des abonnés)' : '') + ' · un clic la montre dans la grille' },
+        vals, null, (i) => ['♥ ' + fmt(media[i].likes) + ' j’aime · 💬 ' + fmt(media[i].comments), String(media[i].caption || '').replace(/\s+/g, ' ').slice(0, 60)]));
+    }
+    return Object.assign(base, { cards });
   }
   renderVals() {
     const SF = window.SF, st = SF && SF.state(), s = this.state, r = s.data || {};
@@ -123,7 +268,7 @@ class Component extends DCLogic {
     const reseau = r.reseau != null ? !!r.reseau : !!(st && st.instagramUnique);
     const base = { hasError: !!(SF && SF.error) || !!s.err, error: (SF && SF.error) || ('Lecture impossible : ' + s.err), loading: s.loading, calHref: SF ? SF.href('cal') : '#',
       eyebrow: reseau ? 'Compte unique du réseau · géré par le franchiseur · lecture seule' : 'L’Instagram de votre boutique · lu en direct chez Meta' };
-    if (!SF || !st) return Object.assign(base, { cells: [], soon: [], how: [], pic: ini, handle: '', name: '', followers: '—', nMedia: 0, nSched: 0, readLabel: '', refreshLabel: '' });
+    if (!SF || !st) return Object.assign(base, { cells: [], soon: [], how: [], pic: ini, handle: '', name: '', followers: '—', nMedia: 0, nSched: 0, readLabel: '', refreshLabel: '', ab: { kpis: [], cards: [] } });
 
     // Les cases, du plus récent au plus ancien : les programmés (une frise = 3 cases), puis les publications en ligne.
     const raw = [];
@@ -163,7 +308,7 @@ class Component extends DCLogic {
       readLabel: r.demo ? 'Démonstration : publications d’exemple.' : lu ? 'Lu chez Instagram le ' + SF.dShort(lu.slice(0, 10)) + ' à ' + lu.slice(11, 16) : '',
       refresh: () => this.load(), refreshLabel: s.loading ? 'Lecture…' : 'Relire chez Instagram',
       cells, empty: !s.loading && cells.length === 0, emptyText: r.erreur ? 'Grille illisible pour l’instant.' : 'Rien de programmé, rien en ligne : la grille est vide.',
-      hasSel: !!sel, sel: sel || {}, unselect: () => this.setState({ sel: null }), soon, noSoon: soon.length === 0,
+      hasSel: !!sel, sel: sel || {}, unselect: () => this.setState({ sel: null }), soon, noSoon: soon.length === 0, ab: this.abVals(r, reseau),
       how: reseau ? ['L’Instagram de L’Atelier By est un compte unique pour tout le réseau. Seul le franchiseur y publie.',
           'Vos posts partent sur la Page Facebook de votre boutique (menu « Publier »). Vous voyez ici ce qui est en ligne et, encadré en rouge, ce que le réseau a programmé.',
           'Une idée pour l’Instagram du réseau ? Proposez-la au franchiseur.']

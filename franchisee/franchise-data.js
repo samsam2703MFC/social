@@ -271,6 +271,21 @@
         { id: 'n2', title: 'Derniers jours de la gamme automne', date: addDays(STATE.today, 3), time: '08:00', status: 'Programmé', own: false, frise: null, src: 'img/illus/seasonal/autumn-range.png' }] });
   }
   /**
+   * À droite de la grille Instagram : les abonnés du compte jour par jour (30 jours : nouveaux, désabonnements)
+   * et les comptes touchés, lus en direct chez Meta.
+   */
+  function instagramAbonnes() {
+    if (!DEMO) return api('GET', '/franchise/instagram/abonnes?shop=' + encodeURIComponent(STATE.shop.id));
+    const h = (t) => { let x = 7; for (let i = 0; i < t.length; i++) x = (x * 31 + t.charCodeAt(i)) % 100003; return x; };
+    const au = addDays(STATE.today, -1), du = addDays(au, -29), serie = {}, reach = {};
+    let g = 0, p = 0;
+    for (let d = du, i = 0; d <= au; d = addDays(d, 1), i++) {
+      const k = h('ig' + d); serie[d] = { gagnes: 1 + k % 5 + (i % 4 === 2 ? 4 : 0), perdus: k % 3 === 0 ? 2 : k % 2 }; g += serie[d].gagnes; p += serie[d].perdus;
+      reach[d] = 420 + k % 380 + (i % 4 === 2 ? 600 : 0);
+    }
+    return Promise.resolve({ reseau: true, followers: 9412, username: 'latelierby.be', du, au, jours: 30, serie, gagnes: g, perdus: p, reach, motif: null, message: null, le: STATE.today + ' 10:00', demo: true });
+  }
+  /**
    * Les opérations du réseau (campagnes du Marketing du BO) où figure la boutique : ce qui y est rattaché
    * (posts, publications de la Page, publicités) et toutes les métriques de la boutique. Lecture seule.
    */
@@ -331,7 +346,7 @@
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, calendrier, calStats, operations, webshopUrl, photoLocale,
+  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, calendrier, calStats, operations, webshopUrl, photoLocale,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();

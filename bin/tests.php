@@ -107,6 +107,16 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
             ['name' => 'page_daily_unfollows_unique', 'period' => 'day', 'values' => [['value' => 1, 'end_time' => $e(1)], ['value' => 0, 'end_time' => $e(0)]]]]]];
     }
     if ($m === 'GET' && $path === '222/insights') { return [400, ['error' => ['code' => 10, 'message' => 'Requires read_insights permission']]]; }
+    // Lot Graph (`batch`) : abonnés et désabonnements d'un jour par requête ; BATCH_REFUS : Meta les refuse.
+    if ($m === 'POST' && $path === '' && isset($p['batch'])) {
+        return [200, array_map(static function ($q) {
+            if (!empty($GLOBALS['BATCH_REFUS'])) { return ['code' => 400, 'body' => json_encode(['error' => ['code' => 100, 'message' => '(#100) metric follows_and_unfollows non disponible']])]; }
+            parse_str((string) parse_url((string) $q['relative_url'], PHP_URL_QUERY), $qq);
+            $j = (int) date('j', (int) $qq['since']);
+            return ['code' => 200, 'body' => json_encode(['data' => [['name' => 'follows_and_unfollows', 'period' => 'day', 'total_value' => ['breakdowns' => [['dimension_keys' => ['follow_type'],
+                'results' => [['dimension_values' => ['FOLLOWER'], 'value' => 2 + $j % 3], ['dimension_values' => ['NON_FOLLOWER'], 'value' => $j % 2]]]]]]]])];
+        }, json_decode((string) $p['batch'], true))];
+    }
     if ($m === 'GET' && $path === '17841/insights' && ($p['metric'] ?? '') === 'views') { return [200, ['data' => [['name' => 'views', 'period' => 'day', 'total_value' => ['value' => 777]]]]]; }
     if ($m === 'GET' && $path === '17841/insights' && ($p['metric'] ?? '') === 'reach') {
         return [200, ['data' => [['name' => 'reach', 'period' => 'day', 'values' => [['value' => 60, 'end_time' => date('Y-m-d', strtotime('-1 day')) . 'T07:00:00+0000'], ['value' => 85, 'end_time' => date('Y-m-d') . 'T07:00:00+0000']]]]]];
@@ -1110,6 +1120,31 @@ sfReglesPut(array_merge(sfRegles(), ['voirAnalyse' => false]));
 check('analyse non partagée par le réseau : refusée ; la règle revient dans l’état du franchisé', $code === 403 && sfRegles()['voirAnalyse'] === false);
 sfReglesPut(array_merge(sfRegles(), ['voirAnalyse' => true]));
 check('analyse : rien n’est écrit en base', (int) Db::row("SELECT COUNT(*) n FROM social_parametre WHERE cle LIKE '%vues%'")['n'] === 0);
+
+echo "Grille Instagram : abonnés jour par jour (gagnés, perdus) et comptes touchés\n";
+$appels = [];
+[$code, $ia] = $fr('GET', '/franchise/instagram/abonnes', [], []);
+$attendu = []; for ($d = date('Y-m-d', strtotime('-30 days')); $d <= date('Y-m-d', strtotime('-1 day')); $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $jj = (int) date('j', strtotime($d)); $attendu[$d] = [2 + $jj % 3, $jj % 2]; }
+check('grille : 30 jours jusqu’à hier, nouveaux abonnés et désabonnements de chaque jour', $code === 200 && $ia['jours'] === 30 && count($ia['serie']) === 30 && $ia['followers'] === 2300
+    && $ia['gagnes'] === array_sum(array_column($attendu, 0)) && $ia['perdus'] === array_sum(array_column($attendu, 1)) && $ia['motif'] === null
+    && ($ia['serie'][date('Y-m-d', strtotime('-1 day'))] ?? null) === ['gagnes' => $attendu[date('Y-m-d', strtotime('-1 day'))][0], 'perdus' => $attendu[date('Y-m-d', strtotime('-1 day'))][1]], json_encode([$code, $ia['gagnes'] ?? null, $ia['perdus'] ?? null, $ia['motif'] ?? null]));
+$lots = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === ''));
+check('désabonnements : les 30 jours en un seul appel (lot Graph), avec le token de la Page', count($lots) === 1 && count(json_decode((string) $lots[0][2]['batch'], true)) === 30 && ($lots[0][2]['access_token'] ?? '') === 'PT111');
+check('comptes touchés jour par jour', count($ia['reach'] ?? []) === 2 && !str_contains(json_encode($ia), 'PT111'));
+$GLOBALS['BATCH_REFUS'] = true;
+[$code, $ib] = $fr('GET', '/franchise/instagram/abonnes', [], []);
+unset($GLOBALS['BATCH_REFUS']);
+check('désabonnements refusés par Meta : les nouveaux abonnés seuls, motif lisible sans détail technique', $code === 200 && $ib['perdus'] === null && $ib['gagnes'] === 4
+    && str_contains((string) $ib['motif'], 'désabonnements') && !str_contains((string) $ib['motif'], '#100'), json_encode([$ib['gagnes'] ?? null, $ib['motif'] ?? null]));
+[$code] = $fr('GET', '/franchise/instagram/abonnes', [], ['shop' => '5']);
+check('abonnés de la grille d’une autre boutique : refusés', $code === 403);
+sfReglesPut(array_merge(sfRegles(), ['voirAnalyse' => false]));
+[$code] = $fr('GET', '/franchise/instagram/abonnes', [], []);
+sfReglesPut(array_merge(sfRegles(), ['voirAnalyse' => true]));
+check('« voir les vues et les abonnés » fermé : refusé', $code === 403);
+$_GET = ['shop' => '4']; [$code, $ic] = socRoute('GET', '/instagram/abonnes'); $_GET = ['shop' => '999'];
+$c404 = (static function () { try { return socRoute('GET', '/instagram/abonnes')[0]; } catch (HttpError $e) { return $e->status; } })(); $_GET = [];
+check('franchiseur (SA Grille) : les abonnés du compte de la boutique ; boutique inconnue refusée', $code === 200 && count($ic['serie']) === 30 && $ic['perdus'] > 0 && $c404 === 404);
 unset($_COOKIE[SF_COOKIE]);
 
 echo "Instagram unique pour tout le réseau\n";
