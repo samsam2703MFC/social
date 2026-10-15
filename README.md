@@ -480,10 +480,12 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   (ex. `Calendrier.dc.html?shop=4`), l'adresse du navigateur l'affiche toujours
   (ajoutée ou corrigée au chargement). Le calendrier y ajoute sa vue, sa date et la publication ouverte
   (`&vue=semaine&date=2026-10-15&post=mfb-…`) : un lien partagé rouvre le même écran.
-- **Mes réseaux (ex-« Mon calendrier ») regroupe trois onglets** (`FOnglets.dc.html`, une seule entrée du
-  menu) : **Calendrier**, **Suivi de ma boutique** (si « voir le suivi » est ouvert) et
-  **Créer un post**. Calendrier et suivi changent sans recharger la page
-  (`Calendrier.dc.html?vue=suivi&jours=28`) ; l'ancienne adresse `Suivi.dc.html` y mène.
+- **Mes réseaux (ex-« Mon calendrier ») est un menu déroulant** (`FNav.dc.html`, déplié sur ses pages,
+  replié ailleurs, ouvert ou fermé à la main et gardé par le navigateur) **et une rangée d'onglets**
+  (`FOnglets.dc.html`) : **Calendrier**, **Vues et abonnés** (si « voir les vues et les abonnés » est
+  ouvert), **Suivi de ma boutique** (si « voir le suivi » est ouvert) et **Créer un post**.
+  Calendrier, vues et suivi changent sans recharger la page (`Calendrier.dc.html?vue=analyse&jours=28`,
+  `?vue=suivi&jours=28`) ; l'ancienne adresse `Suivi.dc.html` y mène.
   « Mes promotions » est retiré du menu : les posts et promotions de la boutique sont au
   calendrier (l'ancienne adresse `Promotions.dc.html` ouvre sa vue liste) et ceux à
   valider ou refusés se signalent par la pastille de « Mes réseaux ».
@@ -493,6 +495,22 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   publication) ; un clic sur un jour l'ouvre au calendrier, en semaine. Chaque jour où
   l'on peut encore publier (délai, horizon, jours ouverts) a son « + » : « Créer un
   post » s'ouvre à cette date (`Publier.dc.html?date=…`).
+- **Vues et abonnés** (`GET /franchise/vues?jours=7|28|90`, `src/vues.php`, règle `voirAnalyse`,
+  lu en direct chez Meta, rien en base, sans le budget publicitaire) : pour la Page de la boutique
+  et son Instagram (celui du réseau en Instagram unique, signalé comme tel), sur les 7, 28 ou 90
+  derniers jours jusqu'à hier — indicateurs (vues, abonnés, publication la plus vue), **courbe des
+  vues de la Page jour par jour** (insights `page_media_view`, repli `page_impressions` puis
+  `page_views_total`, dites alors « visites ») avec les jours de publication marqués,
+  **Instagram : comptes touchés jour par jour** (`reach`, 30 jours au plus) et vues de la période
+  (`views`, par tranches de 30 jours), **vues par publication** (barres, les plus vues d'abord, lues
+  avec la liste par `insights.metric(…)`, sinon une à une ; un clic ouvre la publication),
+  **abonnés de la Page : évolution** (le total d'aujourd'hui moins les gains et pertes des jours
+  suivants), **gagnés / perdus par jour** (barres de part et d'autre de la ligne de base) et
+  **nouveaux abonnés Instagram par jour**. Une série par graphique, sur un seul axe ; au survol,
+  un repère commun à tous les graphiques et l'infobulle du jour ; un clic ouvre ce jour au
+  calendrier, en semaine. Constats (meilleur jour, effet d'une publication, meilleur jour de la
+  semaine), tableau des chiffres jour par jour. Motifs lisibles quand Meta ne partage pas un
+  chiffre, sans détail technique ; rien des autres boutiques.
 - **Onglet Calendrier = calendrier Meta de la boutique** (`GET /franchise/calendrier?du=&au=`,
   `src/franchise.php` → `socCalendriersLire` limité à ses comptes) : les publications de
   *sa* Page Facebook (et de son Instagram, ou de celui du réseau en Instagram unique si
@@ -612,6 +630,7 @@ src/
   metacampagnes.php  campagnes existantes chez Meta : récupération, rafraîchissement, pilotage
   calendriers.php  publications des Pages et Instagram lues en direct pour le Calendrier
   suivi.php        suivi des boutiques : abonnés gagnés / perdus face au budget (en direct)
+  vues.php         vues d'une Page (jour par jour), d'un Instagram et de chaque publication (en direct)
   franchise.php    espace franchisé : règles, modèles, accès, sessions, publication depuis un modèle
   api.php          routes
 bin/               cron.php, deploy.sh, franchisee-build.sh, tests.php

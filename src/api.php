@@ -26,6 +26,7 @@ require_once __DIR__ . '/franchise.php';
 require_once __DIR__ . '/metacampagnes.php';
 require_once __DIR__ . '/calendriers.php';
 require_once __DIR__ . '/suivi.php';
+require_once __DIR__ . '/vues.php';
 require_once __DIR__ . '/operations.php';
 require_once __DIR__ . '/catalogue.php';
 require_once __DIR__ . '/redaction.php';

@@ -33,6 +33,8 @@ function sfReglesDefaut(): array
     return ['actif' => true, 'validation' => 'modele', 'quotaSemaine' => 3, 'delaiMinHeures' => 24, 'horizonJours' => 30,
         'jours' => [1, 2, 3, 4, 5, 6, 0], 'heureMin' => '07:00', 'heureMax' => '20:00', 'fb' => true, 'ig' => true,
         'remiseMax' => 30, 'promoDureeMax' => 14, 'voirReseau' => true, 'voirCampagnes' => true, 'voirResultats' => true, 'voirSuivi' => true,
+        // L'analyse des vues (Page, Instagram, publications) et de l'évolution des abonnés, sans le budget.
+        'voirAnalyse' => true,
         // Le franchisé peut choisir le format du visuel (carré, portrait) et la couleur de chaque texte (palette de la marque).
         'persoVisuel' => true,
         // En attendant l'ERP (pas de point d'accroche franchise_session) : l'espace s'ouvre sans connexion
@@ -64,7 +66,7 @@ function sfReglesPut(array $in): array
         'remiseMax' => max(0, min(90, (int) ($in['remiseMax'] ?? $d['remiseMax']))),
         'promoDureeMax' => max(1, min(90, (int) ($in['promoDureeMax'] ?? $d['promoDureeMax']))),
         'voirReseau' => (bool) ($in['voirReseau'] ?? true), 'voirCampagnes' => (bool) ($in['voirCampagnes'] ?? true), 'voirResultats' => (bool) ($in['voirResultats'] ?? true), 'voirSuivi' => (bool) ($in['voirSuivi'] ?? true),
-        'persoVisuel' => (bool) ($in['persoVisuel'] ?? true),
+        'voirAnalyse' => (bool) ($in['voirAnalyse'] ?? true), 'persoVisuel' => (bool) ($in['persoVisuel'] ?? true),
         'accesLibre' => in_array((string) ($in['accesLibre'] ?? ''), array_column(socReseau(), 'id'), true) ? (string) $in['accesLibre'] : '',
         'message' => mb_substr(trim((string) ($in['message'] ?? $d['message'])), 0, 600),
     ];
@@ -572,6 +574,50 @@ function sfSuivi(string $shop, int $jours): array
 }
 
 /**
+ * L'analyse des vues de la boutique (« Mes réseaux » → Analyse) : pour sa Page et son Instagram
+ * (ou celui du réseau, comme au calendrier), les vues jour par jour, les vues de chaque publication
+ * de la période et l'évolution des abonnés (total actuel, gagnés / perdus par jour). Sans le budget
+ * publicitaire (c'est le « Suivi de ma boutique »). Lu en direct chez Meta ; motifs sans détail technique.
+ */
+function sfVues(string $shop, int $jours): array
+{
+    if (!sfRegles()['voirAnalyse']) { throw new HttpError(403, 'Le réseau ne partage pas l’analyse des vues dans cet espace.'); }
+    $jours = in_array($jours, SOC_SUIVI_PERIODES, true) ? $jours : 28;
+    $au = date('Y-m-d', strtotime('-1 day'));  // les insights d'un jour sont complets le lendemain
+    $du = date('Y-m-d', strtotime($au . ' -' . ($jours - 1) . ' days'));
+    $out = ['du' => $du, 'au' => $au, 'jours' => $jours, 'le' => date('Y-m-d H:i'), 'comptes' => [], 'publications' => [], 'erreurs' => [], 'message' => null];
+    if (!Meta::configured()) { return ['message' => 'Le réseau n’a pas encore relié ses comptes Meta.'] + $out; }
+    try { $garde = sfCalComptes($shop); $tous = socCalComptes(); }
+    catch (MetaError $e) { return ['message' => 'Les comptes Meta du réseau sont illisibles pour l’instant.'] + $out; }
+    if (!$garde) { return ['message' => 'La Page Facebook de votre boutique n’est pas encore reliée par le réseau.'] + $out; }
+    $sans = static fn (?string $m, string $dit) => $m === null ? null : (str_contains($m, '30 derniers jours') && !str_contains($m, 'permission') ? 'Instagram ne donne que les 30 derniers jours, jour par jour.' : $dit);
+    $t0 = strtotime($du . ' 00:00:00');
+    $illisible = false;
+    foreach ($garde as $k => $reseau) {
+        $c = $tous[$k] ?? null;
+        if ($c === null) { continue; }
+        $fb = $c['type'] === 'facebook';
+        $ab = $fb ? socSuiviPage($c, $du, $au) : socSuiviInstagram($c, $du, $au);
+        $v = $fb ? socVuesPage($c, $du, $au) : socVuesInstagram($c, $du, $au);
+        try { $pubs = socVuesPublications($c + ['username' => (string) ($ab['username'] ?? '')], $t0, time()); }
+        catch (MetaError $e) { $pubs = ['publications' => [], 'motif' => 'illisible']; $illisible = true; }
+        $nom = $fb ? (string) ($ab['name'] ?? $c['name']) : ((string) ($ab['username'] ?? '') !== '' ? '@' . $ab['username'] : $c['name']);
+        foreach ($pubs['publications'] as $p) { $out['publications'][] = ['accountName' => $nom] + $p; }
+        $out['comptes'][] = ['key' => $k, 'type' => $c['type'], 'name' => $nom, 'picture' => $ab['picture'] ?? null,
+            'link' => $fb ? ($ab['link'] ?? null) : ((string) ($ab['username'] ?? '') !== '' ? 'https://www.instagram.com/' . $ab['username'] . '/' : null), 'reseau' => $reseau,
+            'vues' => ['metrique' => $v['metrique'], 'serie' => $v['serie'], 'total' => $v['total'],
+                'motif' => $sans($v['motif'], 'Meta ne partage pas encore les vues jour par jour de ce compte.')],
+            'abonnes' => ['followers' => $ab['followers'], 'serie' => $ab['serie'], 'gagnes' => $ab['gagnes'], 'perdus' => $fb ? $ab['perdus'] : null,
+                'motif' => $sans($ab['motif'], 'Meta ne partage pas l’historique des abonnés de ce compte pour l’instant.')],
+            'publicationsMotif' => $pubs['motif'] !== null ? 'Les vues des publications ne sont pas partagées par Meta pour ce compte.' : null];
+    }
+    // Les plus vues d'abord ; sans chiffre, à la fin, les plus récentes d'abord.
+    usort($out['publications'], static fn ($a, $b) => (($b['vues'] ?? -1) <=> ($a['vues'] ?? -1)) ?: strcmp($b['date'] . $b['time'], $a['date'] . $a['time']));
+    if ($illisible) { $out['erreurs'][] = 'une partie des publications n’a pas pu être lue chez Meta'; }
+    return $out;
+}
+
+/**
  * Les comptes Meta que voit la boutique : sa Page Facebook, son Instagram (s'il lui est
  * propre) et, en Instagram unique, celui du réseau si la règle « voir les posts du réseau »
  * le permet. Clés `fb:…` / `ig:…` de socCalComptes().
@@ -692,6 +738,7 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'POST' && $path === '/franchise/posts') { return [200, ['post' => sfPostCreer($shop, body(), $session), 'quota' => ['used' => sfQuotaUtilise($shop, date('Y-m-d')), 'max' => sfRegles()['quotaSemaine']]]]; }
     if ($method === 'POST' && preg_match('#^/franchise/posts/([\w.\-]{1,64})/annuler$#', $path, $m)) { sfPostAnnuler($shop, $m[1]); return [200, ['ok' => true]]; }
     if ($method === 'GET' && $path === '/franchise/suivi') { return [200, sfSuivi($shop, (int) ($_GET['jours'] ?? 28))]; }
+    if ($method === 'GET' && $path === '/franchise/vues') { return [200, sfVues($shop, (int) ($_GET['jours'] ?? 28))]; }
     if ($method === 'GET' && $path === '/franchise/instagram') { return [200, sfInstagram($shop)]; }
     if ($method === 'GET' && $path === '/franchise/calendrier') { return [200, sfCalendrier($shop, (string) ($_GET['du'] ?? ''), (string) ($_GET['au'] ?? ''))]; }
     if ($method === 'GET' && $path === '/franchise/calendrier/stats') { return [200, sfCalStats($shop, (string) ($_GET['id'] ?? ''), (string) ($_GET['compte'] ?? ''))]; }

@@ -20,7 +20,7 @@
   </style>
 </helmet>
 <div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
-  <dc-import name="FNav" active="cal" hint-size="228px,100vh"></dc-import>
+  <dc-import name="FNav" active="{{ onglet }}" on-pick="{{ onOnglet }}" hint-size="228px,100vh"></dc-import>
   <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
     <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }}</div></sc-if>
     <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
@@ -34,8 +34,8 @@
         <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">{{ periodTitle }}</h1>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <sc-if value="{{ isSuivi }}" hint-placeholder-val="{{ false }}">
-          <span style="font-size:11px;color:#666666;">{{ sv.periodLabel }}</span>
+        <sc-if value="{{ hasJours }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:11px;color:#666666;">{{ joursLabel }}</span>
           <div style="display:inline-flex;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:3px;gap:2px;">
             <sc-for list="{{ svPeriods }}" as="pp" hint-placeholder-count="3"><button onClick="{{ pp.pick }}" style="border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer;background:{{ pp.bg }};color:{{ pp.fg }};">{{ pp.label }}</button></sc-for>
           </div>
@@ -266,6 +266,126 @@
         <span style="font-size:11px;color:#666666;line-height:1.45;">Chiffres lus en direct chez Meta pour la Page Facebook de votre boutique ; les publications sont celles de votre calendrier (lues chez Meta et publiées depuis cet espace). Le budget est celui des publicités du réseau qui mettent votre boutique en avant.</span>
       </div>
     </sc-if>
+
+    <!-- ANALYSE : vues de la Page et de l'Instagram jour par jour, vues par publication, évolution des abonnés -->
+    <sc-if value="{{ isAnalyse }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <sc-if value="{{ va.loading }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:40px 20px;text-align:center;font-size:13px;color:#666666;">Lecture de vos vues et de vos abonnés chez Meta…</div></sc-if>
+        <sc-if value="{{ va.hasMessage }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:28px 20px;text-align:center;font-size:13px;color:#666666;line-height:1.5;">{{ va.message }}</div></sc-if>
+        <sc-if value="{{ va.ready }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+            <sc-for list="{{ va.kpis }}" as="k" hint-placeholder-count="5">
+              <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+                <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;"><span style="width:8px;height:8px;border-radius:50%;background:{{ k.dot }};flex:0 0 auto;"></span>{{ k.label }}</span>
+                <span style="font-size:24px;font-weight:300;line-height:1.1;color:#222222;">{{ k.value }}</span>
+                <span style="font-size:11px;color:#666666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ k.sub }}">{{ k.sub }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <sc-for list="{{ va.cards }}" as="ch" hint-placeholder-count="0">
+            <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px 16px;flex-wrap:wrap;">
+                <span style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:14px;font-weight:500;color:#222222;">{{ ch.title }}</span><span style="font-size:11px;color:#666666;line-height:1.4;">{{ ch.sub }}</span></span>
+                <span style="display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;">
+                  <sc-for list="{{ ch.legend }}" as="l" hint-placeholder-count="2"><span style="display:flex;align-items:center;gap:6px;font-size:11px;color:#444444;"><span style="width:{{ l.w }};height:{{ l.h }};border-radius:{{ l.r }};background:{{ l.c }};box-shadow:{{ l.ring }};flex:0 0 auto;"></span>{{ l.n }}</span></sc-for>
+                </span>
+              </div>
+
+              <!-- courbe : une seule série, jour par jour -->
+              <sc-if value="{{ ch.isLine }}" hint-placeholder-val="{{ false }}">
+                <div style="position:relative;height:{{ ch.H }};user-select:none;">
+                  <sc-for list="{{ ch.grid }}" as="g" hint-placeholder-count="4">
+                    <span style="position:absolute;left:44px;right:10px;top:{{ g.top }};border-top:1px solid {{ g.line }};"></span>
+                    <span style="position:absolute;left:0;width:38px;text-align:right;top:{{ g.labTop }};font-size:10px;line-height:12px;color:#8A847C;">{{ g.label }}</span>
+                  </sc-for>
+                  <svg viewBox="0 0 1000 100" preserveAspectRatio="none" style="position:absolute;left:44px;top:12px;width:calc(100% - 54px);height:{{ ch.PH }};overflow:visible;">
+                    <path d="{{ ch.area }}" fill="{{ ch.fill }}" stroke="none"></path>
+                    <path d="{{ ch.line }}" fill="none" stroke="{{ ch.color }}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path>
+                  </svg>
+                  <sc-if value="{{ ch.hasCross }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:12px;height:{{ ch.PH }};left:{{ ch.crossLeft }};border-left:1px solid rgba(34,34,34,0.35);pointer-events:none;"></span></sc-if>
+                  <sc-for list="{{ ch.dots }}" as="d" hint-placeholder-count="0"><span style="position:absolute;left:{{ d.left }};top:{{ d.top }};width:{{ d.size }};height:{{ d.size }};transform:translate(-50%,-50%);border-radius:50%;background:{{ d.bg }};box-shadow:0 0 0 2px #FFFFFF;pointer-events:none;"></span></sc-for>
+                  <sc-for list="{{ ch.xl }}" as="x" hint-placeholder-count="5"><span style="position:absolute;bottom:0;left:{{ x.left }};transform:translateX(-50%);font-size:10px;line-height:12px;color:#8A847C;white-space:nowrap;">{{ x.label }}</span></sc-for>
+                  <div onPointerMove="{{ ch.move }}" onPointerLeave="{{ ch.leave }}" onClick="{{ ch.click }}" style="position:absolute;left:44px;right:10px;top:0;bottom:0;cursor:pointer;touch-action:pan-y;"></div>
+                  <sc-if value="{{ ch.hasTip }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;top:2px;left:{{ ch.crossLeft }};transform:{{ ch.tipX }};background:#232220;color:#FFFFFF;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.45;pointer-events:none;z-index:5;min-width:150px;max-width:260px;box-shadow:0 4px 14px rgba(0,0,0,0.18);">
+                      <div style="font-weight:600;margin-bottom:2px;">{{ ch.tipTitle }}</div>
+                      <sc-for list="{{ ch.tipLines }}" as="t" hint-placeholder-count="2"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t }}</div></sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+
+              <!-- barres jour par jour : gagnés au-dessus de la ligne de base, perdus en dessous -->
+              <sc-if value="{{ ch.isBars }}" hint-placeholder-val="{{ false }}">
+                <div style="position:relative;height:{{ ch.H }};user-select:none;">
+                  <sc-for list="{{ ch.grid }}" as="g" hint-placeholder-count="3">
+                    <span style="position:absolute;left:44px;right:10px;top:{{ g.top }};border-top:1px solid {{ g.line }};"></span>
+                    <span style="position:absolute;left:0;width:38px;text-align:right;top:{{ g.labTop }};font-size:10px;line-height:12px;color:#8A847C;">{{ g.label }}</span>
+                  </sc-for>
+                  <div style="position:absolute;left:44px;right:10px;top:12px;height:{{ ch.PH }};display:flex;">
+                    <sc-for list="{{ ch.bars }}" as="b" hint-placeholder-count="0">
+                      <span style="position:relative;flex:1 1 0;min-width:0;height:100%;background:{{ b.colBg }};">
+                        <span style="position:absolute;left:1px;right:1px;top:{{ b.upTop }};height:{{ b.upH }};background:{{ b.upC }};border-radius:4px 4px 0 0;"></span>
+                        <span style="position:absolute;left:1px;right:1px;top:{{ b.downTop }};height:{{ b.downH }};background:{{ b.downC }};border-radius:0 0 4px 4px;"></span>
+                      </span>
+                    </sc-for>
+                  </div>
+                  <sc-for list="{{ ch.xl }}" as="x" hint-placeholder-count="5"><span style="position:absolute;bottom:0;left:{{ x.left }};transform:translateX(-50%);font-size:10px;line-height:12px;color:#8A847C;white-space:nowrap;">{{ x.label }}</span></sc-for>
+                  <div onPointerMove="{{ ch.move }}" onPointerLeave="{{ ch.leave }}" onClick="{{ ch.click }}" style="position:absolute;left:44px;right:10px;top:0;bottom:0;cursor:pointer;touch-action:pan-y;"></div>
+                  <sc-if value="{{ ch.hasTip }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;top:2px;left:{{ ch.crossLeft }};transform:{{ ch.tipX }};background:#232220;color:#FFFFFF;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.45;pointer-events:none;z-index:5;min-width:150px;max-width:260px;box-shadow:0 4px 14px rgba(0,0,0,0.18);">
+                      <div style="font-weight:600;margin-bottom:2px;">{{ ch.tipTitle }}</div>
+                      <sc-for list="{{ ch.tipLines }}" as="t" hint-placeholder-count="2"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t }}</div></sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+
+              <!-- vues par publication : les plus vues d'abord -->
+              <sc-if value="{{ ch.isTop }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:2px;">
+                  <sc-for list="{{ ch.rows }}" as="r" hint-placeholder-count="0">
+                    <a href="{{ r.link }}" target="_blank" rel="noopener" title="{{ r.tip }}" style="display:grid;grid-template-columns:36px minmax(0,1.3fr) minmax(90px,2fr) 70px;gap:10px;align-items:center;padding:5px 4px;border-radius:8px;text-decoration:none;color:#222222;" style-hover="background:#F7F3EE;">
+                      <img src="{{ r.img }}" alt="" style="width:36px;height:36px;border-radius:6px;object-fit:cover;background:#F5EFE4;display:block;">
+                      <span style="display:flex;flex-direction:column;gap:1px;min-width:0;">
+                        <span style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.title }}</span>
+                        <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#666666;white-space:nowrap;overflow:hidden;"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.c }};flex:0 0 auto;"></span>{{ r.meta }}</span>
+                      </span>
+                      <span style="height:10px;border-radius:0 4px 4px 0;background:#F1ECE5;overflow:hidden;display:block;"><span style="display:block;height:100%;width:{{ r.w }};background:{{ r.c }};border-radius:0 4px 4px 0;"></span></span>
+                      <span style="font-size:13px;font-weight:500;text-align:right;color:#222222;">{{ r.value }}</span>
+                    </a>
+                  </sc-for>
+                  <sc-if value="{{ ch.empty }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;padding:8px 4px;">Aucune publication sur la période.</span></sc-if>
+                </div>
+              </sc-if>
+              <sc-if value="{{ ch.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.45;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:6px 8px;">{{ ch.note }}</span></sc-if>
+            </div>
+          </sc-for>
+          <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:14px 18px;display:flex;flex-direction:column;gap:6px;">
+            <span style="font-size:14px;font-weight:500;">Ce qu’il faut retenir</span>
+            <sc-for list="{{ va.insights }}" as="t" hint-placeholder-count="3"><span style="font-size:13px;color:#222222;line-height:1.5;">{{ t }}</span></sc-for>
+          </div>
+          <details style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:12px 18px;">
+            <summary style="cursor:pointer;font-size:13px;font-weight:500;color:#444444;">Voir les chiffres jour par jour</summary>
+            <div style="overflow:auto;margin-top:10px;">
+              <div style="display:grid;grid-template-columns:110px repeat(5,minmax(86px,1fr)) minmax(160px,2fr);min-width:820px;">
+                <sc-for list="{{ va.head }}" as="h" hint-placeholder-count="7"><span style="padding:8px;font-size:11px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.12);">{{ h }}</span></sc-for>
+                <sc-for list="{{ va.rows }}" as="r" hint-placeholder-count="0">
+                  <span style="padding:6px 8px;font-size:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);">{{ r.jour }}</span>
+                  <span style="padding:6px 8px;font-size:12px;text-align:right;border-bottom:0.5px solid rgba(34,34,34,0.06);">{{ r.vf }}</span>
+                  <span style="padding:6px 8px;font-size:12px;text-align:right;border-bottom:0.5px solid rgba(34,34,34,0.06);">{{ r.vi }}</span>
+                  <span style="padding:6px 8px;font-size:12px;text-align:right;border-bottom:0.5px solid rgba(34,34,34,0.06);">{{ r.g }}</span>
+                  <span style="padding:6px 8px;font-size:12px;text-align:right;border-bottom:0.5px solid rgba(34,34,34,0.06);">{{ r.p }}</span>
+                  <span style="padding:6px 8px;font-size:12px;text-align:right;border-bottom:0.5px solid rgba(34,34,34,0.06);">{{ r.gi }}</span>
+                  <span style="padding:6px 8px;font-size:12px;color:#444444;border-bottom:0.5px solid rgba(34,34,34,0.06);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ r.pubs }}">{{ r.pubs }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </details>
+        </sc-if>
+        <span style="font-size:11px;color:#666666;line-height:1.45;">{{ va.foot }}</span>
+      </div>
+    </sc-if>
     </sc-if>
   </main>
   <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
@@ -275,19 +395,19 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { view: 'month', cursor: null, selId: null, toast: '', tick: 0, hide: [], mp: null, mpLoading: false, mpErr: '', ps: null, jours: 28, sv: null, svLoading: false, svErr: '' };
+  state = { view: 'month', cursor: null, selId: null, toast: '', tick: 0, hide: [], mp: null, mpLoading: false, mpErr: '', ps: null, jours: 28, sv: null, svLoading: false, svErr: '', va: null, vaLoading: false, vaErr: '', hov: null };
   componentDidMount() {
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sf-change', this._h);
     const SF = window.SF, st = SF && SF.state(); if (!st) return;
-    const q = new URLSearchParams(location.search), vue = { semaine: 'week', liste: 'list', mois: 'month', suivi: 'suivi' }[q.get('vue') || ''];
+    const q = new URLSearchParams(location.search), vue = { semaine: 'week', liste: 'list', mois: 'month', suivi: 'suivi', analyse: 'analyse' }[q.get('vue') || ''];
     const patch = { cursor: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : st.today };
-    if (vue && (vue !== 'suivi' || st.rules.voirSuivi !== false)) patch.view = vue;
+    if (vue && (vue !== 'suivi' || st.rules.voirSuivi !== false) && (vue !== 'analyse' || st.rules.voirAnalyse !== false)) patch.view = vue;
     if ([7, 28, 90].includes(+q.get('jours'))) patch.jours = +q.get('jours');
     if (q.get('post')) patch.selId = q.get('post');
     this.setState(patch, () => this.loadMeta(false));
     if (q.get('ok')) this.toast(q.get('ok') === 'valider' ? 'Envoyé : le réseau valide votre post avant publication.' : 'Programmé : il partira à l’heure prévue.');
   }
-  componentDidUpdate() { this.loadMeta(false); this.loadStats(); this.loadSuivi(); }
+  componentDidUpdate() { this.loadMeta(false); this.loadStats(); this.loadSuivi(); this.loadVues(); }
   componentWillUnmount() { clearTimeout(this._tt); window.removeEventListener('sf-change', this._h); }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 5000); }
 
@@ -295,7 +415,7 @@ class Component extends DCLogic {
   period() {
     const SF = window.SF, s = this.state, cur = s.cursor || SF.state().today;
     // Suivi : les N derniers jours jusqu'à hier (comme les chiffres de Meta) ; ses publications viennent de la même lecture.
-    if (s.view === 'suivi') { const au = SF.addDays(SF.state().today, -1); return [SF.addDays(au, -(s.jours - 1)), au]; }
+    if (s.view === 'suivi' || s.view === 'analyse') { const au = SF.addDays(SF.state().today, -1); return [SF.addDays(au, -(s.jours - 1)), au]; }
     if (s.view === 'week') { const off = (SF.d2(cur).getDay() + 6) % 7, a = SF.addDays(cur, -off); return [a, SF.addDays(a, 6)]; }
     const c = SF.d2(cur), first = new Date(c.getFullYear(), c.getMonth(), 1), off = (first.getDay() + 6) % 7, a = SF.addDays(SF.iso(first), -off);
     const last = new Date(c.getFullYear(), c.getMonth() + 1, 0);
@@ -304,8 +424,8 @@ class Component extends DCLogic {
   /** L'adresse garde la vue et la date (avec la boutique) : un lien partagé rouvre le même calendrier. */
   syncUrl() {
     const s = this.state; if (!s.cursor) return;
-    try { const u = new URL(location.href); u.searchParams.set('vue', { week: 'semaine', list: 'liste', month: 'mois', suivi: 'suivi' }[s.view]); u.searchParams.set('date', s.cursor);
-      if (s.view === 'suivi') u.searchParams.set('jours', s.jours); else u.searchParams.delete('jours');
+    try { const u = new URL(location.href); u.searchParams.set('vue', { week: 'semaine', list: 'liste', month: 'mois', suivi: 'suivi', analyse: 'analyse' }[s.view]); u.searchParams.set('date', s.cursor);
+      if (s.view === 'suivi' || s.view === 'analyse') u.searchParams.set('jours', s.jours); else u.searchParams.delete('jours');
       if (s.selId) u.searchParams.set('post', s.selId); else u.searchParams.delete('post'); u.searchParams.delete('ok');
       if (u.toString() !== location.href) history.replaceState(history.state, '', u.toString()); } catch (e) {}
   }
@@ -313,6 +433,7 @@ class Component extends DCLogic {
   loadMeta(force) {
     const SF = window.SF; if (!SF || !SF.state() || !this.state.cursor) return;
     this.syncUrl();
+    if (this.state.view === 'analyse') return;  // l'analyse lit ses publications avec leurs vues (SF.vues)
     const [du, au] = this.period(), key = du + '_' + au;
     if (!force && this._mk === key) return;
     this._mk = key; this._mc = this._mc || {};
@@ -329,6 +450,15 @@ class Component extends DCLogic {
     this.setState({ svLoading: true, svErr: '' });
     SF.suivi(k).then(r => { this._sc[k] = r; if (this._sk === k) this.setState({ sv: r, svLoading: false }); })
       .catch(e => { if (this._sk === k) this.setState({ svLoading: false, svErr: e.message || 'erreur' }); });
+  }
+  /** L'analyse des vues et des abonnés (sa Page, son Instagram), lue chez Meta quand l'onglet est ouvert. */
+  loadVues() {
+    const SF = window.SF, s = this.state; if (!SF || !SF.state() || s.view !== 'analyse' || this._vk === s.jours) return;
+    const k = this._vk = s.jours; this._vc = this._vc || {};
+    if (this._vc[k]) { this.setState({ va: this._vc[k], vaErr: '', hov: null }); return; }
+    this.setState({ vaLoading: true, vaErr: '', hov: null });
+    SF.vues(k).then(r => { this._vc[k] = r; if (this._vk === k) this.setState({ va: r, vaLoading: false }); })
+      .catch(e => { if (this._vk === k) this.setState({ vaLoading: false, vaErr: e.message || 'erreur' }); });
   }
   /** Les chiffres (vues…) de la publication Meta ouverte, lus à l'ouverture de sa fiche. */
   loadStats() {
@@ -388,9 +518,172 @@ class Component extends DCLogic {
       periodLabel: (r.demo ? 'Démonstration · ' : '') + 'du ' + SF.dShort(r.du) + ' au ' + SF.dShort(r.au) });
   }
 
+  /**
+   * L'analyse : les vues de la Page (et les comptes touchés sur Instagram) jour par jour, les vues de chaque
+   * publication de la période et l'évolution des abonnés. Une seule série par graphique, sur un seul axe ;
+   * au survol, un repère commun à tous les graphiques jour par jour et l'infobulle du graphique survolé.
+   */
+  analyseVals() {
+    const SF = window.SF, s = this.state, r = s.va;
+    const base = { loading: s.vaLoading, hasMessage: false, message: '', ready: false, kpis: [], cards: [], insights: [], head: [], rows: [], foot: '' };
+    if (s.vaErr) return Object.assign(base, { hasMessage: true, message: 'Analyse illisible pour l’instant : ' + s.vaErr });
+    if (!r) return base;
+    if (r.message || !(r.comptes || []).length) return Object.assign(base, { hasMessage: !s.vaLoading, message: r.message || 'Aucun compte Meta n’est relié à votre boutique.' });
+    // Couleurs : chaque compte garde la sienne (Facebook, Instagram) ; gagnés / perdus : paire lisible par tous (daltonisme vérifié).
+    const C = { fb: '#1877F2', ig: '#C13584', mark: '#232220', up: '#1F8A60', down: '#D97B29' };
+    const fmt = (v, d = 0) => v == null ? '—' : Number(v).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const axe = (v) => Math.abs(v) >= 10000 ? fmt(v / 1000, Math.abs(v) >= 100000 ? 0 : 1) + ' k' : fmt(v);
+    const signe = (v) => v == null ? '—' : v > 0 ? '+' + fmt(v) : v < 0 ? '−' + fmt(-v) : '0';
+    const MO = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'], JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+    const court = (d) => { const x = SF.d2(d); return x.getDate() + ' ' + MO[x.getMonth()]; };
+    const days = []; for (let d = r.du; d <= r.au; d = SF.addDays(d, 1)) days.push(d);
+    const n = days.length;
+    const fb = r.comptes.find(c => c.type === 'facebook') || null, ig = r.comptes.find(c => c.type === 'instagram') || null;
+    const pubs = r.publications || [];
+    const parJour = (c) => { const o = {}; if (c) pubs.filter(p => p.account === c.key && p.date >= r.du && p.date <= r.au).forEach(p => (o[p.date] = o[p.date] || []).push(p)); return o; };
+    const pF = parJour(fb), pI = parJour(ig);
+    const hov = s.hov && s.hov.i < n ? s.hov : null;
+    // Géométrie commune : graduations à gauche (44 px), dates en bas (24 px) ; un jour = une bande, le point au milieu.
+    const PT = 12, PB = 24, fOf = (i) => (i + 0.5) / n, xAt = (f) => 'calc(44px + (100% - 54px) * ' + f.toFixed(4) + ')';
+    const nice = (lo, hi, k = 4) => { if (!(hi > lo)) hi = lo + 1; const raw = (hi - lo) / k, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+      const step = Math.max(1, (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p), a = Math.floor(lo / step) * step, b = Math.ceil(hi / step) * step, t = [];
+      for (let v = a; v <= b + step / 2; v += step) t.push(Math.round(v) || 0);
+      return { lo: a, hi: b, ticks: t }; };
+    const dates = () => { const k = Math.min(n, 5), out = []; for (let j = 0; j < k; j++) { const i = k === 1 ? 0 : Math.round(j * (n - 1) / (k - 1)); out.push({ left: xAt(fOf(i)), label: court(days[i]) }); } return out; };
+    const idx = (e) => { const b = e.currentTarget.getBoundingClientRect(); return Math.max(0, Math.min(n - 1, Math.floor((e.clientX - b.left) / Math.max(1, b.width) * n))); };
+    const survol = (k, lignes) => ({
+      move: (e) => { const i = idx(e), h = this.state.hov; if (!h || h.i !== i || h.k !== k) this.setState({ hov: { k, i } }); },
+      leave: () => { if (this.state.hov) this.setState({ hov: null }); },
+      // Un jour cliqué s'ouvre au calendrier (semaine).
+      click: (e) => { const i = idx(e); this.setState({ view: 'week', cursor: days[i], calView: 'week', hov: null }); },
+      hasCross: !!hov, crossLeft: hov ? xAt(fOf(hov.i)) : '0px', hasTip: !!hov && hov.k === k,
+      tipX: hov && fOf(hov.i) > 0.6 ? 'translateX(calc(-100% - 12px))' : 'translateX(12px)',
+      tipTitle: hov ? SF.dLabel(days[hov.i]) : '', tipLines: hov && hov.k === k ? lignes(hov.i) : [] });
+    const titres = (l) => l && l.length ? l.slice(0, 2).map(p => 'Publié : « ' + (p.title || p.type) + ' »').concat(l.length > 2 ? ['… et ' + (l.length - 2) + ' autre(s)'] : []) : ['aucune publication ce jour-là'];
+    const carte = (o) => Object.assign({ isLine: false, isBars: false, isTop: false, legend: [], grid: [], dots: [], xl: [], bars: [], rows: [], hasNote: !!o.note, note: o.note || '', empty: false,
+      hasCross: false, hasTip: false, tipLines: [], move: () => {}, leave: () => {}, click: () => {} }, o);
+    const lg = { ligne: (c, n2) => ({ c, n: n2, w: '14px', h: '2px', r: '1px', ring: 'none' }), point: (n2) => ({ c: C.mark, n: n2, w: '8px', h: '8px', r: '50%', ring: '0 0 0 2px #FFFFFF, 0 0 0 2.5px rgba(34,34,34,0.25)' }),
+      barre: (c, n2) => ({ c, n: n2, w: '10px', h: '10px', r: '3px', ring: 'none' }) };
+
+    /** Une courbe jour par jour (une série) : `vals` un nombre ou null par jour ; `marques` les jours à repérer. */
+    const courbe = (k, o, vals, color, marques, lignes) => {
+      const ok = vals.filter(v => v != null);
+      if (!ok.length) return carte({ title: o.title, sub: o.sub, note: o.vide });
+      const zero = o.zero !== false, H = 200, PH = H - PT - PB;
+      const sc = zero ? nice(0, Math.max(...ok)) : nice(Math.min(...ok), Math.max(...ok));
+      const y = (v) => 1 - (v - sc.lo) / (sc.hi - sc.lo);
+      let line = '', area = '', seg = [];
+      const fin = () => { if (!seg.length) return; line += seg.map((p, j) => (j ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' ') + ' ';
+        if (zero && seg.length > 1) area += 'M' + seg[0][0] + ' 100 ' + seg.map(p => 'L' + p[0] + ' ' + p[1]).join(' ') + ' L' + seg[seg.length - 1][0] + ' 100 Z ';
+        seg = []; };
+      vals.forEach((v, i) => { if (v == null) fin(); else seg.push([(fOf(i) * 1000).toFixed(1), (y(v) * 100).toFixed(2)]); });
+      fin();
+      const dots = [];
+      vals.forEach((v, i) => { if (v != null && marques[days[i]]) dots.push({ left: xAt(fOf(i)), top: (PT + y(v) * PH).toFixed(1) + 'px', size: '8px', bg: C.mark }); });
+      if (hov && vals[hov.i] != null) dots.push({ left: xAt(fOf(hov.i)), top: (PT + y(vals[hov.i]) * PH).toFixed(1) + 'px', size: '10px', bg: color });
+      return carte(Object.assign({ isLine: true, title: o.title, sub: o.sub, note: o.note, H: H + 'px', PH: PH + 'px', line, area, color, fill: color + '1A',
+        legend: [lg.ligne(color, o.serie), lg.point('jour avec publication')],
+        grid: sc.ticks.map(t => ({ top: (PT + y(t) * PH).toFixed(1) + 'px', labTop: (PT + y(t) * PH - 6).toFixed(1) + 'px', label: axe(t), line: zero && t === sc.lo ? 'rgba(34,34,34,0.30)' : 'rgba(34,34,34,0.08)' })),
+        dots, xl: dates() }, survol(k, lignes)));
+    };
+    /** Les abonnés jour par jour en barres : gagnés au-dessus de la ligne de base, perdus en dessous (si Meta les donne). */
+    const barres = (k, o, serie, perdus, lignes) => {
+      const g = days.map(d => serie && serie[d] ? +serie[d].gagnes || 0 : null), p = days.map(d => perdus && serie && serie[d] ? +serie[d].perdus || 0 : 0);
+      if (!g.some(v => v != null)) return carte({ title: o.title, sub: o.sub, note: o.vide });
+      const H = 160, PH = H - PT - PB, sc = nice(-Math.max(0, ...p), Math.max(1, ...g.filter(v => v != null)), perdus ? 4 : 3);
+      const y = (v) => (sc.hi - v) / (sc.hi - sc.lo) * PH, y0 = y(0);
+      const bars = days.map((d, i) => { const hu = g[i] ? y0 - y(g[i]) : 0, hd = p[i] ? y(-p[i]) - y0 : 0;
+        return { upTop: (y0 - hu).toFixed(1) + 'px', upH: hu.toFixed(1) + 'px', downTop: (y0 + 1).toFixed(1) + 'px', downH: hd.toFixed(1) + 'px', upC: C.up, downC: C.down,
+          colBg: hov && hov.i === i ? 'rgba(34,34,34,0.06)' : 'transparent' }; });
+      return carte(Object.assign({ isBars: true, title: o.title, sub: o.sub, note: o.note, H: H + 'px', PH: PH + 'px', bars,
+        legend: perdus ? [lg.barre(C.up, 'gagnés'), lg.barre(C.down, 'perdus')] : [],
+        grid: sc.ticks.map(t => ({ top: (PT + y(t)).toFixed(1) + 'px', labTop: (PT + y(t) - 6).toFixed(1) + 'px', label: perdus ? signe(t) : axe(t), line: t === 0 ? 'rgba(34,34,34,0.30)' : 'rgba(34,34,34,0.08)' })),
+        xl: dates() }, survol(k, lignes)));
+    };
+
+    const vF = days.map(d => fb && fb.vues.serie && fb.vues.serie[d] != null ? +fb.vues.serie[d] : null);
+    const vI = days.map(d => ig && ig.vues.serie && ig.vues.serie[d] != null ? +ig.vues.serie[d] : null);
+    const visites = fb && fb.vues.metrique === 'visites', motVue = visites ? 'visites' : 'vues';
+    const aF = fb ? fb.abonnes : null, aI = ig ? ig.abonnes : null, sF = (aF && aF.serie) || null, sI = (aI && aI.serie) || null;
+    const net = (d) => sF && sF[d] ? (+sF[d].gagnes || 0) - (+sF[d].perdus || 0) : 0;
+    // Le total d'abonnés de la Page jour par jour : le total d'aujourd'hui, moins ce qui a changé ensuite.
+    const tot = days.map(() => null);
+    if (aF && aF.followers != null && sF) { tot[n - 1] = aF.followers; for (let i = n - 1; i > 0; i--) tot[i - 1] = tot[i] - net(days[i]); }
+    const netF = aF && aF.gagnes != null ? aF.gagnes - (aF.perdus || 0) : null;
+    const nomIg = ig ? 'Instagram' + (ig.reseau ? ' du réseau' : '') : '';
+    const reseauNote = ig && ig.reseau ? 'Instagram est commun à tout le réseau : ses chiffres ne sont pas ceux de votre seule boutique.' : '';
+    const joindre = (...t) => t.filter(Boolean).join(' ');
+    const somme = (a) => a.reduce((t, v) => t + (v || 0), 0), nb = (a) => a.filter(v => v != null).length;
+
+    const cards = [];
+    if (fb) cards.push(courbe('fbv', { title: (visites ? 'Visites' : 'Vues') + ' de votre Page Facebook, jour par jour', serie: visites ? 'visites de la Page' : 'vues de la Page',
+      sub: fmt(fb.vues.total) + ' ' + motVue + ' sur ' + n + ' jours' + (nb(vF) ? ' · ' + fmt(somme(vF) / nb(vF)) + ' par jour en moyenne' : '') + ' · ' + fb.name,
+      note: joindre(fb.vues.motif, visites ? 'Meta ne donne plus les vues de cette Page : ce sont les visites de la Page.' : ''), vide: fb.vues.motif || 'Meta ne donne pas encore les vues jour par jour de votre Page.' },
+      vF, C.fb, pF, (i) => [fmt(vF[i]) + ' ' + motVue].concat(titres(pF[days[i]]))));
+    if (ig) cards.push(courbe('igv', { title: nomIg + ' · comptes touchés, jour par jour', serie: 'comptes touchés', zero: true,
+      sub: joindre(ig.vues.total != null ? fmt(ig.vues.total) + ' vues sur la période ·' : '', ig.name), note: joindre(ig.vues.motif, reseauNote),
+      vide: joindre(ig.vues.motif || 'Meta ne donne pas encore les comptes touchés jour par jour de cet Instagram.', reseauNote) },
+      vI, C.ig, pI, (i) => [fmt(vI[i]) + ' comptes touchés'].concat(titres(pI[days[i]]))));
+    // Vues par publication : les plus vues d'abord (une barre par publication, couleur du compte).
+    const avecVues = pubs.filter(p => p.vues != null), top = (avecVues.length ? avecVues : pubs).slice(0, 10), maxV = Math.max(1, ...avecVues.map(p => p.vues));
+    const pm = r.comptes.map(c => c.publicationsMotif).filter(Boolean);
+    cards.push(carte({ isTop: true, title: 'Vues par publication', empty: !pubs.length,
+      sub: pubs.length ? (top.length < pubs.length ? 'les ' + top.length + ' plus vues sur ' + pubs.length : pubs.length + ' publication(s)') + ' depuis le ' + court(r.du) + ' · vues depuis la mise en ligne · cliquez pour l’ouvrir' : 'depuis le ' + court(r.du),
+      legend: [fb ? lg.barre(C.fb, 'Page Facebook') : null, ig ? lg.barre(C.ig, nomIg) : null].filter(Boolean),
+      rows: top.map(p => ({ title: p.title || p.type || 'Publication', img: SF.media(p.img) || 'img/logo.png', link: p.permalink || '#', c: p.channel === 'Instagram' ? C.ig : C.fb,
+        meta: SF.dLabel(p.date) + ' · ' + (p.channel === 'Instagram' ? nomIg || 'Instagram' : 'Page') + ' · ' + p.type, w: p.vues != null ? Math.max(1, p.vues / maxV * 100).toFixed(1) + '%' : '0%', value: fmt(p.vues),
+        tip: (p.title || '') + ' — ' + fmt(p.vues) + ' vues' + (p.personnes != null ? ' · ' + fmt(p.personnes) + ' personnes touchées' : '') })),
+      note: pm.length && !avecVues.length ? pm[0] : pm.length ? 'Une partie des vues n’est pas partagée par Meta.' : '' }));
+    if (fb) cards.push(courbe('fbt', { title: 'Abonnés de votre Page : évolution', serie: 'abonnés de la Page', zero: false,
+      sub: fmt(aF.followers) + ' abonnés aujourd’hui' + (netF != null ? ' · ' + signe(netF) + ' en ' + n + ' jours' : ''), note: '',
+      vide: aF.followers != null ? fmt(aF.followers) + ' abonnés aujourd’hui. ' + (aF.motif || 'Meta ne donne pas encore l’historique des abonnés de votre Page.') : (aF.motif || 'Abonnés illisibles pour l’instant.') },
+      tot, C.fb, pF, (i) => [fmt(tot[i]) + ' abonnés', sF && sF[days[i]] ? '+' + fmt(sF[days[i]].gagnes) + ' / −' + fmt(sF[days[i]].perdus) + ' ce jour-là' : 'pas de chiffre ce jour-là'].concat(titres(pF[days[i]]).slice(0, 1))));
+    if (fb && sF) cards.push(barres('fbg', { title: 'Abonnés gagnés et perdus, jour par jour', sub: 'Page Facebook · +' + fmt(aF.gagnes) + ' gagnés, −' + fmt(aF.perdus) + ' perdus sur ' + n + ' jours', note: '' },
+      sF, true, (i) => { const x = sF[days[i]]; return x ? ['+' + fmt(x.gagnes) + ' gagnés', '−' + fmt(x.perdus) + ' perdus', 'net ' + signe((+x.gagnes || 0) - (+x.perdus || 0))] : ['pas de chiffre ce jour-là']; }));
+    if (ig) cards.push(barres('igg', { title: nomIg + ' · nouveaux abonnés, jour par jour', sub: fmt(aI.followers) + ' abonnés aujourd’hui' + (aI.gagnes != null ? ' · +' + fmt(aI.gagnes) + ' nouveaux' : '') + ' · ' + ig.name,
+      note: joindre(aI.motif, sI ? 'Instagram ne donne pas les désabonnements jour par jour.' : '', reseauNote), vide: joindre(aI.motif || 'Meta ne donne pas encore les nouveaux abonnés de cet Instagram.', reseauNote) },
+      sI, false, (i) => { const x = sI && sI[days[i]]; return x ? ['+' + fmt(x.gagnes) + ' nouveaux abonnés'] : ['pas de chiffre ce jour-là']; }));
+
+    // Indicateurs
+    const best = avecVues[0] || null;
+    const kpis = [].concat(fb ? [{ label: (visites ? 'Visites' : 'Vues') + ' · Page', value: fmt(fb.vues.total), sub: n + ' jours' + (nb(vF) ? ' · ' + fmt(somme(vF) / nb(vF)) + ' / jour' : ''), dot: C.fb }] : [])
+      .concat(ig ? [{ label: 'Vues · ' + nomIg, value: fmt(ig.vues.total), sub: ig.vues.total != null ? n + ' jours · ' + ig.name : 'non partagées par Meta', dot: C.ig }] : [])
+      .concat(fb ? [{ label: 'Abonnés · Page', value: fmt(aF.followers), sub: aF.gagnes != null ? '+' + fmt(aF.gagnes) + ' / −' + fmt(aF.perdus) + ' · net ' + signe(netF) + ' en ' + n + ' j' : 'historique non partagé', dot: C.fb }] : [])
+      .concat(ig ? [{ label: 'Abonnés · ' + nomIg, value: fmt(aI.followers), sub: aI.gagnes != null ? '+' + fmt(aI.gagnes) + ' nouveaux' : 'historique non partagé', dot: C.ig }] : [])
+      .concat([{ label: 'Publication la plus vue', value: best ? fmt(best.vues) : '—', sub: best ? '« ' + (best.title || best.type) + ' » · ' + SF.dShort(best.date) : pubs.length ? 'vues non partagées' : 'aucune publication', dot: best ? (best.channel === 'Instagram' ? C.ig : C.fb) : '#B8B2A8' }]);
+
+    // Ce qu'il faut retenir
+    const insights = [];
+    if (nb(vF)) {
+      let bi = 0; vF.forEach((v, i) => { if (v != null && v > (vF[bi] || 0)) bi = i; });
+      insights.push('Votre meilleur jour : ' + SF.dLabel(days[bi]) + ', ' + fmt(vF[bi]) + ' ' + motVue + (pF[days[bi]] ? ', le jour de « ' + (pF[days[bi]][0].title || pF[days[bi]][0].type) + ' ».' : '.'));
+      const avec = vF.filter((v, i) => v != null && pF[days[i]]), sans = vF.filter((v, i) => v != null && !pF[days[i]]);
+      if (avec.length && sans.length) { const a = somme(avec) / avec.length, b = somme(sans) / sans.length;
+        insights.push('Les jours où votre Page publie, elle fait ' + fmt(a) + ' ' + motVue + ' en moyenne, contre ' + fmt(b) + ' les autres jours' + (b > 0 && a > b * 1.1 ? ' : publier multiplie vos ' + motVue + ' par ' + fmt(a / b, 1) + '.' : '.')); }
+      if (n >= 14) { const t = [0, 0, 0, 0, 0, 0, 0], c = [0, 0, 0, 0, 0, 0, 0];
+        vF.forEach((v, i) => { if (v != null) { const w = SF.d2(days[i]).getDay(); t[w] += v; c[w]++; } });
+        let bw = -1; t.forEach((v, w) => { if (c[w] && (bw < 0 || v / c[w] > t[bw] / c[bw])) bw = w; });
+        if (bw >= 0) insights.push('Le ' + JOURS[bw] + ' est votre meilleur jour de la semaine : ' + fmt(t[bw] / c[bw]) + ' ' + motVue + ' en moyenne. Un bon jour pour publier.'); }
+    }
+    if (aF && aF.gagnes != null) insights.push('Votre Page : +' + fmt(aF.gagnes) + ' abonnés, −' + fmt(aF.perdus) + ' désabonnements, soit ' + signe(netF) + ' en ' + n + ' jours.');
+    if (aI && aI.gagnes != null) insights.push(nomIg + ' : +' + fmt(aI.gagnes) + ' nouveaux abonnés' + (ig.reseau ? ' pour tout le réseau.' : '.'));
+    if (!insights.length) insights.push('Meta ne partage pas encore les chiffres jour par jour de vos comptes : les totaux s’affichent.');
+
+    // Les chiffres en tableau (lecture sans graphique)
+    const rows = days.slice().reverse().map(d => ({ jour: SF.dLabel(d), vf: fmt(fb && fb.vues.serie ? fb.vues.serie[d] : null), vi: fmt(ig && ig.vues.serie ? ig.vues.serie[d] : null),
+      g: fmt(sF && sF[d] ? sF[d].gagnes : null), p: fmt(sF && sF[d] ? sF[d].perdus : null), gi: fmt(sI && sI[d] ? sI[d].gagnes : null),
+      pubs: (pF[d] || []).concat(pI[d] || []).map(p => p.title || p.type).join(' · ') || '—' }));
+    const le = String(r.le || '');
+    return Object.assign(base, { ready: true, kpis, cards, insights, rows,
+      head: ['Jour', visites ? 'Visites Page' : 'Vues Page', 'Touchés IG', 'Gagnés Page', 'Perdus Page', 'Nouveaux IG', 'Publications'],
+      foot: 'Chiffres lus en direct chez Meta' + (r.demo ? ' (démonstration)' : le ? ' le ' + SF.dShort(le.slice(0, 10)) + ' à ' + le.slice(11, 16) : '') + ' pour la Page Facebook de votre boutique'
+        + (ig ? (ig.reseau ? ' et l’Instagram du réseau' : ' et son Instagram') : '') + '. Les chiffres d’un jour sont complets le lendemain : la période s’arrête hier. Rien n’est copié.'
+        + ((r.erreurs || []).length ? ' · ' + r.erreurs[0] : '') });
+  }
+
   renderVals() {
     const SF = window.SF, st = SF && SF.state(), s = this.state;
-    if (!st) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', cells: [], dows: [], kpis: [], upcoming: [], chips: [], views: [], weekCols: [], listRows: [], listHead: [], legend: [], svPeriods: [], sv: { kpis: [], days: [], insights: [] } };
+    if (!st) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', cells: [], dows: [], kpis: [], upcoming: [], chips: [], views: [], weekCols: [], listRows: [], listHead: [], legend: [], svPeriods: [], sv: { kpis: [], days: [], insights: [] }, va: { kpis: [], cards: [], insights: [], head: [], rows: [] } };
     const cursor = s.cursor || st.today, [du, au] = this.period(), mp = s.mp, nowMs = SF.at(st.today, st.now);
     const fmt = (n) => n == null ? '—' : Number(n).toLocaleString('fr-BE');
     const ini = (t, bg) => 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52"><rect width="52" height="52" rx="26" fill="' + bg + '"/><text x="26" y="33" font-family="Arial" font-size="18" font-weight="700" fill="#fff" text-anchor="middle">' + t + '</text></svg>');
@@ -495,15 +788,19 @@ class Component extends DCLogic {
     const shift = (n) => { if (s.view === 'week') { this.setState({ cursor: SF.addDays(cursor, 7 * n) }); return; } const d = new Date(m0.getFullYear(), m0.getMonth() + n, 1); this.setState({ cursor: SF.iso(d) }); };
     const seg = (on) => on ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
     const lu = mp && mp.le ? String(mp.le) : '';
-    const suivi = s.view === 'suivi';
+    const suivi = s.view === 'suivi', analyse = s.view === 'analyse', horsCal = suivi || analyse;
     return {
-      ok: true, hasError: false, shopName: st.shop.name, periodTitle: suivi ? 'SUIVI DE MA BOUTIQUE' : label,
-      // Les onglets de « Mes réseaux » : le calendrier et le suivi changent sans recharger la page.
-      onglet: suivi ? 'suivi' : 'cal', isCal: !suivi, isSuivi: suivi,
-      onOnglet: (k) => { if (k === 'suivi' && !suivi) this.setState({ view: 'suivi', calView: s.view, selId: null }); else if (k === 'cal' && suivi) this.setState({ view: s.calView || 'month' }); },
-      eyebrow: suivi ? 'Suivi · L’Atelier By ' + st.shop.name + ' · vos abonnés, vos publications et les publicités du réseau' : 'Calendrier Meta · L’Atelier By ' + st.shop.name + ' · Facebook et Instagram',
-      svPeriods: [7, 28, 90].map(j => { const [bg, fg] = seg(s.jours === j); return { label: j + ' j', bg, fg, pick: () => this.setState({ jours: j }) }; }),
+      ok: true, hasError: false, shopName: st.shop.name, periodTitle: analyse ? 'VUES ET ABONNÉS' : suivi ? 'SUIVI DE MA BOUTIQUE' : label,
+      // Les onglets de « Mes réseaux » (et son menu) : calendrier, vues et abonnés, suivi changent sans recharger la page.
+      onglet: analyse ? 'analyse' : suivi ? 'suivi' : 'cal', isCal: !horsCal, isSuivi: suivi, isAnalyse: analyse,
+      onOnglet: (k) => { if (k === 'cal') { if (horsCal) this.setState({ view: s.calView || 'month', hov: null }); return; }
+        if (k !== s.view && ['suivi', 'analyse'].includes(k)) this.setState({ view: k, calView: horsCal ? s.calView : s.view, selId: null, hov: null }); },
+      eyebrow: analyse ? 'Vues et abonnés · L’Atelier By ' + st.shop.name + ' · ce que vos clients voient de vous sur Facebook et Instagram'
+        : suivi ? 'Suivi · L’Atelier By ' + st.shop.name + ' · vos abonnés, vos publications et les publicités du réseau' : 'Calendrier Meta · L’Atelier By ' + st.shop.name + ' · Facebook et Instagram',
+      hasJours: horsCal, joursLabel: horsCal ? ((analyse ? s.va && s.va.demo : s.sv && s.sv.demo) ? 'Démonstration · ' : '') + 'du ' + SF.dShort(du) + ' au ' + SF.dShort(au) : '',
+      svPeriods: [7, 28, 90].map(j => { const [bg, fg] = seg(s.jours === j); return { label: j + ' j', bg, fg, pick: () => this.setState({ jours: j, hov: null }) }; }),
       sv: suivi ? this.suiviVals(st, META) : { kpis: [], days: [], insights: [] },
+      va: analyse ? this.analyseVals() : { kpis: [], cards: [], insights: [], head: [], rows: [] },
       views: [['month', 'Mois'], ['week', 'Semaine'], ['list', 'Liste']].map(([k, l]) => { const [bg, fg] = seg(s.view === k); return { label: l, bg, fg, pick: () => this.setState({ view: k }) }; }),
       prev: () => shift(-1), next: () => shift(1), goToday: () => this.setState({ cursor: st.today }),
       pubHref: SF.href('pub'), hasMessage: !!(st.rules.message || '').trim(), message: st.rules.message,

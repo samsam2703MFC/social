@@ -32,7 +32,30 @@
   <div style="padding:14px 12px 8px;display:flex;flex-direction:column;gap:2px;">
     <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8D1D2C;padding:0 10px 2px;">Communication</span>
     <span style="font-size:11px;color:#8A847C;padding:0 10px 8px;">Vos posts et promotions, dans la charte du réseau</span>
-    <sc-for list="{{ items }}" as="it" hint-placeholder-count="4">
+    <sc-for list="{{ items }}" as="it" hint-placeholder-count="3">
+      <!-- « Mes réseaux » : un menu déroulant (calendrier, vues et abonnés, suivi, créer un post) -->
+      <sc-if value="{{ it.isGroup }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ it.toggle }}" aria-expanded="{{ it.expanded }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:8px;border:none;cursor:pointer;text-align:left;width:100%;font-size:13px;font-weight:{{ it.w }};color:{{ it.fg }};background:{{ it.bg }};" style-hover="background:#F4EFE8;">
+          <span style="display:flex;align-items:center;gap:10px;">
+            <span style="width:18px;height:18px;border-radius:5px;background:{{ it.numBg }};color:{{ it.numFg }};font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">{{ it.n }}</span>
+            {{ it.label }}
+          </span>
+          <span style="display:flex;align-items:center;gap:6px;">
+            <sc-if value="{{ it.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:{{ it.badgeBg }};color:#FFFFFF;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ it.badge }}</span></sc-if>
+            <span style="font-size:10px;color:#666666;display:inline-block;transform:rotate({{ it.caretRot }});transition:transform 0.15s;">▾</span>
+          </span>
+        </button>
+        <sc-if value="{{ it.open }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:1px;margin:2px 0 6px 19px;padding-left:9px;border-left:1px solid rgba(34,34,34,0.12);">
+            <sc-for list="{{ it.subs }}" as="sb" hint-placeholder-count="4">
+              <a href="{{ sb.href }}" onClick="{{ sb.click }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;text-decoration:none;font-size:12.5px;font-weight:{{ sb.w }};color:{{ sb.fg }};background:{{ sb.bg }};" style-hover="background:#F4EFE8;">
+                <span style="width:14px;text-align:center;font-size:11px;color:{{ sb.icFg }};flex:0 0 auto;">{{ sb.ic }}</span>{{ sb.label }}
+              </a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </sc-if>
+      <sc-if value="{{ it.isLink }}" hint-placeholder-val="{{ true }}">
       <a href="{{ it.href }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:{{ it.w }};color:{{ it.fg }};background:{{ it.bg }};" style-hover="background:#F4EFE8;">
         <span style="display:flex;align-items:center;gap:10px;">
           <span style="width:18px;height:18px;border-radius:5px;background:{{ it.numBg }};color:{{ it.numFg }};font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">{{ it.n }}</span>
@@ -40,6 +63,7 @@
         </span>
         <sc-if value="{{ it.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:{{ it.badgeBg }};color:#FFFFFF;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ it.badge }}</span></sc-if>
       </a>
+      </sc-if>
     </sc-for>
   </div>
   <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
@@ -61,23 +85,39 @@
   </sc-if>
 </nav>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:228,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cal&quot;,&quot;pub&quot;,&quot;promo&quot;,&quot;camp&quot;,&quot;suivi&quot;,&quot;ig&quot;],&quot;default&quot;:&quot;cal&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:228,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cal&quot;,&quot;analyse&quot;,&quot;suivi&quot;,&quot;pub&quot;,&quot;camp&quot;,&quot;ig&quot;],&quot;default&quot;:&quot;cal&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
+  state = { open: null };
   componentDidMount() { this._h = () => this.forceUpdate(); window.addEventListener('sf-change', this._h); }
   componentWillUnmount() { window.removeEventListener('sf-change', this._h); }
   renderVals() {
     const SF = window.SF, st = SF && SF.state();
     if (!st) return { ok: false, items: [], shops: [] };
-    const active = ['pub', 'suivi'].includes(this.props.active) ? 'cal' : this.props.active || 'cal', r = st.rules, q = st.quota || { used: 0, max: r.quotaSemaine };
+    // « Mes réseaux » est un menu déroulant : calendrier, vues et abonnés, suivi de la boutique, créer un post.
+    // `active` : la page (ou l'onglet) ouvert ; `onPick` (facultatif) : la page change d'onglet sans recharger.
+    const GROUPE = ['cal', 'analyse', 'suivi', 'pub'], sub = this.props.active || 'cal', pick = this.props.onPick;
+    const active = GROUPE.includes(sub) ? 'cal' : sub, r = st.rules, q = st.quota || { used: 0, max: r.quotaSemaine };
     const refused = st.posts.filter(p => p.own && p.status === 'Refusé').length, pending = st.posts.filter(p => p.own && p.status === 'À valider').length;
-    // « Mes réseaux » regroupe le calendrier, le suivi de la boutique et la création d'un post (onglets).
+    // Ouvert sur les pages de « Mes réseaux », fermé ailleurs ; replié ou déplié à la main, il le reste (ce navigateur).
+    let memo = null; try { const v = localStorage.getItem('sf.nav.reseaux'); memo = v === '1' ? true : v === '0' ? false : null; } catch (e) {}
+    const open = this.state.open != null ? this.state.open : memo != null ? memo : active === 'cal';
+    const toggle = () => { try { localStorage.setItem('sf.nav.reseaux', open ? '0' : '1'); } catch (e) {} this.setState({ open: !open }); };
+    const subs = [['cal', 'Calendrier', '▦', SF.href('cal')]]
+      .concat(r.voirAnalyse !== false ? [['analyse', 'Vues et abonnés', '∿', SF.href('cal', 'vue=analyse')]] : [])
+      .concat(r.voirSuivi !== false ? [['suivi', 'Suivi de ma boutique', '↗', SF.href('cal', 'vue=suivi')]] : [])
+      .concat([['pub', 'Créer un post', '+', SF.href('pub')]])
+      .map(([k, label, ic, href]) => { const on = active === 'cal' && k === sub;
+        return { label, ic, href, fg: on ? '#8D1D2C' : '#333333', w: on ? 600 : 400, bg: on ? '#F4EFE8' : 'transparent', icFg: on ? '#8D1D2C' : '#8A847C',
+          click: (e) => { if (typeof pick === 'function' && k !== 'pub' && sub !== 'pub') { e.preventDefault(); pick(k); } } }; });
     // « Mes promotions » est retiré : les posts à valider ou refusés se signalent sur « Mes réseaux ».
     const defs = [['cal', 'Mes réseaux', refused || pending, refused ? '#8D1D2C' : '#D97B29']].concat(r.voirCampagnes ? [['camp', 'Opérations du réseau', 0, '#8D1D2C']] : []).concat(st.grilleInstagram || st.instagramUnique ? [['ig', st.instagramUnique ? 'Grille Instagram du réseau' : 'Grille Instagram', 0, '#8D1D2C']] : []);
     const jours = [1, 2, 3, 4, 5, 6, 0].filter(j => (r.jours || []).includes(j)).map(j => SF.DAYS[j]);
     const name = (st.me && st.me.name) || 'Gérant';
     return {
-      ok: true, items: defs.map(([k, label, badge, badgeBg], i) => { const on = k === active; return { n: i + 1, label, href: SF.href(k), badge, hasBadge: badge > 0, badgeBg,
-        fg: on ? '#8D1D2C' : '#222222', bg: on ? '#F4EFE8' : 'transparent', w: on ? 500 : 400, numBg: on ? '#8D1D2C' : '#EAE4DC', numFg: on ? '#FFFFFF' : '#666666' }; }),
+      ok: true, items: defs.map(([k, label, badge, badgeBg], i) => { const on = k === active, grp = k === 'cal';
+        return { n: i + 1, label, href: SF.href(k), badge, hasBadge: badge > 0, badgeBg, isGroup: grp, isLink: !grp, open: grp && open, expanded: grp && open ? 'true' : 'false',
+          caretRot: open ? '0deg' : '-90deg', toggle, subs: grp ? subs : [],
+          fg: on ? '#8D1D2C' : '#222222', bg: on ? '#F4EFE8' : 'transparent', w: on ? 500 : 400, numBg: on ? '#8D1D2C' : '#EAE4DC', numFg: on ? '#FFFFFF' : '#666666' }; }),
       shopName: st.shop.name, shopId: st.shop.id, shops: (st.me.shops || []), oneShop: (st.me.shops || []).length <= 1, manyShops: (st.me.shops || []).length > 1,
       switchShop: (e) => SF.switchShop(e.target.value),
       quotaLabel: q.used + ' / ' + q.max + ' post' + (q.max > 1 ? 's' : ''), quotaPct: Math.min(100, q.max ? q.used / q.max * 100 : 100) + '%', quotaColor: q.used >= q.max ? '#8D1D2C' : '#1F8A60',

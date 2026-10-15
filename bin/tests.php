@@ -97,10 +97,20 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
     // Suivi des abonnés : insights de la Page 111 et de l'Instagram 17841 ; la Page 222 refuse (permission).
     if ($m === 'GET' && $path === '111/insights') {
         $e = static fn (int $j) => date('Y-m-d', strtotime('-' . $j . ' days')) . 'T07:00:00+0000';
+        // Analyse des vues : les vues de la Page jour par jour (noms 2025) ; retirées, ce sont ses visites.
+        if (in_array($p['metric'] ?? '', ['page_media_view', 'page_impressions'], true)) {
+            if (!empty($GLOBALS['VUES_RETIREES'])) { return [400, ['error' => ['code' => 100, 'message' => '(#100) The value must be a valid insights metric']]]; }
+            return [200, ['data' => [['name' => $p['metric'], 'period' => 'day', 'values' => [['value' => 120, 'end_time' => $e(2)], ['value' => 340, 'end_time' => $e(1)], ['value' => 90, 'end_time' => $e(0)]]]]]];
+        }
+        if (($p['metric'] ?? '') === 'page_views_total') { return [200, ['data' => [['name' => 'page_views_total', 'period' => 'day', 'values' => [['value' => 9, 'end_time' => $e(1)], ['value' => 4, 'end_time' => $e(0)]]]]]]; }
         return [200, ['data' => [['name' => 'page_daily_follows_unique', 'period' => 'day', 'values' => [['value' => 5, 'end_time' => $e(1)], ['value' => 3, 'end_time' => $e(0)]]],
             ['name' => 'page_daily_unfollows_unique', 'period' => 'day', 'values' => [['value' => 1, 'end_time' => $e(1)], ['value' => 0, 'end_time' => $e(0)]]]]]];
     }
     if ($m === 'GET' && $path === '222/insights') { return [400, ['error' => ['code' => 10, 'message' => 'Requires read_insights permission']]]; }
+    if ($m === 'GET' && $path === '17841/insights' && ($p['metric'] ?? '') === 'views') { return [200, ['data' => [['name' => 'views', 'period' => 'day', 'total_value' => ['value' => 777]]]]]; }
+    if ($m === 'GET' && $path === '17841/insights' && ($p['metric'] ?? '') === 'reach') {
+        return [200, ['data' => [['name' => 'reach', 'period' => 'day', 'values' => [['value' => 60, 'end_time' => date('Y-m-d', strtotime('-1 day')) . 'T07:00:00+0000'], ['value' => 85, 'end_time' => date('Y-m-d') . 'T07:00:00+0000']]]]]];
+    }
     if ($m === 'GET' && $path === '17841/insights') { return [200, ['data' => [['name' => 'follower_count', 'period' => 'day', 'values' => [['value' => 4, 'end_time' => date('Y-m-d') . 'T07:00:00+0000']]]]]]; }
     // Chiffres d'une publication (fiche du calendrier) : la Page 111 a retiré post_clicks (refus du lot), la 222 refuse les insights.
     if ($m === 'GET' && preg_match('#^111_\d+/insights$#', $path)) {
@@ -117,6 +127,12 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
             ['name' => 'shares', 'values' => [['value' => 3]]], ['name' => 'total_interactions', 'values' => [['value' => 60]]]]]];
     }
     if ($m === 'GET' && $path === 'm2') { return [200, ['like_count' => 41, 'comments_count' => 6]]; }
+    // Les vues lues avec la liste (`insights.metric(…)`) ; refusées (GROUPE_REFUS) : relues une par une.
+    if ($m === 'GET' && $path === '111/published_posts' && str_contains((string) ($p['fields'] ?? ''), 'insights.metric(')) {
+        if (!empty($GLOBALS['GROUPE_REFUS']) || !str_contains((string) $p['fields'], 'post_media_view')) { return [400, ['error' => ['code' => 100, 'message' => '(#100) The value must be a valid insights metric']]]; }
+        return [200, ['data' => array_map(static fn ($x) => $x + ['insights' => ['data' => [['name' => 'post_media_view', 'values' => [['value' => $x['id'] === '111_9001' ? 1234 : 50]]],
+            ['name' => 'post_total_media_view_unique', 'values' => [['value' => $x['id'] === '111_9001' ? 980 : 40]]]]]], $GLOBALS['META_PUBLIES'] ?? [])]];
+    }
     if ($m === 'GET' && $path === '111/published_posts') { return [200, ['data' => $GLOBALS['META_PUBLIES'] ?? []]]; }
     if ($m === 'GET' && $path === '111/scheduled_posts') { return [200, ['data' => $GLOBALS['META_PROGRAMMES'] ?? []]]; }
     if ($m === 'GET' && preg_match('#^222/(published|scheduled)_posts$#', $path)) { return [400, ['error' => ['code' => 10, 'message' => 'Permission manquante : pages_read_engagement']]]; }
@@ -129,6 +145,12 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
     if ($path === '17841/media_publish') {
         if ($igPanne > 0 && ++$igPub === $igPanne) { return [400, ['error' => ['code' => 9007, 'message' => 'Media ID is not available']]]; }
         return [200, ['id' => 'ig' . $id()]];
+    }
+    if ($m === 'GET' && $path === '17841/media' && str_contains((string) ($p['fields'] ?? ''), 'insights.metric(')) {
+        if (!str_contains((string) $p['fields'], '(views,')) { return [400, ['error' => ['code' => 100, 'message' => '(#100) Invalid metric']]]; }
+        $i = static fn (int $v, int $r) => ['insights' => ['data' => [['name' => 'views', 'values' => [['value' => $v]]], ['name' => 'reach', 'values' => [['value' => $r]]]]]];
+        return [200, ['data' => [['id' => 'm2', 'media_type' => 'IMAGE', 'media_url' => 'https://cdn.ig/m2.jpg', 'permalink' => 'https://instagram.com/p/m2', 'timestamp' => date('c', strtotime('-1 day'))] + $i(500, 400),
+            ['id' => 'm1', 'media_type' => 'VIDEO', 'media_url' => 'https://cdn.ig/m1.mp4', 'thumbnail_url' => 'https://cdn.ig/m1.jpg', 'timestamp' => date('c', strtotime('-3 days'))] + $i(200, 150)]]];
     }
     if ($m === 'GET' && $path === '17841/media') {
         return [200, ['data' => [['id' => 'm2', 'media_type' => 'IMAGE', 'media_url' => 'https://cdn.ig/m2.jpg', 'permalink' => 'https://instagram.com/p/m2', 'timestamp' => date('c', strtotime('-1 day'))],
@@ -1052,6 +1074,42 @@ check('suivi non partagé par le réseau : refusé', $code === 403);
 sfReglesPut(array_merge(sfRegles(), ['voirSuivi' => true]));
 $b = sfSuivi('999', 7);
 check('boutique sans Page reliée : message, aucune donnée', $b['lignes'] === [] && str_contains((string) $b['message'], 'Page Facebook'));
+
+echo "Espace franchisé : analyse des vues et des abonnés\n";
+$appels = [];
+[$code, $va] = $fr('GET', '/franchise/vues', [], ['jours' => '7']);
+$vc = array_column($va['comptes'] ?? [], null, 'key');
+$vf = $vc['fb:111'] ?? null; $vi = $vc['ig:17841'] ?? null;
+check('vues : SA Page et son Instagram, 7 jours jusqu’à hier', $code === 200 && $vf && $vi && count($vc) === 2 && $va['jours'] === 7 && $va['au'] === date('Y-m-d', strtotime('-1 day'))
+    && $va['du'] === date('Y-m-d', strtotime('-7 days')), json_encode([$code, array_keys($vc), $va['du'] ?? null]));
+check('vues de la Page jour par jour (page_media_view), total de la période', $vf['vues']['metrique'] === 'vues' && $vf['vues']['total'] === 550 && count($vf['vues']['serie']) === 3
+    && ($vf['vues']['serie'][date('Y-m-d', strtotime('-2 days'))] ?? null) === 340 && $vf['vues']['motif'] === null, json_encode($vf['vues']));
+check('Instagram : vues de la période et comptes touchés jour par jour', $vi['vues']['total'] === 777 && $vi['vues']['metrique'] === 'personnes' && count($vi['vues']['serie']) === 2, json_encode($vi['vues']));
+check('abonnés : total actuel, gagnés et perdus par jour (Page) ; nouveaux abonnés (Instagram)', $vf['abonnes']['followers'] === 1500 && $vf['abonnes']['gagnes'] === 8 && $vf['abonnes']['perdus'] === 1
+    && count($vf['abonnes']['serie']) === 2 && $vi['abonnes']['followers'] === 2300 && $vi['abonnes']['gagnes'] === 4 && $vi['abonnes']['perdus'] === null, json_encode([$vf['abonnes'], $vi['abonnes']]));
+$vp = array_column($va['publications'], 'vues', 'id');
+check('vues de chaque publication de la période, la plus vue d’abord (celles du module comprises)', array_slice(array_values($vp), 0, 4) === [1234, 500, 200, 50] && array_key_first($vp) === 'mfb-111_9001'
+    && ($va['publications'][0]['accountName'] ?? '') === "L'Atelier By Halle" && ($va['publications'][1]['personnes'] ?? null) === 400, json_encode($va['publications']));
+check('vues des publications lues avec la liste : un appel par compte, pas un par publication',
+    !array_filter($appels, static fn ($a) => (bool) preg_match('#^(111_\d+|m\d)/insights$#', $a[1])), json_encode(array_column($appels, 1)));
+check('analyse : rien des autres boutiques, ni token, ni dépense', !str_contains(json_encode($va), 'PT111') && !str_contains(json_encode($va), 'Wavre') && !str_contains(json_encode($va), 'depense'));
+[$code] = $fr('GET', '/franchise/vues', [], ['shop' => '5', 'jours' => '7']);
+check('analyse d’une autre boutique : refusée', $code === 403);
+$GLOBALS['VUES_RETIREES'] = true; $GLOBALS['GROUPE_REFUS'] = true;
+[$code, $va2] = $fr('GET', '/franchise/vues', [], ['jours' => '7']);
+unset($GLOBALS['VUES_RETIREES'], $GLOBALS['GROUPE_REFUS']);
+$vf2 = array_column($va2['comptes'], null, 'key')['fb:111'];
+check('vues retirées par Meta : les visites de la Page à la place, dites comme telles', $vf2['vues']['metrique'] === 'visites' && $vf2['vues']['total'] === 13, json_encode($vf2['vues']));
+check('lecture groupée refusée : vues relues publication par publication', (array_column($va2['publications'], 'vues', 'id')['mfb-111_9001'] ?? null) === 1234, json_encode($va2['publications']));
+[$code, $va3] = $fr('GET', '/franchise/vues', [], ['jours' => '13']);
+check('période inconnue : 28 jours', $code === 200 && $va3['jours'] === 28);
+$w5 = sfVues('5', 7);
+check('permission manquante (Wavre) : motifs lisibles, sans détail technique ni token', !str_contains(json_encode($w5), 'read_insights') && !str_contains(json_encode($w5), 'PT222'), json_encode($w5));
+sfReglesPut(array_merge(sfRegles(), ['voirAnalyse' => false]));
+[$code] = $fr('GET', '/franchise/vues', [], ['jours' => '7']);
+check('analyse non partagée par le réseau : refusée ; la règle revient dans l’état du franchisé', $code === 403 && sfRegles()['voirAnalyse'] === false);
+sfReglesPut(array_merge(sfRegles(), ['voirAnalyse' => true]));
+check('analyse : rien n’est écrit en base', (int) Db::row("SELECT COUNT(*) n FROM social_parametre WHERE cle LIKE '%vues%'")['n'] === 0);
 unset($_COOKIE[SF_COOKIE]);
 
 echo "Instagram unique pour tout le réseau\n";
