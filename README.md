@@ -510,9 +510,17 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
 - **Publier** reprend le générateur dans le cadre du modèle : la **photo du webshop**
   du produit (Cloudflare R2, rapatriée par `GET /franchise/media/webshop` pour que le
   visuel s'exporte), l'illustration du catalogue ou sa photo (si le modèle l'ouvre) ;
-  le **format** (carré 1:1, portrait 4:5) et la **couleur de chaque texte** (clic sur un
-  texte du visuel → palette de la marque) si la règle « Personnaliser le visuel » est
-  ouverte (`persoVisuel`, par défaut oui) ; l'aperçu dans le fil Facebook, Instagram
+  et, si la règle « Personnaliser le visuel » est ouverte (`persoVisuel`, par défaut oui),
+  **tous les réglages du visuel de « Créer un post » du franchiseur** (section « Visuel ·
+  tous les réglages ») : photos ajoutées (import, médiathèque du design system) et leur
+  zoom / cadrage, **modèles de visuel du réseau** (`visuels_modeles`), format (carré,
+  portrait, story, paysage), contrôle du visuel, fond et fondu, logo, illustration,
+  **textes posés** (modèles d'étiquette du design system et du réseau, forme, police,
+  couleurs, position, taille, rotation), les **26 styles** (photo unique et montages),
+  le contenu, l'affichage et la **couleur de chaque texte** (aussi par un clic sur le
+  texte dans l'aperçu) et la police de la phrase. Le visuel part de celui du modèle (avec
+  le produit, le prix, l'offre saisis) ; « Revenir au visuel du modèle » annule les
+  réglages. Le texte du post reste celui du modèle ; l'aperçu dans le fil Facebook, Instagram
   (si le post y part) ou **dans un téléphone** ; et **le jour choisi** : ce qui est déjà
   prévu sur sa Page (posts de l'espace, publications lues chez Meta), avec une alerte à
   moins de 2 h d'un autre post.

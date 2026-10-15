@@ -380,6 +380,10 @@ function sfEtat(string $shop, array $session): array
         'rules' => array_replace($r, ['ig' => $r['ig'] && !socIgUnique()]), 'templates' => sfModeles(true), 'posts' => $posts, 'campaigns' => $camps, 'catalogue' => sfCatalogue($shop),
         'quota' => ['week' => sfLundi(date('Y-m-d')), 'used' => sfQuotaUtilise($shop, date('Y-m-d')), 'max' => $r['quotaSemaine']],
         'instagramUnique' => socIgUnique(),
+        // Les modèles de visuel et d'étiquette du réseau (enregistrés dans « Créer un post » du franchiseur) : l'éditeur
+        // de visuel de la boutique les applique.
+        'visuelsModeles' => socVisuelsModeles(socSetting('visuels_modeles')),
+        'etiquettesModeles' => socEtiquettesModeles(socSetting('etiquettes_modeles')),
         // La grille Instagram de l'espace : celle du réseau (Instagram unique) ou celle du compte de la boutique.
         'grilleInstagram' => socIgUnique() || (string) ($s['ids']['instagram_user_id'] ?? '') !== '',
         // Catégorie → groupe, produit → catégorie : les liens directs du webshop (socWebshopUrl).

@@ -608,6 +608,12 @@ check('état : sa boutique, son catalogue (API, sans B2B ni inactif), les campag
 check('état : posts du réseau qui la concernent, jamais les dark posts ni ceux des autres boutiques', in_array('p1', $ids, true) && !in_array('d1', $ids, true) && !in_array('p2', $ids, true));
 [$code] = $fr('GET', '/franchise/etat', [], ['shop' => '5']);
 check('une autre boutique : 403', $code === 403);
+socSettingPut('visuels_modeles', [['id' => 'vm1', 'nom' => 'Promo du mois', 'v' => ['style' => 'ruby', 'format' => 'portrait', 'fond' => 'noir']]], false);
+socSettingPut('etiquettes_modeles', [['id' => 'e1', 'nom' => 'Badge abricot', 'forme' => 'pastille', 'police' => 'titre', 'couleur' => 'ruby', 'fond' => 'abricot']], false);
+[$code, $et2] = $fr('GET', '/franchise/etat');
+check('état : les modèles de visuel et d’étiquette du réseau, pour l’éditeur de visuel de la boutique', ($et2['visuelsModeles'][0]['nom'] ?? '') === 'Promo du mois'
+    && ($et2['visuelsModeles'][0]['v']['style'] ?? '') === 'ruby' && ($et2['etiquettesModeles'][0]['nom'] ?? '') === 'Badge abricot', json_encode([$et2['visuelsModeles'] ?? null, $et2['etiquettesModeles'] ?? null]));
+socSettingPut('visuels_modeles', null, false); socSettingPut('etiquettes_modeles', null, false);
 
 echo "Espace franchisé : publier depuis un modèle\n";
 $vis = 'data:image/png;base64,' . base64_encode(str_repeat("\x89PNGvisuel", 60));

@@ -131,6 +131,416 @@
             </section>
           </sc-if>
 
+          <!-- Visuel : tous les réglages de « Créer un post » du franchiseur (si le réseau l'ouvre) -->
+          <sc-if value="{{ persoOn }}" hint-placeholder-val="{{ true }}">
+          <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+              <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Visuel · tous les réglages</span>
+              <button onClick="{{ visReset }}" title="Annule vos réglages : le visuel redevient celui du modèle" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;">Revenir au visuel du modèle</button>
+            </div>
+            <!-- Photos du visuel -->
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="font-size:12px;color:#666666;">{{ vPhotosLabel }}</span>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <sc-for list="{{ vPhotos }}" as="m" hint-placeholder-count="0">
+                  <div title="{{ m.tip }}" style="position:relative;width:68px;height:68px;border-radius:8px;background:#F4EFE8;border:2px solid {{ m.ring }};box-sizing:border-box;overflow:hidden;">
+                    <img src="{{ m.src }}" alt="" style="position:absolute;left:4px;top:4px;width:calc(100% - 8px);height:calc(100% - 8px);object-fit:contain;">
+                    <span style="position:absolute;left:4px;bottom:4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:rgba(35,34,32,0.82);color:#FFFFFF;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ m.n }}</span>
+                    <sc-if value="{{ m.canRemove }}" hint-placeholder-val="{{ true }}"><button onClick="{{ m.remove }}" title="Retirer du visuel" style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;border:none;background:#232220;color:#FFFFFF;font-size:10px;cursor:pointer;padding:0;">×</button></sc-if>
+                  </div>
+                </sc-for>
+                <label style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Importer<span style="font-size:10px;color:#666666;font-weight:400;">photos</span>
+                  <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ onFiles }}" style="display:none;">
+                </label>
+                <sc-if value="{{ hasXPhotos }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearXPhotos }}" title="Retirer les photos ajoutées" style="height:68px;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;">Vider</button></sc-if>
+              </div>
+            </div>
+          <!-- Zoom et cadrage de chaque photo dans sa case du gabarit -->
+          <sc-if value="{{ hasAdj }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;background:#FBF8F4;border:0.5px solid rgba(34,34,34,0.10);border-radius:10px;padding:12px 14px;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Ajuster les photos dans le gabarit</span>
+                <span style="font-size:11px;color:#666666;">zoom 50 – 300 % · ↔ ↕ cadrage · photo par photo</span>
+              </div>
+              <sc-for list="{{ adjRows }}" as="a" hint-placeholder-count="0">
+                <div style="display:grid;grid-template-columns:18px 40px minmax(150px,1.5fr) minmax(80px,1fr) minmax(80px,1fr) 28px;gap:10px;align-items:center;font-size:11px;color:#444444;">
+                  <span style="font-weight:600;color:#222222;">{{ a.n }}</span>
+                  <img src="{{ a.src }}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px;background:#F4EFE8;display:block;">
+                  <span style="display:flex;align-items:center;gap:5px;min-width:0;">
+                    <button onClick="{{ a.minus }}" title="Dézoomer" style="width:24px;height:24px;border-radius:6px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:14px;line-height:1;padding:0;flex:0 0 auto;">−</button>
+                    <input type="range" min="50" max="300" step="5" value="{{ a.zoom }}" onChange="{{ a.setZoom }}" title="Zoom" style="flex:1 1 auto;min-width:0;accent-color:#8D1D2C;">
+                    <button onClick="{{ a.plus }}" title="Zoomer" style="width:24px;height:24px;border-radius:6px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:14px;line-height:1;padding:0;flex:0 0 auto;">+</button>
+                    <span style="width:38px;text-align:right;font-weight:600;color:#222222;flex:0 0 auto;">{{ a.zoomLabel }}</span>
+                  </span>
+                  <label title="Cadrage horizontal" style="display:flex;align-items:center;gap:4px;min-width:0;">↔<input type="range" min="0" max="100" value="{{ a.x }}" onChange="{{ a.setX }}" style="flex:1 1 auto;min-width:0;accent-color:#8D1D2C;"></label>
+                  <label title="Cadrage vertical" style="display:flex;align-items:center;gap:4px;min-width:0;">↕<input type="range" min="0" max="100" value="{{ a.y }}" onChange="{{ a.setY }}" style="flex:1 1 auto;min-width:0;accent-color:#8D1D2C;"></label>
+                  <button onClick="{{ a.reset }}" title="Revenir à 100 %, centré" style="width:26px;height:26px;border-radius:6px;border:none;background:transparent;color:#8D1D2C;cursor:pointer;font-size:15px;padding:0;">⟲</button>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+      <!-- Recherche médiathèque -->
+      <div style="background:#FBF8F4;border:0.5px solid rgba(34,34,34,0.10);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <p style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;margin:0;">Ajouter des photos · médiathèque du design system</p>
+        </div>
+        <input type="search" value="{{ query }}" onChange="{{ setQuery }}" placeholder="Nom, catégorie, saison…" style="width:100%;box-sizing:border-box;font-size:14px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:9px 12px;outline:none;" style-focus="border-color:#8D1D2C;">
+        <div style="display:flex;gap:8px;">
+          <select value="{{ fCat }}" onChange="{{ setFCat }}" style="flex:1;min-width:0;font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;">
+            <option value="">Toutes catégories</option>
+            <option value="Viennoiseries">Viennoiseries</option>
+            <option value="Pains">Pains</option>
+            <option value="Pâtisseries">Pâtisseries</option>
+            <option value="Tartes">Tartes</option>
+            <option value="Sandwichs &amp; salés">Sandwichs &amp; salés</option>
+            <option value="Boissons">Boissons</option>
+            <option value="Ambiance &amp; boutique">Ambiance &amp; boutique</option>
+            <option value="Illustrations">Illustrations</option>
+          </select>
+          <select value="{{ fSeason }}" onChange="{{ setFSeason }}" style="flex:1;min-width:0;font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;">
+            <option value="">Toutes saisons</option>
+            <option value="Toute l'année">Toute l'année</option>
+            <option value="Printemps">Printemps</option>
+            <option value="Été">Été</option>
+            <option value="Automne">Automne</option>
+            <option value="Hiver">Hiver</option>
+            <option value="Noël &amp; Nouvel An">Noël &amp; Nouvel An</option>
+            <option value="Épiphanie">Épiphanie</option>
+            <option value="Saint-Valentin">Saint-Valentin</option>
+            <option value="Pâques">Pâques</option>
+            <option value="Fête des mères">Fête des mères</option>
+            <option value="Saint-Nicolas">Saint-Nicolas</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px;max-height:212px;overflow:auto;">
+          <sc-for list="{{ results }}" as="r" hint-placeholder-count="0">
+            <button onClick="{{ r.toggle }}" title="{{ r.tip }}" style="position:relative;aspect-ratio:1/1;border-radius:8px;background:#F4EFE8;border:2px solid {{ r.ring }};box-sizing:border-box;cursor:pointer;overflow:hidden;padding:0;">
+              <img src="{{ r.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;">
+              <sc-if value="{{ r.inPost }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:#8D1D2C;color:#FFFFFF;font-size:10px;line-height:16px;text-align:center;display:block;">✓</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+        <p style="font-size:12px;color:#666666;margin:0;">{{ resultLabel }} · cliquez pour ajouter ou retirer du visuel (montages : photo 1 → case 1…)</p>
+      </div>
+            <!-- Recadrage : le format du visuel, fixé ici plutôt que par Facebook -->
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span style="font-size:12px;color:#666666;">Recadrage · format du visuel</span>
+                <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+                  <sc-for list="{{ vFormats }}" as="vf" hint-placeholder-count="3"><button onClick="{{ vf.pick }}" title="{{ vf.tip }}" style="border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:500;cursor:pointer;background:{{ vf.bg }};color:{{ vf.fg }};">{{ vf.label }}</button></sc-for>
+                </div>
+              </div>
+              <span style="font-size:11px;color:#666666;line-height:1.45;">{{ vFormatTip }}</span>
+            </div>
+            <!-- Contrôle qualité du visuel -->
+            <div style="display:flex;flex-direction:column;gap:5px;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:8px 10px;background:#FCFAF7;">
+              <span style="font-size:12px;color:#444444;font-weight:500;">Contrôle du visuel</span>
+              <sc-if value="{{ qcOk }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:500;color:#1F8A60;">✓ Rien à signaler : textes lisibles, dans le cadre et hors des zones recadrées.</span></sc-if>
+              <sc-for list="{{ qcItems }}" as="qi" hint-placeholder-count="0"><span style="display:flex;gap:6px;align-items:flex-start;font-size:11px;line-height:1.45;border-radius:6px;padding:4px 8px;background:{{ qi.bg }};color:{{ qi.fg }};"><b style="flex:0 0 auto;">{{ qi.ico }}</b><span>{{ qi.msg }}</span></span></sc-for>
+            </div>
+            <!-- Fond : palette du design system de la marque -->
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;color:#666666;">Fond · palette de la marque</span>
+              <sc-if value="{{ hasFonds }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+                  <sc-for list="{{ fonds }}" as="fd" hint-placeholder-count="6"><button onClick="{{ fd.pick }}" title="{{ fd.nom }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:58px;">
+                    <span style="width:40px;height:40px;border-radius:50%;background:{{ fd.hex }};border:{{ fd.border }};box-shadow:0 0 0 {{ fd.ringW }} {{ fd.ring }};display:flex;align-items:center;justify-content:center;font-size:10px;color:#666666;box-sizing:border-box;">{{ fd.label }}</span>
+                    <span style="font-size:10px;color:#444444;text-align:center;line-height:1.2;">{{ fd.nom }}</span></button></sc-for>
+                </div>
+                <span style="font-size:11px;color:#666666;line-height:1.45;">{{ fondTip }}</span>
+              </sc-if>
+              <sc-if value="{{ noFonds }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Plein cadre : le fond est la photo.</span></sc-if>
+              <sc-if value="{{ hasFondu }}" hint-placeholder-val="{{ false }}">
+                <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#444444;flex-wrap:wrap;">Fondu sur la photo
+                  <input type="range" min="0" max="100" step="5" value="{{ fondu }}" onChange="{{ setFondu }}" style="flex:1 1 160px;max-width:260px;accent-color:#8D1D2C;">
+                  <span style="width:42px;text-align:right;color:#222222;font-weight:500;">{{ fonduLabel }}</span>
+                  <button onClick="{{ fonduReset }}" title="Revenir au fondu d’origine (60 %)" style="border:none;background:transparent;color:#8D1D2C;font-size:11px;cursor:pointer;">60 %</button>
+                </label>
+                <span style="font-size:11px;color:#666666;">0 % : photo sans dégradé · 100 % : dégradé le plus sombre (texte le plus lisible).</span>
+              </sc-if>
+            </div>
+            <!-- Logo : version d'origine (foncé, clair) ou recolorée dans la palette -->
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;color:#666666;">Logo</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:stretch;">
+                <sc-for list="{{ logos }}" as="lg" hint-placeholder-count="7"><button onClick="{{ lg.pick }}" title="{{ lg.nom }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;border:{{ lg.ringW }} solid {{ lg.ring }};background:#FFFFFF;border-radius:8px;padding:5px;cursor:pointer;width:86px;box-sizing:border-box;">
+                  <span style="width:74px;height:28px;border-radius:5px;background:{{ lg.apercu }};display:flex;align-items:center;justify-content:center;">
+                    <sc-if value="{{ lg.isImg }}" hint-placeholder-val="{{ true }}"><img src="{{ lg.src }}" alt="" style="height:11px;width:auto;"></sc-if>
+                    <sc-if value="{{ lg.isMask }}" hint-placeholder-val="{{ false }}"><span style="height:11px;width:64px;display:block;background:{{ lg.hex }};-webkit-mask:url('img/logo-white.png') center/contain no-repeat;mask:url('img/logo-white.png') center/contain no-repeat;"></span></sc-if>
+                    <sc-if value="{{ lg.isAuto }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;color:#666666;">auto</span></sc-if>
+                  </span>
+                  <span style="font-size:10px;color:#444444;">{{ lg.nom }}</span></button></sc-for>
+              </div>
+            </div>
+            <!-- Illustration : un dessin du design system posé sur le visuel -->
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span style="font-size:12px;color:#666666;">Illustration · design system</span>
+                <button onClick="{{ illusToggle }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:500;cursor:pointer;">{{ illusBtn }}</button>
+                <sc-if value="{{ hasIllus }}" hint-placeholder-val="{{ false }}"><button onClick="{{ illusRemove }}" style="border:none;background:transparent;color:#8D1D2C;font-size:11px;font-weight:500;cursor:pointer;padding:5px 4px;">Retirer</button></sc-if>
+              </div>
+              <sc-if value="{{ illusOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="border:0.5px solid rgba(34,34,34,0.12);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;background:#FBF8F4;">
+                  <div style="display:inline-flex;flex-wrap:wrap;gap:2px;background:#F4EFE8;border-radius:8px;padding:3px;align-self:flex-start;">
+                    <sc-for list="{{ illusSubs }}" as="isub" hint-placeholder-count="5"><button onClick="{{ isub.pick }}" style="border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:500;cursor:pointer;background:{{ isub.bg }};color:{{ isub.fg }};">{{ isub.label }}</button></sc-for>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;max-height:220px;overflow:auto;">
+                    <sc-for list="{{ illusItems }}" as="it" hint-placeholder-count="8"><button onClick="{{ it.pick }}" title="{{ it.name }}" style="aspect-ratio:1/1;background:#FFFFFF;border:2px solid {{ it.ring }};border-radius:8px;padding:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-sizing:border-box;"><img src="{{ it.src }}" alt="{{ it.name }}" style="max-width:100%;max-height:100%;object-fit:contain;"></button></sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ hasIllus }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+                  <span style="width:56px;height:56px;border-radius:8px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.12);display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box;flex:0 0 auto;" title="{{ illusName }}"><img src="{{ illusThumb }}" alt="" style="max-width:100%;max-height:100%;object-fit:contain;"></span>
+                  <div style="display:grid;grid-template-columns:repeat(3,24px);gap:3px;flex:0 0 auto;" title="Position">
+                    <sc-for list="{{ illusPos }}" as="ip" hint-placeholder-count="9"><button onClick="{{ ip.pick }}" style="width:24px;height:24px;border-radius:5px;border:0.5px solid rgba(34,34,34,0.18);background:{{ ip.bg }};color:{{ ip.fg }};font-size:11px;cursor:pointer;padding:0;">{{ ip.lab }}</button></sc-for>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:4px;flex:1 1 200px;min-width:180px;font-size:11px;color:#666666;">
+                    <label style="display:flex;align-items:center;gap:6px;">↔<input type="range" min="0" max="100" value="{{ illusX }}" onChange="{{ setIllusX }}" style="flex:1;accent-color:#8D1D2C;"></label>
+                    <label style="display:flex;align-items:center;gap:6px;">↕<input type="range" min="0" max="100" value="{{ illusY }}" onChange="{{ setIllusY }}" style="flex:1;accent-color:#8D1D2C;"></label>
+                    <label style="display:flex;align-items:center;gap:6px;">Taille<input type="range" min="5" max="80" value="{{ illusT }}" onChange="{{ setIllusT }}" style="flex:1;accent-color:#8D1D2C;"><span style="width:34px;text-align:right;color:#222222;">{{ illusTLabel }}</span></label>
+                  </div>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                  <span style="font-size:11px;color:#666666;">Trait :</span>
+                  <sc-for list="{{ illusTraits }}" as="tr" hint-placeholder-count="5"><button onClick="{{ tr.pick }}" title="{{ tr.nom }}" style="display:inline-flex;align-items:center;gap:5px;border:{{ tr.ringW }} solid {{ tr.ring }};background:#FFFFFF;border-radius:999px;padding:3px 9px 3px 4px;font-size:11px;cursor:pointer;"><sc-if value="{{ tr.isHex }}" hint-placeholder-val="{{ true }}"><span style="width:14px;height:14px;border-radius:50%;background:{{ tr.hex }};border:0.5px solid rgba(34,34,34,0.25);display:block;"></span></sc-if>{{ tr.nom }}</button></sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <!-- Textes sur le visuel : promotion, formule ou prix posé sur la photo, dans la typo et les couleurs de la marque -->
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;color:#666666;" title="Chaque texte se réécrit : champ ci-dessous, ou double-clic sur le texte dans l'aperçu">Textes sur le visuel</span>
+                <sc-for list="{{ txtList }}" as="tl" hint-placeholder-count="0"><span style="display:inline-flex;align-items:center;border:0.5px solid rgba(34,34,34,0.18);background:{{ tl.bg }};border-radius:999px;overflow:hidden;"><button onClick="{{ tl.pick }}" style="border:none;background:transparent;color:{{ tl.fg }};padding:4px 4px 4px 10px;font-size:11px;font-weight:500;cursor:pointer;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tl.label }}</button><button onClick="{{ tl.del }}" title="Effacer ce texte du visuel" style="border:none;background:transparent;color:{{ tl.fg }};padding:2px 9px 3px 4px;font-size:14px;line-height:1;cursor:pointer;opacity:0.8;">×</button></span></sc-for>
+                <button onClick="{{ txtAdd }}" style="border:0.5px dashed rgba(34,34,34,0.35);background:#FFFFFF;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;">+ Texte</button>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <span style="font-size:11px;color:#666666;">Modèles :</span>
+                <sc-for list="{{ txtModeles }}" as="tm" hint-placeholder-count="5"><span style="display:inline-flex;align-items:center;gap:2px;"><button onClick="{{ tm.apply }}" title="Appliquer ce modèle" style="border:{{ tm.border }};background:{{ tm.bg }};color:{{ tm.fg }};border-radius:{{ tm.radius }};padding:5px 11px;font-size:12px;font-family:{{ tm.font }};text-transform:{{ tm.tt }};cursor:pointer;white-space:nowrap;">{{ tm.nom }}</button><sc-if value="{{ tm.canDel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ tm.del }}" title="Supprimer ce modèle" style="border:none;background:transparent;color:#8A847C;font-size:13px;cursor:pointer;padding:0 3px;">×</button></sc-if></span></sc-for>
+              </div>
+              <sc-if value="{{ hasTxtSel }}" hint-placeholder-val="{{ false }}">
+                <div style="border:0.5px solid rgba(34,34,34,0.12);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:9px;background:#FBF8F4;">
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <input ref="{{ txtRef }}" type="text" value="{{ txtVal }}" onChange="{{ setTxtVal }}" placeholder="Texte (ex. −1,40 €, 13,00 €, 2+1)" style="flex:1 1 160px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;outline:none;">
+                    <input type="text" value="{{ sousVal }}" onChange="{{ setSousVal }}" placeholder="Sous-texte (facultatif)" style="flex:1 1 160px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 10px;outline:none;">
+                  </div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-size:11px;color:#666666;width:52px;">Forme</span>
+                    <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap;"><sc-for list="{{ txtFormes }}" as="tf" hint-placeholder-count="4"><button onClick="{{ tf.pick }}" style="border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:500;cursor:pointer;background:{{ tf.bg }};color:{{ tf.fg }};">{{ tf.label }}</button></sc-for></div>
+                  </div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-size:11px;color:#666666;width:52px;">Police</span>
+                    <sc-for list="{{ txtPolices }}" as="tp" hint-placeholder-count="4"><button onClick="{{ tp.pick }}" title="{{ tp.detail }}" style="border:{{ tp.bw }} solid {{ tp.border }};background:#FFFFFF;border-radius:8px;padding:5px 10px;cursor:pointer;font-family:{{ tp.font }};font-weight:{{ tp.weight }};text-transform:{{ tp.tt }};font-size:14px;color:#222222;">{{ tp.label }}</button></sc-for>
+                  </div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-size:11px;color:#666666;width:52px;">Texte</span>
+                    <sc-for list="{{ txtCouleurs }}" as="tc" hint-placeholder-count="9"><button onClick="{{ tc.pick }}" title="{{ tc.nom }}" style="width:24px;height:24px;border-radius:50%;background:{{ tc.hex }};border:1px solid rgba(34,34,34,0.15);box-shadow:0 0 0 {{ tc.ringW }} {{ tc.ring }};cursor:pointer;padding:0;"></button></sc-for>
+                  </div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-size:11px;color:#666666;width:52px;">Fond</span>
+                    <sc-for list="{{ txtFonds }}" as="tb" hint-placeholder-count="10"><button onClick="{{ tb.pick }}" title="{{ tb.nom }}" style="width:24px;height:24px;border-radius:50%;background:{{ tb.hex }};border:1px solid rgba(34,34,34,0.15);box-shadow:0 0 0 {{ tb.ringW }} {{ tb.ring }};cursor:pointer;padding:0;font-size:9px;color:#8A847C;">{{ tb.dashLabel }}</button></sc-for>
+                    <span style="font-size:11px;color:#8A4B00;">{{ txtFondNote }}</span>
+                  </div>
+                  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <div style="display:grid;grid-template-columns:repeat(3,24px);gap:3px;" title="Position"><sc-for list="{{ txtPos }}" as="tq" hint-placeholder-count="9"><button onClick="{{ tq.pick }}" style="width:24px;height:24px;border-radius:5px;border:0.5px solid rgba(34,34,34,0.18);background:{{ tq.bg }};color:{{ tq.fg }};font-size:11px;cursor:pointer;padding:0;">{{ tq.lab }}</button></sc-for></div>
+                    <div style="display:flex;flex-direction:column;gap:4px;flex:1 1 200px;min-width:180px;font-size:11px;color:#666666;">
+                      <label style="display:flex;align-items:center;gap:6px;">Taille<input type="range" min="20" max="200" value="{{ txtTaille }}" onChange="{{ setTxtTaille }}" style="flex:1;accent-color:#8D1D2C;"><span style="width:44px;text-align:right;color:#222222;">{{ txtTailleLabel }}</span></label>
+                      <label style="display:flex;align-items:center;gap:6px;">Rotation<input type="range" min="-30" max="30" value="{{ txtRot }}" onChange="{{ setTxtRot }}" style="flex:1;accent-color:#8D1D2C;"><span style="width:44px;text-align:right;color:#222222;">{{ txtRotLabel }}</span></label>
+                      <span>Ou glissez le texte directement sur l’aperçu.</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:8px;">
+                    <button onClick="{{ txtDel }}" style="border:none;background:transparent;color:#8D1D2C;font-size:11px;font-weight:500;cursor:pointer;margin-left:auto;">Supprimer ce texte</button>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+            <!-- Style -->
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;color:#666666;">Style · photo unique</span>
+                <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+                  <sc-for list="{{ cutModes }}" as="cm" hint-placeholder-count="3"><button onClick="{{ cm.pick }}" style="border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:500;cursor:pointer;background:{{ cm.bg }};color:{{ cm.fg }};">{{ cm.label }}</button></sc-for>
+                </div>
+              </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:10px;">
+          <button onClick="{{ pickEpure }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selEpure }};background:#F5EFE4;padding:12px;display:flex;flex-direction:column;align-items:center;gap:5px;box-sizing:border-box;">
+              <div style="width:22px;height:3px;background:#8D1D2C;"></div>
+              <div style="width:46px;height:7px;background:#232220;"></div>
+              <div style="width:30px;height:30px;border-radius:50%;background:#8A847C;opacity:0.5;margin-top:2px;"></div>
+              <div style="width:20px;height:6px;background:#8D1D2C;margin-top:auto;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Épuré</span>
+          </button>
+          <button onClick="{{ pickAbricot }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selAbricot }};background:#F2C9A0;padding:12px;position:relative;box-sizing:border-box;overflow:hidden;">
+              <div style="width:50px;height:9px;background:#232220;"></div>
+              <div style="width:34px;height:9px;background:#232220;margin-top:3px;"></div>
+              <div style="position:absolute;right:8px;bottom:8px;width:40px;height:40px;border-radius:50%;background:#8A847C;opacity:0.6;"></div>
+              <div style="position:absolute;left:12px;bottom:12px;width:18px;height:7px;background:#8D1D2C;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Abricot</span>
+          </button>
+          <button onClick="{{ pickRuby }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selRuby }};background:#8D1D2C;padding:12px;display:flex;flex-direction:column;align-items:center;gap:5px;box-sizing:border-box;">
+              <div style="width:32px;height:32px;border-radius:50%;background:#F2C9A0;opacity:0.85;"></div>
+              <div style="width:46px;height:7px;background:#FFFFFF;margin-top:2px;"></div>
+              <div style="width:20px;height:6px;background:#FFFFFF;margin-top:auto;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Ruby</span>
+          </button>
+          <button onClick="{{ pickNoir }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selNoir }};background:#232220;padding:12px;display:flex;flex-direction:column;align-items:center;gap:5px;box-sizing:border-box;">
+              <div style="width:22px;height:3px;background:#F2C9A0;"></div>
+              <div style="width:46px;height:7px;background:#FFFFFF;"></div>
+              <div style="width:30px;height:30px;border-radius:50%;background:#8A847C;opacity:0.6;margin-top:2px;"></div>
+              <div style="width:20px;height:6px;background:#F2C9A0;margin-top:auto;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Noir</span>
+          </button>
+          <button onClick="{{ pickPlein }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPlein }};background:linear-gradient(180deg,#A39D94 0%,#8A847C 45%,#2E2C2A 100%);padding:12px;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;box-sizing:border-box;">
+              <div style="width:48px;height:8px;background:#FFFFFF;"></div>
+              <div style="width:20px;height:6px;background:#F2C9A0;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Plein cadre</span>
+          </button>
+          <button onClick="{{ pickPleinbandeau }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPleinbandeau }};background:linear-gradient(180deg,#A39D94 0%,#8A847C 60%);display:flex;flex-direction:column;justify-content:flex-end;box-sizing:border-box;overflow:hidden;">
+              <div style="background:#8D1D2C;padding:8px 10px;display:flex;justify-content:space-between;align-items:flex-end;"><div style="width:36px;height:7px;background:#FFFFFF;"></div><div style="width:14px;height:6px;background:#F2C9A0;"></div></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Plein · bandeau</span>
+          </button>
+          <button onClick="{{ pickPleinencart }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPleinencart }};background:linear-gradient(160deg,#B8B2A8 0%,#8A847C 100%);padding:8px;display:flex;flex-direction:column;justify-content:flex-end;box-sizing:border-box;">
+              <div style="width:56%;background:#F5EFE4;border-radius:5px;padding:6px;display:flex;flex-direction:column;gap:3px;"><div style="width:80%;height:5px;background:#232220;"></div><div style="width:40%;height:4px;background:#8D1D2C;"></div></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Plein · encart</span>
+          </button>
+          <button onClick="{{ pickPleinhaut }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPleinhaut }};background:linear-gradient(180deg,#2E2C2A 0%,#8A847C 50%,#A39D94 100%);padding:9px;display:flex;flex-direction:column;align-items:center;gap:4px;box-sizing:border-box;position:relative;">
+              <div style="width:44px;height:7px;background:#FFFFFF;"></div><div style="width:28px;height:4px;background:#F2C9A0;"></div>
+              <div style="position:absolute;right:7px;bottom:7px;width:20px;height:20px;border-radius:50%;background:#8D1D2C;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Plein · titre haut</span>
+          </button>
+          <button onClick="{{ pickPleinfilet }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPleinfilet }};background:linear-gradient(180deg,#A39D94 0%,#8A847C 50%,#2E2C2A 100%);padding:5px;box-sizing:border-box;">
+              <div style="width:100%;height:100%;border:1.5px solid #F5EFE4;border-radius:3px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;padding:6px;"><div style="width:40px;height:6px;background:#FFFFFF;"></div><div style="width:16px;height:5px;background:#F2C9A0;"></div></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Plein · filet</span>
+          </button>
+          <button onClick="{{ pickDuo }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selDuo }};background:linear-gradient(90deg,#8A847C 0%,#8A847C 44%,#F5EFE4 44%,#F5EFE4 100%);padding:12px 10px 12px 0;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;box-sizing:border-box;">
+              <div style="width:34px;height:7px;background:#232220;"></div>
+              <div style="width:24px;height:7px;background:#232220;"></div>
+              <div style="width:16px;height:6px;background:#8D1D2C;margin-top:8px;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Duo</span>
+          </button>
+        </div>
+              <span style="font-size:12px;color:#666666;margin-top:4px;">Style · montage (photo 1 → case 1, photo 2 → case 2…)</span>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:10px;">
+          <button onClick="{{ pickMosaique }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selMosaique }};background:#F5EFE4;padding:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;box-sizing:border-box;overflow:hidden;">
+              <div style="display:flex;flex-direction:column;gap:4px;margin-top:-6px;"><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div><div style="height:28px;border-radius:4px;background:#D9D2C7;"></div><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div></div>
+              <div style="display:flex;flex-direction:column;gap:4px;margin-top:-16px;"><div style="height:28px;border-radius:4px;background:#D9D2C7;"></div><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div><div style="height:28px;border-radius:4px;background:#D9D2C7;"></div></div>
+              <div style="display:flex;flex-direction:column;gap:4px;margin-top:-10px;"><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div><div style="height:28px;border-radius:4px;background:#D9D2C7;"></div><div style="height:22px;border-radius:4px;background:#D9D2C7;"></div></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Mosaïque</span>
+          </button>
+          <button onClick="{{ pickGrille }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selGrille }};background:#F5EFE4;padding:10px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr auto;gap:4px;box-sizing:border-box;">
+              <div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+              <div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+              <div style="height:6px;width:70%;background:#232220;margin-top:3px;"></div><div style="height:6px;width:40%;background:#8D1D2C;margin-top:3px;justify-self:end;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Grille 2×2</span>
+          </button>
+          <button onClick="{{ pickTrio }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selTrio }};background:#F5EFE4;padding:10px;display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr auto;gap:4px;box-sizing:border-box;">
+              <div style="border-radius:4px;background:#D9D2C7;grid-row:1 / span 2;"></div><div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+              <div style="height:6px;width:70%;background:#232220;margin-top:3px;"></div><div style="height:6px;width:60%;background:#8D1D2C;margin-top:3px;justify-self:end;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Trio</span>
+          </button>
+          <button onClick="{{ pickCollage }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selCollage }};background:#F5EFE4;padding:6px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:4px;box-sizing:border-box;">
+              <div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+              <div style="border-radius:4px;background:#D9D2C7;"></div><div style="border-radius:4px;background:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;"><div style="width:60%;height:4px;background:#232220;"></div><div style="width:35%;height:4px;background:#8D1D2C;"></div></div><div style="border-radius:4px;background:#D9D2C7;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Collage</span>
+          </button>
+          <button onClick="{{ pickBandes }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selBandes }};background:#F5EFE4;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr auto;gap:2px;box-sizing:border-box;overflow:hidden;">
+              <div style="background:#D9D2C7;"></div><div style="background:#D9D2C7;"></div><div style="background:#D9D2C7;"></div>
+              <div style="grid-column:1 / span 3;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;"><div style="height:6px;width:40%;background:#232220;"></div><div style="height:6px;width:22%;background:#8D1D2C;"></div></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Bandes</span>
+          </button>
+          <button onClick="{{ pickGalerie }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+            <div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selGalerie }};background:#F5EFE4;padding:10px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:3px;box-sizing:border-box;">
+              <div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div>
+              <div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div>
+              <div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div><div style="border-radius:3px;background:#D9D2C7;"></div>
+            </div>
+            <span style="font-size:11px;color:#222222;text-align:center;">Galerie 3×3</span>
+          </button>
+          <button onClick="{{ pickFrise }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selFrise }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:25%;top:14%;width:50%;height:8%;background:#232220;border-radius:1px;"></div><div style="position:absolute;left:6%;top:36%;width:19%;height:19%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:29%;top:36%;width:19%;height:19%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:52%;top:36%;width:19%;height:19%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:75%;top:36%;width:19%;height:19%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:38%;top:72%;width:24%;height:6%;background:#8D1D2C;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Frise</span></button>
+          <button onClick="{{ pickPuzzle }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPuzzle }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:6%;top:6%;width:56%;height:56%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:6%;width:28%;height:26%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:36%;width:28%;height:26%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:6%;top:66%;width:28%;height:28%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:37%;top:66%;width:28%;height:28%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:66%;width:28%;height:28%;background:#FFFFFF;border-radius:4px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Puzzle</span></button>
+          <button onClick="{{ pickPastilles }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selPastilles }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:18%;top:14%;width:28%;height:28%;background:#D9D2C7;border-radius:999px;"></div><div style="position:absolute;left:54%;top:14%;width:28%;height:28%;background:#D9D2C7;border-radius:999px;"></div><div style="position:absolute;left:18%;top:48%;width:28%;height:28%;background:#D9D2C7;border-radius:999px;"></div><div style="position:absolute;left:54%;top:48%;width:28%;height:28%;background:#D9D2C7;border-radius:999px;"></div><div style="position:absolute;left:10%;top:84%;width:40%;height:6%;background:#232220;border-radius:1px;"></div><div style="position:absolute;left:66%;top:84%;width:24%;height:6%;background:#8D1D2C;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Pastilles</span></button>
+          <button onClick="{{ pickEpinglees }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selEpinglees }};background:#EAE4DC;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:10%;top:12%;width:40%;height:46%;background:#FFFFFF;border-radius:3px;transform:rotate(-6deg);"></div><div style="position:absolute;left:50%;top:8%;width:40%;height:48%;background:#FFFFFF;border-radius:3px;transform:rotate(4deg);"></div><div style="position:absolute;left:28%;top:46%;width:44%;height:40%;background:#FFFFFF;border-radius:3px;transform:rotate(-2deg);"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Épinglées</span></button>
+          <button onClick="{{ pickEtagere }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selEtagere }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:6%;top:44%;width:88%;height:3%;background:#8D1D2C;border-radius:0px;"></div><div style="position:absolute;left:6%;top:84%;width:88%;height:3%;background:#8D1D2C;border-radius:0px;"></div><div style="position:absolute;left:10%;top:22%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:38%;top:22%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:22%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:10%;top:62%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:38%;top:62%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:62%;width:22%;height:22%;background:#D9D2C7;border-radius:4px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Étagère</span></button>
+          <button onClick="{{ pickDiagonale }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selDiagonale }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:6%;top:12%;width:50%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:25%;top:40%;width:50%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:44%;top:68%;width:50%;height:22%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:6%;top:74%;width:28%;height:6%;background:#232220;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Diagonale</span></button>
+          <button onClick="{{ pickVedette }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selVedette }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:6%;top:14%;width:88%;height:40%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:6%;top:60%;width:46%;height:6%;background:#232220;border-radius:1px;"></div><div style="position:absolute;left:70%;top:60%;width:24%;height:6%;background:#8D1D2C;border-radius:1px;"></div><div style="position:absolute;left:6%;top:74%;width:19%;height:18%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:29%;top:74%;width:19%;height:18%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:52%;top:74%;width:19%;height:18%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:75%;top:74%;width:19%;height:18%;background:#D9D2C7;border-radius:4px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Vedette</span></button>
+          <button onClick="{{ pickDamier }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selDamier }};background:#F5EFE4;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:8%;top:8%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:29.5%;top:8%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:51%;top:8%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:72.5%;top:8%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:8%;top:25%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:29.5%;top:25%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:51%;top:25%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:72.5%;top:25%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:8%;top:42%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:29.5%;top:42%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:51%;top:42%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:72.5%;top:42%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:8%;top:59%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:29.5%;top:59%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:51%;top:59%;width:19%;height:15%;background:#F2C9A0;border-radius:3px;"></div><div style="position:absolute;left:72.5%;top:59%;width:19%;height:15%;background:#D9D2C7;border-radius:3px;"></div><div style="position:absolute;left:8%;top:80%;width:50%;height:6%;background:#232220;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Damier</span></button>
+          <button onClick="{{ pickEncadre }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selEncadre }};background:#8D1D2C;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:8%;top:16%;width:40%;height:32%;background:#F5EFE4;border-radius:4px;border:2px solid #FFFFFF;box-sizing:border-box;"></div><div style="position:absolute;left:52%;top:16%;width:40%;height:32%;background:#F5EFE4;border-radius:4px;border:2px solid #FFFFFF;box-sizing:border-box;"></div><div style="position:absolute;left:8%;top:52%;width:40%;height:32%;background:#F5EFE4;border-radius:4px;border:2px solid #FFFFFF;box-sizing:border-box;"></div><div style="position:absolute;left:52%;top:52%;width:40%;height:32%;background:#F5EFE4;border-radius:4px;border:2px solid #FFFFFF;box-sizing:border-box;"></div><div style="position:absolute;left:8%;top:88%;width:50%;height:5%;background:#FFFFFF;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Encadré</span></button>
+          <button onClick="{{ pickNuit }}" style="background:transparent;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:stretch;"><div style="aspect-ratio:1/1;border-radius:8px;border:2px solid {{ selNuit }};background:#232220;position:relative;overflow:hidden;box-sizing:border-box;"><div style="position:absolute;left:8%;top:16%;width:26%;height:50%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:37%;top:16%;width:26%;height:50%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:66%;top:16%;width:26%;height:50%;background:#D9D2C7;border-radius:4px;"></div><div style="position:absolute;left:8%;top:76%;width:50%;height:8%;background:#FFFFFF;border-radius:1px;"></div><div style="position:absolute;left:66%;top:76%;width:26%;height:8%;background:#F2C9A0;border-radius:1px;"></div></div><span style="font-size:11px;color:#222222;text-align:center;">Nuit</span></button>
+        </div>
+            </div>
+
+            <!-- Textes sur le visuel -->
+            <div style="display:flex;flex-direction:column;gap:8px;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"><span style="font-size:12px;color:#666666;">Textes sur le visuel · cochez pour afficher · {{ vLangNote }}</span></div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px 14px;">
+                <sc-for list="{{ vFields }}" as="f" hint-placeholder-count="7">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" checked="{{ f.on }}" onChange="{{ f.toggle }}" style="accent-color:#8D1D2C;width:15px;height:15px;margin:0;flex:0 0 auto;">
+                    <sc-if value="{{ f.isLabel }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;padding:8px 0;">{{ f.label }}</span></sc-if>
+                    <sc-if value="{{ f.isInput }}" hint-placeholder-val="{{ true }}"><input type="text" value="{{ f.value }}" onChange="{{ f.set }}" placeholder="{{ f.label }}" style="flex:1 1 auto;min-width:0;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;" style-focus="border-color:#8D1D2C;"></sc-if>
+                    <sc-if value="{{ f.c1.hasDot }}" hint-placeholder-val="{{ false }}"><button onClick="{{ f.c1.dotPick }}" title="{{ f.c1.dotTip }}" style="flex:0 0 auto;width:22px;height:22px;border-radius:50%;cursor:pointer;padding:0;font-size:9px;font-weight:600;color:#666666;background:{{ f.c1.dotBg }};border:2px solid {{ f.c1.dotRing }};box-shadow:inset 0 0 0 1px rgba(34,34,34,0.15);">{{ f.c1.dotTxt }}</button></sc-if>
+                    <sc-if value="{{ f.hasSecond }}" hint-placeholder-val="{{ false }}"><input type="text" value="{{ f.value2 }}" onChange="{{ f.set2 }}" placeholder="{{ f.label2 }}" style="flex:1 1 auto;min-width:0;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;" style-focus="border-color:#8D1D2C;"></sc-if>
+                    <sc-if value="{{ f.c2.hasDot }}" hint-placeholder-val="{{ false }}"><button onClick="{{ f.c2.dotPick }}" title="{{ f.c2.dotTip }}" style="flex:0 0 auto;width:22px;height:22px;border-radius:50%;cursor:pointer;padding:0;font-size:9px;font-weight:600;color:#666666;background:{{ f.c2.dotBg }};border:2px solid {{ f.c2.dotRing }};box-shadow:inset 0 0 0 1px rgba(34,34,34,0.15);">{{ f.c2.dotTxt }}</button></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ hasCouleurPal }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#FCFAF7;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:8px 10px;">
+                  <span style="font-size:12px;color:#444444;">Couleur · <b style="font-weight:500;">{{ couleurNom }}</b></span>
+                  <sc-for list="{{ couleurPal }}" as="cp" hint-placeholder-count="10"><button onClick="{{ cp.pick }}" title="{{ cp.nom }}" style="width:24px;height:24px;border-radius:50%;cursor:pointer;padding:0;font-size:9px;font-weight:600;color:#666666;background:{{ cp.hex }};border:2px solid {{ cp.ring }};box-shadow:inset 0 0 0 1px rgba(34,34,34,0.15);">{{ cp.txt }}</button></sc-for>
+                  <button onClick="{{ couleurTous }}" title="Remettre toutes les couleurs des textes à celles du style" style="border:none;background:transparent;color:#8D1D2C;font-size:11px;font-weight:500;cursor:pointer;margin-left:auto;">Tout en automatique</button>
+                  <button onClick="{{ couleurFermer }}" style="border:none;background:transparent;color:#8A847C;font-size:13px;cursor:pointer;padding:0 2px;">×</button>
+                </div>
+              </sc-if>
+              <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:4px;">
+                <span style="font-size:12px;color:#666666;">Phrase</span>
+                <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;">
+                  <sc-for list="{{ fonts }}" as="ft" hint-placeholder-count="3"><button onClick="{{ ft.pick }}" style="border:none;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:{{ ft.family }};background:{{ ft.bg }};color:{{ ft.fg }};">{{ ft.label }}</button></sc-for>
+                </div>
+
+              </div>
+            </div>
+            <!-- Modèles de visuel du réseau -->
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span style="font-size:12px;color:#666666;">Modèles de visuel du réseau</span>
+              <sc-for list="{{ visModeles }}" as="vm" hint-placeholder-count="0"><button onClick="{{ vm.apply }}" title="Appliquer ce modèle (le produit, le prix et la photo restent ceux du post)" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:500;cursor:pointer;">{{ vm.nom }}</button></sc-for>
+              <sc-if value="{{ noVisModeles }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8A847C;">aucun pour l’instant (le réseau les enregistre dans « Créer un post »)</span></sc-if>
+            </div>
+          </section>
+          </sc-if>
+
           <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:10px;">
             <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Quand et où</span>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
@@ -163,12 +573,6 @@
             </div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
-            <sc-if value="{{ persoOn }}" hint-placeholder-val="{{ true }}">
-              <div style="display:inline-flex;align-items:center;gap:6px;">
-                <span style="font-size:11px;color:#666666;">Format</span>
-                <div style="display:inline-flex;background:#FFFFFF;border-radius:8px;padding:3px;gap:2px;border:0.5px solid rgba(34,34,34,0.10);"><sc-for list="{{ formats }}" as="fo" hint-placeholder-count="2"><button onClick="{{ fo.pick }}" title="{{ fo.tip }}" style="border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ fo.bg }};color:{{ fo.fg }};">{{ fo.label }}</button></sc-for></div>
-              </div>
-            </sc-if>
             <sc-if value="{{ bilingual }}" hint-placeholder-val="{{ false }}"><div style="display:inline-flex;background:#FFFFFF;border-radius:8px;padding:3px;gap:2px;border:0.5px solid rgba(34,34,34,0.10);"><sc-for list="{{ langs }}" as="l" hint-placeholder-count="2"><button onClick="{{ l.pick }}" style="border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ l.bg }};color:{{ l.fg }};">Visuel {{ l.label }}</button></sc-for></div></sc-if>
           </div>
           <div style="align-self:center;width:100%;max-width:{{ telW }};box-sizing:border-box;border:{{ telB }};border-radius:{{ telR }};background:#FFFFFF;box-shadow:{{ telSh }};overflow:hidden;">
@@ -188,7 +592,7 @@
                   <span style="display:flex;flex-direction:column;"><span style="font-size:13px;font-weight:600;color:#262626;">{{ igHandle }}</span><span style="font-size:11px;color:#8e8e8e;">{{ shopCity }}</span></span>
                 </div>
               </sc-if>
-              <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}"><dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-text-pick="{{ onTextPick }}" hint-size="100%,380px"></dc-import></sc-if>
+              <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}"><dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-text-pick="{{ onTextPick }}" on-label-move="{{ onLabelMove }}" on-label-select="{{ onLabelSelect }}" on-label-edit="{{ onLabelEdit }}" on-label-delete="{{ onLabelDelete }}" hint-size="100%,380px"></dc-import></sc-if>
               <sc-if value="{{ isFixe }}" hint-placeholder-val="{{ false }}">
                 <div style="display:grid;grid-template-columns:repeat({{ fixeCols }},minmax(0,1fr));gap:2px;background:#F4EFE8;">
                   <sc-for list="{{ fixeMedia }}" as="fm" hint-placeholder-count="1"><img src="{{ fm }}" alt="" style="width:100%;display:block;object-fit:cover;aspect-ratio:{{ fixeRatio }};"></sc-for>
@@ -213,7 +617,7 @@
               </div>
             </div>
           </sc-if>
-          <span style="font-size:11px;color:#666666;line-height:1.5;">Le texte, le titre et la mise en page sont ceux du réseau ; seuls vos choix changent. {{ langNote }}</span>
+          <span style="font-size:11px;color:#666666;line-height:1.5;">{{ pvNote }} {{ langNote }}</span>
         </aside>
       </div>
     </sc-if>
@@ -229,7 +633,10 @@ class Component extends DCLogic {
     const base = { tpl: null, filter: q.get('promo') ? 'promo' : 'all', q: '', product: null, discount: 0, offer: '', promoPrice: '', from: '', to: '', free: '', photo: null,
       fb: true, ig: true, date: '', time: '', lang: 'fr', errors: [], busy: false,
       // Le visuel : photo (webshop, illustration, la sienne), format, couleur de chaque texte ; l'aperçu (fil, Instagram, téléphone).
-      pmode: null, format: 'carre', couleurs: {}, phraseColor: 'auto', couleurRole: null, couleurNom: '', pv: 'fb', tel: false, ws: {}, wsErr: '', jour: null };
+      pmode: null, couleurRole: null, couleurNom: '', pv: 'fb', tel: false, ws: {}, wsErr: '', jour: null,
+      // L'éditeur de visuel (comme « Créer un post » du franchiseur) : réglages par-dessus le visuel du modèle,
+      // textes par langue, photos ajoutées et leur cadrage, texte posé sélectionné, médiathèque, contrôle.
+      ...this.visuelVide(), illusOpen: false, illusCat: null, query: '', fCat: '', fSeason: '', qc: [] };
     if (!st) return base;
     base.lang = (st.shop.langs || ['fr'])[0];
     let slot = this.firstSlot(st);
@@ -259,9 +666,197 @@ class Component extends DCLogic {
   forTpl(t, st) {
     const p = t.promo || {}, r = st.rules;
     return { tpl: t.id, product: null, discount: p.kind === 'remise' ? Math.min(p.max, r.remiseMax, Math.max(p.min, 20)) : 0, offer: p.kind === 'offre' ? (p.offres || [])[0] || '' : '',
-      promoPrice: '', free: '', photo: null, pmode: null, link: t.link ? 'modele' : 'aucun', fb: !!(t.fb && r.fb && st.shop.fb === 'connected'), ig: !!(t.ig && r.ig && st.shop.igs === 'connected'), errors: [] };
+      promoPrice: '', free: '', photo: null, pmode: null, ...this.visuelVide(), link: t.link ? 'modele' : 'aucun', fb: !!(t.fb && r.fb && st.shop.fb === 'connected'), ig: !!(t.ig && r.ig && st.shop.igs === 'connected'), errors: [] };
   }
   componentDidMount() { this.lireJour(); this.lirePhoto(); }
+  /* --- L'éditeur de visuel : les réglages de « Créer un post » (franchiseur), sur le visuel du modèle ---------------- */
+  visuelVide() { return { vo: {}, vt: { fr: {}, nl: {} }, xphotos: [], adj: {}, txtSel: null }; }
+  STYLES1 = ['epure', 'abricot', 'ruby', 'noir', 'plein', 'pleinbandeau', 'pleinencart', 'pleinhaut', 'pleinfilet', 'duo'];
+  STYLES2 = ['mosaique', 'grille', 'trio', 'collage', 'bandes', 'galerie', 'frise', 'puzzle', 'pastilles', 'epinglees', 'etagere', 'diagonale', 'vedette', 'damier', 'encadre', 'nuit'];
+  TEXTES = ['eyebrow', 'title', 'phrase', 'price', 'unit', 'promo', 'promoSub', 'site'];
+  FORMATS = [['carre', 'Carré 1:1', '1080 × 1080 · entier dans le fil Facebook et Instagram, sur mobile comme sur ordinateur.'],
+    ['portrait', 'Portrait 4:5', '1080 × 1350 · le plus grand sur mobile (Facebook et Instagram). Sur ordinateur, Facebook le réduit : bandes de couleur sur les côtés.'],
+    ['story', 'Story 9:16', '1080 × 1920 · plein écran sur téléphone. Le haut et le bas sont couverts par l’interface : le contrôle signale ce qui y tombe.'],
+    ['paysage', 'Paysage 1,91:1', '1200 × 630 · toute la largeur du fil sur ordinateur ; plus petit sur mobile.']];
+  /** Le visuel : celui du modèle (avec les champs saisis), puis les réglages du franchisé par-dessus. */
+  visuel(t, fields, L) {
+    const s = this.state, base = window.SFVisuel.control(t, fields, L);
+    return Object.assign({ format: 'carre', fondu: 60, logo: 'auto', textes: [], couleurs: {}, illus: null, fond: null, phraseFont: 'script', phraseColor: 'auto' }, base, s.vo, (s.vt || {})[L] || {});
+  }
+  V(patch) { this.setState(st => ({ vo: Object.assign({}, st.vo, patch) })); }
+  VT(L, key, val) { this.setState(st => ({ vt: Object.assign({}, st.vt, { [L]: Object.assign({}, (st.vt || {})[L], { [key]: val }) }) })); }
+  /** Les photos du visuel : celle du modèle (webshop, illustration ou la sienne), puis celles ajoutées, avec leur cadrage. */
+  photosVisuel(t, prod) {
+    const SF = window.SF, s = this.state, mode = this.photoMode(t, prod);
+    const main = mode === 'webshop' ? [{ src: s.ws[prod.photo] || prod.photo, cut: false, name: prod.name }]
+      : mode === 'illus' ? (prod && prod.img ? [{ src: SF.media(prod.img), cut: true, name: prod.name }] : [])
+      : s.photo ? [{ src: s.photo, cut: false, name: 'Photo de la boutique' }] : [];
+    return main.concat(s.xphotos || []).map((p, i) => Object.assign({}, p, (s.adj || {})[i] || {}));
+  }
+  /** Les modèles d'étiquette : ceux du design system, puis ceux du réseau. */
+  etqModeles() { const st = window.SF.state(); return (window.DS_ETIQUETTES || []).map(m => Object.assign({ ds: true }, m)).concat((st.etiquettesModeles || []).filter(m => m && m.id && m.nom)); }
+  /** Pose un texte sur le visuel, dans le style du dernier modèle d'étiquette utilisé. */
+  poserTexte(v, txt) {
+    const ts = v.textes || [], M = this.etqModeles(), m = M.find(x => x.id === this._etqDernier) || M[0] || {};
+    const t = { id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), txt: String(txt || 'Texte'), sous: '', forme: m.forme, police: m.police, couleur: m.couleur, fond: m.fond, taille: m.taille, rot: m.rot, x: m.x, y: m.y };
+    if (ts.length) { t.x = Math.min(90, (+t.x || 50) + 6 * ts.length); t.y = Math.min(90, (+t.y || 50) + 6 * ts.length); }
+    this.V({ textes: ts.concat(t) }); this.setState({ txtSel: t.id });
+    setTimeout(() => { const el = this._txtIn; if (el) { try { el.focus({ preventScroll: true }); el.select(); } catch (e) {} } }, 80);
+  }
+  /** Le contrôle qualité du visuel (lu dans le studio après chaque rendu) ; l'état ne change que s'il a changé. */
+  qcLire() {
+    if (!this._api || !this._api.controle) return;
+    let q = []; try { q = this._api.controle() || []; } catch (e) { console.error(e); }
+    if (JSON.stringify(q) !== JSON.stringify(this.state.qc)) this.setState({ qc: q });
+  }
+  /** Une photo importée : réduite à 2048 px ; détourée si ses bords sont transparents. */
+  readFile(file) {
+    return new Promise((res) => {
+      if (!file || !/^image\//.test(file.type)) return res(null);
+      const rd = new FileReader(); rd.onerror = () => res(null);
+      rd.onload = () => { const url = rd.result, img = new Image();
+        img.onerror = () => res(null);
+        img.onload = () => { let cut = false;
+          try { const c = document.createElement('canvas'); c.width = 32; c.height = 32; const x = c.getContext('2d'); x.drawImage(img, 0, 0, 32, 32); const d = x.getImageData(0, 0, 32, 32).data; let clear = 0, tot = 0;
+            for (let y = 0; y < 32; y++) for (let k = 0; k < 32; k++) { if (k > 1 && k < 30 && y > 1 && y < 30) continue; tot++; if (d[(y * 32 + k) * 4 + 3] < 16) clear++; } cut = clear / tot > 0.35; } catch (e) {}
+          let src = url;
+          try { const big = Math.max(img.width, img.height), r = big > 2048 ? 2048 / big : 1;
+            if (r < 1 || (!cut && file.size > 1500000)) { const c = document.createElement('canvas'); c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+              c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); src = cut ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.9); } } catch (e) { src = url; }
+          res({ src, cut, name: file.name }); };
+        img.src = url; };
+      rd.readAsDataURL(file);
+    });
+  }
+  /** Les valeurs de l'éditeur de visuel (mêmes réglages que « Créer un post » du franchiseur). */
+  editeur(t, st, fields, L, prod, seg) {
+    const SF = window.SF, s = this.state, on = st.rules.persoVisuel !== false && (t.visual || {}).style !== 'fixe';
+    const v = this.visuel(t, fields, L), base = window.SFVisuel.control(t, fields, L), cur = on ? v : base;
+    const photos = this.photosVisuel(t, prod), nMain = photos.length - (s.xphotos || []).length;
+    const role = on ? s.couleurRole : null, P = this.PALETTE();
+    const couleurDe = (r) => r === 'phrase' ? (v.phraseColor || 'auto') : ((v.couleurs || {})[r] || 'auto');
+    const setC = (r, id) => { if (!r) return; if (r === 'phrase') { this.V({ phraseColor: id }); return; } const c = Object.assign({}, v.couleurs || {}); if (id === 'auto') delete c[r]; else c[r] = id; this.V({ couleurs: c }); };
+    const pastille = (r, nom) => { const id = couleurDe(r), c = P.find(x => x.id === id) || P[0], ouvert = s.couleurRole === r;
+      return { hasDot: true, dotBg: c.hex, dotTxt: id === 'auto' ? 'A' : '', dotRing: ouvert ? '#8D1D2C' : 'transparent', dotTip: 'Couleur · ' + nom + ' : ' + c.nom, dotPick: () => this.setState({ couleurRole: ouvert ? null : r, couleurNom: nom }) }; };
+    const out = { persoOn: on, visReset: () => { this.setState(Object.assign(this.visuelVide(), { couleurRole: null })); },
+      studioControl: Object.assign({}, cur, { photos, txtSel: on ? s.txtSel : null, texteSel: role,
+        showPrice: cur.showPrice && !!String(cur.price || '').trim(), showPromo: cur.showPromo && !!String(cur.promo || '').trim(), showTitle: cur.showTitle && !!String(cur.title || '').trim(), showPhrase: cur.showPhrase && !!String(cur.phrase || '').trim() }),
+      onStudioApi: (api) => { this._api = api; },
+      onTextPick: on ? (r0) => this.setState({ couleurRole: r0, couleurNom: this.NOMS_TEXTE[r0] || r0 }) : null,
+      onLabelMove: (id, x, y) => { if (on) this.V({ textes: (v.textes || []).map(q => q.id === id ? Object.assign({}, q, { x, y }) : q) }); },
+      onLabelSelect: (id) => { if (on) this.setState({ txtSel: id }); }, onLabelEdit: (id) => { if (on) this.setState({ txtSel: id }); },
+      onLabelDelete: (id) => { if (on) { this.V({ textes: (v.textes || []).filter(q => q.id !== id) }); if (s.txtSel === id) this.setState({ txtSel: null }); } },
+      hasCouleurAstuce: on && !role, hasCouleurPal: !!role, couleurNom: role ? s.couleurNom : '',
+      couleurPal: P.map(c => ({ nom: c.nom, hex: c.hex, txt: c.id === 'auto' ? 'A' : '', ring: c.id === couleurDe(role) ? '#222222' : 'transparent', pick: () => setC(role, c.id) })),
+      couleurTous: () => this.V({ couleurs: {}, phraseColor: 'auto' }), couleurFermer: () => this.setState({ couleurRole: null }) };
+    if (!on) return out;
+    clearTimeout(this._qcT); this._qcT = setTimeout(() => this.qcLire(), 600);
+    // Photos du visuel et leur cadrage ; médiathèque du design system.
+    const xs = s.xphotos || [], inX = (src) => xs.some(p => p.src === src);
+    const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const lib = window.DS_ILLUS || [];
+    const found = lib.filter(it => (!s.fCat || it.cat === s.fCat) && (!s.fSeason || it.season === s.fSeason)
+      && (!s.query || norm(s.query).split(/\s+/).filter(Boolean).every(w => norm([it.name, it.cat, it.sub, it.season].join(' ')).includes(w))));
+    Object.assign(out, {
+      vPhotosLabel: photos.length ? photos.length + ' photo(s) dans le visuel — la n°1 vient du modèle (« Photo du post ») ; les montages en prennent plusieurs.' : 'Aucune photo : choisissez un produit, importez ou ajoutez depuis la médiathèque.',
+      vPhotos: photos.map((p, i) => ({ n: i + 1, src: p.src, ring: i < nMain ? '#8D1D2C' : 'rgba(34,34,34,0.12)', tip: (p.name || 'Photo') + (i < nMain ? ' · photo du modèle' : ''), canRemove: i >= nMain,
+        remove: () => this.setState(st => ({ xphotos: st.xphotos.filter((q, j) => j !== i - nMain), adj: {} })) })),
+      onFiles: async (e) => { const fs = Array.from((e.target.files) || []).slice(0, 12); e.target.value = ''; const r = (await Promise.all(fs.map(f => this.readFile(f)))).filter(Boolean); if (r.length) this.setState(st => ({ xphotos: st.xphotos.concat(r) })); },
+      hasXPhotos: xs.length > 0, clearXPhotos: () => this.setState({ xphotos: [], adj: {} }),
+      hasAdj: photos.length > 0,
+      adjRows: photos.map((ph, i) => { const z = Math.round((ph.zoom || 1) * 100), x = ph.x != null ? ph.x : 50, y = ph.y != null ? ph.y : 50;
+        const put = (patch) => this.setState(st => ({ adj: Object.assign({}, st.adj, { [i]: Object.assign({}, (st.adj || {})[i], patch) }) }));
+        const zoomTo = (pc) => put({ zoom: Math.min(300, Math.max(50, pc)) / 100 });
+        return { n: i + 1, src: ph.src, zoom: z, zoomLabel: z + ' %', x, y, setZoom: (e) => zoomTo(+e.target.value), minus: () => zoomTo(z - 10), plus: () => zoomTo(z + 10),
+          setX: (e) => put({ x: +e.target.value }), setY: (e) => put({ y: +e.target.value }), reset: () => put({ zoom: 1, x: 50, y: 50 }) }; }),
+      query: s.query, setQuery: (e) => this.setState({ query: e.target.value }), fCat: s.fCat, setFCat: (e) => this.setState({ fCat: e.target.value }), fSeason: s.fSeason, setFSeason: (e) => this.setState({ fSeason: e.target.value }),
+      results: found.slice(0, 40).map(it => ({ src: it.src, inPost: inX(it.src), ring: inX(it.src) ? '#8D1D2C' : 'transparent', tip: it.name + ' · ' + [it.cat, it.sub, it.season].filter(Boolean).join(' · '),
+        toggle: () => this.setState(st => ({ xphotos: inX(it.src) ? st.xphotos.filter(q => q.src !== it.src) : st.xphotos.concat({ src: it.src, cut: it.cut !== false, name: it.name }), adj: {} })) })),
+      resultLabel: found.length + (found.length > 1 ? ' visuels' : ' visuel'),
+    });
+    // Modèles de visuel du réseau : style, format, fond, logo, illustration, textes posés (le produit, le prix et la photo restent ceux du post).
+    const VM = (st.visuelsModeles || []).filter(m => m && m.id && m.nom && m.v);
+    Object.assign(out, { visModeles: VM.map(m => ({ nom: m.nom, apply: () => { const w = Object.assign({}, m.v), tx = {};
+        ['eyebrow', 'phrase', 'unit', 'site'].forEach(k => { if (w[k] !== undefined) { tx[k] = w[k]; delete w[k]; } }); delete w.nl;
+        this.setState(st2 => ({ vo: Object.assign({}, st2.vo, w), vt: Object.assign({}, st2.vt, { [L]: Object.assign({}, (st2.vt || {})[L], tx) }) })); } })),
+      hasVisModeles: VM.length > 0, noVisModeles: VM.length === 0 });
+    // Format, contrôle, fondu, logo, fond.
+    const COL = { erreur: ['#FDECEC', '#8D1D2C', '✕'], attention: ['#FFF4E5', '#8A4B00', '!'], conseil: ['#F4EFE8', '#444444', 'i'] };
+    const T = window.DS_TONS || {}, ton = Object.prototype.hasOwnProperty.call(T, v.style) ? T[v.style] : 'clair', fonds = (window.DS_FONDS || []).filter(f => f.ton === ton), curF = fonds.some(f => f.id === v.fond) ? v.fond : null;
+    Object.assign(out, {
+      vFormats: this.FORMATS.map(([k, label, tip]) => { const [bg, fg] = seg((v.format || 'carre') === k); return { label, tip, bg, fg, pick: () => this.V({ format: k }) }; }),
+      vFormatTip: (this.FORMATS.find(f => f[0] === (v.format || 'carre')) || this.FORMATS[0])[2],
+      qcItems: (s.qc || []).map(q => ({ msg: q.msg, bg: (COL[q.niveau] || COL.conseil)[0], fg: (COL[q.niveau] || COL.conseil)[1], ico: (COL[q.niveau] || COL.conseil)[2] })), qcOk: !(s.qc || []).length,
+      cutModes: [['auto', 'Auto'], ['cut', 'Détourées'], ['full', 'Pleines']].map(([k, label]) => { const [bg, fg] = seg((v.cutMode || 'auto') === k); return { label, bg, fg, pick: () => this.V({ cutMode: k }) }; }),
+      hasFondu: ['plein', 'pleinbandeau', 'pleinhaut', 'pleinfilet'].includes(v.style), fondu: v.fondu != null ? v.fondu : 60, fonduLabel: (v.fondu != null ? v.fondu : 60) + ' %',
+      setFondu: (e) => this.V({ fondu: +e.target.value }), fonduReset: () => this.V({ fondu: 60 }),
+      logos: (window.DS_LOGOS || []).map(Lg => { const sel = (v.logo || 'auto') === Lg.id;
+        return { nom: Lg.nom, isAuto: Lg.id === 'auto', isImg: !!Lg.src, isMask: !!Lg.hex, src: Lg.src || '', hex: Lg.hex || 'transparent', apercu: Lg.apercu || '#FFFFFF', ring: sel ? '#8D1D2C' : 'rgba(34,34,34,0.18)', ringW: sel ? '2px' : '1px', pick: () => this.V({ logo: Lg.id }) }; }),
+      hasFonds: !!ton && fonds.length > 0, noFonds: !ton,
+      fondTip: ton === 'fonce' ? 'Style foncé : fonds foncés de la marque (texte clair).' : 'Style clair : fonds clairs de la marque (texte foncé). Pour un fond foncé, prenez Ruby, Noir, Encadré ou Nuit.',
+      fonds: [{ id: null, nom: 'Fond du style', hex: 'transparent', dash: true }].concat(fonds).map(f => ({ nom: f.nom, hex: f.hex, ring: (curF || null) === f.id ? '#8D1D2C' : 'rgba(34,34,34,0.18)', ringW: (curF || null) === f.id ? '3px' : '1px',
+        border: f.dash ? '1px dashed rgba(34,34,34,0.35)' : '1px solid rgba(34,34,34,0.12)', label: f.dash ? 'Style' : '', pick: () => this.V({ fond: f.id }) })),
+    });
+    // Illustration du design system.
+    { const all = (window.DS_ILLUS || []).filter(x => x.cat === 'Illustrations'), subs = [...new Set(all.map(x => x.sub))];
+      const sub = subs.includes(s.illusCat) ? s.illusCat : subs[0], il = v.illus && v.illus.src ? v.illus : null;
+      const put = (patch) => this.V({ illus: Object.assign({ x: 82, y: 18, taille: 28, trait: 'auto' }, il || {}, patch) });
+      const POS = [['↖', 16, 16], ['↑', 50, 14], ['↗', 84, 16], ['←', 14, 50], ['●', 50, 50], ['→', 86, 50], ['↙', 16, 84], ['↓', 50, 86], ['↘', 84, 84]];
+      Object.assign(out, { illusOpen: !!s.illusOpen, illusToggle: () => this.setState({ illusOpen: !s.illusOpen }), illusBtn: s.illusOpen ? 'Fermer le choix' : il ? 'Changer d’illustration' : 'Ajouter une illustration',
+        illusSubs: subs.map(x => { const [bg, fg] = seg(x === sub); return { label: x, bg, fg, pick: () => this.setState({ illusCat: x }) }; }),
+        illusItems: all.filter(x => x.sub === sub).map(x => ({ src: x.src, name: x.name, ring: il && il.src === x.src ? '#8D1D2C' : 'rgba(34,34,34,0.10)', pick: () => put({ src: x.src, name: x.name }) })),
+        hasIllus: !!il, illusName: il ? il.name || 'Illustration' : '', illusThumb: il ? il.src : '',
+        illusPos: POS.map(([lab, x, y]) => ({ lab, pick: () => put({ x, y }), bg: il && +il.x === x && +il.y === y ? '#8D1D2C' : '#FFFFFF', fg: il && +il.x === x && +il.y === y ? '#FFFFFF' : '#444444' })),
+        illusX: il ? (il.x != null ? il.x : 82) : 82, illusY: il ? (il.y != null ? il.y : 18) : 18, illusT: il ? (il.taille != null ? il.taille : 28) : 28, illusTLabel: (il ? (il.taille != null ? il.taille : 28) : 28) + ' %',
+        setIllusX: (e) => put({ x: +e.target.value }), setIllusY: (e) => put({ y: +e.target.value }), setIllusT: (e) => put({ taille: +e.target.value }),
+        illusTraits: [{ id: 'auto', nom: 'Auto', hex: null }].concat(window.DS_TRAITS || []).map(tr => { const sel = il && (il.trait || 'auto') === tr.id; return { nom: tr.nom, hex: tr.hex || '#FFFFFF', isHex: !!tr.hex, ring: sel ? '#8D1D2C' : 'rgba(34,34,34,0.18)', ringW: sel ? '2px' : '1px', pick: () => put({ trait: tr.id }) }; }),
+        illusRemove: () => this.V({ illus: null }) }); }
+    // Textes posés sur le visuel (promotion, formule, prix) : forme, police, couleurs, position, taille, rotation.
+    { const ts = v.textes || [], sel = ts.find(q => q.id === s.txtSel) || null;
+      const upd = (patch) => { if (sel) this.V({ textes: ts.map(q => q.id === sel.id ? Object.assign({}, q, patch) : q) }); };
+      const FONDS = window.DS_FONDS || [], POL = window.DS_POLICES || [], FOR = window.DS_FORMES || [], hex = (k) => (FONDS.find(f => f.id === k) || {}).hex || '';
+      const sw = (f, sOn, fn) => ({ nom: f.nom, hex: f.hex || 'transparent', dashLabel: f.id ? '' : '∅', ring: sOn ? '#8D1D2C' : 'rgba(34,34,34,0.18)', ringW: sOn ? '3px' : '1px', pick: fn });
+      const pick = (o) => ({ forme: o.forme, police: o.police, couleur: o.couleur, fond: o.fond, taille: o.taille, rot: o.rot, x: o.x, y: o.y });
+      const POS = [['↖', 18, 18], ['↑', 50, 14], ['↗', 82, 18], ['←', 18, 50], ['●', 50, 50], ['→', 82, 50], ['↙', 18, 82], ['↓', 50, 86], ['↘', 82, 82]];
+      const M = this.etqModeles();
+      Object.assign(out, { hasTxtSel: !!sel,
+        txtList: ts.map(q => { const o = q.id === s.txtSel; return { label: String(q.txt || q.sous || 'Texte').slice(0, 26), bg: o ? '#8D1D2C' : '#FFFFFF', fg: o ? '#FFFFFF' : '#222222', pick: () => this.setState({ txtSel: o ? null : q.id }),
+          del: () => { this.V({ textes: ts.filter(x => x.id !== q.id) }); if (s.txtSel === q.id) this.setState({ txtSel: null }); } }; }),
+        txtAdd: () => this.poserTexte(v, String(v.promo || '').trim() || 'Nouveau'), txtRef: (el) => { this._txtIn = el; },
+        txtVal: sel ? sel.txt || '' : '', setTxtVal: (e) => upd({ txt: e.target.value }), sousVal: sel ? sel.sous || '' : '', setSousVal: (e) => upd({ sous: e.target.value }),
+        txtFormes: FOR.map(f => { const [bg, fg] = seg(!!sel && (sel.forme || 'etiquette') === f.id); return { label: f.nom, bg, fg, pick: () => upd({ forme: f.id }) }; }),
+        txtPolices: POL.map(pl => { const o = !!sel && sel.police === pl.id; return { label: pl.nom, detail: pl.detail, font: pl.font, weight: pl.weight, tt: pl.tt, border: o ? '#8D1D2C' : 'rgba(34,34,34,0.18)', bw: o ? '2px' : '1px', pick: () => upd({ police: pl.id }) }; }),
+        txtCouleurs: FONDS.map(f => sw(f, !!sel && sel.couleur === f.id, () => upd({ couleur: f.id }))),
+        txtFonds: [{ id: null, nom: 'Aucun', hex: null }].concat(FONDS).map(f => sw(f, !!sel && (sel.fond || null) === f.id, () => upd({ fond: f.id }))),
+        txtFondNote: sel && sel.forme === 'texte' ? 'Texte seul : pas de fond (choisissez Étiquette, Pastille ou Bandeau pour un fond).' : '',
+        txtTaille: sel ? +sel.taille || 56 : 56, txtTailleLabel: (sel ? +sel.taille || 56 : 56) + ' px', setTxtTaille: (e) => upd({ taille: +e.target.value }),
+        txtRot: sel ? +sel.rot || 0 : 0, txtRotLabel: (sel ? +sel.rot || 0 : 0) + '°', setTxtRot: (e) => upd({ rot: +e.target.value }),
+        txtPos: POS.map(([lab, x, y]) => { const o = !!sel && +sel.x === x && +sel.y === y; return { lab, pick: () => upd({ x, y }), bg: o ? '#8D1D2C' : '#FFFFFF', fg: o ? '#FFFFFF' : '#444444' }; }),
+        txtDel: () => { if (sel) { this.V({ textes: ts.filter(q => q.id !== sel.id) }); this.setState({ txtSel: null }); } },
+        txtModeles: M.map(m => ({ nom: m.nom, bg: hex(m.forme === 'texte' ? null : m.fond) || '#FFFFFF', fg: hex(m.couleur) || '#222222', font: ((POL.find(pl => pl.id === m.police) || {}).font) || "'Gotham'",
+          tt: ((POL.find(pl => pl.id === m.police) || {}).tt) || 'none', radius: m.forme === 'pastille' ? '999px' : m.forme === 'bandeau' ? '2px' : '8px', border: m.forme === 'texte' || (m.fond === 'blanc' || m.fond === 'creme') ? '1px solid rgba(34,34,34,0.18)' : '1px solid transparent',
+          apply: () => { this._etqDernier = m.id; if (sel) upd(pick(m)); else this.poserTexte(v, String(v.promo || '').trim() || m.nom); }, canDel: false, del: () => {} })) }); }
+    // Style : les 26 styles du studio (photo unique et montages).
+    this.STYLES1.concat(this.STYLES2).forEach(k => { const C = k.charAt(0).toUpperCase() + k.slice(1); out['sel' + C] = v.style === k ? '#8D1D2C' : 'transparent'; out['pick' + C] = () => this.V({ style: k }); });
+    // Textes sur le visuel : contenu (dans la langue du visuel), affichage, couleur ; police de la phrase.
+    const bil = (st.shop.langs || ['fr']).length > 1, gv = (k) => v[k] == null ? '' : String(v[k]);
+    const vf = (label, key, showKey, extra) => Object.assign({ label: label + (bil ? ' (' + L.toUpperCase() + ')' : ''), value: gv(key), on: !!v[showKey], isInput: true, isLabel: false, hasSecond: false,
+      set: (e) => this.VT(L, key, e.target.value), toggle: () => this.V({ [showKey]: !v[showKey] }), c1: { hasDot: false }, c2: { hasDot: false } }, extra);
+    Object.assign(out, {
+      vLangNote: 'visuel en ' + L.toUpperCase() + (bil ? ' — changez la langue au-dessus de l’aperçu' : ''),
+      vFields: [
+        vf("Logo L'Atelier By", 'title', 'showLogo', { isInput: false, isLabel: true }),
+        vf('Mention', 'eyebrow', 'showEyebrow', { c1: pastille('eyebrow', 'Mention') }),
+        vf('Nom du produit', 'title', 'showTitle', { c1: pastille('title', 'Nom du produit') }),
+        vf("Phrase d'accroche", 'phrase', 'showPhrase', { c1: pastille('phrase', 'Phrase d’accroche') }),
+        vf('Prix', 'price', 'showPrice', { hasSecond: true, label2: 'Unité', value2: gv('unit'), set2: (e) => this.VT(L, 'unit', e.target.value), c1: pastille('price', 'Prix'), c2: pastille('unit', 'Unité') }),
+        vf('Offre (4+1)', 'promo', 'showPromo', { hasSecond: true, label2: 'Sous-texte de l’offre', value2: gv('promoSub'), set2: (e) => this.VT(L, 'promoSub', e.target.value), c1: pastille('promo', 'Offre'), c2: pastille('promoSub', 'Sous-texte de l’offre') }),
+        vf('Site web', 'site', 'showSite', { c1: pastille('site', 'Site web') }),
+      ],
+      fonts: [['script', 'Script', "'Playwrite DEVA'"], ['display', 'DISPLAY', "'Vank'"], ['sans', 'Sans', "'Gotham'"]].map(([k, label, family]) => { const [bg, fg] = seg((v.phraseFont || 'script') === k); return { label, family, bg, fg, pick: () => this.V({ phraseFont: k }) }; }),
+    });
+    return out;
+  }
   componentDidUpdate() { this.lireJour(); this.lirePhoto(); }
   componentWillUnmount() {}
   /** Ce qui est déjà prévu le jour choisi : les posts de l'espace et les publications de la Page lues chez Meta. */
@@ -326,7 +921,7 @@ class Component extends DCLogic {
           await new Promise(r => setTimeout(r, 400));
         }
         // L'export se fait sans la sélection d'un texte (le cadre en pointillé n'a rien à faire dans le visuel publié).
-        if (this.state.couleurRole) { await new Promise(r => this.setState({ couleurRole: null }, r)); await new Promise(r => setTimeout(r, 120)); }
+        if (this.state.couleurRole || this.state.txtSel) { await new Promise(r => this.setState({ couleurRole: null, txtSel: null }, r)); await new Promise(r => setTimeout(r, 150)); }
         b.visual = await this._api.toImage({ jpeg: true, pixelRatio: SF.live ? 1 : 0.5, quality: 0.9 });
       }
       const p = await SF.createPost(b);
@@ -429,22 +1024,9 @@ class Component extends DCLogic {
           tel, telToggle: () => this.setState({ tel: !tel }), telBtnBg: tel ? '#8D1D2C' : '#FFFFFF', telBtnFg: tel ? '#FFFFFF' : '#444444',
           telB: tel ? '10px solid #0B0B0B' : '0', telR: tel ? '44px' : '10px', telSh: tel ? '0 12px 32px rgba(0,0,0,0.20)' : 'none', telW: tel ? '360px' : '100%',
           cardR: tel ? '0' : '10px', cardB: tel ? 'none' : '0.5px solid rgba(34,34,34,0.12)' }; })(),
-      // Personnaliser le visuel (si le réseau l'ouvre) : format et couleur de chaque texte, dans la palette de la marque.
-      ...(() => { const on = st.rules.persoVisuel !== false, P = this.PALETTE(), role = on ? s.couleurRole : null;
-        const cur = role ? (role === 'phrase' ? s.phraseColor || 'auto' : (s.couleurs || {})[role] || 'auto') : 'auto';
-        const setC = (id) => { if (!role) return; if (role === 'phrase') { this.setState({ phraseColor: id }); return; } const c = Object.assign({}, s.couleurs); if (id === 'auto') delete c[role]; else c[role] = id; this.setState({ couleurs: c }); };
-        const FORMATS = [['carre', 'Carré 1:1', '1080 × 1080 · entier dans le fil, sur mobile comme sur ordinateur'], ['portrait', 'Portrait 4:5', '1080 × 1350 · le plus grand dans le fil sur mobile']];
-        const ctl = Object.assign({}, V.control(t, fields, L), on ? { format: s.format, couleurs: s.couleurs, phraseColor: s.phraseColor, texteSel: role } : {});
-        const mode = this.photoMode(t, prod);
-        if (mode === 'webshop') ctl.photos = [{ src: s.ws[prod.photo] || prod.photo, cut: false, name: prod.name }];
-        else if (mode === 'illus') ctl.photos = prod && prod.img ? [{ src: SF.media(prod.img), cut: true, name: prod.name }] : [];
-        else if (!s.photo) ctl.photos = [];
-        return { persoOn: on, formats: FORMATS.map(([k, label, tip]) => { const [bg, fg] = seg((s.format || 'carre') === k); return { label, tip, bg, fg, pick: () => this.setState({ format: k }) }; }),
-          studioControl: ctl, onStudioApi: (api) => { this._api = api; },
-          onTextPick: on ? (r0) => this.setState({ couleurRole: r0, couleurNom: this.NOMS_TEXTE[r0] || r0 }) : null,
-          hasCouleurAstuce: on && !role && (t.visual || {}).style !== 'fixe', hasCouleurPal: !!role, couleurNom: role ? s.couleurNom : '',
-          couleurPal: P.map(c => ({ nom: c.nom, hex: c.hex, txt: c.id === 'auto' ? 'A' : '', ring: c.id === cur ? '#222222' : 'transparent', pick: () => setC(c.id) })),
-          couleurTous: () => this.setState({ couleurs: {}, phraseColor: 'auto' }), couleurFermer: () => this.setState({ couleurRole: null }) }; })(),
+      // L'éditeur de visuel (si le réseau l'ouvre) : les réglages de « Créer un post » du franchiseur, sur le visuel du modèle.
+      ...this.editeur(t, st, fields, L, prod, seg),
+      pvNote: st.rules.persoVisuel !== false && (t.visual || {}).style !== 'fixe' ? 'Le texte du post est celui du modèle du réseau ; le visuel part du modèle et se règle à gauche (« Visuel · tous les réglages »).' : 'Le texte, le titre et la mise en page sont ceux du réseau ; seuls vos choix changent.',
       isStudio: (t.visual || {}).style !== 'fixe', isFixe: (t.visual || {}).style === 'fixe',
       fixeMedia: (((t.visual || {}).media || []).filter(m => m.kind !== 'video').map(m => SF.media(m.src)).slice(0, 4)).concat([]).filter(Boolean),
       fixeCols: Math.min(2, Math.max(1, (((t.visual || {}).media || []).filter(m => m.kind !== 'video').length))), fixeRatio: (((t.visual || {}).media || []).length > 1 ? '4 / 5' : 'auto'),
