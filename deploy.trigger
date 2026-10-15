@@ -78,3 +78,4 @@ Relivraison : aperçu téléphone/story/grille, vidéo animée, détourage — 2
 Relivraison : toggle « Ouvrir la fiche du produit » — 2026-10-14T18:34:14Z
 Relivraison : couleur de chaque texte du visuel — 2026-10-14T20:23:48Z
 Relivraison : clic sur un texte du visuel → sa couleur — 2026-10-15T08:03:35Z
+Relivraison : espace franchisé — calendrier Meta, grille Instagram, Publier, ?shop= dans l'adresse — 2026-10-15T10:06:32Z
