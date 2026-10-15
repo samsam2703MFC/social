@@ -152,11 +152,14 @@ function socIgAbonnes(array $c, int $jours = 30): array
         'serie' => $b['serie'], 'gagnes' => $b['gagnes'], 'perdus' => null, 'reach' => null, 'motif' => $b['motif'], 'le' => date('Y-m-d H:i')];
     if ($b['followers'] === null && $b['motif'] !== null) { return $out; }  // compte illisible
     // Désabonnements : Meta ne les donne qu'en total sur une période ; un jour par requête, toutes dans un lot.
+    // Meta compte les jours à l'heure du Pacifique : une fenêtre de midi (UTC) à midi tombe sur le bon jour,
+    // quel que soit le fuseau du serveur (minuit à Bruxelles donnerait la veille).
     $jourDe = []; $lot = [];
     for ($d = $du; $d <= $au; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
+        $midi = (int) strtotime($d . ' 12:00:00 UTC');
         $jourDe[] = $d;
         $lot[] = ['method' => 'GET', 'relative_url' => $c['id'] . '/insights?' . http_build_query(['metric' => 'follows_and_unfollows', 'period' => 'day',
-            'metric_type' => 'total_value', 'breakdown' => 'follow_type', 'since' => strtotime($d), 'until' => strtotime($d . ' +1 day')])];
+            'metric_type' => 'total_value', 'breakdown' => 'follow_type', 'since' => $midi, 'until' => $midi + 86400])];
     }
     $flux = []; $refus = null;
     try {

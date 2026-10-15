@@ -112,7 +112,8 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
         return [200, array_map(static function ($q) {
             if (!empty($GLOBALS['BATCH_REFUS'])) { return ['code' => 400, 'body' => json_encode(['error' => ['code' => 100, 'message' => '(#100) metric follows_and_unfollows non disponible']])]; }
             parse_str((string) parse_url((string) $q['relative_url'], PHP_URL_QUERY), $qq);
-            $j = (int) date('j', (int) $qq['since']);
+            $j = (int) gmdate('j', (int) $qq['since']);
+            if (gmdate('H', (int) $qq['since']) !== '12') { return ['code' => 200, 'body' => json_encode(['data' => []])]; }  // la veille chez Meta : refusé du test
             return ['code' => 200, 'body' => json_encode(['data' => [['name' => 'follows_and_unfollows', 'period' => 'day', 'total_value' => ['breakdowns' => [['dimension_keys' => ['follow_type'],
                 'results' => [['dimension_values' => ['FOLLOWER'], 'value' => 2 + $j % 3], ['dimension_values' => ['NON_FOLLOWER'], 'value' => $j % 2]]]]]]]])];
         }, json_decode((string) $p['batch'], true))];
