@@ -403,7 +403,8 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   post (`visual.v.couleurs`, la phrase dans `phraseColor`) et dans les modèles de visuel ; tous
   les styles et formats (classes `pf-t-…` sur les textes, variables `--c-…` posées par
   `applyTheme`). « Tout en automatique » rend les couleurs du style. Le contrôle du visuel
-  signale un contraste trop faible.
+  signale un contraste trop faible. **Un clic sur un texte de l'aperçu** ouvre aussi sa couleur,
+  juste sous l'aperçu (`onTextPick`) ; le texte choisi y est entouré, jamais dans l'image exportée.
 - **Logo du visuel** — selon le style, ou au choix : Foncé (`img/logo.png`, apostrophe dorée),
   Clair (`img/logo-white.png`), ou recoloré dans la palette (noir, ruby, abricot, crème : masque
   CSS sur le logo blanc ; `DS_LOGOS`). Gardé avec le post (`visual.v.logo`).

@@ -40,6 +40,9 @@
     .pf-c-phrase .pf-t-phrase{color:var(--c-phrase) !important;} .pf-c-price .pf-t-price{color:var(--c-price) !important;}
     .pf-c-unit .pf-t-unit{color:var(--c-unit) !important;} .pf-c-promo .pf-t-promo{color:var(--c-promo) !important;}
     .pf-c-promosub .pf-t-promosub{color:var(--c-promosub) !important;} .pf-c-site .pf-t-site{color:var(--c-site) !important;}
+    /* Écran hôte (Créer un post) : un clic sur un texte du visuel ouvre sa couleur ; le texte choisi est entouré (jamais à l'export). */
+    .pf-pick [class*="pf-t-"]{cursor:pointer;} .pf-pick [class*="pf-t-"]:hover{outline:2px dashed rgba(141,29,44,0.55);outline-offset:6px;}
+    .pf-sel-eyebrow .pf-t-eyebrow,.pf-sel-title .pf-t-title,.pf-sel-phrase .pf-t-phrase,.pf-sel-price .pf-t-price,.pf-sel-unit .pf-t-unit,.pf-sel-promo .pf-t-promo,.pf-sel-promosub .pf-t-promosub,.pf-sel-site .pf-t-site{outline:3px solid rgba(141,29,44,0.85) !important;outline-offset:6px;}
   </style>
 </helmet>
 
@@ -357,7 +360,7 @@
         <div style="width:{{ artW }}px;height:{{ artH }}px;transform:scale(var(--s,0.5));transform-origin:0 0;">
 
           <!-- ARTBOARD : 1080 × 1080 (carré), 1080 × 1350 (portrait 4:5), 2057 × 1080 (paysage 1,91:1, exporté en 1200 × 630) -->
-          <div ref="{{ artRef }}" data-format="{{ formatKey }}" style="width:{{ artW }}px;height:{{ artH }}px;position:relative;overflow:hidden;font-family:'Gotham';color:#232220;background:#F5EFE4;">
+          <div ref="{{ artRef }}" data-format="{{ formatKey }}" onClick="{{ artClick }}" style="width:{{ artW }}px;height:{{ artH }}px;position:relative;overflow:hidden;font-family:'Gotham';color:#232220;background:#F5EFE4;">
 
             <!-- ÉPURÉ -->
             <sc-if value="{{ isEpure }}" hint-placeholder-val="{{ true }}">
@@ -1213,7 +1216,10 @@ class Component extends DCLogic {
       const hex = this.couleurTexte(C[k]), cle = k.toLowerCase();
       el.classList.toggle('pf-c-' + cle, !!hex);
       if (hex) el.style.setProperty('--c-' + cle, hex); else el.style.removeProperty('--c-' + cle);
+      // Le texte dont on règle la couleur, entouré sur l'aperçu (pas pendant l'export).
+      el.classList.toggle('pf-sel-' + cle, !ms.exporting && ms.texteSel === k);
     });
+    el.classList.toggle('pf-pick', !ms.exporting && typeof this.props.onTextPick === 'function');
   }
   /** Une couleur de texte de la palette (DS_FONDS, plus le gris de la marque) → son code ; « auto » ou inconnue → null. */
   couleurTexte(id) {
@@ -1513,6 +1519,11 @@ class Component extends DCLogic {
       illusW: il ? Math.round(Math.min(F.w, F.h) * Math.min(80, Math.max(5, il.taille != null ? +il.taille : 28)) / 100) : 0, illusRatio: il ? ratios[il.src] || '1/1' : '1/1',
       formats: Object.keys(this.FORMATS).map(k => { const on = k === fKey, [bg, fg] = seg(on); return { label: this.FORMATS[k].label, tip: this.FORMATS[k].tip, bg, fg, pick: () => this.setState({ format: k }) }; }),
       artRef: (el) => { this._art = el; this.applyTheme(); },
+      // Un clic sur un texte du visuel : l'écran hôte ouvre la couleur de ce texte.
+      artClick: (e) => { const t = e.target && e.target.closest ? e.target.closest('[class*="pf-t-"]') : null, m = t && /pf-t-(\w+)/.exec(t.className);
+        if (!m || typeof this.props.onTextPick !== 'function') return;
+        const R = { eyebrow: 'eyebrow', title: 'title', phrase: 'phrase', price: 'price', unit: 'unit', promo: 'promo', promosub: 'promoSub', site: 'site' };
+        if (R[m[1]]) this.props.onTextPick(R[m[1]]); },
       previewRef: (el) => {
         if (!el || this._prev === el) return;
         this._prev = el;

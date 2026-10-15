@@ -957,7 +957,7 @@
           <!-- visuel : instance unique du studio -->
           <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
             <div style="position:relative;">
-            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-label-move="{{ onLabelMove }}" on-label-select="{{ onLabelSelect }}" on-label-edit="{{ onLabelEdit }}" on-label-delete="{{ onLabelDelete }}" hint-size="100%,420px"></dc-import>
+            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-label-move="{{ onLabelMove }}" on-label-select="{{ onLabelSelect }}" on-label-edit="{{ onLabelEdit }}" on-label-delete="{{ onLabelDelete }}" on-text-pick="{{ onTextPick }}" hint-size="100%,420px"></dc-import>
             <sc-if value="{{ isStoryUi }}" hint-placeholder-val="{{ false }}">
               <div style="position:absolute;inset:0;pointer-events:none;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
                 <div style="position:absolute;left:0;right:0;top:0;height:16%;background:linear-gradient(180deg,rgba(0,0,0,0.5),rgba(0,0,0,0));"></div>
@@ -1047,6 +1047,14 @@
         </div>
         <sc-if value="{{ tel }}" hint-placeholder-val="{{ false }}"><div style="height:22px;display:flex;align-items:center;justify-content:center;background:{{ telBarBg }};"><span style="width:112px;height:4px;border-radius:2px;background:{{ telBarFg }};display:block;"></span></div></sc-if>
         </div>
+        <sc-if value="{{ hasCouleurPal }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:#FFFFFF;border:0.5px solid rgba(141,29,44,0.35);border-radius:10px;padding:8px 10px;">
+            <span style="font-size:12px;color:#444444;flex:1 1 100%;">Couleur · <b style="font-weight:500;">{{ couleurNom }}</b></span>
+            <sc-for list="{{ couleurPal }}" as="cp" hint-placeholder-count="10"><button onClick="{{ cp.pick }}" title="{{ cp.nom }}" style="width:24px;height:24px;border-radius:50%;cursor:pointer;padding:0;font-size:9px;font-weight:600;color:#666666;background:{{ cp.hex }};border:2px solid {{ cp.ring }};box-shadow:inset 0 0 0 1px rgba(34,34,34,0.15);">{{ cp.txt }}</button></sc-for>
+            <button onClick="{{ couleurFermer }}" title="Fermer" style="border:none;background:transparent;color:#8A847C;font-size:13px;cursor:pointer;padding:0 2px;margin-left:auto;">×</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasCouleurAstuce }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Cliquez sur un texte du visuel pour changer sa couleur.</span></sc-if>
         <sc-if value="{{ igWarn }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A4B00;background:#FCE7C8;border-radius:8px;padding:8px 10px;">{{ igWarnText }}</span></sc-if>
         <span style="font-size:11px;color:#666666;line-height:1.5;">Variables pour {{ pv.city }} : {{ pv.resolved }}</span>
       </aside>
@@ -1518,6 +1526,7 @@ class Component extends DCLogic {
       this.toast('Vidéo impossible : ' + (e.message || e));
     }
   }
+  NOMS_TEXTE = { eyebrow: 'Mention saison', title: 'Nom du produit', phrase: 'Phrase d’accroche', price: 'Prix', unit: 'Unité', promo: 'Offre', promoSub: 'Sous-texte de l’offre', site: 'Site web' };
   /** Les couleurs des textes du visuel : automatique (celle du style), la palette de la marque, le gris de la marque. */
   PALETTE_TEXTE() { return [{ id: 'auto', nom: 'Automatique (couleur du style)', hex: '#FFFFFF' }].concat((window.DS_FONDS || []).map(f => ({ id: f.id, nom: f.nom, hex: f.hex })), [{ id: 'gris', nom: 'Gris', hex: '#8A847C' }]); }
   /** La couleur choisie pour un texte (la phrase garde son réglage historique `phraseColor`). */
@@ -2223,12 +2232,12 @@ class Component extends DCLogic {
         vf('Site web', 'site', 'showSite', { c1: this.pastille('site', 'Site web') }),
       ].map(f => Object.assign({ c1: { hasDot: false }, c2: { hasDot: false } }, f)),
       ...(() => { const r = s.couleurRole, P = this.PALETTE_TEXTE(), cur = r ? this.couleurDe(r) : 'auto';
-        return { hasCouleurPal: !!r && !locked, couleurNom: r ? s.couleurNom || '' : '',
+        return { hasCouleurPal: !!r && !locked, couleurNom: r ? s.couleurNom || '' : '', hasCouleurAstuce: !r && !locked && s.mode === 'studio',
           couleurPal: P.map(c => ({ nom: c.nom, hex: c.hex, txt: c.id === 'auto' ? 'A' : '', ring: c.id === cur ? '#222222' : 'transparent', pick: () => this.couleurTexte(r, c.id) })),
           couleurTous: () => { if (!locked) { this.V({ couleurs: {}, phraseColor: 'auto' }); this.toast('Couleurs des textes : celles du style.'); } },
           couleurFermer: () => this.setState({ couleurRole: null }) }; })(),
       fonts: [['script', 'Script', "'Playwrite DEVA'"], ['display', 'DISPLAY', "'Vank'"], ['sans', 'Sans', "'Gotham'"]].map(([k, label, family]) => { const [bg, fg] = seg(v.phraseFont === k); return { label, family, bg, fg, pick: () => this.V({ phraseFont: k }) }; }),
-      studioControl: Object.assign({}, vL, { txtSel: s.txtSel, photos: s.photos, showPrice: v.showPrice && !!String(v.price || '').trim(), showPromo: v.showPromo && !!String(v.promo || '').trim(), showTitle: v.showTitle && !!String(v.title || '').trim(), showPhrase: v.showPhrase && !!String(v.phrase || '').trim() }),
+      studioControl: Object.assign({}, vL, { txtSel: s.txtSel, texteSel: s.couleurRole || null, photos: s.photos, showPrice: v.showPrice && !!String(v.price || '').trim(), showPromo: v.showPromo && !!String(v.promo || '').trim(), showTitle: v.showTitle && !!String(v.title || '').trim(), showPhrase: v.showPhrase && !!String(v.phrase || '').trim() }),
       onStudioApi: (api) => { this._api = api; },
       // Un texte posé glissé sur l'aperçu : sa nouvelle position ; un clic le sélectionne.
       onLabelMove: (id, x, y) => { if (!locked) this.setState(st => ({ v: Object.assign({}, st.v, { textes: (st.v.textes || []).map(t => t.id === id ? Object.assign({}, t, { x, y }) : t) }) })); },
@@ -2237,6 +2246,8 @@ class Component extends DCLogic {
       onLabelEdit: (id) => { if (!locked) { this.setState({ txtSel: id }); this.editerTexte(); } },
       // Le × d'un texte posé (sur l'aperçu ou sur sa pastille) : il est effacé du visuel.
       onLabelDelete: (id) => { if (!locked) this.effacerTexte(id); },
+      // Un clic sur un texte du visuel : sa couleur s'ouvre sous l'aperçu (et à côté de son champ).
+      onTextPick: (role) => { if (!locked) this.setState({ couleurRole: role, couleurNom: this.NOMS_TEXTE[role] || role }); },
       txtRef: (el) => { this._txtIn = el; },
       // ciblage
       shopBadges: SA.SHOPS.concat(tests).map(sh => { const on = t.includes(sh.id), test = !!sh.test;
