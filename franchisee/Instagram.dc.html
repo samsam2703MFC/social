@@ -23,70 +23,153 @@
 
     <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
       <div style="display:flex;flex-direction:column;gap:4px;">
-        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Compte unique du réseau · géré par le franchiseur · lecture seule</span>
-        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">INSTAGRAM DU RESEAU</h1>
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">{{ eyebrow }}</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">GRILLE INSTAGRAM</h1>
+        <span style="font-size:13px;color:#4A443E;">Le profil tel qu’il sera : les posts programmés au-dessus de ceux déjà en ligne.</span>
       </div>
-      <span style="font-size:11px;color:#666666;">{{ readLabel }}</span>
+      <a href="{{ calHref }}" style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;display:flex;align-items:center;text-decoration:none;color:#222222;">Voir le calendrier</a>
     </header>
 
-    <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
-      <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:40px 20px;text-align:center;font-size:13px;color:#666666;">Lecture du compte Instagram chez Meta…</div>
-    </sc-if>
-
-    <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
-      <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
-        <div style="flex:1 1 560px;min-width:0;max-width:760px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;">
-          <div style="display:flex;align-items:center;gap:14px;">
-            <img src="{{ pic }}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:#F4EFE8;border:2px solid #FFFFFF;box-shadow:0 0 0 2px #DD2A7B;">
-            <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
-              <span style="font-size:16px;font-weight:600;">{{ handle }}</span>
-              <span style="font-size:13px;color:#444444;">{{ name }}</span>
-              <span style="font-size:12px;color:#666666;"><strong style="font-weight:600;color:#222222;">{{ followers }}</strong> abonnés · <strong style="font-weight:600;color:#222222;">{{ nMedia }}</strong> publications affichées</span>
-            </div>
-            <a href="{{ profileHref }}" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px;font-weight:500;white-space:nowrap;">Ouvrir Instagram ↗</a>
-          </div>
-          <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:8px 10px;">{{ errText }}</span></sc-if>
-          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;">
-            <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="9">
-              <a href="{{ t.href }}" target="{{ t.target }}" rel="noopener" title="{{ t.tip }}" style="position:relative;display:block;aspect-ratio:3 / 4;background:#F4EFE8;overflow:hidden;text-decoration:none;">
-                <img src="{{ t.src }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;opacity:{{ t.op }};">
-                <sc-if value="{{ t.soon }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:6px;top:6px;font-size:10px;font-weight:600;background:#D97B29;color:#FFFFFF;border-radius:999px;padding:2px 7px;">{{ t.badge }}</span></sc-if>
-                <sc-if value="{{ t.video }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:6px;top:6px;font-size:11px;color:#FFFFFF;text-shadow:0 1px 3px rgba(0,0,0,0.5);">▶</span></sc-if>
-                <span style="position:absolute;left:0;right:0;bottom:0;padding:16px 6px 5px;font-size:10px;color:#FFFFFF;background:linear-gradient(transparent,rgba(0,0,0,0.55));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.foot }}</span>
-              </a>
-            </sc-for>
+    <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
+      <!-- La grille -->
+      <section style="flex:0 0 auto;background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:14px;display:flex;flex-direction:column;gap:12px;width:484px;max-width:100%;box-sizing:border-box;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <img src="{{ pic }}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:#F4EFE8;border:2px solid #FFFFFF;box-shadow:0 0 0 2px #DD2A7B;flex:0 0 auto;">
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 auto;">
+            <span style="font-size:16px;font-weight:600;">{{ handle }}</span>
+            <span style="font-size:13px;color:#444444;">{{ name }}</span>
+            <span style="font-size:12px;color:#666666;"><strong style="font-weight:600;color:#222222;">{{ followers }}</strong> abonnés · <strong style="font-weight:600;color:#222222;">{{ nMedia }}</strong> en ligne · <strong style="font-weight:600;color:#8D1D2C;">{{ nSched }}</strong> programmé(s)</span>
           </div>
         </div>
-        <aside style="flex:0 1 300px;min-width:260px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;font-size:12px;line-height:1.5;color:#444444;">
-          <span style="font-size:13px;font-weight:500;color:#222222;">Comment ça marche</span>
-          <span>L’Instagram de L’Atelier By est un compte unique pour tout le réseau. Seul le franchiseur y publie.</span>
-          <span>Vos posts partent sur la Page Facebook de votre boutique (menu « Publier »). Vous voyez ici ce qui est en ligne et, en orange, ce que le réseau a programmé.</span>
-          <span>Une idée pour l’Instagram du réseau ? Proposez-la au franchiseur.</span>
-        </aside>
-      </div>
-    </sc-if>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:#666666;">{{ readLabel }}</span>
+          <span style="display:flex;gap:8px;align-items:center;">
+            <a href="{{ profileHref }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;white-space:nowrap;">Ouvrir Instagram ↗</a>
+            <button onClick="{{ refresh }}" disabled="{{ loading }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;">{{ refreshLabel }}</button>
+          </span>
+        </div>
+        <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A4B00;background:#FCE7C8;border-radius:6px;padding:8px 10px;">{{ errText }}</span></sc-if>
+        <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="padding:30px 10px;text-align:center;font-size:13px;color:#666666;">Lecture du compte Instagram chez Meta…</div></sc-if>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;">
+          <sc-for list="{{ cells }}" as="c" hint-placeholder-count="9">
+            <div onClick="{{ c.click }}" title="{{ c.tip }}" style="position:relative;width:100%;height:0;padding-bottom:133.333%;overflow:hidden;background:{{ c.bg }};cursor:pointer;">
+              <sc-if value="{{ c.hasImg }}" hint-placeholder-val="{{ true }}"><img src="{{ c.src }}" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if>
+              <sc-if value="{{ c.isText }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:10px;text-align:center;font-size:11px;font-weight:500;color:#3A3530;">{{ c.alt }}</span></sc-if>
+              <span style="position:absolute;inset:0;box-shadow:{{ c.ring }};pointer-events:none;"></span>
+              <sc-if value="{{ c.isVideo }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:6px;right:6px;font-size:12px;color:#FFFFFF;text-shadow:0 1px 3px rgba(0,0,0,0.5);">▶</span></sc-if>
+              <sc-if value="{{ c.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:6px;left:6px;max-width:calc(100% - 12px);box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;font-weight:600;border-radius:999px;padding:3px 7px;background:{{ c.badgeBg }};color:{{ c.badgeFg }};">{{ c.badge }}</span></sc-if>
+              <sc-if value="{{ c.hasFlag }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:6px;bottom:6px;font-size:10px;font-weight:600;border-radius:6px;padding:2px 6px;background:#FCE7C8;color:#7A4100;">{{ c.flag }}</span></sc-if>
+              <sc-if value="{{ c.hasFoot }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;right:0;bottom:0;padding:16px 6px 5px;font-size:10px;color:#FFFFFF;background:linear-gradient(transparent,rgba(0,0,0,0.55));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.foot }}</span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;padding:20px 0;text-align:center;">{{ emptyText }}</span></sc-if>
+      </section>
+
+      <section style="flex:1 1 340px;min-width:280px;display:flex;flex-direction:column;gap:12px;">
+        <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#FFFFFF;border-radius:12px;border:1.5px solid #8D1D2C;padding:14px 16px;display:flex;flex-direction:column;gap:7px;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8D1D2C;">{{ sel.kind }}</span>
+            <span style="font-size:15px;font-weight:600;line-height:1.35;overflow-wrap:anywhere;">{{ sel.title }}</span>
+            <span style="font-size:13px;color:#3A3530;">{{ sel.when }}</span>
+            <sc-if value="{{ sel.hasStats }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#3A3530;">{{ sel.stats }}</span></sc-if>
+            <span style="font-size:12px;color:#666666;line-height:1.5;">{{ sel.help }}</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+              <sc-if value="{{ sel.hasOpen }}" hint-placeholder-val="{{ false }}"><a href="{{ sel.href }}" target="{{ sel.target }}" rel="noopener" style="border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;background:#8D1D2C;color:#FFFFFF;text-decoration:none;">{{ sel.openLabel }}</a></sc-if>
+              <button onClick="{{ unselect }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;">Fermer</button>
+            </div>
+          </div>
+        </sc-if>
+        <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:16px;display:flex;flex-direction:column;gap:8px;">
+          <span style="font-size:15px;font-weight:600;">Bientôt sur le profil</span>
+          <sc-if value="{{ noSoon }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Rien de programmé pour l’instant.</span></sc-if>
+          <sc-for list="{{ soon }}" as="u" hint-placeholder-count="0">
+            <button onClick="{{ u.open }}" style="text-align:left;border:none;background:transparent;padding:6px 0;border-top:0.5px solid rgba(34,34,34,0.06);cursor:pointer;display:flex;gap:10px;align-items:center;">
+              <img src="{{ u.img }}" alt="" style="width:34px;height:45px;border-radius:4px;object-fit:cover;background:#F5EFE4;flex:0 0 auto;">
+              <span style="display:flex;flex-direction:column;gap:1px;min-width:0;flex:1 1 auto;"><span style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ u.title }}</span><span style="font-size:11px;color:#666666;">{{ u.when }} · {{ u.who }}</span></span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:16px;display:flex;flex-direction:column;gap:8px;">
+          <span style="font-size:15px;font-weight:600;">Légende</span>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px;align-items:center;">
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:18px;height:24px;box-shadow:inset 0 0 0 2px #8D1D2C;box-sizing:border-box;"></span>Programmé</span>
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:18px;height:24px;background:#EAE4DC;"></span>Déjà en ligne (lu chez Instagram)</span>
+            <span style="display:flex;align-items:center;gap:6px;"><span style="font-size:10px;font-weight:600;border-radius:999px;padding:3px 7px;background:#8D1D2C;color:#FFFFFF;">Frise</span>3 posts qui forment une ligne</span>
+          </div>
+        </div>
+        <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:16px;display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.55;color:#3A3530;">
+          <span style="font-size:15px;font-weight:600;color:#222222;">Comment ça marche</span>
+          <sc-for list="{{ how }}" as="h" hint-placeholder-count="3"><span>{{ h }}</span></sc-for>
+        </div>
+      </section>
+    </div>
   </main>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { data: null, loading: true, err: '' };
-  componentDidMount() {
+  state = { data: null, loading: true, err: '', sel: null };
+  componentDidMount() { this.load(); }
+  load() {
     const SF = window.SF; if (!SF || !SF.state()) { this.setState({ loading: false }); return; }
+    this.setState({ loading: true, err: '' });
     SF.instagram().then(r => this.setState({ data: r, loading: false })).catch(e => this.setState({ loading: false, err: e.message || 'erreur' }));
   }
   renderVals() {
-    const SF = window.SF, s = this.state, r = s.data;
-    const base = { hasError: !!(SF && SF.error) || !!s.err, error: (SF && SF.error) || ('Lecture impossible : ' + s.err), loading: s.loading };
-    if (!SF || !r) return Object.assign(base, { ready: false, tiles: [], readLabel: '' });
+    const SF = window.SF, st = SF && SF.state(), s = this.state, r = s.data || {};
     const fmt = (n) => n == null ? '—' : Number(n).toLocaleString('fr-BE');
     const ini = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" rx="32" fill="#C13584"/><text x="32" y="41" font-family="Arial" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">AB</text></svg>');
-    const soon = (r.programmes || []).map(p => ({ src: SF.media(p.src), soon: true, badge: 'Prévu ' + SF.dShort(p.date), video: false, op: 0.92, href: '#', target: '_self', foot: p.title, tip: p.title + ' — programmé le ' + SF.dLabel(p.date) + ' à ' + p.time }));
-    const live = (r.media || []).map(m => ({ src: m.src, soon: false, badge: '', video: !!m.video, op: 1, href: m.permalink || '#', target: '_blank',
-      foot: (m.likes != null ? '♥ ' + fmt(m.likes) : '') + (m.comments != null ? '  💬 ' + fmt(m.comments) : ''), tip: (m.caption || '') + ' — ' + SF.dLabel(String(m.at).slice(0, 10)) }));
-    return Object.assign(base, { ready: true, pic: r.picture || ini, handle: '@' + (r.username || 'instagram'), name: r.name || '', followers: fmt(r.followers), nMedia: (r.media || []).length,
+    const reseau = r.reseau != null ? !!r.reseau : !!(st && st.instagramUnique);
+    const base = { hasError: !!(SF && SF.error) || !!s.err, error: (SF && SF.error) || ('Lecture impossible : ' + s.err), loading: s.loading, calHref: SF ? SF.href('cal') : '#',
+      eyebrow: reseau ? 'Compte unique du réseau · géré par le franchiseur · lecture seule' : 'L’Instagram de votre boutique · lu en direct chez Meta' };
+    if (!SF || !st) return Object.assign(base, { cells: [], soon: [], how: [], pic: ini, handle: '', name: '', followers: '—', nMedia: 0, nSched: 0, readLabel: '', refreshLabel: '' });
+
+    // Les cases, du plus récent au plus ancien : les programmés (une frise = 3 cases), puis les publications en ligne.
+    const raw = [];
+    (r.programmes || []).forEach(p => { if (Array.isArray(p.frise) && p.frise.length === 3) p.frise.forEach((src, j) => raw.push({ sched: true, p, src, tile: j })); else raw.push({ sched: true, p, src: p.src, tile: -1 }); });
+    (r.media || []).forEach(m => raw.push({ sched: false, m, src: m.src }));
+    const when = (p) => SF.dShort(p.date) + ' · ' + p.time;
+    const isSel = (c) => s.sel && ((c.sched && s.sel.p === c.p.id) || (!c.sched && s.sel.m === c.m.id));
+    const cells = raw.map(c => {
+      const p = c.p, first = c.sched && c.tile <= 0, pending = c.sched && p.status === 'À valider';
+      const badge = c.sched ? (first ? (p.frise ? 'Frise · ' : '') + when(p) : '') : (c.m.frise && c.m.frise.tile === 0 ? 'Frise publiée' : '');
+      return { src: SF.media(c.src), hasImg: !!c.src, isText: !c.src, alt: c.sched ? p.title : (c.m.caption || 'Publication'), isVideo: !c.sched && !!c.m.video,
+        bg: c.sched ? '#FFFFFF' : '#EAE4DC', ring: isSel(c) ? 'inset 0 0 0 3px #232220' : c.sched ? 'inset 0 0 0 2px ' + (pending ? '#D97B29' : '#8D1D2C') : 'none',
+        hasBadge: !!badge, badge, badgeBg: c.sched ? (p.frise ? '#8D1D2C' : '#FFFFFF') : '#232220', badgeFg: c.sched ? (p.frise ? '#FFFFFF' : '#8D1D2C') : '#FFFFFF',
+        hasFlag: pending && first, flag: 'à valider',
+        hasFoot: !c.sched && (c.m.likes != null || c.m.comments != null), foot: !c.sched ? ((c.m.likes != null ? '♥ ' + fmt(c.m.likes) : '') + (c.m.comments != null ? '  💬 ' + fmt(c.m.comments) : '')) : '',
+        tip: c.sched ? p.title + ' — programmé le ' + SF.dLabel(p.date) + ' à ' + p.time + (p.frise ? ' · frise, case ' + (c.tile + 1) + '/3' : '') : (c.m.caption || '') + ' — ' + SF.dLabel(String(c.m.at).slice(0, 10)),
+        click: () => this.setState({ sel: c.sched ? { p: p.id } : { m: c.m.id } }) };
+    });
+    let sel = null;
+    if (s.sel && s.sel.p) {
+      const p = (r.programmes || []).find(x => x.id === s.sel.p);
+      if (p) sel = { kind: (p.frise ? 'Frise programmée · 3 posts' : 'Post programmé') + (p.own ? ' · votre post' : ' · réseau'), title: p.title, when: SF.dLabel(p.date) + ' à ' + p.time + (p.status === 'À valider' ? ' · à valider par le réseau' : ''),
+        hasStats: false, help: p.own ? 'Votre post : il apparaîtra ici à sa publication.' : 'Programmé par le réseau sur le compte Instagram' + (reseau ? ' commun' : ' de la boutique') + '. Il prendra cette place à sa publication.',
+        hasOpen: !!p.own, href: SF.href('cal', 'post=' + encodeURIComponent(p.id)), target: '_self', openLabel: 'Voir au calendrier' };
+    } else if (s.sel && s.sel.m) {
+      const m = (r.media || []).find(x => x.id === s.sel.m);
+      if (m) sel = { kind: (m.frise ? 'Frise · ' : '') + (m.type || 'Publication') + ' en ligne', title: m.caption || 'Publication Instagram', when: 'Publié le ' + SF.dLabel(String(m.at).slice(0, 10)) + ' à ' + String(m.at).slice(11, 16),
+        hasStats: m.likes != null || m.comments != null, stats: '♥ ' + fmt(m.likes) + ' j’aime · 💬 ' + fmt(m.comments) + ' commentaire(s)',
+        help: 'Les publications en ligne ne se déplacent pas : la grille suit l’ordre de publication.', hasOpen: !!m.permalink, href: m.permalink, target: '_blank', openLabel: 'Voir sur Instagram ↗' };
+    }
+    const soon = (r.programmes || []).slice().sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).map(p => ({ title: p.title, img: SF.media(Array.isArray(p.frise) ? p.frise[0] : p.src), when: when(p),
+      who: (p.own ? 'votre post' : 'réseau') + (p.frise ? ' · frise' : '') + (p.status === 'À valider' ? ' · à valider' : ''), open: () => this.setState({ sel: { p: p.id } }) }));
+    const lu = r.le ? String(r.le) : '';
+    return Object.assign(base, {
+      pic: r.picture || ini, handle: '@' + (r.username || 'instagram'), name: r.name || '', followers: fmt(r.followers), nMedia: (r.media || []).length, nSched: (r.programmes || []).length,
       profileHref: r.username ? 'https://www.instagram.com/' + r.username + '/' : 'https://www.instagram.com/', hasErr: !!r.erreur, errText: r.erreur || '',
-      tiles: soon.concat(live), readLabel: r.demo ? 'Démonstration' : 'Lu en direct chez Meta' });
+      readLabel: r.demo ? 'Démonstration : publications d’exemple.' : lu ? 'Lu chez Instagram le ' + SF.dShort(lu.slice(0, 10)) + ' à ' + lu.slice(11, 16) : '',
+      refresh: () => this.load(), refreshLabel: s.loading ? 'Lecture…' : 'Relire chez Instagram',
+      cells, empty: !s.loading && cells.length === 0, emptyText: r.erreur ? 'Grille illisible pour l’instant.' : 'Rien de programmé, rien en ligne : la grille est vide.',
+      hasSel: !!sel, sel: sel || {}, unselect: () => this.setState({ sel: null }), soon, noSoon: soon.length === 0,
+      how: reseau ? ['L’Instagram de L’Atelier By est un compte unique pour tout le réseau. Seul le franchiseur y publie.',
+          'Vos posts partent sur la Page Facebook de votre boutique (menu « Publier »). Vous voyez ici ce qui est en ligne et, encadré en rouge, ce que le réseau a programmé.',
+          'Une idée pour l’Instagram du réseau ? Proposez-la au franchiseur.']
+        : ['Le compte Instagram de votre boutique, lu en direct chez Meta : les 30 dernières publications.', 'Au-dessus, encadrés, vos posts et ceux du réseau programmés sur ce compte : ils prendront ces places à leur publication.',
+          'Une frise (3 posts qui forment une ligne) part en bloc : programmez vos posts à plus de 30 minutes d’elle.'],
+    });
   }
 }
 </script>

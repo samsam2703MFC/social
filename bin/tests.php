@@ -907,6 +907,26 @@ $c400 = (static function () { try { return socRoute('GET', '/meta/calendriers')[
 $_GET = [];
 check('période de plus de 100 jours refusée', $c400 === 400);
 
+echo "Espace franchisé : le calendrier Meta de sa boutique (en direct)\n";
+sfSessionOuvrir(['4'], 'Test calendrier', 'code');
+$per = ['du' => date('Y-m-d', strtotime('-7 days')), 'au' => date('Y-m-d', strtotime('+7 days'))];
+[$code, $fc] = $fr('GET', '/franchise/calendrier', [], $per);
+$fcp = array_column($fc['posts'] ?? [], null, 'id');
+check('franchisé : les publications de SA Page et de son Instagram, lues en direct (programmées comprises)', $code === 200 && isset($fcp['mfb-111_9001'], $fcp['mfb-111_9002'], $fcp['mig-m2'])
+    && ($fcp['mfb-111_9002']['status'] ?? '') === 'Programmé' && ($fcp['mfb-111_9001']['stats']['reactions'] ?? null) === 12, json_encode(array_keys($fcp)));
+check('franchisé : rien des autres boutiques (ni leurs publications, ni leurs comptes, ni les tokens)', !isset($fcp['mfb-222_7001']) && array_column($fc['comptes'], 'key') === ['fb:111', 'ig:17841']
+    && !str_contains(json_encode($fc), 'PT111') && !str_contains(json_encode($fc), 'Wavre'), json_encode($fc['comptes']));
+check('franchisé : les champs utiles seulement (ni boutiques, ni marque)', !array_key_exists('shops', $fcp['mfb-111_9001']) && !array_key_exists('marque', $fcp['mfb-111_9001']) && $fcp['mfb-111_9001']['permalink'] === 'https://facebook.com/111/posts/9001');
+[$code] = $fr('GET', '/franchise/calendrier', [], $per + ['shop' => '5']);
+check('franchisé : le calendrier d’une autre boutique est refusé', $code === 403);
+[$code, $fs] = $fr('GET', '/franchise/calendrier/stats', [], ['id' => 'mfb-111_9001', 'compte' => 'fb:111']);
+[$c2] = $fr('GET', '/franchise/calendrier/stats', [], ['id' => 'mfb-222_7001', 'compte' => 'fb:222']);
+[$c3] = $fr('GET', '/franchise/calendrier/stats', [], ['id' => 'mfb-222_7001', 'compte' => 'fb:111']);
+check('franchisé : les vues d’une publication de sa Page ; celles d’une autre Page refusées', $code === 200 && $fs['vues'] === 1234 && $c2 === 404 && $c3 === 404, json_encode([$code, $fs['vues'] ?? null, $c2, $c3]));
+[$code] = $fr('GET', '/franchise/calendrier', [], ['du' => '2026-01-01', 'au' => '2026-12-31']);
+check('franchisé : période trop longue refusée', $code === 400);
+unset($_COOKIE[SF_COOKIE]);
+
 echo "Liens du webshop (boutique, catégorie, sous-catégorie, produit)\n";
 // Le plan du webshop (catégorie → groupe, produit → catégorie) tel que le catalogue lu le laisse en cache.
 socSettingPut('tfb_cache_nav', ['v' => 1, 'shops' => ['4' => ['le' => time(), 'data' => [
@@ -1053,6 +1073,24 @@ sfSessionOuvrir(['4'], 'Test IG', 'code');
     [$code, $vu] = $fr('GET', '/franchise/instagram');
     check('franchisé : vue en lecture sur l’Instagram du réseau (profil, publications, programmés)', $code === 200 && $vu['username'] === 'latelierby.halle' && count($vu['media']) === 2
         && $vu['followers'] === 2300, json_encode($vu));
+    $progIds = array_column($vu['programmes'], 'id');
+    check('franchisé : la grille du réseau, avec au-dessus ce qui y est programmé (ni dark post, ni passé)', $vu['reseau'] === true && in_array('pu1', $progIds, true) === false
+        && array_filter($vu['programmes'], static fn ($p) => $p['status'] === 'Programmé') == array_values(array_filter($vu['programmes'], static fn ($p) => $p['status'] === 'Programmé')), json_encode($vu['programmes']));
+    $pu2 = array_merge($pu, ['id' => 'pu2', 'date' => date('Y-m-d', strtotime('+3 days')), 'time' => '08:00', 'title' => 'Prochain du réseau']);
+    socStateSave(['changes' => ['posts' => ['upsert' => [$pu2]]]]);
+    [, $vu2] = $fr('GET', '/franchise/instagram');
+    $dates = array_map(static fn ($p) => $p['date'] . $p['time'], $vu2['programmes']); $tri = $dates; rsort($tri);
+    check('franchisé : un post du réseau programmé sur Instagram s’ajoute au-dessus de la grille, du plus récent au plus ancien', in_array('pu2', array_column($vu2['programmes'], 'id'), true)
+        && $dates === $tri && !array_filter($vu2['programmes'], static fn ($p) => $p['own']), json_encode($vu2['programmes']));
+    sfReglesPut(array_merge(sfRegles(), ['voirReseau' => false]));
+    [, $vu3] = $fr('GET', '/franchise/instagram');
+    [, $fc3] = $fr('GET', '/franchise/calendrier', [], ['du' => date('Y-m-d', strtotime('-7 days')), 'au' => date('Y-m-d', strtotime('+7 days'))]);
+    check('« voir les posts du réseau » fermé : ni les programmés du réseau, ni l’Instagram du réseau au calendrier', !in_array('pu2', array_column($vu3['programmes'], 'id'), true)
+        && !in_array('ig:17841', array_column($fc3['comptes'] ?? [], 'key'), true), json_encode([$vu3['programmes'], $fc3['comptes'] ?? null]));
+    sfReglesPut(array_merge(sfRegles(), ['voirReseau' => true]));
+    [, $fc4] = $fr('GET', '/franchise/calendrier', [], ['du' => date('Y-m-d', strtotime('-7 days')), 'au' => date('Y-m-d', strtotime('+7 days'))]);
+    check('Instagram unique : au calendrier de la boutique, sa Page et l’Instagram du réseau (signalé)', array_column($fc4['comptes'] ?? [], 'reseau', 'key') === ['fb:111' => false, 'ig:17841' => true], json_encode($fc4['comptes'] ?? null));
+    socStateSave(['changes' => ['posts' => ['delete' => ['pu2']]]]);
 }
 unset($_COOKIE[SF_COOKIE]);
 socSettingPut('instagram_unique', null, false);
@@ -1446,6 +1484,27 @@ check('photo du catalogue (R2) rendue par le module, type lu dans ses octets', $
 check('hôte hors du webshop, http, ou adresse détournée : refusés (422)', $media('https://exemple.com/x.webp')[0] === 422 && $media('http://cdn.r2.dev/x.webp')[0] === 422
     && $media('https://cdn.r2.dev@exemple.com/x.webp')[0] === 422 && $media('file:///etc/passwd')[0] === 422 && $media('')[0] === 422);
 check('réponse qui n’est pas une image, ou image absente : 502', $media('https://cdn.r2.dev/faux.webp')[0] === 502 && $media('https://cdn.r2.dev/absente.webp')[0] === 502);
+
+echo "Espace franchisé : la photo du webshop d'un produit, le visuel personnalisable\n";
+$fmedia = static function (string $u, array $q = []): array { $_GET = ['u' => $u] + $q; try { return socRoute('GET', '/franchise/media/webshop'); } catch (HttpError $e) { return [$e->status, $e->getMessage()]; } finally { $_GET = []; } };
+unset($_COOKIE[SF_COOKIE]);
+check('franchisé sans session : la photo du webshop est refusée (401)', $fmedia('https://cdn.r2.dev/webshop/p11.webp')[0] === 401);
+sfSessionOuvrir(['4'], 'Test photo', 'code');
+[$code, $f] = $fmedia('https://cdn.r2.dev/webshop/p11.webp');
+check('franchisé : la photo du produit (R2) servie par le module ; autre hôte ou autre boutique refusés', $code === 200 && $f instanceof SocFichier && $f->type === 'image/webp'
+    && $fmedia('https://exemple.com/x.webp')[0] === 422 && $fmedia('https://cdn.r2.dev/webshop/p11.webp', ['shop' => '5'])[0] === 403);
+// Le catalogue du webshop de la boutique (en cache) donne la photo du produit 1 ; le catalogue de caisse, ses produits.
+$navAvant = socSetting('tfb_cache_nav');
+socSettingPut('tfb_cache_nav', ['v' => 1, 'shops' => ['4' => ['le' => time(), 'data' => ['groupes' => [], 'categories' => [], 'gammes' => [],
+    'produits' => [['id' => 1, 'name' => 'Brioche croustillante', 'image' => 'https://cdn.r2.dev/webshop/p1.webp']]]]]], false);
+socSettingPut('tfb_cache_catalogue_4', null, false);
+$catF = array_column(sfCatalogue('4'), null, 'apiId');
+check('catalogue de la boutique : chaque produit avec sa photo du webshop quand il en a une', ($catF[1]['photo'] ?? null) === 'https://cdn.r2.dev/webshop/p1.webp' && $catF[1]['img'] !== '', json_encode(array_values($catF)));
+socSettingPut('tfb_cache_nav', $navAvant, false); socSettingPut('tfb_cache_catalogue_4', null, false);
+unset($_COOKIE[SF_COOKIE]);
+check('règle « personnaliser le visuel » (format, couleur des textes) : ouverte par défaut, le franchiseur peut la fermer', sfRegles()['persoVisuel'] === true
+    && sfReglesPut(array_merge(sfRegles(), ['persoVisuel' => false]))['persoVisuel'] === false && sfRegles()['persoVisuel'] === false);
+sfReglesPut(array_merge(sfRegles(), ['persoVisuel' => true]));
 
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');

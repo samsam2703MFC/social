@@ -96,16 +96,17 @@ function socCalDuModule(): array
  * posts programmés dans Meta Business Suite qui tombent dans la période.
  * Rend ['comptes' => profils (photo, nom, boutique, compteurs), 'posts' => …].
  */
-function socCalendriersLire(string $du, string $au): array
+function socCalendriersLire(string $du, string $au, ?callable $garder = null): array
 {
     if (!Meta::configured()) { throw new HttpError(409, 'token Meta absent : saisissez-le dans Paramètres → API Meta → Clés d’accès Meta'); }
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $au) || $au < $du) { throw new HttpError(400, 'période invalide (du, au : AAAA-MM-JJ)'); }
     if ((strtotime($au) - strtotime($du)) / 86400 > 100) { throw new HttpError(400, 'période trop longue : 100 jours au plus'); }
     $t0 = strtotime($du . ' 00:00:00'); $t1 = strtotime($au . ' 23:59:59');
     $out = ['du' => $du, 'au' => $au, 'le' => date('Y-m-d H:i'), 'comptes' => [], 'posts' => [], 'erreurs' => []];
-    try { $comptes = socCalComptes(); }
+    // `$garder` : les comptes à relire (l'espace franchisé : la Page de la boutique et son Instagram).
+    try { $comptes = $garder === null ? socCalComptes() : array_filter(socCalComptes(), $garder); }
     catch (MetaError $e) { $comptes = []; $out['erreurs'][] = 'Pages du System User : ' . $e->getMessage(); }
-    if (!$comptes && !$out['erreurs']) { $out['erreurs'][] = 'aucune Page visible du System User (Business Manager → Utilisateurs système → Ressources)'; }
+    if (!$comptes && !$out['erreurs'] && $garder === null) { $out['erreurs'][] = 'aucune Page visible du System User (Business Manager → Utilisateurs système → Ressources)'; }
     $duModule = socCalDuModule();
 
     foreach ($comptes as $key => $c) {

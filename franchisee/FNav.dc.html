@@ -66,7 +66,7 @@ class Component extends DCLogic {
     if (!st) return { items: [], shops: [] };
     const active = this.props.active || 'cal', r = st.rules, q = st.quota || { used: 0, max: r.quotaSemaine };
     const refused = st.posts.filter(p => p.own && p.status === 'Refusé').length, pending = st.posts.filter(p => p.own && p.status === 'À valider').length;
-    const defs = [['cal', 'Mon calendrier', refused, '#8D1D2C'], ['pub', 'Publier', 0, '#8D1D2C'], ['promo', 'Mes promotions', pending, '#D97B29']].concat(r.voirCampagnes ? [['camp', 'Opérations du réseau', 0, '#8D1D2C']] : []).concat(r.voirSuivi !== false ? [['suivi', 'Suivi de ma boutique', 0, '#8D1D2C']] : []).concat(st.instagramUnique ? [['ig', 'Instagram du réseau', 0, '#8D1D2C']] : []);
+    const defs = [['cal', 'Mon calendrier', refused, '#8D1D2C'], ['pub', 'Publier', 0, '#8D1D2C'], ['promo', 'Mes promotions', pending, '#D97B29']].concat(r.voirCampagnes ? [['camp', 'Opérations du réseau', 0, '#8D1D2C']] : []).concat(r.voirSuivi !== false ? [['suivi', 'Suivi de ma boutique', 0, '#8D1D2C']] : []).concat(st.grilleInstagram || st.instagramUnique ? [['ig', st.instagramUnique ? 'Grille Instagram du réseau' : 'Grille Instagram', 0, '#8D1D2C']] : []);
     const jours = [1, 2, 3, 4, 5, 6, 0].filter(j => (r.jours || []).includes(j)).map(j => SF.DAYS[j]);
     const name = (st.me && st.me.name) || 'Gérant';
     return {

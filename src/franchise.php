@@ -32,6 +32,8 @@ function sfReglesDefaut(): array
     return ['actif' => true, 'validation' => 'modele', 'quotaSemaine' => 3, 'delaiMinHeures' => 24, 'horizonJours' => 30,
         'jours' => [1, 2, 3, 4, 5, 6, 0], 'heureMin' => '07:00', 'heureMax' => '20:00', 'fb' => true, 'ig' => true,
         'remiseMax' => 30, 'promoDureeMax' => 14, 'voirReseau' => true, 'voirCampagnes' => true, 'voirResultats' => true, 'voirSuivi' => true,
+        // Le franchisé peut choisir le format du visuel (carré, portrait) et la couleur de chaque texte (palette de la marque).
+        'persoVisuel' => true,
         'message' => 'Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By.'];
 }
 
@@ -58,6 +60,7 @@ function sfReglesPut(array $in): array
         'remiseMax' => max(0, min(90, (int) ($in['remiseMax'] ?? $d['remiseMax']))),
         'promoDureeMax' => max(1, min(90, (int) ($in['promoDureeMax'] ?? $d['promoDureeMax']))),
         'voirReseau' => (bool) ($in['voirReseau'] ?? true), 'voirCampagnes' => (bool) ($in['voirCampagnes'] ?? true), 'voirResultats' => (bool) ($in['voirResultats'] ?? true), 'voirSuivi' => (bool) ($in['voirSuivi'] ?? true),
+        'persoVisuel' => (bool) ($in['persoVisuel'] ?? true),
         'message' => mb_substr(trim((string) ($in['message'] ?? $d['message'])), 0, 600),
     ];
     if ($r['heureMax'] <= $r['heureMin']) { $r['heureMax'] = $d['heureMax']; $r['heureMin'] = $d['heureMin']; }
@@ -273,22 +276,26 @@ function sfCatalogueBrut(string $shop): array
 {
     $cle = 'tfb_cache_catalogue_' . preg_replace('/\W/', '', $shop);
     $c = socSetting($cle);
-    // v2 : les articles disent s'ils sont vendus sur le webshop (lien produit du webshop).
-    if (is_array($c) && ($c['v'] ?? 1) === 3 && ($c['le'] ?? 0) > time() - 21600 && !empty($c['items'])) { return $c['items']; }
+    // v3 : les articles disent s'ils sont vendus sur le webshop (lien produit du webshop) ; v4 : avec leur photo du webshop.
+    if (is_array($c) && ($c['v'] ?? 1) === 4 && ($c['le'] ?? 0) > time() - 21600 && !empty($c['items'])) { return $c['items']; }
     try {
         $fr = Tfb::liste(Tfb::get('/shops/' . rawurlencode($shop) . '/products/available'));
         $nl = [];
         try { foreach (Tfb::liste(Tfb::get('/shops/' . rawurlencode($shop) . '/products/available?lang_code=nl')) as $p) { $nl[(string) $p['id']] = (string) ($p['name'] ?? ''); } }
         catch (Throwable $e) { /* sans NL */ }
+        // La photo du produit sur le webshop (Cloudflare R2), lue au catalogue du webshop de la boutique (30 min de cache).
+        $photos = [];
+        try { foreach ((array) (socNavCatalogue($shop)['produits'] ?? []) as $w) { if (!empty($w['image'])) { $photos[(int) $w['id']] = (string) $w['image']; } } }
+        catch (Throwable $e) { /* sans photos : l'illustration du design system */ }
         $items = [];
         foreach ($fr as $p) {
             $cat = (string) ($p['category_name'] ?? '');
             if (empty($p['is_active']) || preg_match('/^B\.?2\.?B/i', $cat)) { continue; }
             $prix = is_numeric($p['portion_price'] ?? null) ? (float) $p['portion_price'] : (is_numeric($p['suggested_sale_price'] ?? null) ? (float) $p['suggested_sale_price'] : null);
             $items[] = ['id' => 'p' . $p['id'], 'apiId' => (int) $p['id'], 'webshop' => !empty($p['webshop_active']), 'categoryId' => (int) ($p['id_category'] ?? 0), 'name' => (string) $p['name'], 'nameNl' => ($nl[(string) $p['id']] ?? '') ?: (string) $p['name'],
-                'price' => $prix !== null && $prix > 0 ? number_format($prix, 2, ',', '') : '', 'img' => socIllus($cat, (string) $p['name']), 'gamme' => $cat];
+                'price' => $prix !== null && $prix > 0 ? number_format($prix, 2, ',', '') : '', 'img' => socIllus($cat, (string) $p['name']), 'photo' => $photos[(int) $p['id']] ?? null, 'gamme' => $cat];
         }
-        if ($items) { socSettingPut($cle, ['v' => 3, 'le' => time(), 'items' => $items], false); return $items; }
+        if ($items) { socSettingPut($cle, ['v' => 4, 'le' => time(), 'items' => $items], false); return $items; }
     } catch (Throwable $e) { /* repli */ }
     if (is_array($c['items'] ?? null) && $c['items']) { return $c['items']; }
     return array_values(array_map(static fn ($p) => array_intersect_key($p, array_flip(['id', 'name', 'nameNl', 'price', 'img', 'gamme'])),
@@ -439,6 +446,8 @@ function sfEtat(string $shop, array $session): array
         'rules' => array_replace($r, ['ig' => $r['ig'] && !socIgUnique()]), 'templates' => sfModeles(true), 'posts' => $posts, 'campaigns' => $camps, 'catalogue' => sfCatalogue($shop),
         'quota' => ['week' => sfLundi(date('Y-m-d')), 'used' => sfQuotaUtilise($shop, date('Y-m-d')), 'max' => $r['quotaSemaine']],
         'instagramUnique' => socIgUnique(),
+        // La grille Instagram de l'espace : celle du réseau (Instagram unique) ou celle du compte de la boutique.
+        'grilleInstagram' => socIgUnique() || (string) ($s['ids']['instagram_user_id'] ?? '') !== '',
         // Catégorie → groupe, produit → catégorie : les liens directs du webshop (socWebshopUrl).
         'webshopPlan' => socWebshopPlanCache(),
         'webshopUrl' => rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/',
@@ -625,19 +634,78 @@ function sfSuivi(string $shop, int $jours): array
 }
 
 /**
- * La vue du franchisé sur l'Instagram du réseau (compte unique, géré par le
- * franchiseur) : le profil et ses dernières publications, lus en direct chez
- * Meta, plus ce que le réseau y a programmé si la règle « voir les posts du
- * réseau » le permet. Lecture seule.
+ * Les comptes Meta que voit la boutique : sa Page Facebook, son Instagram (s'il lui est
+ * propre) et, en Instagram unique, celui du réseau si la règle « voir les posts du réseau »
+ * le permet. Clés `fb:…` / `ig:…` de socCalComptes().
  */
-function sfInstagram(): array
+function sfCalComptes(string $shop): array
 {
-    if (!socIgUnique()) { throw new HttpError(404, 'Chaque boutique a son propre Instagram : voir « Mon calendrier ».'); }
-    $b = socBrand();
-    $ig = (string) $b['ids']['instagram_user_id'];
-    $tok = socIgToken($ig, (string) $b['ids']['page_id']);
-    $out = ['username' => '', 'name' => '', 'picture' => null, 'followers' => null, 'media' => [], 'programmes' => [], 'erreur' => null, 'le' => date('Y-m-d H:i')];
+    $unique = socIgUnique();
+    $igReseau = $unique && sfRegles()['voirReseau'] ? (string) (socBrand()['ids']['instagram_user_id'] ?? '') : '';
+    $page = (string) (socShop($shop)['ids']['page_id'] ?? '');
+    $out = [];
+    foreach (socCalComptes() as $k => $c) {
+        $saPage = $c['type'] === 'facebook' && ((string) $c['shop'] === $shop || ($page !== '' && (string) $c['id'] === $page));
+        if ($saPage || ($c['type'] === 'instagram' && !$unique && (string) $c['shop'] === $shop)) { $out[$k] = false; }
+        elseif ($c['type'] === 'instagram' && $igReseau !== '' && (string) $c['id'] === $igReseau) { $out[$k] = true; }
+    }
+    return $out;  // clé → compte du réseau ?
+}
+
+/**
+ * Le calendrier Meta de la boutique : les publications de sa Page (et de son Instagram, ou de
+ * celui du réseau) entre deux dates, lues en direct chez Meta comme au Calendrier du franchiseur
+ * (src/calendriers.php), plus ce qui y est programmé dans Meta Business Suite. Rien des autres
+ * boutiques : ni leurs comptes, ni le détail technique des erreurs.
+ */
+function sfCalendrier(string $shop, string $du, string $au): array
+{
+    $vide = ['du' => $du, 'au' => $au, 'le' => date('Y-m-d H:i'), 'comptes' => [], 'posts' => [], 'erreurs' => []];
+    if (!Meta::configured()) { return $vide + ['message' => 'Le réseau n’a pas encore relié ses comptes Meta.']; }
+    try { $garde = sfCalComptes($shop); }
+    catch (MetaError $e) { return $vide + ['message' => 'Les comptes Meta du réseau sont illisibles pour l’instant.']; }
+    if (!$garde) { return $vide + ['message' => 'La Page Facebook de votre boutique n’est pas encore reliée par le réseau.']; }
+    $r = socCalendriersLire($du, $au, static fn ($c) => isset($garde[$c['key']]));
+    $comptes = array_map(static fn ($c) => ['key' => $c['key'], 'type' => $c['type'], 'name' => $c['name'], 'username' => $c['username'], 'picture' => $c['picture'],
+        'link' => $c['link'], 'reseau' => $garde[$c['key']] ?? false, 'publies' => $c['publies'], 'programmes' => $c['programmes'],
+        'erreur' => $c['erreur'] !== null ? 'lecture impossible chez Meta pour l’instant' : null], $r['comptes']);
+    $champs = array_flip(['id', 'channel', 'account', 'accountName', 'date', 'time', 'type', 'title', 'text', 'img', 'status', 'permalink', 'stats', 'campaign']);
+    $posts = array_map(static fn ($p) => array_intersect_key($p, $champs), $r['posts']);
+    return ['du' => $r['du'], 'au' => $r['au'], 'le' => $r['le'], 'comptes' => $comptes, 'posts' => array_values($posts),
+        'erreurs' => $r['erreurs'] ? ['une partie des publications n’a pas pu être lue chez Meta'] : [], 'message' => null];
+}
+
+/** Les chiffres (vues, personnes touchées…) d'une publication du calendrier de la boutique, lus en direct. */
+function sfCalStats(string $shop, string $id, string $compte): array
+{
+    if (!isset(sfCalComptes($shop)[$compte])) { throw new HttpError(404, 'Cette publication n’est pas à votre boutique.'); }
+    $r = socCalStats($id, $compte);
+    if ($r['motif'] !== null) { $r['motif'] = 'Les chiffres détaillés ne sont pas partagés par Meta pour cette publication.'; }
+    return $r;
+}
+
+/**
+ * La grille Instagram de la boutique, comme la « Grille Instagram » du franchiseur : le profil
+ * et ses dernières publications lus en direct chez Meta, et au-dessus, du plus récent au plus
+ * ancien, ce qui est programmé (une frise = 3 cases). En Instagram unique, c'est le compte du
+ * réseau (ses posts programmés si la règle « voir les posts du réseau » le permet) ; sinon celui
+ * de la boutique. Lecture seule : le franchisé ne déplace rien.
+ */
+function sfInstagram(string $shop): array
+{
+    $unique = socIgUnique();
+    $s = $unique ? socBrand() : socShop($shop);
+    $ig = (string) ($s['ids']['instagram_user_id'] ?? '');
+    $compte = $unique ? 'marque' : $shop;
+    $out = ['reseau' => $unique, 'username' => '', 'name' => '', 'picture' => null, 'followers' => null, 'media' => [], 'programmes' => [], 'erreur' => null, 'le' => date('Y-m-d H:i')];
+    if ($ig === '') { $out['erreur'] = 'Votre boutique n’a pas de compte Instagram relié par le réseau.'; return $out; }
+    // Les frises déjà publiées par le module : leurs ids Instagram, tuile 3 → 1.
+    $frises = [];
+    foreach (socItems('posts') as $p) {
+        foreach (array_values((array) ($p['frise']['ig'][$compte] ?? [])) as $j => $mid) { if (is_scalar($mid)) { $frises[(string) $mid] = ['title' => (string) ($p['title'] ?? ''), 'tile' => 2 - $j]; } }
+    }
     try {
+        $tok = socIgToken($ig, (string) ($s['ids']['page_id'] ?? ''));
         $pr = Meta::call('GET', $ig, ['fields' => 'username,name,profile_picture_url,followers_count,media_count'], $tok);
         $out['username'] = (string) ($pr['username'] ?? ''); $out['name'] = (string) ($pr['name'] ?? '');
         $out['picture'] = (string) ($pr['profile_picture_url'] ?? '') ?: null; $out['followers'] = isset($pr['followers_count']) ? (int) $pr['followers_count'] : null;
@@ -645,19 +713,28 @@ function sfInstagram(): array
         foreach ((array) ($r['data'] ?? []) as $x) {
             if (empty($x['id'])) { continue; }
             $video = strtoupper((string) ($x['media_type'] ?? '')) === 'VIDEO';
+            $pt = strtoupper((string) ($x['media_product_type'] ?? ''));
             $out['media'][] = ['id' => (string) $x['id'], 'src' => (string) (($video ? ($x['thumbnail_url'] ?? '') : '') ?: ($x['media_url'] ?? '')), 'video' => $video,
+                'type' => $pt === 'REELS' ? 'Reel' : (strtoupper((string) ($x['media_type'] ?? '')) === 'CAROUSEL_ALBUM' ? 'Carrousel' : ($video ? 'Vidéo' : 'Photo')),
                 'permalink' => (string) ($x['permalink'] ?? ''), 'at' => date('Y-m-d H:i', strtotime((string) ($x['timestamp'] ?? '')) ?: time()),
-                'caption' => mb_substr((string) ($x['caption'] ?? ''), 0, 200), 'likes' => isset($x['like_count']) ? (int) $x['like_count'] : null, 'comments' => isset($x['comments_count']) ? (int) $x['comments_count'] : null];
+                'caption' => mb_substr((string) ($x['caption'] ?? ''), 0, 300), 'likes' => isset($x['like_count']) ? (int) $x['like_count'] : null,
+                'comments' => isset($x['comments_count']) ? (int) $x['comments_count'] : null, 'frise' => $frises[(string) $x['id']] ?? null];
         }
-    } catch (MetaError $e) { $out['erreur'] = 'Instagram illisible pour l’instant : ' . $e->getMessage(); }
-    if (sfRegles()['voirReseau']) {
-        foreach (socItems('posts') as $p) {
-            if (($p['status'] ?? '') !== 'Programmé' || !empty($p['dark']) || !socShopsIg($p)) { continue; }
-            $out['programmes'][] = ['title' => (string) ($p['title'] ?? ''), 'date' => (string) ($p['date'] ?? ''), 'time' => (string) ($p['time'] ?? ''),
-                'src' => (string) (((array) ($p['frise']['tiles'] ?? []))[0] ?? ($p['img'] ?? ''))];
-        }
-        usort($out['programmes'], static fn ($a, $c) => strcmp($c['date'] . $c['time'], $a['date'] . $a['time']));
+    } catch (MetaError $e) { $out['erreur'] = 'Instagram illisible pour l’instant chez Meta.'; }
+    // Au-dessus : les posts programmés sur ce compte (ceux du réseau si la règle le permet, ceux de la boutique toujours).
+    $voir = sfRegles()['voirReseau'];
+    foreach (socItems('posts') as $p) {
+        $propre = ($p['origin'] ?? '') === 'franchise' && array_map('strval', (array) ($p['shops'] ?? [])) === [$shop];
+        $st = (string) ($p['status'] ?? '');
+        if (!empty($p['dark']) || !($st === 'Programmé' || ($propre && $st === 'À valider')) || !($propre || $voir)) { continue; }
+        if (!in_array($compte, socShopsIg($p), true)) { continue; }
+        $t = strtotime(($p['date'] ?? '') . ' ' . ($p['time'] ?? ''));
+        if ($t === false || $t < time() - 300) { continue; }
+        $tuiles = array_values(array_filter(array_map('strval', (array) ($p['frise']['tiles'] ?? [])), static fn ($u) => $u !== ''));
+        $out['programmes'][] = ['id' => (string) $p['id'], 'title' => (string) ($p['title'] ?? ''), 'date' => (string) ($p['date'] ?? ''), 'time' => (string) ($p['time'] ?? ''),
+            'status' => $st, 'own' => $propre, 'frise' => count($tuiles) === 3 ? $tuiles : null, 'src' => (string) ($p['img'] ?? '')];
     }
+    usort($out['programmes'], static fn ($a, $c) => strcmp($c['date'] . $c['time'], $a['date'] . $a['time']));
     return $out;
 }
 
@@ -694,8 +771,12 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'POST' && $path === '/franchise/posts') { return [200, ['post' => sfPostCreer($shop, body(), $session), 'quota' => ['used' => sfQuotaUtilise($shop, date('Y-m-d')), 'max' => sfRegles()['quotaSemaine']]]]; }
     if ($method === 'POST' && preg_match('#^/franchise/posts/([\w.\-]{1,64})/annuler$#', $path, $m)) { sfPostAnnuler($shop, $m[1]); return [200, ['ok' => true]]; }
     if ($method === 'GET' && $path === '/franchise/suivi') { return [200, sfSuivi($shop, (int) ($_GET['jours'] ?? 28))]; }
-    if ($method === 'GET' && $path === '/franchise/instagram') { return [200, sfInstagram()]; }
+    if ($method === 'GET' && $path === '/franchise/instagram') { return [200, sfInstagram($shop)]; }
+    if ($method === 'GET' && $path === '/franchise/calendrier') { return [200, sfCalendrier($shop, (string) ($_GET['du'] ?? ''), (string) ($_GET['au'] ?? ''))]; }
+    if ($method === 'GET' && $path === '/franchise/calendrier/stats') { return [200, sfCalStats($shop, (string) ($_GET['id'] ?? ''), (string) ($_GET['compte'] ?? ''))]; }
     if ($method === 'GET' && $path === '/franchise/operations') { return [200, sfOperations($shop)]; }
+    // La photo d'un produit du webshop (R2, sans CORS) servie par le module : le visuel qui la dessine s'exporte.
+    if ($method === 'GET' && $path === '/franchise/media/webshop') { return [200, socMediaWebshop((string) ($_GET['u'] ?? ''))]; }
     throw new HttpError(404, 'route inconnue');
 }
 

@@ -64,8 +64,10 @@ class Component extends DCLogic {
     this.setState({ busy: true, err: '' });
     try {
       const r = await SF.api('POST', '/franchise/connexion', body);
-      try { localStorage.setItem('sf.shop', r.shops[0]); } catch (e) {}
-      location.href = SF.href('cal', 'shop=' + encodeURIComponent(r.shops[0]));
+      // La boutique demandée dans l'adresse (?shop=4) si elle est au compte, sinon la première.
+      const want = new URLSearchParams(location.search).get('shop'), sid = want && r.shops.map(String).includes(want) ? want : String(r.shops[0]);
+      try { localStorage.setItem('sf.shop', sid); } catch (e) {}
+      location.href = SF.href('cal', 'shop=' + encodeURIComponent(sid));
     } catch (e) { this.setState({ busy: false, err: e.message, password: '' }); }
   }
   renderVals() {

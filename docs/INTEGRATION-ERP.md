@@ -90,4 +90,6 @@ Franchiseur (session `auth`) :
 
 Espace franchisé (session franchisé, limitée à ses boutiques) :
 `POST /franchise/connexion` · `POST /franchise/deconnexion` · `GET /franchise/session` ·
-`GET /franchise/etat` · `POST /franchise/posts` · `POST /franchise/posts/{id}/annuler` · `GET /franchise/suivi?jours=7|28|90` · `GET /franchise/instagram`.
+`GET /franchise/etat` · `POST /franchise/posts` · `POST /franchise/posts/{id}/annuler` · `GET /franchise/suivi?jours=7|28|90` · `GET /franchise/instagram` ·
+`GET /franchise/operations` · `GET /franchise/calendrier?du=&au=` · `GET /franchise/calendrier/stats?id=&compte=` · `GET /franchise/media/webshop?u=`
+(toutes avec `?shop=` : la boutique, vérifiée contre la session).

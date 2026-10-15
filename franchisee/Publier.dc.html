@@ -13,6 +13,7 @@
   <script src="config.js"></script>
   <script src="franchise-data.js"></script>
   <script src="franchise-visuel.js"></script>
+  <script src="ds-catalogue.js"></script>
   <style>
     html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
     /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
@@ -67,7 +68,7 @@
               <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:300px;overflow:auto;">
                 <sc-for list="{{ products }}" as="p" hint-placeholder-count="6">
                   <button onClick="{{ p.pick }}" style="padding:0;border-radius:8px;border:2px solid {{ p.ring }};background:#FFFFFF;cursor:pointer;overflow:hidden;text-align:left;display:flex;flex-direction:column;">
-                    <span style="display:block;height:58px;background:#F4EFE8;position:relative;"><img src="{{ p.img }}" alt="" style="position:absolute;left:8px;top:5px;width:calc(100% - 16px);height:48px;object-fit:contain;"></span>
+                    <span style="display:block;height:72px;background:#F4EFE8;position:relative;overflow:hidden;"><img src="{{ p.img }}" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:{{ p.fit }};"></span>
                     <span style="padding:6px 8px;display:flex;flex-direction:column;gap:1px;"><span style="font-size:11px;font-weight:500;line-height:1.25;color:#222222;">{{ p.name }}</span><span style="font-size:10px;color:#666666;">{{ p.price }}</span></span>
                   </button>
                 </sc-for>
@@ -114,13 +115,16 @@
             <span style="font-size:11px;color:#666666;line-height:1.45;word-break:break-all;">{{ linkLabel }}</span>
           </section>
 
-          <sc-if value="{{ needPhoto }}" hint-placeholder-val="{{ false }}">
-            <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:8px;">
+          <sc-if value="{{ showPhotoSec }}" hint-placeholder-val="{{ false }}">
+            <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:10px;">
               <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">{{ photoTitle }}</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <sc-for list="{{ photoChoices }}" as="pc" hint-placeholder-count="3"><button onClick="{{ pc.pick }}" disabled="{{ pc.dis }}" title="{{ pc.tip }}" style="border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid {{ pc.border }};background:{{ pc.bg }};color:{{ pc.fg }};opacity:{{ pc.op }};">{{ pc.label }}</button></sc-for>
+              </div>
               <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                <sc-if value="{{ hasPhoto }}" hint-placeholder-val="{{ false }}"><img src="{{ photo }}" alt="Votre photo" style="width:72px;height:72px;object-fit:cover;border-radius:8px;"></sc-if>
-                <label style="height:44px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:13px;font-weight:500;display:flex;align-items:center;">{{ photoBtn }}<input type="file" accept="image/*" onChange="{{ onPhoto }}" style="display:none;"></label>
-                <sc-if value="{{ canDropPhoto }}" hint-placeholder-val="{{ false }}"><button onClick="{{ dropPhoto }}" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;">Utiliser l’image du catalogue</button></sc-if>
+                <sc-if value="{{ hasThumb }}" hint-placeholder-val="{{ false }}"><img src="{{ thumb }}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px;background:#F5EFE4;"></sc-if>
+                <sc-if value="{{ canUpload }}" hint-placeholder-val="{{ false }}"><label style="height:44px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:13px;font-weight:500;display:flex;align-items:center;">{{ photoBtn }}<input type="file" accept="image/*" onChange="{{ onPhoto }}" style="display:none;"></label></sc-if>
+                <span style="font-size:11px;color:{{ photoNoteFg }};line-height:1.45;flex:1 1 180px;">{{ photoNote }}</span>
               </div>
             </section>
           </sc-if>
@@ -133,6 +137,12 @@
               <sc-for list="{{ channels }}" as="c" hint-placeholder-count="2"><label style="display:flex;align-items:center;gap:6px;font-size:13px;color:{{ c.fg }};cursor:pointer;"><input type="checkbox" checked="{{ c.on }}" onChange="{{ c.toggle }}" disabled="{{ c.dis }}" style="accent-color:#8D1D2C;margin:0;">{{ c.label }}</label></sc-for>
             </div>
             <span style="font-size:11px;color:#666666;line-height:1.5;">{{ rulesNote }}</span>
+            <div style="display:flex;flex-direction:column;gap:4px;background:#F4EFE8;border-radius:8px;padding:9px 11px;">
+              <span style="font-size:12px;font-weight:500;color:#222222;">{{ jourTitle }}</span>
+              <sc-for list="{{ jourItems }}" as="ji" hint-placeholder-count="0"><span style="font-size:12px;color:#3A3530;display:flex;align-items:center;gap:6px;"><span style="width:7px;height:7px;border-radius:50%;background:{{ ji.dot }};flex:0 0 auto;"></span><strong style="font-weight:600;">{{ ji.time }}</strong> {{ ji.who }} · {{ ji.title }}</span></sc-for>
+              <sc-if value="{{ jourVide }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">{{ jourVideTxt }}</span></sc-if>
+              <sc-if value="{{ jourProche }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A4B00;">{{ jourProcheTxt }}</span></sc-if>
+            </div>
           </section>
 
           <sc-if value="{{ hasErrors }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;"><sc-for list="{{ errors }}" as="er" hint-placeholder-count="0"><span style="font-size:12px;color:#8D1D2C;">{{ er }}</span></sc-for></div></sc-if>
@@ -142,24 +152,65 @@
           </div>
         </div>
 
-        <aside style="flex:0 1 380px;min-width:300px;display:flex;flex-direction:column;gap:8px;position:sticky;top:16px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <aside style="flex:0 1 400px;min-width:300px;display:flex;flex-direction:column;gap:8px;position:sticky;top:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
             <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Aperçu · charte du réseau</span>
-            <sc-if value="{{ bilingual }}" hint-placeholder-val="{{ false }}"><div style="display:inline-flex;background:#FFFFFF;border-radius:8px;padding:3px;gap:2px;border:0.5px solid rgba(34,34,34,0.10);"><sc-for list="{{ langs }}" as="l" hint-placeholder-count="2"><button onClick="{{ l.pick }}" style="border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ l.bg }};color:{{ l.fg }};">Visuel {{ l.label }}</button></sc-for></div></sc-if>
-          </div>
-          <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.12);overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
-            <div style="display:flex;align-items:center;gap:10px;padding:12px 14px 8px;">
-              <span style="width:36px;height:36px;border-radius:50%;background:#8D1D2C;display:flex;align-items:center;justify-content:center;"><img src="img/logo-white.png" alt="" style="width:26px;height:auto;"></span>
-              <span style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;color:#1c1e21;">{{ pageName }}</span><span style="font-size:12px;color:#65676b;">{{ whenLabel }} · Public</span></span>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <sc-if value="{{ hasPvTabs }}" hint-placeholder-val="{{ false }}"><div style="display:inline-flex;background:#FFFFFF;border-radius:8px;padding:3px;gap:2px;border:0.5px solid rgba(34,34,34,0.10);"><sc-for list="{{ pvTabs }}" as="pt" hint-placeholder-count="2"><button onClick="{{ pt.pick }}" style="border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ pt.bg }};color:{{ pt.fg }};">{{ pt.label }}</button></sc-for></div></sc-if>
+              <button onClick="{{ telToggle }}" title="L’aperçu dans un téléphone" style="border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ telBtnBg }};color:{{ telBtnFg }};">Sur téléphone</button>
             </div>
-            <p style="margin:0;padding:0 14px 10px;font-size:13px;line-height:1.45;color:#1c1e21;white-space:pre-wrap;">{{ pvText }}</p>
-            <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}"><dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" hint-size="100%,380px"></dc-import></sc-if>
-            <sc-if value="{{ isFixe }}" hint-placeholder-val="{{ false }}">
-              <div style="display:grid;grid-template-columns:repeat({{ fixeCols }},minmax(0,1fr));gap:2px;background:#F4EFE8;">
-                <sc-for list="{{ fixeMedia }}" as="fm" hint-placeholder-count="1"><img src="{{ fm }}" alt="" style="width:100%;display:block;object-fit:cover;aspect-ratio:{{ fixeRatio }};"></sc-for>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+            <sc-if value="{{ persoOn }}" hint-placeholder-val="{{ true }}">
+              <div style="display:inline-flex;align-items:center;gap:6px;">
+                <span style="font-size:11px;color:#666666;">Format</span>
+                <div style="display:inline-flex;background:#FFFFFF;border-radius:8px;padding:3px;gap:2px;border:0.5px solid rgba(34,34,34,0.10);"><sc-for list="{{ formats }}" as="fo" hint-placeholder-count="2"><button onClick="{{ fo.pick }}" title="{{ fo.tip }}" style="border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ fo.bg }};color:{{ fo.fg }};">{{ fo.label }}</button></sc-for></div>
               </div>
             </sc-if>
+            <sc-if value="{{ bilingual }}" hint-placeholder-val="{{ false }}"><div style="display:inline-flex;background:#FFFFFF;border-radius:8px;padding:3px;gap:2px;border:0.5px solid rgba(34,34,34,0.10);"><sc-for list="{{ langs }}" as="l" hint-placeholder-count="2"><button onClick="{{ l.pick }}" style="border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ l.bg }};color:{{ l.fg }};">Visuel {{ l.label }}</button></sc-for></div></sc-if>
           </div>
+          <div style="align-self:center;width:100%;max-width:{{ telW }};box-sizing:border-box;border:{{ telB }};border-radius:{{ telR }};background:#FFFFFF;box-shadow:{{ telSh }};overflow:hidden;">
+            <sc-if value="{{ tel }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;align-items:center;padding:9px 22px 7px;background:#FFFFFF;color:#0B0B0B;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:13px;font-weight:600;"><span>9:41</span><span style="width:86px;height:24px;border-radius:13px;background:#0B0B0B;display:block;"></span><span style="font-size:11px;">5G ▮</span></div></sc-if>
+            <div style="background:#FFFFFF;border-radius:{{ cardR }};border:{{ cardB }};overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+              <sc-if value="{{ isFbPv }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 14px 8px;">
+                  <span style="width:36px;height:36px;border-radius:50%;background:#8D1D2C;display:flex;align-items:center;justify-content:center;flex:0 0 auto;"><img src="img/logo-white.png" alt="" style="width:26px;height:auto;"></span>
+                  <span style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;color:#1c1e21;">{{ pageName }}</span><span style="font-size:12px;color:#65676b;">{{ whenLabel }} · Public</span></span>
+                </div>
+                <p style="margin:0;padding:0 14px 10px;font-size:13px;line-height:1.45;color:#1c1e21;white-space:pre-wrap;">{{ pvText }}</p>
+                <sc-if value="{{ hasPvLink }}" hint-placeholder-val="{{ false }}"><p style="margin:-4px 0 0;padding:0 14px 10px;font-size:13px;color:#385898;word-break:break-all;">{{ pvLink }}</p></sc-if>
+              </sc-if>
+              <sc-if value="{{ isIgPv }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;">
+                  <span style="width:32px;height:32px;border-radius:50%;background:#8D1D2C;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #FFFFFF,0 0 0 3.5px #D97B29;"><img src="img/logo-white.png" alt="" style="width:22px;height:auto;"></span>
+                  <span style="display:flex;flex-direction:column;"><span style="font-size:13px;font-weight:600;color:#262626;">{{ igHandle }}</span><span style="font-size:11px;color:#8e8e8e;">{{ shopCity }}</span></span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}"><dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-text-pick="{{ onTextPick }}" hint-size="100%,380px"></dc-import></sc-if>
+              <sc-if value="{{ isFixe }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;grid-template-columns:repeat({{ fixeCols }},minmax(0,1fr));gap:2px;background:#F4EFE8;">
+                  <sc-for list="{{ fixeMedia }}" as="fm" hint-placeholder-count="1"><img src="{{ fm }}" alt="" style="width:100%;display:block;object-fit:cover;aspect-ratio:{{ fixeRatio }};"></sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isFbPv }}" hint-placeholder-val="{{ true }}"><div style="display:flex;justify-content:space-around;padding:8px 10px;border-top:0.5px solid #E4E6EB;font-size:12px;font-weight:600;color:#65676b;"><span>👍 J’aime</span><span>💬 Commenter</span><span>↗ Partager</span></div></sc-if>
+              <sc-if value="{{ isIgPv }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:14px;padding:9px 12px 4px;font-size:19px;color:#262626;"><span>♡</span><span>💬</span><span>➤</span></div>
+                <p style="margin:0;padding:2px 12px 12px;font-size:13px;line-height:1.45;color:#262626;white-space:pre-wrap;"><strong style="font-weight:600;">{{ igHandle }}</strong> {{ pvText }}</p>
+              </sc-if>
+            </div>
+          </div>
+          <sc-if value="{{ hasCouleurAstuce }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;line-height:1.45;">Cliquez sur un texte du visuel pour changer sa couleur (palette de la marque).</span></sc-if>
+          <sc-if value="{{ hasCouleurPal }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.12);padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:12px;font-weight:600;">Couleur · {{ couleurNom }}</span>
+                <span style="display:flex;gap:10px;"><button onClick="{{ couleurTous }}" style="border:none;background:transparent;color:#8D1D2C;font-size:11px;font-weight:500;cursor:pointer;padding:0;">Couleurs du style</button><button onClick="{{ couleurFermer }}" title="Fermer" style="border:none;background:transparent;font-size:14px;cursor:pointer;padding:0;">×</button></span>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <sc-for list="{{ couleurPal }}" as="cp" hint-placeholder-count="10"><button onClick="{{ cp.pick }}" title="{{ cp.nom }}" style="width:26px;height:26px;border-radius:50%;border:2px solid {{ cp.ring }};box-shadow:inset 0 0 0 1px rgba(34,34,34,0.18);background:{{ cp.hex }};cursor:pointer;font-size:10px;font-weight:700;color:#8A847C;padding:0;">{{ cp.txt }}</button></sc-for>
+              </div>
+            </div>
+          </sc-if>
           <span style="font-size:11px;color:#666666;line-height:1.5;">Le texte, le titre et la mise en page sont ceux du réseau ; seuls vos choix changent. {{ langNote }}</span>
         </aside>
       </div>
@@ -174,7 +225,9 @@ class Component extends DCLogic {
   init() {
     const SF = window.SF, st = SF && SF.state(), q = new URLSearchParams(location.search);
     const base = { tpl: null, filter: q.get('promo') ? 'promo' : 'all', q: '', product: null, discount: 0, offer: '', promoPrice: '', from: '', to: '', free: '', photo: null,
-      fb: true, ig: true, date: '', time: '', lang: 'fr', errors: [], busy: false };
+      fb: true, ig: true, date: '', time: '', lang: 'fr', errors: [], busy: false,
+      // Le visuel : photo (webshop, illustration, la sienne), format, couleur de chaque texte ; l'aperçu (fil, Instagram, téléphone).
+      pmode: null, format: 'carre', couleurs: {}, phraseColor: 'auto', couleurRole: null, couleurNom: '', pv: 'fb', tel: false, ws: {}, wsErr: '', jour: null };
     if (!st) return base;
     base.lang = (st.shop.langs || ['fr'])[0];
     const slot = this.firstSlot(st);
@@ -200,9 +253,37 @@ class Component extends DCLogic {
   forTpl(t, st) {
     const p = t.promo || {}, r = st.rules;
     return { tpl: t.id, product: null, discount: p.kind === 'remise' ? Math.min(p.max, r.remiseMax, Math.max(p.min, 20)) : 0, offer: p.kind === 'offre' ? (p.offres || [])[0] || '' : '',
-      promoPrice: '', free: '', photo: null, link: t.link ? 'modele' : 'aucun', fb: !!(t.fb && r.fb && st.shop.fb === 'connected'), ig: !!(t.ig && r.ig && st.shop.igs === 'connected'), errors: [] };
+      promoPrice: '', free: '', photo: null, pmode: null, link: t.link ? 'modele' : 'aucun', fb: !!(t.fb && r.fb && st.shop.fb === 'connected'), ig: !!(t.ig && r.ig && st.shop.igs === 'connected'), errors: [] };
   }
+  componentDidMount() { this.lireJour(); this.lirePhoto(); }
+  componentDidUpdate() { this.lireJour(); this.lirePhoto(); }
   componentWillUnmount() {}
+  /** Ce qui est déjà prévu le jour choisi : les posts de l'espace et les publications de la Page lues chez Meta. */
+  lireJour() {
+    const SF = window.SF, d = this.state.date;
+    if (!SF || !SF.state() || !/^\d{4}-\d{2}-\d{2}$/.test(d || '') || this._jd === d) return;
+    this._jd = d;
+    SF.calendrier(d, d).then(r => { if (this._jd === d) this.setState({ jour: { date: d, posts: (r && r.posts) || [] } }); })
+      .catch(() => { if (this._jd === d) this.setState({ jour: { date: d, posts: [], err: true } }); });
+  }
+  /** La photo du produit sur le webshop, rapatriée par le module (sinon le visuel ne s'exporte pas). */
+  lirePhoto() {
+    const SF = window.SF, st = SF && SF.state(), s = this.state; if (!st) return;
+    const prod = s.product ? st.catalogue.find(p => p.id === s.product) : null, src = prod && prod.photo;
+    if (!src || s.ws[src] || this._wl === src) return;
+    this._wl = src;
+    SF.photoLocale(src).then(d => this.setState(x => ({ ws: Object.assign({}, x.ws, { [src]: d }), wsErr: '' })))
+      .catch(e => { this._wl = null; this.setState({ wsErr: e.message || 'photo du webshop illisible' }); });
+  }
+  /** La façon dont la photo du post est prise : la sienne, celle du webshop, ou l'illustration du catalogue. */
+  photoMode(t, prod) {
+    const s = this.state;
+    if (t.photo === 'upload' || (t.photo === 'choix' && s.pmode === 'mine')) return 'mine';
+    if (s.pmode !== 'illus' && prod && prod.photo) return 'webshop';
+    return 'illus';
+  }
+  PALETTE() { return [{ id: 'auto', nom: 'Automatique (couleur du style)', hex: '#FFFFFF' }].concat((window.DS_FONDS || []).map(f => ({ id: f.id, nom: f.nom, hex: f.hex })), [{ id: 'gris', nom: 'Gris', hex: '#8A847C' }]); }
+  NOMS_TEXTE = { eyebrow: 'Mention', title: 'Nom du produit', phrase: 'Votre phrase', price: 'Prix', unit: 'Unité', promo: 'Offre', promoSub: 'Sous-texte de l’offre', site: 'Site web' };
   readPhoto(file) {
     return new Promise((res) => {
       if (!file || !/^image\//.test(file.type)) return res(null);
@@ -216,7 +297,9 @@ class Component extends DCLogic {
   }
   body() {
     const s = this.state;
-    return { template: s.tpl, product: s.product, discount: s.discount, offer: s.offer, promoPrice: s.promoPrice, from: s.from, to: s.to, free: s.free.trim(), photo: s.photo, link: s.link || 'aucun', fb: s.fb, ig: s.ig, date: s.date, time: s.time };
+    const st = window.SF.state(), t = st.templates.find(x => x.id === s.tpl), prod = s.product ? st.catalogue.find(p => p.id === s.product) : null;
+    const mine = t && this.photoMode(t, prod) === 'mine';
+    return { template: s.tpl, product: s.product, discount: s.discount, offer: s.offer, promoPrice: s.promoPrice, from: s.from, to: s.to, free: s.free.trim(), photo: mine ? s.photo : null, link: s.link || 'aucun', fb: s.fb, ig: s.ig, date: s.date, time: s.time };
   }
   async submit() {
     const SF = window.SF, s = this.state;
@@ -229,6 +312,15 @@ class Component extends DCLogic {
       // Modèle à visuel fixe (post du réseau) : le visuel est celui du réseau, rien à dessiner.
       if (!fixe) {
         if (!this._api) throw new Error('Le visuel n’est pas prêt : patientez une seconde et recommencez.');
+        // La photo du webshop doit être rapatriée avant l'export (sinon le visuel ne se dessine pas).
+        const st0 = SF.state(), prod0 = s.product ? st0.catalogue.find(p => p.id === s.product) : null;
+        if (this.photoMode(tpl0, prod0) === 'webshop' && !this.state.ws[prod0.photo]) {
+          const d = await SF.photoLocale(prod0.photo);
+          await new Promise(r => this.setState(x => ({ ws: Object.assign({}, x.ws, { [prod0.photo]: d }) }), r));
+          await new Promise(r => setTimeout(r, 400));
+        }
+        // L'export se fait sans la sélection d'un texte (le cadre en pointillé n'a rien à faire dans le visuel publié).
+        if (this.state.couleurRole) { await new Promise(r => this.setState({ couleurRole: null }, r)); await new Promise(r => setTimeout(r, 120)); }
         b.visual = await this._api.toImage({ jpeg: true, pixelRatio: SF.live ? 1 : 0.5, quality: 0.9 });
       }
       const p = await SF.createPost(b);
@@ -277,7 +369,7 @@ class Component extends DCLogic {
     return Object.assign(common, {
       eyebrow: 'Publier · modèle du réseau', title: t.name.toUpperCase(), back: () => this.setState({ tpl: null, errors: [] }), tplDescription: t.description || '',
       needProduct: t.product === 'choix', q: s.q, setQ: (e) => this.setState({ q: e.target.value }), qPh: 'Rechercher parmi vos ' + st.catalogue.length + ' produits…',
-      products: products.slice(0, 60).map(c => ({ name: c.name, price: c.price ? c.price + ' €' : '', img: SF.media(c.img), ring: s.product === c.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)', pick: () => S({ product: c.id }) })),
+      products: products.slice(0, 60).map(c => ({ name: c.name, price: c.price ? c.price + ' €' : '', img: c.photo || SF.media(c.img), fit: c.photo ? 'cover' : 'contain', ring: s.product === c.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)', pick: () => S({ product: c.id }) })),
       hasPromo: kind !== 'aucune' || !!t.period, isRemise: kind === 'remise', isOffre: kind === 'offre', isPrix: kind === 'prix',
       discount: s.discount, dMin: p.min || 1, dMax, setDiscount: (e) => S({ discount: +e.target.value }),
       offers: (p.offres || []).map(o => Object.assign(chip(s.offer === o), { label: o, pick: () => S({ offer: o }) })),
@@ -292,13 +384,30 @@ class Component extends DCLogic {
         const opt = (k, label, dis, tip) => { const on = cur === k; return { label, dis: !!dis, op: dis ? 0.45 : 1, tip: tip || '', bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)', pick: () => { if (!dis) S({ link: k }); } }; };
         return { linkChoices: [opt('aucun', 'Aucun lien')].concat(t.link ? [opt('modele', 'Lien du réseau', false, tplUrl)] : [])
             .concat([opt('webshop', 'Mon webshop'), opt('produit', 'Ce produit sur mon webshop', !wsP, wsP ? '' : 'Choisissez un produit vendu sur le webshop'), opt('categorie', 'Sa catégorie sur mon webshop', !wsC, wsC ? '' : 'Choisissez d’abord un produit')]),
-          linkLabel: url ? 'Le post renverra vers : ' + url : 'Pas de lien dans le post (votre phrase ne peut pas en contenir : le réseau gère les liens).' }; })(),
+          linkLabel: url ? 'Le post renverra vers : ' + url : 'Pas de lien dans le post (votre phrase ne peut pas en contenir : le réseau gère les liens).', hasPvLink: !!url, pvLink: url }; })(),
       needFree: +t.free > 0, free: s.free, freeMax: +t.free, setFree: (e) => S({ free: e.target.value.slice(0, +t.free) }), freeCount: s.free.length + ' / ' + t.free + ' caractères',
-      needPhoto: t.photo === 'upload' || t.photo === 'choix', photoTitle: t.photo === 'upload' ? 'Votre photo (obligatoire)' : 'Votre photo (facultatif)',
-      hasPhoto: !!s.photo, photo: s.photo || '', photoBtn: s.photo ? 'Changer de photo' : 'Importer une photo', canDropPhoto: !!s.photo && t.photo === 'choix',
-      onPhoto: async (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; const d = await this.readPhoto(f); if (d) S({ photo: d }); },
-      dropPhoto: () => S({ photo: null }),
+      // Photo : celle du webshop (la vraie photo du produit), l'illustration du catalogue, ou la sienne (si le modèle l'ouvre).
+      ...(() => { const mode = this.photoMode(t, prod), up = t.photo === 'upload', ch = t.photo === 'choix', fixe = (t.visual || {}).style === 'fixe', wsSrc = prod && prod.photo;
+        const opt = (k, label, dis, tip) => { const on = mode === k; return { label, dis: !!dis, op: dis ? 0.45 : 1, tip: tip || '', bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)',
+          pick: () => { if (!dis) S({ pmode: k === 'webshop' ? null : k }); } }; };
+        const choices = up ? [] : [opt('webshop', 'Photo du webshop', !wsSrc, wsSrc ? '' : (prod ? 'Pas de photo de ce produit sur le webshop' : 'Choisissez d’abord un produit')), opt('illus', 'Illustration du catalogue')].concat(ch ? [opt('mine', 'Ma photo')] : []);
+        const thumb = mode === 'mine' ? s.photo : mode === 'webshop' ? (s.ws[wsSrc] || wsSrc) : prod ? SF.media(prod.img) : '';
+        const note = mode === 'mine' ? (s.photo ? 'Votre photo, posée dans la mise en page du modèle.' : up ? 'Ce modèle demande votre photo.' : 'Importez votre photo.')
+          : mode === 'webshop' ? (s.ws[wsSrc] ? 'La photo du produit sur votre webshop.' : s.wsErr ? 'Photo du webshop illisible (' + s.wsErr + ') : prenez l’illustration.' : 'Photo du webshop en chargement…')
+          : prod ? 'L’illustration du produit (design system de la marque).' : 'Choisissez un produit : sa photo suit.';
+        return { showPhotoSec: !fixe && (up || ch || (t.product === 'choix')), photoTitle: up ? 'Votre photo (obligatoire)' : 'Photo du post', photoChoices: choices,
+          hasThumb: !!thumb, thumb: thumb || '', canUpload: mode === 'mine', photoBtn: s.photo ? 'Changer de photo' : 'Importer une photo', photoNote: note, photoNoteFg: mode === 'webshop' && s.wsErr ? '#8A4B00' : '#666666',
+          onPhoto: async (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; const d = await this.readPhoto(f); if (d) S({ photo: d, pmode: 'mine' }); } }; })(),
       date: s.date, time: s.time, hMin: r.heureMin, hMax: r.heureMax, setDate: (e) => S({ date: e.target.value }), setTime: (e) => S({ time: e.target.value }), channels: chans,
+      // Le jour choisi : ce qui est déjà prévu (posts de l'espace, publications de la Page et de l'Instagram lues chez Meta).
+      ...(() => { const d = s.date, J = s.jour && s.jour.date === d ? s.jour : null, mins = (h) => { const [a, b] = String(h || '0:0').split(':').map(Number); return a * 60 + (b || 0); };
+        const items = st.posts.filter(p => p.date === d && p.status !== 'Refusé').map(p => ({ time: p.time, who: p.own ? 'mon post' : 'réseau', title: p.title, dot: p.own ? '#8D1D2C' : '#B8B2A8', fb: !!p.fb }))
+          .concat(J ? J.posts.map(p => ({ time: p.time, who: p.channel === 'Instagram' ? 'Instagram' : 'ma Page (Meta)', title: p.title || p.type, dot: p.channel === 'Instagram' ? '#DD2A7B' : '#1877F2', fb: p.channel === 'Facebook' })) : [])
+          .sort((a, b) => a.time.localeCompare(b.time));
+        const proche = s.time ? items.filter(x => x.fb && Math.abs(mins(x.time) - mins(s.time)) < 120) : [];
+        return { jourTitle: d ? 'Le ' + SF.dLabel(d) + ' sur votre Page' + (J ? '' : ' · lecture chez Meta…') : 'Choisissez une date', jourItems: items, jourVide: !!d && items.length === 0,
+          jourVideTxt: J && J.err ? 'Rien de prévu dans l’espace (publications Meta illisibles pour l’instant).' : 'Rien de prévu ce jour-là : votre post aura la place.',
+          jourProche: proche.length > 0, jourProcheTxt: 'À moins de 2 h de « ' + (proche[0] || {}).title + ' » (' + (proche[0] || {}).time + ') : espacez-les pour qu’ils ne se fassent pas de l’ombre.' }; })(),
       rulesNote: 'Règles du réseau : ' + (jours.length === 7 ? 'tous les jours' : jours.join(', ')) + ', entre ' + r.heureMin + ' et ' + r.heureMax + ', au moins ' + r.delaiMinHeures + ' h à l’avance et au plus ' + r.horizonJours + ' jours · ' + q.used + ' / ' + q.max + ' posts cette semaine.',
       errors: s.errors, hasErrors: s.errors.length > 0,
       submitNote: val ? 'Le réseau valide avant publication.' : 'Publication à l’heure prévue.', submitLabel: s.busy ? 'Préparation du visuel…' : (val ? 'Envoyer au réseau' : 'Programmer'),
@@ -306,7 +415,30 @@ class Component extends DCLogic {
       bilingual: langs.length > 1, langs: langs.map(l => { const [bg, fg] = seg(s.lang === l); return { label: l.toUpperCase(), bg, fg, pick: () => this.setState({ lang: l }) }; }),
       langNote: langs.length > 1 ? 'Boutique bilingue : la légende part en ' + langs.map(x => x.toUpperCase()).join(' et ') + ' ; le visuel est dans la langue choisie.' : '',
       pageName: st.shop.page || ('L’Atelier By ' + st.shop.name), whenLabel: s.date ? SF.dLabel(s.date) + ' à ' + s.time : '', pvText: text || '—',
-      studioControl: V.control(t, fields, L), onStudioApi: (api) => { this._api = api; },
+      // Aperçu : le fil Facebook, ou Instagram si le post y part ; dans un téléphone sur demande.
+      ...(() => { const igOn = chans.some(c => c.label.startsWith('Instagram') && c.on), pv = igOn && s.pv === 'ig' ? 'ig' : 'fb', tel = !!s.tel;
+        const tab = (k, label) => { const [bg, fg] = seg(pv === k); return { label, bg, fg, pick: () => this.setState({ pv: k }) }; };
+        return { hasPvTabs: igOn, pvTabs: [tab('fb', 'Facebook'), tab('ig', 'Instagram')], isFbPv: pv === 'fb', isIgPv: pv === 'ig',
+          igHandle: String(st.shop.ig || '').replace(/^@?/, '') || 'latelierby', shopCity: 'L’Atelier By ' + st.shop.name,
+          tel, telToggle: () => this.setState({ tel: !tel }), telBtnBg: tel ? '#8D1D2C' : '#FFFFFF', telBtnFg: tel ? '#FFFFFF' : '#444444',
+          telB: tel ? '10px solid #0B0B0B' : '0', telR: tel ? '44px' : '10px', telSh: tel ? '0 12px 32px rgba(0,0,0,0.20)' : 'none', telW: tel ? '360px' : '100%',
+          cardR: tel ? '0' : '10px', cardB: tel ? 'none' : '0.5px solid rgba(34,34,34,0.12)' }; })(),
+      // Personnaliser le visuel (si le réseau l'ouvre) : format et couleur de chaque texte, dans la palette de la marque.
+      ...(() => { const on = st.rules.persoVisuel !== false, P = this.PALETTE(), role = on ? s.couleurRole : null;
+        const cur = role ? (role === 'phrase' ? s.phraseColor || 'auto' : (s.couleurs || {})[role] || 'auto') : 'auto';
+        const setC = (id) => { if (!role) return; if (role === 'phrase') { this.setState({ phraseColor: id }); return; } const c = Object.assign({}, s.couleurs); if (id === 'auto') delete c[role]; else c[role] = id; this.setState({ couleurs: c }); };
+        const FORMATS = [['carre', 'Carré 1:1', '1080 × 1080 · entier dans le fil, sur mobile comme sur ordinateur'], ['portrait', 'Portrait 4:5', '1080 × 1350 · le plus grand dans le fil sur mobile']];
+        const ctl = Object.assign({}, V.control(t, fields, L), on ? { format: s.format, couleurs: s.couleurs, phraseColor: s.phraseColor, texteSel: role } : {});
+        const mode = this.photoMode(t, prod);
+        if (mode === 'webshop') ctl.photos = [{ src: s.ws[prod.photo] || prod.photo, cut: false, name: prod.name }];
+        else if (mode === 'illus') ctl.photos = prod && prod.img ? [{ src: SF.media(prod.img), cut: true, name: prod.name }] : [];
+        else if (!s.photo) ctl.photos = [];
+        return { persoOn: on, formats: FORMATS.map(([k, label, tip]) => { const [bg, fg] = seg((s.format || 'carre') === k); return { label, tip, bg, fg, pick: () => this.setState({ format: k }) }; }),
+          studioControl: ctl, onStudioApi: (api) => { this._api = api; },
+          onTextPick: on ? (r0) => this.setState({ couleurRole: r0, couleurNom: this.NOMS_TEXTE[r0] || r0 }) : null,
+          hasCouleurAstuce: on && !role && (t.visual || {}).style !== 'fixe', hasCouleurPal: !!role, couleurNom: role ? s.couleurNom : '',
+          couleurPal: P.map(c => ({ nom: c.nom, hex: c.hex, txt: c.id === 'auto' ? 'A' : '', ring: c.id === cur ? '#222222' : 'transparent', pick: () => setC(c.id) })),
+          couleurTous: () => this.setState({ couleurs: {}, phraseColor: 'auto' }), couleurFermer: () => this.setState({ couleurRole: null }) }; })(),
       isStudio: (t.visual || {}).style !== 'fixe', isFixe: (t.visual || {}).style === 'fixe',
       fixeMedia: (((t.visual || {}).media || []).filter(m => m.kind !== 'video').map(m => SF.media(m.src)).slice(0, 4)).concat([]).filter(Boolean),
       fixeCols: Math.min(2, Math.max(1, (((t.visual || {}).media || []).filter(m => m.kind !== 'video').length))), fixeRatio: (((t.visual || {}).media || []).length > 1 ? '4 / 5' : 'auto'),

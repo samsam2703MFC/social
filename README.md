@@ -195,8 +195,8 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   liste des boutiques visées), la Grille Instagram n'a qu'une grille, les
   connexions Instagram des boutiques reprennent celle de la marque. Instagram est
   **réservé au franchiseur** : l'espace franchisé ne propose pas ce canal et n'en a
-  qu'une vue en lecture (« Instagram du réseau », `GET /franchise/instagram`, en
-  direct chez Meta, avec ce que le réseau y a programmé).
+  qu'une vue en lecture (« Grille Instagram du réseau », `GET /franchise/instagram`,
+  en direct chez Meta, avec au-dessus ce que le réseau y a programmé).
 - **Calendriers des Pages et comptes Instagram** (`src/calendriers.php`, lecture
   directe, rien en base) — le Calendrier montre, à côté des posts du module, ce que
   chaque Page Facebook et chaque compte Instagram visibles du System User ont
@@ -468,6 +468,37 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   conservé) ou un code d'accès par boutique créé par le franchiseur. Session dans un
   cookie signé, limitée aux boutiques du compte. « Voir comme cette boutique » ouvre
   l'espace d'une boutique depuis l'écran franchiseur.
+- **La boutique est dans l'adresse** : chaque lien de l'espace porte `?shop=<id>`
+  (ex. `Calendrier.dc.html?shop=4`), l'adresse du navigateur l'affiche toujours
+  (ajoutée ou corrigée au chargement) et la connexion ouvre la boutique demandée si
+  elle est au compte. Le calendrier y ajoute sa vue, sa date et la publication ouverte
+  (`&vue=semaine&date=2026-10-15&post=mfb-…`) : un lien partagé rouvre le même écran.
+- **Mon calendrier = calendrier Meta de la boutique** (`GET /franchise/calendrier?du=&au=`,
+  `src/franchise.php` → `socCalendriersLire` limité à ses comptes) : les publications de
+  *sa* Page Facebook (et de son Instagram, ou de celui du réseau en Instagram unique si
+  « voir les posts du réseau » est ouvert), lues en direct chez Meta pour la période
+  affichée, y compris celles faites dans Meta Business Suite et ce qui y est programmé,
+  à côté de ses posts et de ceux du réseau. Vues Mois / Semaine / Liste, une pastille par
+  source avec la photo de profil (filtre), indicateurs (publications et réactions de sa
+  Page), fiche avec réactions, commentaires, partages et — à l'ouverture — vues,
+  personnes touchées et clics (`GET /franchise/calendrier/stats`, refusé pour une
+  publication qui n'est pas à ses comptes). Rien des autres boutiques, ni le détail
+  technique des erreurs Meta ; rien n'est copié en base.
+- **Grille Instagram** (`Instagram.dc.html`, `GET /franchise/instagram?shop=`) : comme
+  la Grille du franchiseur, en lecture seule — le profil (photo, abonnés) et ses 30
+  dernières publications lues en direct (j'aime, commentaires, frises publiées), et
+  au-dessus, du plus récent au plus ancien, ce qui y est programmé (une frise = 3 cases,
+  ses posts « à valider » signalés). Compte du réseau en Instagram unique, sinon celui
+  de la boutique.
+- **Publier** reprend le générateur dans le cadre du modèle : la **photo du webshop**
+  du produit (Cloudflare R2, rapatriée par `GET /franchise/media/webshop` pour que le
+  visuel s'exporte), l'illustration du catalogue ou sa photo (si le modèle l'ouvre) ;
+  le **format** (carré 1:1, portrait 4:5) et la **couleur de chaque texte** (clic sur un
+  texte du visuel → palette de la marque) si la règle « Personnaliser le visuel » est
+  ouverte (`persoVisuel`, par défaut oui) ; l'aperçu dans le fil Facebook, Instagram
+  (si le post y part) ou **dans un téléphone** ; et **le jour choisi** : ce qui est déjà
+  prévu sur sa Page (posts de l'espace, publications lues chez Meta), avec une alerte à
+  moins de 2 h d'un autre post.
 - Démonstration : `/social_franchisee/?demo=1`.
 
 ## Transport dans l'ERP
