@@ -51,7 +51,6 @@ Toutes les données **et toutes les clés** sont stockées et lues dans la base
 | `social_instagram_media` | les 30 dernières publications de chaque compte Instagram (grille du profil) |
 | `social_commentaire` | les commentaires reçus sur les dark posts (Facebook et Instagram), masqués ou non |
 | `social_modele_franchise` | les modèles de post ouverts aux boutiques (espace franchisé) |
-| `social_acces_franchise` | les codes d'accès des boutiques à leur espace (empreinte seulement) |
 | `social_activite` | le journal d'activité |
 
 Chaque table a des colonnes typées (lisibles en SQL) et une colonne `data` qui
@@ -463,15 +462,23 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   jours et heures de publication, canaux, remise maximale, durée maximale d'une
   promotion, ce que la boutique peut voir. Les posts « à valider » arrivent dans le
   calendrier du franchiseur ; un refus est motivé et la boutique voit le motif.
-- **Connexion** : le compte atelierby du gérant (API TFBuddy, espace « owner » :
-  `POST /owner/auth/login` puis `GET /owner/shops` — le mot de passe n'est pas
-  conservé) ou un code d'accès par boutique créé par le franchiseur. Session dans un
-  cookie signé, limitée aux boutiques du compte. « Voir comme cette boutique » ouvre
-  l'espace d'une boutique depuis l'écran franchiseur.
+- **Accès par l'ERP, sans connexion propre à l'espace** : pas de page de connexion,
+  ni compte, ni code d'accès. Le gérant entre depuis l'ERP, où il est déjà connecté :
+  l'ERP rend ses boutiques par le point d'accroche `franchise_session` de
+  `config/hote.php` (voir `docs/INTEGRATION-ERP.md`), et le lien qu'il ouvre porte la
+  boutique (`/social_franchisee/Calendrier.dc.html?shop=4`) — une boutique qui n'est
+  pas à lui est refusée. Sans session de l'ERP, l'espace affiche « Ouvrez votre espace
+  boutique depuis l'ERP ». Seul autre accès : « Voir comme cette boutique » (écran
+  franchiseur), un aperçu dans un cookie signé limité à une boutique, qui se ferme
+  depuis l'espace (« Fermer l'aperçu »). **En attendant l'ERP** (pas de
+  `franchise_session` configuré), la règle « accès ouvert » (`accesLibre`, écran
+  Espace franchisé → 3 · Accès) ouvre l'espace **sans connexion sur une seule
+  boutique** (ex. 4 : `/social_franchisee/` arrive sur `?shop=4`, les autres boutiques
+  restent refusées) ; dès que l'ERP est branché, elle ne joue plus. L'ancienne table `social_acces_franchise`
+  (codes d'accès) n'est plus créée ni lue ; une base qui l'a encore peut la garder.
 - **La boutique est dans l'adresse** : chaque lien de l'espace porte `?shop=<id>`
   (ex. `Calendrier.dc.html?shop=4`), l'adresse du navigateur l'affiche toujours
-  (ajoutée ou corrigée au chargement) et la connexion ouvre la boutique demandée si
-  elle est au compte. Le calendrier y ajoute sa vue, sa date et la publication ouverte
+  (ajoutée ou corrigée au chargement). Le calendrier y ajoute sa vue, sa date et la publication ouverte
   (`&vue=semaine&date=2026-10-15&post=mfb-…`) : un lien partagé rouvre le même écran.
 - **Mon calendrier = calendrier Meta de la boutique** (`GET /franchise/calendrier?du=&au=`,
   `src/franchise.php` → `socCalendriersLire` limité à ses comptes) : les publications de
@@ -565,7 +572,7 @@ session du cockpit.
 public/            écrans de la maquette (SA *.dc.html) + social-data.js (couche de données)
   montage.js       montages Instagram (carrousel panoramique, frise, collages 4:5) dessinés sur canvas
   franchise-visuel.js  visuel figé d'un modèle franchisé (partagé avec l'espace franchisé)
-franchisee/        espace boutique /social_franchisee (connexion, calendrier, publier, promotions, campagnes)
+franchisee/        espace boutique /social_franchisee (calendrier Meta, publier, promotions, opérations, suivi, grille Instagram ; accès par l'ERP)
 config/            config.example.php (premier lancement), hote.example.php (points d'accroche de l'hôte)
   api/index.php    contrôleur frontal de l'API
   vendor/          React, ReactDOM, Babel, html-to-image (embarqués, aucun CDN)

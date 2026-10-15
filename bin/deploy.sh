@@ -118,8 +118,9 @@ code=$(curl -s -o /dev/null -w '%{http_code}' "$LOCAL_BASE/SA%20Calendrier.dc.ht
 [[ "$code" == "200" ]] && log "OK  calendrier servi" || { warn "calendrier → HTTP $code"; fail=1; }
 code=$(curl -s -o /dev/null -w '%{http_code}' "$LOCAL_BASE/uploads/__absent__.png")
 [[ "$code" == "404" ]] && log "OK  un visuel absent rend 404" || warn "uploads absent → HTTP $code (404 attendu)"
-code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1${FR_ALIAS}/Connexion.dc.html")
+code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1${FR_ALIAS}/Calendrier.dc.html")
 [[ "$code" == "200" ]] && log "OK  espace franchisé servi ($FR_ALIAS)" || { warn "$FR_ALIAS → HTTP $code"; fail=1; }
-st=$(curl -s --max-time 20 "$LOCAL_BASE/api/v1/social/franchise/session" || echo '{}')
-grep -q '"authed":false' <<<"$st" && log "OK  API de l'espace franchisé (sans session : non connecté)" || { warn "franchise/session : $st"; fail=1; }
+# Pas de connexion propre à l'espace : sans session de l'ERP, 401 — ou 200 si l'accès ouvert (en attendant l'ERP) est réglé.
+code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$LOCAL_BASE/api/v1/social/franchise/etat")
+[[ "$code" == "401" || "$code" == "200" ]] && log "OK  API de l'espace franchisé (sans session ERP : HTTP $code)" || { warn "franchise/etat sans session → HTTP $code (401 ou 200 attendu)"; fail=1; }
 [[ "$fail" == "0" ]] && log "Module en ligne : http://185.180.206.46${ALIAS_PATH}/" || { warn "Recette en échec."; exit 1; }

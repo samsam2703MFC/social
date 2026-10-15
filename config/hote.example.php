@@ -5,7 +5,8 @@
  *
  * Sans config/hote.php, le module se comporte comme aujourd'hui, à côté du BO
  * consultant : base et session du BO, journal ceo_journal_entry, boutiques lues
- * dans l'API TFBuddy + le BO, franchisés connectés par compte atelierby ou code.
+ * dans l'API TFBuddy + le BO. L'espace franchisé n'a pas de connexion propre : sans
+ * `franchise_session`, seul le franchiseur l'ouvre (aperçu « Voir comme cette boutique »).
  *
  * Chaque entrée est facultative et ne remplace QU'UN point. Rien d'autre à modifier
  * dans le module : ses tables (social_*), son API et ses écrans restent identiques.
@@ -31,8 +32,8 @@ return [
     // page, ig, fb, igs, ads, ids{page_id, ad_account_id, instagram_user_id, pixel_id}, geo…
     // 'boutiques' => static fn (array $liste): array => $liste,
 
-    // Le franchisé déjà connecté à l'ERP : ouvre directement son espace (/social_franchisee),
-    // sans compte atelierby ni code d'accès. null = pas de franchisé connecté.
+    // Le franchisé déjà connecté à l'ERP : SEUL accès des gérants à leur espace (/social_franchisee),
+    // ouvert par l'ERP sur Calendrier.dc.html?shop={id}. null = pas de franchisé connecté.
     // 'franchise_session' => static fn (): ?array => Erp\Auth::isOwner()
     //     ? ['shops' => Erp\Auth::user()->shopIds(), 'name' => Erp\Auth::user()->fullName()] : null,
 ];

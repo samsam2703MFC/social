@@ -15,10 +15,11 @@ declare(strict_types=1);
  *  - Les règles du réseau (`social_parametre.franchise_regles`) — validation par
  *    le franchiseur, quota par semaine, délai, jours et heures, canaux, remise
  *    maximale — sont vérifiées ICI, côté serveur : l'écran ne fait que les montrer.
- *  - Connexion : le compte atelierby du gérant (API TFBuddy, POST /owner/auth/login
- *    puis GET /owner/shops), ou un code d'accès par boutique créé par le
- *    franchiseur (`social_acces_franchise`). Session dans un cookie signé, limitée
- *    aux boutiques du compte.
+ *  - Accès : par l'ERP seulement, sans connexion propre à l'espace. Le gérant déjà
+ *    connecté à l'ERP y entre directement (point d'accroche `franchise_session` de
+ *    config/hote.php : ses boutiques et son nom) ; la boutique ouverte est dans
+ *    l'adresse (?shop=4) et doit être une des siennes. Seul autre accès : l'aperçu
+ *    du franchiseur (« Voir comme cette boutique »), un cookie signé limité à une boutique.
  */
 
 const SF_COOKIE = 'social_f';
@@ -34,6 +35,9 @@ function sfReglesDefaut(): array
         'remiseMax' => 30, 'promoDureeMax' => 14, 'voirReseau' => true, 'voirCampagnes' => true, 'voirResultats' => true, 'voirSuivi' => true,
         // Le franchisé peut choisir le format du visuel (carré, portrait) et la couleur de chaque texte (palette de la marque).
         'persoVisuel' => true,
+        // En attendant l'ERP (pas de point d'accroche franchise_session) : l'espace s'ouvre sans connexion
+        // sur cette boutique, et elle seule ('' = fermé sans l'ERP).
+        'accesLibre' => '',
         'message' => 'Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By.'];
 }
 
@@ -61,6 +65,7 @@ function sfReglesPut(array $in): array
         'promoDureeMax' => max(1, min(90, (int) ($in['promoDureeMax'] ?? $d['promoDureeMax']))),
         'voirReseau' => (bool) ($in['voirReseau'] ?? true), 'voirCampagnes' => (bool) ($in['voirCampagnes'] ?? true), 'voirResultats' => (bool) ($in['voirResultats'] ?? true), 'voirSuivi' => (bool) ($in['voirSuivi'] ?? true),
         'persoVisuel' => (bool) ($in['persoVisuel'] ?? true),
+        'accesLibre' => in_array((string) ($in['accesLibre'] ?? ''), array_column(socReseau(), 'id'), true) ? (string) $in['accesLibre'] : '',
         'message' => mb_substr(trim((string) ($in['message'] ?? $d['message'])), 0, 600),
     ];
     if ($r['heureMax'] <= $r['heureMin']) { $r['heureMax'] = $d['heureMax']; $r['heureMin'] = $d['heureMin']; }
@@ -128,49 +133,6 @@ function sfModeles(bool $actifs = false): array
     return $l;
 }
 
-/* --- accès par code ---------------------------------------------------------------- */
-
-/** Crée un code d'accès pour une boutique. Le code n'est rendu qu'une fois (seul son empreinte est gardée). */
-function sfAccesCreer(string $shop, string $libelle): array
-{
-    if (socShop($shop) === null) { throw new HttpError(404, 'boutique inconnue'); }
-    $alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    $c = '';
-    for ($i = 0; $i < 10; $i++) { $c .= $alpha[random_int(0, strlen($alpha) - 1)]; }
-    $code = 'ATB-' . substr($c, 0, 5) . '-' . substr($c, 5);
-    Db::exec('INSERT INTO social_acces_franchise (shop_id, libelle, code_hash, empreinte, actif, cree_le) VALUES (?,?,?,?,1,?)',
-        [$shop, mb_substr(trim($libelle) ?: 'Gérant', 0, 120), password_hash($code, PASSWORD_DEFAULT), substr(hash('sha256', $code), 0, 16), date('Y-m-d H:i:s')]);
-    socLog(socUser(), 'Espace franchisé', 'Code d’accès créé pour ' . (socShop($shop)['name'] ?? $shop) . ' (' . $libelle . ')');
-    return ['code' => $code, 'acces' => sfAccesListe()];
-}
-
-function sfAccesListe(): array
-{
-    $noms = []; foreach (socShops() as $s) { $noms[$s['id']] = $s['name']; }
-    return array_map(static fn ($r) => ['id' => (int) $r['id'], 'shop' => (string) $r['shop_id'], 'shopName' => $noms[(string) $r['shop_id']] ?? (string) $r['shop_id'],
-        'label' => (string) $r['libelle'], 'active' => (int) $r['actif'] === 1, 'created' => substr((string) $r['cree_le'], 0, 16),
-        'lastUse' => $r['dernier_acces'] ? substr((string) $r['dernier_acces'], 0, 16) : null],
-        Db::rows('SELECT * FROM social_acces_franchise ORDER BY actif DESC, shop_id, id'));
-}
-
-function sfAccesRevoquer(int $id): array
-{
-    Db::exec('UPDATE social_acces_franchise SET actif = 0 WHERE id = ?', [$id]);
-    socLog(socUser(), 'Espace franchisé', 'Code d’accès n° ' . $id . ' révoqué');
-    return sfAccesListe();
-}
-
-/** La ligne d'accès d'un code, ou null. */
-function sfAccesVerifier(string $code): ?array
-{
-    $code = strtoupper(trim($code));
-    if (!preg_match('/^ATB-[A-Z0-9]{5}-[A-Z0-9]{5}$/', $code)) { return null; }
-    $r = Db::row('SELECT * FROM social_acces_franchise WHERE empreinte = ? AND actif = 1', [substr(hash('sha256', $code), 0, 16)]);
-    if ($r === null || !password_verify($code, (string) $r['code_hash'])) { return null; }
-    Db::exec('UPDATE social_acces_franchise SET dernier_acces = ? WHERE id = ?', [date('Y-m-d H:i:s'), $r['id']]);
-    return $r;
-}
-
 /* --- session ------------------------------------------------------------------------ */
 
 function sfSecret(): string
@@ -180,7 +142,7 @@ function sfSecret(): string
     return $s;
 }
 
-/** Ouvre la session franchisé (cookie signé : boutiques, nom, origine, expiration). */
+/** Ouvre l'aperçu du franchiseur (cookie signé : boutiques, nom, origine, expiration). */
 function sfSessionOuvrir(array $shops, string $nom, string $via): array
 {
     $s = ['shops' => array_values(array_map('strval', $shops)), 'name' => mb_substr($nom, 0, 80), 'via' => $via, 'exp' => time() + SF_DUREE];
@@ -194,22 +156,29 @@ function sfSessionOuvrir(array $shops, string $nom, string $via): array
     return $s;
 }
 
+/**
+ * La session de l'espace : l'aperçu du franchiseur (cookie signé) s'il est ouvert, sinon le
+ * gérant connecté à l'ERP (config/hote.php → franchise_session), limité aux boutiques du réseau.
+ * Tant que l'ERP n'est pas branché (pas de franchise_session), la règle « accès ouvert » ouvre
+ * l'espace sans connexion sur une seule boutique (ex. 4) ; une fois l'ERP branché, elle ne joue plus.
+ */
 function sfSession(): ?array
 {
     $c = (string) ($_COOKIE[SF_COOKIE] ?? '');
-    if ($c === '' || !str_contains($c, '.')) {
-        // Transporté dans l'ERP : le franchisé y est déjà connecté (config/hote.php).
-        if (($f = socHote('franchise_session')) !== null && is_array($h = $f()) && !empty($h['shops'])) {
-            $ids = array_values(array_intersect(array_map('strval', (array) $h['shops']), array_column(socReseau(), 'id')));
-            return $ids ? ['shops' => $ids, 'name' => (string) ($h['name'] ?? 'Gérant'), 'via' => 'hote', 'exp' => time() + SF_DUREE] : null;
-        }
-        return null;
+    if ($c !== '' && str_contains($c, '.')) {
+        [$p, $sig] = explode('.', $c, 2);
+        $s = hash_equals(hash_hmac('sha256', $p, sfSecret()), $sig) ? json_decode((string) base64_decode(strtr($p, '-_', '+/')), true) : null;
+        if (is_array($s) && ($s['exp'] ?? 0) >= time() && !empty($s['shops'])) { return $s; }
     }
-    [$p, $sig] = explode('.', $c, 2);
-    if (!hash_equals(hash_hmac('sha256', $p, sfSecret()), $sig)) { return null; }
-    $s = json_decode((string) base64_decode(strtr($p, '-_', '+/')), true);
-    if (!is_array($s) || ($s['exp'] ?? 0) < time() || empty($s['shops'])) { return null; }
-    return $s;
+    if (($f = socHote('franchise_session')) !== null && is_array($h = $f()) && !empty($h['shops'])) {
+        $ids = array_values(array_intersect(array_map('strval', (array) $h['shops']), array_column(socReseau(), 'id')));
+        return $ids ? ['shops' => $ids, 'name' => (string) ($h['name'] ?? 'Gérant'), 'via' => 'hote', 'exp' => time() + SF_DUREE] : null;
+    }
+    $libre = (string) sfRegles()['accesLibre'];
+    if (socHote('franchise_session') === null && $libre !== '' && ($b = socShop($libre)) !== null && in_array($libre, array_column(socReseau(), 'id'), true)) {
+        return ['shops' => [$libre], 'name' => 'Gérant · ' . $b['name'], 'via' => 'libre', 'exp' => time() + SF_DUREE];
+    }
+    return null;
 }
 
 function sfSessionFermer(): void
@@ -222,45 +191,10 @@ function sfSessionFermer(): void
 function sfExiger(?string $shop = null): array
 {
     $s = sfSession();
-    if ($s === null) { throw new HttpError(401, 'Connectez-vous à votre espace.'); }
-    if ($shop !== null && !in_array($shop, $s['shops'], true)) { throw new HttpError(403, 'Cette boutique n’est pas rattachée à votre compte.'); }
+    if ($s === null) { throw new HttpError(401, 'Ouvrez votre espace boutique depuis l’ERP.'); }
+    if ($shop !== null && !in_array($shop, $s['shops'], true)) { throw new HttpError(403, 'Cette boutique n’est pas rattachée à votre compte ERP.'); }
     if (!sfRegles()['actif'] && ($s['via'] ?? '') !== 'apercu') { throw new HttpError(403, 'L’espace franchisé est fermé par le franchiseur.'); }
     return $s;
-}
-
-/** Connexion avec le compte atelierby du gérant (API TFBuddy, espace « owner »). Rend [boutiques, nom]. */
-function sfConnexionTfb(string $phone, string $password): array
-{
-    if (trim($phone) === '' || $password === '') { throw new HttpError(422, 'Téléphone et mot de passe requis.'); }
-    [$code, $b] = Tfb::raw('POST', Tfb::base() . '/owner/auth/login', ['Content-Type: application/json'], (string) json_encode(['phone' => trim($phone), 'password' => $password]));
-    $j = json_decode($b, true);
-    if ($code === 401 || $code === 422) { throw new HttpError(401, 'Identifiants refusés par atelierby.'); }
-    if ($code === 403) { throw new HttpError(403, 'Ce compte atelierby n’est rattaché à aucune boutique (accès « owner »).'); }
-    if ($code === 409) { throw new HttpError(409, 'Ce compte gère plusieurs structures : demandez un code d’accès boutique au franchiseur.'); }
-    $tok = '';
-    foreach ([$j['access_token'] ?? null, $j['token'] ?? null, $j['data']['access_token'] ?? null] as $t) { if (is_string($t) && $t !== '') { $tok = $t; break; } }
-    if ($code < 200 || $code >= 300 || $tok === '') { throw new HttpError(502, 'atelierby ne répond pas (HTTP ' . $code . ').'); }
-    $claims = [];
-    $parts = explode('.', $tok);
-    if (count($parts) === 3) { $claims = (array) json_decode((string) base64_decode(strtr($parts[1], '-_', '+/')), true); }
-    $ids = [];
-    try {
-        [$c2, $b2] = Tfb::raw('GET', Tfb::base() . '/owner/shops', ['Authorization: Bearer ' . $tok]);
-        if ($c2 >= 200 && $c2 < 300) {
-            $l = json_decode($b2, true);
-            $l = is_array($l['data'] ?? null) ? $l['data'] : (is_array($l['shops'] ?? null) ? $l['shops'] : $l);
-            foreach ((array) $l as $x) {
-                if (is_array($x)) { $id = $x['id'] ?? $x['shop_id'] ?? $x['franchisee_shop_id'] ?? null; if ($id !== null) { $ids[] = (string) $id; } }
-                elseif (is_scalar($x)) { $ids[] = (string) $x; }
-            }
-        }
-    } catch (Throwable $e) { /* les claims du jeton prennent le relais */ }
-    if (!$ids && in_array(strtolower((string) ($claims['scope_type'] ?? '')), ['shop', 'franchisee_shop'], true) && isset($claims['scope_id'])) { $ids[] = (string) $claims['scope_id']; }
-    $reseau = array_column(socReseau(), 'id');
-    $ids = array_values(array_intersect(array_unique($ids), $reseau));
-    if (!$ids) { throw new HttpError(403, 'Aucune boutique de ce compte n’est dans le réseau Social & Ads.'); }
-    $nom = trim((string) ($claims['name'] ?? $claims['full_name'] ?? '')) ?: ('Gérant ' . (socShop($ids[0])['name'] ?? ''));
-    return [$ids, $nom];
 }
 
 /* --- catalogue de la boutique ------------------------------------------------------- */
@@ -745,25 +679,8 @@ function sfRoute(string $method, string $path): ?array
 {
     if (!str_starts_with($path, '/franchise/') || str_starts_with($path, '/franchise/admin')) { return null; }
     socInstall();
-    if ($method === 'POST' && $path === '/franchise/connexion') {
-        $b = body();
-        if (!sfRegles()['actif']) { throw new HttpError(403, 'L’espace franchisé est fermé par le franchiseur.'); }
-        if (!empty($b['code'])) {
-            $a = sfAccesVerifier((string) $b['code']);
-            if ($a === null) { throw new HttpError(401, 'Code d’accès inconnu ou révoqué.'); }
-            $s = sfSessionOuvrir([(string) $a['shop_id']], (string) $a['libelle'] . ' · ' . (socShop((string) $a['shop_id'])['name'] ?? ''), 'code');
-        } else {
-            [$ids, $nom] = sfConnexionTfb((string) ($b['phone'] ?? ''), (string) ($b['password'] ?? ''));
-            $s = sfSessionOuvrir($ids, $nom, 'tfb');
-        }
-        socLog($s['name'], 'Connexion', 'Espace franchisé (' . ($s['via'] === 'code' ? 'code d’accès' : 'compte atelierby') . ')');
-        return [200, ['ok' => true, 'shops' => $s['shops'], 'name' => $s['name']]];
-    }
+    // Pas de connexion propre à l'espace : l'ERP ouvre la session ; seul l'aperçu du franchiseur se ferme ici.
     if ($method === 'POST' && $path === '/franchise/deconnexion') { sfSessionFermer(); return [200, ['ok' => true]]; }
-    if ($method === 'GET' && $path === '/franchise/session') {
-        $s = sfSession();
-        return [200, ['authed' => $s !== null, 'open' => sfRegles()['actif'], 'shops' => $s['shops'] ?? [], 'name' => $s['name'] ?? '']];
-    }
     $session = sfExiger();
     $shop = (string) ($_GET['shop'] ?? (body()['shop'] ?? '')) ?: (string) $session['shops'][0];
     sfExiger($shop);
@@ -784,10 +701,8 @@ function sfRoute(string $method, string $path): ?array
 function sfAdminRoute(string $method, string $path): ?array
 {
     if (!str_starts_with($path, '/franchise/admin')) { return null; }
-    if ($method === 'GET' && $path === '/franchise/admin') { return [200, ['rules' => sfRegles(), 'templates' => sfModeles(), 'access' => sfAccesListe()]]; }
+    if ($method === 'GET' && $path === '/franchise/admin') { return [200, ['rules' => sfRegles(), 'templates' => sfModeles()]]; }
     if ($method === 'POST' && $path === '/franchise/admin/regles') { return [200, ['rules' => sfReglesPut((array) (body()['rules'] ?? []))]]; }
-    if ($method === 'POST' && $path === '/franchise/admin/acces') { return [200, sfAccesCreer((string) (body()['shop'] ?? ''), (string) (body()['label'] ?? 'Gérant'))]; }
-    if ($method === 'POST' && preg_match('#^/franchise/admin/acces/(\d+)/revoquer$#', $path, $m)) { return [200, ['access' => sfAccesRevoquer((int) $m[1])]]; }
     if ($method === 'POST' && $path === '/franchise/admin/apercu') {
         // « Voir comme la boutique » : une session franchisé de prévisualisation, ouverte par le franchiseur.
         $shop = (string) (body()['shop'] ?? '');

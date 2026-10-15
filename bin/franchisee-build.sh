@@ -16,6 +16,8 @@ rsync -a --delete --exclude 'config.js' \
 rsync -a "$DEST/.shared/" "$DEST/"
 rm -rf "$DEST/.shared"
 rsync -a --exclude 'config.js' "$SRC/franchisee/" "$DEST/"
+# Pages retirées : l'accès se fait par l'ERP (plus de page de connexion propre à l'espace).
+rm -f "$DEST/Connexion.dc.html"
 printf '%s\n' "// Écrit par bin/franchisee-build.sh — l'API et les médias du module Social & Ads." \
   "window.SF_CONFIG = { api: '$API', media: '$MEDIA' };" > "$DEST/config.js"
 echo "espace franchisé assemblé dans $DEST (API $API)"

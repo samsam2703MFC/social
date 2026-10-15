@@ -35,7 +35,7 @@ fournit. Chaque entrée est facultative ; sans elle, le comportement « BO » s'
 | `utilisateur` | `social_parametre.utilisateur` | le nom de l'utilisateur connecté |
 | `journal` | copie dans `ceo_journal_entry` (le module garde son journal `social_activite`) | le journal de l'ERP |
 | `boutiques` | API TFBuddy `/public/shops` + `ceo_shop` (zone, franchisé) + `brand_guard_pages` (Page Facebook) + caisse (position) | reçoit la liste calculée et la rend complétée ou remplacée |
-| `franchise_session` | le franchisé se connecte avec son compte atelierby (API `/owner/auth/login`) ou un code d'accès | le gérant déjà connecté à l'ERP entre directement dans son espace : `['shops' => [...], 'name' => '…']` |
+| `franchise_session` | **seul accès des gérants** : sans lui, l'espace franchisé n'est ouvert qu'en aperçu par le franchiseur, ou sur la seule boutique de la règle « accès ouvert » (`accesLibre`, en attendant l'ERP) — pas de page de connexion propre à l'espace | le gérant déjà connecté à l'ERP entre directement dans son espace : `['shops' => [...], 'name' => '…']` ; l'ERP l'y envoie par `/social_franchisee/Calendrier.dc.html?shop={id}` |
 
 La recette (`bin/tests.php`, section « Transport dans l'ERP ») vérifie chacun de ces
 points.
@@ -65,7 +65,8 @@ Autres dépendances, sans adaptation nécessaire :
 3. **Espace franchisé** : `bin/franchisee-build.sh DEST API_BASE MEDIA_BASE` assemble un
    dossier statique ; `API_BASE` = l'adresse de l'API, `MEDIA_BASE` = l'adresse de
    `public/` (pour les visuels `uploads/…`). Il doit être servi par le **même hôte** que
-   l'API (cookie de session).
+   l'API (session de l'ERP, cookie de l'aperçu). Le menu de l'ERP ouvre
+   `Calendrier.dc.html?shop={id}` ; chaque lien de l'espace garde `?shop=`.
 4. **Médias** : `public/uploads/` (ou `SOCIAL_UPLOADS_DIR`) doit rester joignable depuis
    Internet à l'adresse `social_parametre.url_publique` : Meta y télécharge les visuels.
 5. **Tâches planifiées** : `php bin/cron.php queue` (chaque minute), `sync` (horaire),
@@ -84,12 +85,11 @@ Franchiseur (session `auth`) :
 `POST /meta/campagnes/rafraichir` · `GET /operations` · `POST /operations/rattacher` · `GET /meta/calendriers?du=&au=` · `GET /meta/post-stats?id=&compte=` · `GET /suivi/abonnes?jours=7|28|90` ·
 `GET|POST /audit/api` · `GET|POST /instagram/grille` · `GET|POST /darkposts/commentaires` ·
 `POST /darkposts/commentaires/{id}/masquer` · `GET /franchise/admin` ·
-`POST /franchise/admin/regles` · `POST /franchise/admin/acces` ·
-`POST /franchise/admin/acces/{id}/revoquer` · `POST /franchise/admin/apercu` ·
+`POST /franchise/admin/regles` · `POST /franchise/admin/apercu` ·
 `GET|POST /webhook` (signé par Meta).
 
-Espace franchisé (session franchisé, limitée à ses boutiques) :
-`POST /franchise/connexion` · `POST /franchise/deconnexion` · `GET /franchise/session` ·
+Espace franchisé (session de l'ERP via `franchise_session`, ou aperçu du franchiseur ; limitée à ses boutiques) :
+`POST /franchise/deconnexion` (ferme l'aperçu) ·
 `GET /franchise/etat` · `POST /franchise/posts` · `POST /franchise/posts/{id}/annuler` · `GET /franchise/suivi?jours=7|28|90` · `GET /franchise/instagram` ·
 `GET /franchise/operations` · `GET /franchise/calendrier?du=&au=` · `GET /franchise/calendrier/stats?id=&compte=` · `GET /franchise/media/webshop?u=`
 (toutes avec `?shop=` : la boutique, vérifiée contre la session).

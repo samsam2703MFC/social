@@ -22,7 +22,7 @@
 <div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
   <dc-import name="FNav" active="cal" hint-size="228px,100vh"></dc-import>
   <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
-    <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }} <a href="{{ loginHref }}">Se reconnecter</a></div></sc-if>
+    <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }}</div></sc-if>
     <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
 
     <!-- En-tête -->
@@ -275,7 +275,7 @@ class Component extends DCLogic {
 
   renderVals() {
     const SF = window.SF, st = SF && SF.state(), s = this.state;
-    if (!st) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', loginHref: SF ? SF.href('login') : 'Connexion.dc.html', cells: [], dows: [], kpis: [], upcoming: [], chips: [], views: [], weekCols: [], listRows: [], listHead: [], legend: [] };
+    if (!st) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', cells: [], dows: [], kpis: [], upcoming: [], chips: [], views: [], weekCols: [], listRows: [], listHead: [], legend: [] };
     const cursor = s.cursor || st.today, [du, au] = this.period(), mp = s.mp, nowMs = SF.at(st.today, st.now);
     const fmt = (n) => n == null ? '—' : Number(n).toLocaleString('fr-BE');
     const ini = (t, bg) => 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52"><rect width="52" height="52" rx="26" fill="' + bg + '"/><text x="26" y="33" font-family="Arial" font-size="18" font-weight="700" fill="#fff" text-anchor="middle">' + t + '</text></svg>');
@@ -378,7 +378,7 @@ class Component extends DCLogic {
     const seg = (on) => on ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
     const lu = mp && mp.le ? String(mp.le) : '';
     return {
-      ok: true, hasError: false, loginHref: SF.href('login'), shopName: st.shop.name, periodTitle: label,
+      ok: true, hasError: false, shopName: st.shop.name, periodTitle: label,
       views: [['month', 'Mois'], ['week', 'Semaine'], ['list', 'Liste']].map(([k, l]) => { const [bg, fg] = seg(s.view === k); return { label: l, bg, fg, pick: () => this.setState({ view: k }) }; }),
       prev: () => shift(-1), next: () => shift(1), goToday: () => this.setState({ cursor: st.today }),
       pubHref: SF.href('pub'), hasMessage: !!(st.rules.message || '').trim(), message: st.rules.message,

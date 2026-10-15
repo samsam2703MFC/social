@@ -37,7 +37,6 @@
           <sc-for list="{{ shopOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.name }}</option></sc-for>
         </select>
         <button onClick="{{ viewAs }}" style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">Voir comme cette boutique ↗</button>
-        <a href="{{ spaceUrl }}" target="_blank" rel="noopener" style="height:36px;padding:0 14px;border-radius:8px;background:#8D1D2C;color:#FFFFFF;font-size:13px;font-weight:500;display:flex;align-items:center;text-decoration:none;">Ouvrir l’espace franchisé ↗</a>
       </div>
     </header>
 
@@ -189,34 +188,23 @@
       </section>
 
       <!-- ============ ACCÈS ============ -->
-      <section style="flex:1 1 420px;min-width:300px;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
-        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">3 · Accès des boutiques</span>
-        <span style="font-size:12px;color:#444444;line-height:1.55;">Les gérants se connectent avec <strong style="font-weight:600;">leur compte atelierby</strong> (téléphone et mot de passe, espace « owner » de l’API) : ils n’accèdent qu’aux boutiques de ce compte. À défaut, créez un <strong style="font-weight:600;">code d’accès</strong> par boutique — il n’est affiché qu’une fois.</span>
-        <sc-if value="{{ hasNewCode }}" hint-placeholder-val="{{ false }}">
-          <div style="background:#232220;color:#F5EFE4;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;">
-            <span style="font-size:12px;color:#F2C9A0;">Code d’accès de {{ newCode.shop }} — à transmettre au gérant, il ne sera plus affiché</span>
-            <span style="font-family:ui-monospace,monospace;font-size:20px;letter-spacing:0.08em;">{{ newCode.code }}</span>
-            <span style="font-size:11px;color:#CFC6BA;">Adresse : {{ spaceUrl }} → « Code d’accès »</span>
-            <button onClick="{{ hideCode }}" style="align-self:flex-end;border:none;background:#F2C9A0;color:#232220;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:500;cursor:pointer;">C’est noté</button>
-          </div>
-        </sc-if>
+      <section id="acces" style="flex:1 1 420px;min-width:300px;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">3 · Accès des boutiques · par l’ERP</span>
+        <span style="font-size:12px;color:#444444;line-height:1.55;">Les gérants entrent dans leur espace <strong style="font-weight:600;">depuis l’ERP</strong>, où ils sont déjà connectés : pas de compte ni de code à gérer ici. L’ERP dit leurs boutiques ; le lien de l’espace porte la boutique (<span style="font-family:ui-monospace,monospace;">?shop=</span>) et n’ouvre que l’une des leurs.</span>
+        <div style="display:flex;flex-direction:column;gap:6px;background:#F4EFE8;border-radius:8px;padding:10px 12px;">
+          <label style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:#222222;font-weight:500;">En attendant l’ERP, ouvrir l’espace sans connexion sur
+            <select value="{{ libre }}" onChange="{{ setLibre }}" style="font-size:12px;font-weight:500;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 8px;">
+              <option value="">— aucune boutique (fermé sans l’ERP) —</option>
+              <sc-for list="{{ shopOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.name }} ({{ o.id }})</option></sc-for>
+            </select>
+          </label>
+          <span style="font-size:11px;color:#666666;line-height:1.45;">{{ libreNote }} À enregistrer avec les règles. Une fois l’ERP branché, c’est lui qui ouvre l’espace : ce réglage ne joue plus.</span>
+        </div>
         <div style="border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;overflow:hidden;">
           <sc-for list="{{ accessRows }}" as="a" hint-placeholder-count="4">
-            <div style="padding:10px 12px;border-top:0.5px solid rgba(34,34,34,0.08);display:flex;flex-direction:column;gap:6px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-                <span style="display:flex;flex-direction:column;"><span style="font-size:13px;font-weight:500;">{{ a.name }}</span><span style="font-size:11px;color:#666666;">{{ a.franchisee }}</span></span>
-                <span style="display:flex;gap:6px;align-items:center;">
-                  <input type="text" value="{{ a.label }}" onChange="{{ a.setLabel }}" placeholder="Gérant" style="width:110px;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 8px;">
-                  <button onClick="{{ a.create }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:5px 9px;font-size:12px;font-weight:500;cursor:pointer;">Créer un code</button>
-                  <button onClick="{{ a.view }}" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;">Voir ↗</button>
-                </span>
-              </div>
-              <sc-for list="{{ a.codes }}" as="c" hint-placeholder-count="0">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:{{ c.fg }};">
-                  <span>Code « {{ c.label }} » · créé le {{ c.created }} · {{ c.use }}</span>
-                  <sc-if value="{{ c.active }}" hint-placeholder-val="{{ false }}"><button onClick="{{ c.revoke }}" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;">Révoquer</button></sc-if>
-                </div>
-              </sc-for>
+            <div style="padding:10px 12px;border-top:0.5px solid rgba(34,34,34,0.08);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <span style="display:flex;flex-direction:column;min-width:0;"><span style="font-size:13px;font-weight:500;">{{ a.name }}</span><span style="font-size:11px;color:#666666;font-family:ui-monospace,monospace;word-break:break-all;">{{ a.link }}</span></span>
+              <button onClick="{{ a.view }}" title="Ouvrir l’espace de cette boutique comme son gérant le voit (aperçu, sans l’ERP)" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;">Voir comme cette boutique ↗</button>
             </div>
           </sc-for>
         </div>
@@ -231,7 +219,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { sel: null, ed: null, rules: null, labels: {}, newCode: null, asShop: '', pvLang: 'fr', toast: '', tick: 0, err: '' };
+  state = { sel: null, ed: null, rules: null, asShop: '', pvLang: 'fr', toast: '', tick: 0, err: '' };
   componentDidMount() {
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
     const SA = window.SA; if (!SA) return;
@@ -244,7 +232,7 @@ class Component extends DCLogic {
   pick(t) { this.setState({ sel: t.id, ed: JSON.parse(JSON.stringify(t)), err: '' }); }
   E(patch) { this.setState({ ed: Object.assign({}, this.state.ed, patch), err: '' }); }
   R(patch) { this.setState({ rules: Object.assign({}, this.state.rules, patch) }); }
-  franchise() { return Object.assign({ rules: {}, access: [], url: '/social_franchisee/' }, window.SA.state().franchise || {}); }
+  franchise() { const f = Object.assign({ rules: {}, url: '/social_franchisee/' }, window.SA.state().franchise || {}); f.url = String(f.url || '/social_franchisee/').replace(/\/?$/, '/'); return f; }
 
   saveTpl() {
     const SA = window.SA, e = this.state.ed, rules = this.state.rules || {};
@@ -277,36 +265,13 @@ class Component extends DCLogic {
       this.toast('Règles enregistrées : elles s’appliquent aux prochaines publications des boutiques.');
     } catch (e) { this.toast('Enregistrement impossible : ' + e.message); }
   }
-  async createCode(shop) {
-    const SA = window.SA, label = (this.state.labels[shop.id] || '').trim() || 'Gérant';
-    try {
-      let code, access;
-      if (SA.live) { const r = await SA.api('POST', '/franchise/admin/acces', { shop: shop.id, label }); code = r.code; access = r.acces; }
-      else {
-        const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', rnd = (n) => Array.from({ length: n }, () => A[Math.floor(Math.random() * A.length)]).join('');
-        code = 'ATB-' + rnd(5) + '-' + rnd(5);
-        access = this.franchise().access.concat({ id: Date.now(), shop: shop.id, shopName: shop.name, label, active: true, created: SA.TODAY + ' ' + new Date().toTimeString().slice(0, 5), lastUse: null });
-      }
-      SA.save({ franchise: Object.assign({}, this.franchise(), { access }) });
-      this.setState({ newCode: { shop: shop.name, code } });
-    } catch (e) { this.toast('Création impossible : ' + e.message); }
-  }
-  async revoke(c) {
-    const SA = window.SA;
-    if (!window.confirm('Révoquer le code « ' + c.label + ' » ? La boutique ne pourra plus l’utiliser.')) return;
-    try {
-      const access = SA.live ? (await SA.api('POST', '/franchise/admin/acces/' + c.id + '/revoquer', {})).access : this.franchise().access.map(x => x.id === c.id ? Object.assign({}, x, { active: false }) : x);
-      SA.save({ franchise: Object.assign({}, this.franchise(), { access }) });
-      this.toast('Code révoqué.');
-    } catch (e) { this.toast('Révocation impossible : ' + e.message); }
-  }
   async viewAs(shopId) {
     const SA = window.SA, url = this.franchise().url || '/social_franchisee/';
     if (!shopId) return;
-    if (!SA.live) { window.open(url + '?demo=1&shop=' + encodeURIComponent(shopId), '_blank'); return; }
+    if (!SA.live) { window.open(url + 'Calendrier.dc.html?demo=1&shop=' + encodeURIComponent(shopId), '_blank'); return; }
     // Le navigateur bloque une fenêtre ouverte après un appel réseau : on l'ouvre d'abord.
     const w = window.open('about:blank', '_blank');
-    try { await SA.api('POST', '/franchise/admin/apercu', { shop: shopId }); if (w) w.location = url + '?shop=' + encodeURIComponent(shopId); }
+    try { await SA.api('POST', '/franchise/admin/apercu', { shop: shopId }); if (w) w.location = url + 'Calendrier.dc.html?shop=' + encodeURIComponent(shopId); }
     catch (e) { if (w) w.close(); this.toast('Aperçu impossible : ' + e.message); }
   }
 
@@ -317,12 +282,11 @@ class Component extends DCLogic {
     const seg = (on) => on ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
     const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
     const pending = st.posts.filter(p => p.origin === 'franchise' && p.status === 'À valider');
-    const access = fr.access || [];
     const kpis = [
       { label: 'Espace', value: rules.actif === false ? 'Fermé' : 'Ouvert', sub: (rules.validation === 'toujours' ? 'tout est validé par vous' : rules.validation === 'jamais' ? 'publication directe' : 'validation selon le modèle'), color: rules.actif === false ? '#8D1D2C' : '#0F6B4A', border: 'rgba(34,34,34,0.10)', href: '#regles' },
       { label: 'Modèles ouverts', value: tpls.filter(t => t.active).length + ' / ' + tpls.length, sub: 'textes et visuels figés', color: '#222222', border: 'rgba(34,34,34,0.10)', href: '#' },
       { label: 'À valider', value: pending.length, sub: 'propositions des boutiques', color: pending.length ? '#8A4B00' : '#222222', border: pending.length ? '#E3B155' : 'rgba(34,34,34,0.10)', href: SA.href('cal', 'status=' + encodeURIComponent('À valider')) },
-      { label: 'Codes d’accès actifs', value: access.filter(a => a.active).length, sub: 'en plus des comptes atelierby', color: '#222222', border: 'rgba(34,34,34,0.10)', href: '#acces' },
+      { label: 'Accès des boutiques', value: rules.accesLibre ? 'Ouvert · ' + ((SA.byId(SA.SHOPS, rules.accesLibre) || {}).name || rules.accesLibre) : 'Par l’ERP', sub: rules.accesLibre ? 'sans connexion, en attendant l’ERP' : 'session de l’ERP, boutique dans le lien', color: '#222222', border: 'rgba(34,34,34,0.10)', href: '#acces' },
     ];
     const list = tpls.slice().sort((a, b) => (+a.order || 99) - (+b.order || 99)).map(t => ({ name: t.name, resume: (t.description ? t.description + ' — ' : '') + V.resume(t),
       state: t.active ? 'ouvert' : 'fermé', stBg: t.active ? '#E2F0E8' : '#F4EFE8', stFg: t.active ? '#0F6B4A' : '#666666',
@@ -378,7 +342,6 @@ class Component extends DCLogic {
     const r = rules, RS = (k, v) => this.R({ [k]: v });
     const days = [[1, 'lun.'], [2, 'mar.'], [3, 'mer.'], [4, 'jeu.'], [5, 'ven.'], [6, 'sam.'], [0, 'dim.']].map(([j, label]) => { const on = (r.jours || []).includes(j);
       return Object.assign(chip(on), { label, toggle: () => RS('jours', on ? r.jours.filter(x => x !== j) : (r.jours || []).concat(j)) }); });
-    const byShop = {}; access.forEach(a => { (byShop[a.shop] = byShop[a.shop] || []).push(a); });
     return Object.assign({
       kpis, tpls: list, hasEd: !!e, newTpl: () => this.setState({ sel: null, err: '', ed: { id: 'ft' + Date.now(), order: tpls.length + 1, name: 'Nouveau modèle', description: '', active: false, type: 'Produit', fb: true, ig: true, validation: true,
         title: '{produit}', text: '{produit} chez L’Atelier By {ville}.', textNl: '{produit} bij L’Atelier By {ville}.', product: 'choix', promo: { kind: 'aucune' }, period: false, free: 0, photo: 'choix', visual: { style: 'epure', eyebrow: '', eyebrowNl: '' } } }),
@@ -390,13 +353,11 @@ class Component extends DCLogic {
       boolRules: [['fb', 'Facebook autorisé'], ['ig', SA.igUnique() ? 'Instagram : réservé au franchiseur (compte unique du réseau) — le franchisé n’en a qu’une vue' : 'Instagram autorisé'], ['voirReseau', 'Voir les posts du réseau'], ['voirCampagnes', 'Voir les opérations'], ['voirResultats', 'Voir les résultats de sa boutique'], ['voirSuivi', 'Voir le suivi de sa boutique (abonnés, budget)'], ['persoVisuel', 'Personnaliser le visuel : format (carré, portrait) et couleur des textes, dans la palette de la marque']]
         .map(([k, label]) => ({ label, on: r[k] !== false, toggle: () => RS(k, r[k] === false) })),
       setMessage: (ev) => RS('message', ev.target.value), saveRules: () => this.saveRules(), rulesLabel: 'Enregistrer les règles',
-      accessRows: SA.SHOPS.map(sh => ({ name: sh.name, franchisee: sh.franchisee ? 'Franchisé : ' + sh.franchisee : 'Compte atelierby du gérant, ou code d’accès',
-        label: s.labels[sh.id] || '', setLabel: (ev) => this.setState({ labels: Object.assign({}, s.labels, { [sh.id]: ev.target.value }) }),
-        create: () => this.createCode(sh), view: () => this.viewAs(sh.id),
-        codes: (byShop[sh.id] || []).map(c => ({ label: c.label, created: SA.dShort(String(c.created).slice(0, 10)), use: !c.active ? 'révoqué' : c.lastUse ? 'dernière connexion ' + SA.dShort(String(c.lastUse).slice(0, 10)) + ' ' + String(c.lastUse).slice(11, 16) : 'jamais utilisé',
-          active: !!c.active, fg: c.active ? '#222222' : '#9A948C', revoke: () => this.revoke(c) })) })),
-      hasNewCode: !!s.newCode, newCode: s.newCode || {}, hideCode: () => this.setState({ newCode: null }),
-      spaceUrl: fr.url || '/social_franchisee/', shopOptions: SA.SHOPS.map(x => ({ id: x.id, name: x.name })), asShop: s.asShop, setAsShop: (ev) => this.setState({ asShop: ev.target.value }),
+      // Le lien que l'ERP ouvre pour chaque boutique (la boutique dans l'adresse).
+      libre: r.accesLibre || '', setLibre: (ev) => RS('accesLibre', ev.target.value),
+      libreNote: r.accesLibre ? 'L’adresse ' + fr.url + ' ouvre directement l’espace de ' + ((SA.byId(SA.SHOPS, r.accesLibre) || {}).name || r.accesLibre) + ' (?shop=' + r.accesLibre + '), sans connexion — les autres boutiques restent fermées.' : 'Sans l’ERP, l’espace reste fermé (seul l’aperçu « Voir comme cette boutique » l’ouvre).',
+      accessRows: SA.SHOPS.map(sh => ({ name: sh.name, link: fr.url + 'Calendrier.dc.html?shop=' + encodeURIComponent(sh.id), view: () => this.viewAs(sh.id) })),
+      shopOptions: SA.SHOPS.map(x => ({ id: x.id, name: x.name })), asShop: s.asShop, setAsShop: (ev) => this.setState({ asShop: ev.target.value }),
       viewAs: () => this.viewAs(s.asShop || (SA.SHOPS[0] || {}).id),
       hasToast: !!s.toast, toast: s.toast,
     }, edVals);

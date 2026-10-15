@@ -1,16 +1,16 @@
 // Espace franchisé — couche de données.
 //
 // En réel : l'état de la boutique est lu à l'API du module Social & Ads
-// (GET {api}/franchise/etat?shop=…), avec la session du franchisé (cookie signé
-// posé à la connexion). Sans session → page de connexion.
+// (GET {api}/franchise/etat?shop=…). Pas de connexion propre à l'espace : le gérant
+// y entre depuis l'ERP, déjà connecté (ou le franchiseur, en aperçu). Sans session :
+// un message renvoie vers l'ERP.
 // En démonstration (?demo=1) : des données d'exemple, gardées dans ce navigateur.
 (function () {
   if (window.SF) return;
   const CFG = Object.assign({ api: '/social/api/v1/social', media: '/social/' }, window.SF_CONFIG || {});
   const Q = new URLSearchParams(location.search);
-  const PAGE = decodeURIComponent(location.pathname.split('/').pop() || '');
-  const ON_LOGIN = /^Connexion/.test(PAGE);
-  const PAGES = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', promo: 'Promotions.dc.html', camp: 'Campagnes.dc.html', suivi: 'Suivi.dc.html', ig: 'Instagram.dc.html', login: 'Connexion.dc.html' };
+  const PAGES = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', promo: 'Promotions.dc.html', camp: 'Campagnes.dc.html', suivi: 'Suivi.dc.html', ig: 'Instagram.dc.html' };
+  const HORS_SESSION = 'Ouvrez votre espace boutique depuis l’ERP : vous y êtes déjà connecté.';
   let DEMO = Q.has('demo');
   try { if (!DEMO && sessionStorage.getItem('sf.demo') === '1' && !Q.has('live')) DEMO = true; if (DEMO) sessionStorage.setItem('sf.demo', '1'); else sessionStorage.removeItem('sf.demo'); } catch (e) {}
 
@@ -85,7 +85,7 @@
   async function api(method, path, body) {
     const r = await fetch(CFG.api + path, { method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: body ? JSON.stringify(body) : undefined });
     let j = null; try { j = await r.json(); } catch (e) {}
-    if (r.status === 401 && !ON_LOGIN) { location.href = href('login'); throw new Error('Session expirée.'); }
+    if (r.status === 401) throw new Error(HORS_SESSION);
     if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
     return j;
   }
@@ -102,9 +102,8 @@
   try { if (!SHOP) SHOP = localStorage.getItem('sf.shop') || ''; } catch (e) {}
   function load() {
     if (DEMO) { STATE = demoLoad(); if (SHOP && STATE.me.shops.some(x => x.id === SHOP) && SHOP !== STATE.shop.id) { const x = STATE.me.shops.find(y => y.id === SHOP); STATE.shop = Object.assign({}, STATE.shop, { id: x.id, name: x.name, langs: x.id === 'halle' ? ['nl', 'fr'] : ['fr'] }); } return; }
-    if (ON_LOGIN) return;
     const r = xhr('GET', '/franchise/etat' + (SHOP ? '?shop=' + encodeURIComponent(SHOP) : ''));
-    if (r.status === 401) { location.replace(href('login')); return; }
+    if (r.status === 401) { ERR = HORS_SESSION; return; }
     if (r.status === 403 && SHOP) { try { localStorage.removeItem('sf.shop'); } catch (e) {} const r2 = xhr('GET', '/franchise/etat'); if (r2.status === 200) { STATE = r2.json; return; } ERR = (r2.json && r2.json.error) || 'Accès refusé.'; return; }
     if (r.status !== 200 || !r.json) { ERR = (r.json && r.json.error) || 'Espace indisponible (HTTP ' + r.status + ').'; return; }
     STATE = r.json;
@@ -180,11 +179,12 @@
     if (tpl.photo === 'upload' && !b.photo) err.push('Ajoutez votre photo.');
     return err;
   }
-  async function logout() {
-    if (DEMO) { try { sessionStorage.removeItem('sf.demo'); localStorage.removeItem('sf.demo.state'); } catch (e) {} location.href = PAGES.login; return; }
+  /** Ferme l'aperçu du franchiseur (la session du gérant, elle, est celle de l'ERP). */
+  async function fermerApercu() {
     try { await api('POST', '/franchise/deconnexion', {}); } catch (e) {}
     try { localStorage.removeItem('sf.shop'); } catch (e) {}
-    location.href = PAGES.login;
+    window.close();
+    location.reload();
   }
   /** Suivi de la boutique : abonnés gagnés / perdus face au budget, lu en direct chez Meta (sa Page seulement). */
   function suivi(jours) {
@@ -300,7 +300,7 @@
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, logout, switchShop, reset, emit, suivi, instagram, calendrier, calStats, operations, webshopUrl, photoLocale,
+  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, instagram, calendrier, calStats, operations, webshopUrl, photoLocale,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();

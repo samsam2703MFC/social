@@ -203,16 +203,6 @@ Tfb::$transport = static function (string $m, string $url, array $h, ?string $bo
         $b = json_decode((string) $body, true);
         return ($b['password'] ?? '') === 'pw' ? [200, json_encode(['access_token' => 'JWT-' . $mm[1]])] : [401, '{"message":"bad"}'];
     }
-    if ($p === '/api/v1/owner/auth/login') {
-        $b = json_decode((string) $body, true);
-        if (($b['password'] ?? '') !== 'ok') { return [401, '{"status":"error","description":"Invalid credentials"}']; }
-        $claims = rtrim(strtr(base64_encode(json_encode(['name' => 'Nathan Charlot', 'scope_type' => 'shop', 'scope_id' => 4])), '+/', '-_'), '=');
-        return [200, json_encode(['access_token' => 'h.' . $claims . '.s', 'refresh_token' => 'r', 'token_type' => 'Bearer', 'session_id' => 1, 'expires_in' => 1800])];
-    }
-    if ($p === '/api/v1/owner/shops') {
-        $ok = (bool) array_filter($h, static fn ($x) => str_starts_with($x, 'Authorization: Bearer h.'));
-        return $ok ? [200, json_encode(['data' => [['id' => 4, 'name' => 'Atelier by - Halle'], ['id' => 99, 'name' => 'Hors réseau']]])] : [401, '{}'];
-    }
     if ($p === '/api/swagger/openapi.json') {
         return [200, json_encode(['openapi' => '3.0.0', 'paths' => [
             '/api/v1/public/shops' => ['get' => []], '/api/v1/shops' => ['get' => ['tags' => ['Franchise shop']]],
@@ -601,15 +591,16 @@ $fr = static function (string $m, string $path, array $body = [], array $get = [
 unset($_COOKIE[SF_COOKIE]);
 [$code, $b] = $fr('GET', '/franchise/admin');
 check('modèles franchisé livrés (5), règles par défaut', $code === 200 && count($b['templates']) === 5 && $b['rules']['quotaSemaine'] === 3 && $b['rules']['validation'] === 'modele');
-[$code] = $fr('GET', '/franchise/etat');
-check('sans session : 401', $code === 401);
-[$code, $acc] = $fr('POST', '/franchise/admin/acces', ['shop' => '4', 'label' => 'Nathan']);
-check('code d’accès créé (rendu une fois, empreinte seule en base)', $code === 200 && preg_match('/^ATB-[A-Z0-9]{5}-[A-Z0-9]{5}$/', $acc['code']) === 1
-    && !str_contains(json_encode(Db::rows('SELECT * FROM social_acces_franchise')), $acc['code']));
-[$code] = $fr('POST', '/franchise/connexion', ['code' => 'ATB-AAAAA-BBBBB']);
-check('code inconnu : 401', $code === 401);
-[$code, $b] = $fr('POST', '/franchise/connexion', ['code' => strtolower($acc['code'])]);
-check('connexion par code : session limitée à Halle', $code === 200 && $b['shops'] === ['4']);
+[$code, $b] = $fr('GET', '/franchise/etat');
+check('sans session (ni ERP, ni aperçu) : 401, renvoyé vers l’ERP', $code === 401 && str_contains((string) $b['error'], 'ERP'));
+[$c1] = $fr('POST', '/franchise/connexion', ['code' => 'ATB-AAAAA-BBBBB']);
+[$c2] = $fr('POST', '/franchise/connexion', ['phone' => '0499', 'password' => 'ok']);
+[$c3] = $fr('POST', '/franchise/admin/acces', ['shop' => '4', 'label' => 'Nathan']);
+[$c4] = $fr('GET', '/franchise/session');
+check('pas de connexion propre à l’espace (ni code d’accès, ni compte atelierby) : aucune session ouverte, l’accès passe par l’ERP', $c1 === 401 && $c2 === 401 && $c4 === 401 && $c3 === 404
+    && sfSession() === null && empty($_COOKIE[SF_COOKIE]), json_encode([$c1, $c2, $c3, $c4]));
+// Le gérant connecté à l'ERP (config/hote.php → franchise_session).
+$GLOBALS['SOCIAL_HOTE'] = ['franchise_session' => static fn (): ?array => ['shops' => ['4'], 'name' => 'Nathan (ERP)']];
 [$code, $et] = $fr('GET', '/franchise/etat');
 $ids = array_column($et['posts'] ?? [], 'id');
 check('état : sa boutique, son catalogue (API, sans B2B ni inactif), les campagnes où elle figure', $code === 200 && $et['shop']['name'] === 'Halle'
@@ -658,23 +649,35 @@ check('annuler son post non publié', $code === 200 && socItem('posts', $b['post
 [$code] = $fr('POST', '/franchise/posts/p1/annuler', ['shop' => '4']);
 check('annuler un post du réseau : impossible', $code === 404);
 
-echo "Espace franchisé : compte atelierby, aperçu, fermeture\n";
+echo "Espace franchisé : aperçu du franchiseur, espace fermé\n";
 unset($_COOKIE[SF_COOKIE]);
-[$code] = $fr('POST', '/franchise/connexion', ['phone' => '0499', 'password' => 'faux']);
-check('compte atelierby refusé : 401', $code === 401);
-[$code, $b] = $fr('POST', '/franchise/connexion', ['phone' => '0499', 'password' => 'ok']);
-check('compte atelierby (owner) : ses boutiques du réseau seulement', $code === 200 && $b['shops'] === ['4'] && $b['name'] === 'Nathan Charlot', json_encode($b));
 [$code, $b] = $fr('POST', '/franchise/admin/apercu', ['shop' => '5']);
-check('aperçu franchiseur : session sur la boutique choisie', $code === 200 && sfSession()['shops'] === ['5'] && sfSession()['via'] === 'apercu');
+check('aperçu franchiseur : session sur la boutique choisie (prime sur celle de l’ERP)', $code === 200 && sfSession()['shops'] === ['5'] && sfSession()['via'] === 'apercu');
+[$code] = $fr('POST', '/franchise/deconnexion');
+check('aperçu fermé : retour à la session de l’ERP', $code === 200 && sfSession()['via'] === 'hote' && sfSession()['shops'] === ['4']);
 $fr('POST', '/franchise/admin/regles', ['rules' => array_merge(sfRegles(), ['actif' => false])]);
-unset($_COOKIE[SF_COOKIE]);
-[$code] = $fr('POST', '/franchise/connexion', ['code' => $acc['code']]);
-check('espace fermé par le franchiseur : connexion refusée', $code === 403);
+[$code] = $fr('GET', '/franchise/etat');
+$fr('POST', '/franchise/admin/apercu', ['shop' => '4']);
+[$code2] = $fr('GET', '/franchise/etat');
+check('espace fermé par le franchiseur : le gérant (ERP) refusé, l’aperçu du franchiseur passe', $code === 403 && $code2 === 200);
 $fr('POST', '/franchise/admin/regles', ['rules' => array_merge(sfRegles(), ['actif' => true, 'validation' => 'modele', 'quotaSemaine' => 3])]);
-[$code, $b] = $fr('POST', '/franchise/admin/acces/' . $fr('GET', '/franchise/admin')[1]['access'][0]['id'] . '/revoquer');
-[$code2] = $fr('POST', '/franchise/connexion', ['code' => $acc['code']]);
-check('code révoqué : refusé', $code === 200 && $code2 === 401);
-unset($_COOKIE[SF_COOKIE]);
+unset($_COOKIE[SF_COOKIE], $GLOBALS['SOCIAL_HOTE']);
+
+echo "Espace franchisé : accès ouvert sur une boutique, en attendant l'ERP\n";
+[$code, $b] = $fr('GET', '/franchise/etat');
+check('sans ERP ni réglage : fermé (401)', $code === 401);
+$fr('POST', '/franchise/admin/regles', ['rules' => array_merge(sfRegles(), ['accesLibre' => '4'])]);
+[$code, $b] = $fr('GET', '/franchise/etat');
+check('accès ouvert sur la boutique 4 : l’espace s’ouvre sans connexion, sur elle', $code === 200 && $b['shop']['id'] === '4' && $b['me']['via'] === 'libre'
+    && array_column($b['me']['shops'], 'id') === ['4'] && empty($_COOKIE[SF_COOKIE]), json_encode($b['me'] ?? $b));
+[$code] = $fr('GET', '/franchise/etat', [], ['shop' => '5']);
+check('accès ouvert : les autres boutiques restent fermées (403)', $code === 403);
+$GLOBALS['SOCIAL_HOTE'] = ['franchise_session' => static fn (): ?array => null];
+[$code] = $fr('GET', '/franchise/etat');
+check('ERP branché : l’accès ouvert ne joue plus (seule la session de l’ERP ouvre l’espace)', $code === 401);
+unset($GLOBALS['SOCIAL_HOTE']);
+check('réglage borné : une boutique hors du réseau est refusée', sfReglesPut(array_merge(sfRegles(), ['accesLibre' => '999']))['accesLibre'] === '');
+$fr('POST', '/franchise/admin/regles', ['rules' => array_merge(sfRegles(), ['accesLibre' => ''])]);
 
 echo "Transport dans l'ERP : points d'accroche de l'hôte\n";
 $journalHote = [];

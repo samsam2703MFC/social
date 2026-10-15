@@ -51,7 +51,7 @@ function socRoute(string $method, string $path): array
         return [200, socWebhook((string) file_get_contents('php://input'), $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? null)];
     }
 
-    // Espace franchisé : sa propre session (compte atelierby du gérant ou code d'accès), pas celle du cockpit.
+    // Espace franchisé : la session du gérant vient de l'ERP (franchise_session) ou de l'aperçu du franchiseur, pas du cockpit.
     if (($r = sfRoute($method, $path)) !== null) { return $r; }
 
     socInstall();

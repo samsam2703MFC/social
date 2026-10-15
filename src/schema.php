@@ -24,7 +24,6 @@ declare(strict_types=1);
  *                        `ig_media_id`, liens) ;
  *  - social_commentaire : les commentaires reçus sur les dark posts (Facebook et Instagram) ;
  *  - social_modele_franchise : les modèles de post ouverts aux franchisés (espace /social_franchisee) ;
- *  - social_acces_franchise : les codes d'accès des boutiques à leur espace (empreinte seulement) ;
  *  - social_resultat   : résultats Meta + ventes par campagne et boutique ;
  *  - social_rattachement : publication Meta (lue en direct) → opération du Marketing du BO (le lien seul) ;
  *  - social_instagram_media : les dernières publications de chaque compte
@@ -113,10 +112,6 @@ function socInstall(): void
 
     Db::exec('CREATE TABLE IF NOT EXISTS social_modele_franchise (id VARCHAR(64) PRIMARY KEY, nom VARCHAR(160) NULL, type VARCHAR(60) NULL,'
         . 'actif TINYINT NOT NULL DEFAULT 1, ordre INT NULL, validation TINYINT NULL, texte_fr TEXT NULL, texte_nl TEXT NULL, data LONGTEXT NOT NULL, ' . $maj . ')' . $t);
-
-    Db::exec('CREATE TABLE IF NOT EXISTS social_acces_franchise (id INT AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL, libelle VARCHAR(120) NOT NULL,'
-        . 'code_hash VARCHAR(255) NOT NULL, empreinte CHAR(16) NOT NULL, actif TINYINT NOT NULL DEFAULT 1, cree_le DATETIME NOT NULL, dernier_acces DATETIME NULL,'
-        . 'KEY idx_empreinte (empreinte), KEY idx_shop (shop_id))' . $t);
 
     Db::exec('CREATE TABLE IF NOT EXISTS social_instagram_media (media_id VARCHAR(40) PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
         . 'type VARCHAR(20) NULL, media_url VARCHAR(1000) NULL, vignette_url VARCHAR(1000) NULL, permalink VARCHAR(300) NULL,'
