@@ -1609,6 +1609,50 @@ check('règle « personnaliser le visuel » (format, couleur des textes) : ouver
     && sfReglesPut(array_merge(sfRegles(), ['persoVisuel' => false]))['persoVisuel'] === false && sfRegles()['persoVisuel'] === false);
 sfReglesPut(array_merge(sfRegles(), ['persoVisuel' => true]));
 
+echo "Espace franchisé : promotions, bundles et formules liés au produit (Publier)\n";
+$regAvant = sfRegles();
+sfReglesPut(array_merge($regAvant, ['actif' => true, 'quotaSemaine' => 50, 'validation' => 'modele', 'jours' => [0, 1, 2, 3, 4, 5, 6], 'heureMin' => '07:00', 'heureMax' => '20:00']));
+$jj = static fn (int $n) => date('Y-m-d', strtotime(($n >= 0 ? '+' : '') . $n . ' days'));
+socSettingPut('tfb_cache_catalogue_4', null, false);
+socSettingPut('tfb_cache_promos', ['le' => time(), 'items' => [
+    ['id' => 950, 'type' => 'offre', 'nom' => 'Brioches 4+1', 'libelle' => '4 + 1 offert (Brioche croustillante)', 'court' => '4+1', 'du' => $jj(-1), 'au' => $jj(20), 'tous' => false, 'shops' => ['4', '5'], 'produits' => [1], 'categories' => []],
+    ['id' => 951, 'type' => 'bundle', 'nom' => 'Duo brioche', 'libelle' => 'Bundle : 2 × Brioche croustillante = 9,90 €', 'court' => '9,90 €', 'du' => null, 'au' => null, 'tous' => true, 'shops' => [], 'produits' => [1], 'categories' => []],
+    ['id' => 952, 'type' => 'offre', 'nom' => 'Wavre seulement', 'libelle' => '2+1 à Wavre', 'court' => '2+1', 'du' => null, 'au' => null, 'tous' => false, 'shops' => ['5'], 'produits' => [1], 'categories' => []],
+    ['id' => 953, 'type' => 'offre', 'nom' => 'Autre produit', 'libelle' => 'Autre', 'court' => '1+1', 'du' => null, 'au' => null, 'tous' => true, 'shops' => [], 'produits' => [99], 'categories' => []],
+    ['id' => 954, 'type' => 'remise', 'nom' => 'Plus tard', 'libelle' => '−10 % · Plus tard', 'court' => '−10 %', 'du' => $jj(25), 'au' => $jj(28), 'tous' => true, 'shops' => [], 'produits' => [1], 'categories' => []]]], false);
+sfSessionOuvrir(['4'], 'Test offres', 'code');
+[$code, $of] = $fr('GET', '/franchise/catalogue/offres', [], ['produit' => 'p1']);
+$ofi = array_column($of['promotions'] ?? [], null, 'id');
+check('offres du produit : les promotions et bundles qui le visent, valables dans la boutique (ni celles d’une autre boutique, ni d’un autre produit)', $code === 200
+    && array_keys($ofi) === [950, 951, 954] && $ofi[950]['portee'] === 'Votre boutique et 1 autre' && $ofi[951]['portee'] === 'Toutes les boutiques', json_encode($of));
+check('mention de l’offre tirée de l’API (dates, boutique), en français et en néerlandais', $ofi[950]['mention'] === 'Offre valable du ' . date('d/m/Y', strtotime($jj(-1))) . ' au ' . date('d/m/Y', strtotime($jj(20))) . ', à Halle.'
+    && $ofi[951]['mention'] === 'Offre valable dans toutes les boutiques.' && $ofi[951]['mentionNl'] === 'Aanbod geldig in alle winkels.' && !str_contains(json_encode($of), '"shops"'), json_encode([$ofi[950]['mention'], $ofi[951]['mention']]));
+$d3 = $jj(3);
+[$code, $b] = $fr('POST', '/franchise/posts', ['template' => 'fp-produit', 'product' => 'p1', 'offre' => ['genre' => 'promotion', 'id' => 951], 'fb' => true, 'ig' => false, 'date' => $d3, 'time' => '10:00', 'visual' => $vis]);
+$po = socItem('posts', (string) ($b['post']['id'] ?? ''));
+check('produit du jour + bundle du réseau : libellé et mention dans le texte, offre gardée pour la vérification à la publication', $code === 200
+    && str_contains($po['text'], "\nBundle : 2 × Brioche croustillante = 9,90 €\nOffre valable dans toutes les boutiques.") && ($po['offre']['id'] ?? null) === 951 && ($po['offre']['genre'] ?? '') === 'promotion'
+    && ($po['promo']['label'] ?? '') === '9,90 €' && str_contains($po['textNl'], 'Aanbod geldig in alle winkels.'), json_encode([$code, $b, $po['text'] ?? null]));
+[$code, $b] = $fr('POST', '/franchise/posts', ['template' => 'fp-offre', 'product' => 'p1', 'offre' => ['genre' => 'promotion', 'id' => 950], 'from' => $jj(40), 'to' => $jj(41), 'fb' => true, 'date' => $d3, 'time' => '11:00', 'visual' => $vis]);
+$po2 = socItem('posts', (string) ($b['post']['id'] ?? ''));
+check('offre spéciale avec la promotion du réseau : {offre} = 4+1, ses dates (pas celles saisies), sa mention', $code === 200
+    && str_starts_with($po2['text'], '4+1 sur Brioche croustillante chez L’Atelier By {ville}, du ' . date('d/m', strtotime($jj(-1)))) && ($po2['promo']['to'] ?? '') === $jj(20)
+    && str_contains($po2['text'], 'Offre valable du ') && ($po2['offre']['id'] ?? null) === 950, json_encode([$code, $b, $po2['text'] ?? null]));
+check('à la publication : la promotion relue dans TFBuddy (encore valable : rien à redire)', socVerifierOffres($po2, '4') === []);
+$offreRefus = static function (array $patch, string $attendu) use ($fr, $vis, $d3): bool {
+    [$code, $b] = $fr('POST', '/franchise/posts', array_merge(['template' => 'fp-produit', 'product' => 'p1', 'fb' => true, 'date' => $d3, 'time' => '12:00', 'visual' => $vis], $patch));
+    return $code === 422 && str_contains((string) ($b['error'] ?? ''), $attendu);
+};
+check('promotion d’une autre boutique (ou inconnue) : refusée', $offreRefus(['offre' => ['genre' => 'promotion', 'id' => 952]], 'plus valable dans votre boutique') && $offreRefus(['offre' => ['genre' => 'promotion', 'id' => 777]], 'plus valable'));
+check('promotion qui commence après la publication : refusée', $offreRefus(['offre' => ['genre' => 'promotion', 'id' => 954]], 'ne commence que le'));
+check('modèle à remise : garde la sienne (promotion du réseau refusée)', $offreRefus(['template' => 'fp-remise', 'discount' => 20, 'from' => $d3, 'to' => $jj(5), 'offre' => ['genre' => 'promotion', 'id' => 951]], 'sa propre remise'));
+$cacheP = socSetting('tfb_cache_promos'); $cacheP['items'] = array_values(array_filter($cacheP['items'], static fn ($x) => $x['id'] !== 950)); socSettingPut('tfb_cache_promos', $cacheP, false);
+check('promotion arrêtée dans TFBuddy avant la publication : la publication s’arrête', (bool) array_filter(socVerifierOffres($po2, '4'), static fn ($e) => str_contains($e, 'n’est plus active')));
+foreach ([$po, $po2] as $x) { if ($x) { socItemDelete('posts', (string) $x['id']); socUnqueue((string) $x['id']); } }
+socSettingPut('tfb_cache_promos', null, false); socSettingPut('tfb_cache_catalogue_4', null, false);
+sfReglesPut($regAvant);
+unset($_COOKIE[SF_COOKIE]);
+
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');
 check('GET /state', $code === 200 && $b['mode'] === 'live' && count($b['shops']) === 2);

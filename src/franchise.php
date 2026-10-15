@@ -407,6 +407,59 @@ function sfRemplir(string $t, array $v): string
 }
 
 /**
+ * Les promotions, bundles et formules liés à un produit du catalogue de la boutique, lus dans
+ * TFBuddy comme dans « Créer un post » du franchiseur (src/catalogue.php) : une promotion est liée
+ * si elle vise le produit ou sa catégorie ; seules celles valables dans la boutique sont rendues,
+ * avec leur mention (dates, boutiques) en français et en néerlandais. `$produit` : id du catalogue (p…).
+ */
+function sfOffres(string $shop, string $produit): array
+{
+    $prod = null;
+    foreach (sfCatalogue($shop) as $p) { if ((string) $p['id'] === $produit) { $prod = $p; break; } }
+    $out = ['promotions' => [], 'formules' => [], 'erreur' => null];
+    if ($prod === null || empty($prod['apiId'])) { return $out; }
+    $pid = (int) $prod['apiId']; $cid = (int) ($prod['categoryId'] ?? 0);
+    $nom = (string) (socShop($shop)['name'] ?? $shop);
+    try {
+        foreach (socPromotions() as $x) {
+            if (!in_array($pid, $x['produits'], true) && !($cid && in_array($cid, $x['categories'], true))) { continue; }
+            if (empty($x['tous']) && !in_array($shop, array_map('strval', (array) $x['shops']), true)) { continue; }  // pas dans cette boutique
+            $autres = count(array_diff(array_map('strval', (array) $x['shops']), [$shop]));
+            $out['promotions'][] = ['id' => (int) $x['id'], 'type' => $x['type'], 'nom' => $x['nom'], 'libelle' => $x['libelle'], 'court' => $x['court'],
+                'du' => $x['du'], 'au' => $x['au'], 'tous' => !empty($x['tous']),
+                'portee' => !empty($x['tous']) ? 'Toutes les boutiques' : 'Votre boutique' . ($autres ? ' et ' . $autres . ' autre' . ($autres > 1 ? 's' : '') : ''),
+                'mention' => sfMention($x, $nom, 'fr'), 'mentionNl' => sfMention($x, $nom, 'nl')];
+        }
+    } catch (Throwable $e) { $out['erreur'] = 'Les promotions du réseau sont illisibles pour l’instant.'; }
+    // Les formules du produit (sandwich + boisson…), au prix de la boutique.
+    try { $out['formules'] = array_values(array_filter((socNavOffres(['shop' => $shop, 'produit' => $pid])['formules'] ?? []), static fn ($f) => ($f['nom'] ?? '') !== '')); }
+    catch (Throwable $e) { /* sans formules */ }
+    return $out;
+}
+
+/** La mention d'une promotion pour le post de la boutique : ses dates (si l'API en a) et où elle vaut. */
+function sfMention(array $x, string $boutique, string $L): string
+{
+    $d = static fn (?string $iso): string => $iso ? date('d/m/Y', strtotime($iso)) : '';
+    $du = $x['du'] ?? null; $au = $x['au'] ?? null;
+    if ($L === 'nl') {
+        $q = $du && $au ? 'van ' . $d($du) . ' tot ' . $d($au) : ($au ? 'tot ' . $d($au) : ($du ? 'vanaf ' . $d($du) : ''));
+        return 'Aanbod geldig ' . implode(', ', array_filter([$q, !empty($x['tous']) ? 'in alle winkels' : 'in ' . $boutique])) . '.';
+    }
+    $q = $du && $au ? 'du ' . $d($du) . ' au ' . $d($au) : ($au ? 'jusqu’au ' . $d($au) : ($du ? 'à partir du ' . $d($du) : ''));
+    return 'Offre valable ' . implode(', ', array_filter([$q, !empty($x['tous']) ? 'dans toutes les boutiques' : 'à ' . $boutique])) . '.';
+}
+
+/** Ajoute un bloc au texte du post : avant la ligne {lien} s'il y en a une (le lien reste en dernier), sinon à la fin. */
+function sfAjouter(string $t, string $bloc): string
+{
+    $bloc = trim($bloc);
+    if ($bloc === '' || str_contains($t, $bloc)) { return $t; }
+    if (preg_match('/\n\{lien\}\s*$/u', $t, $m, PREG_OFFSET_CAPTURE)) { return substr($t, 0, $m[0][1]) . "\n" . $bloc . substr($t, $m[0][1]); }
+    return (trim($t) !== '' ? rtrim($t) . "\n" : '') . $bloc;
+}
+
+/**
  * Crée un post depuis un modèle. Tout est vérifié ici : modèle ouvert, champs
  * permis et bornés, canaux, date (délai, horizon, jours, heures), quota de la
  * semaine. Le texte et le titre sont ceux du modèle ; le visuel est celui que
@@ -447,11 +500,37 @@ function sfPostCreer(string $shop, array $b, array $session = []): array
         if ($prod === null) { $err[] = 'Choisissez un produit de votre catalogue.'; }
     }
     $prixNum = $prod && $prod['price'] !== '' ? (float) str_replace(',', '.', (string) $prod['price']) : null;
+    $kind = (string) ($tpl['promo']['kind'] ?? 'aucune');
+
+    // Promotion, bundle ou formule de TFBuddy liés au produit : relus ici (jamais pris tels quels de l'écran),
+    // vérifiés encore à la publication (socVerifierOffres). Un modèle à remise ou à prix promo garde la sienne.
+    $api = null;
+    if (is_array($b['offre'] ?? null) && ($b['offre']['genre'] ?? '') !== '') {
+        if ($prod === null) { $err[] = 'Choisissez d’abord le produit de la promotion.'; }
+        elseif (in_array($kind, ['remise', 'prix'], true)) { $err[] = 'Ce modèle a sa propre remise : prenez un modèle sans remise (ex. « Produit du jour ») pour publier une promotion du réseau.'; }
+        else {
+            $o = sfOffres($shop, (string) $prod['id']);
+            if (($b['offre']['genre'] ?? '') === 'formule') {
+                foreach ($o['formules'] as $x) { if ((string) $x['nom'] === (string) ($b['offre']['nom'] ?? '')) { $api = ['genre' => 'formule'] + $x; } }
+            } else {
+                foreach ($o['promotions'] as $x) { if ((int) $x['id'] === (int) ($b['offre']['id'] ?? 0)) { $api = ['genre' => 'promotion'] + $x; } }
+            }
+            if ($api === null) { $err[] = 'Cette promotion n’est plus valable dans votre boutique : rechargez la page.'; }
+            elseif ($t !== false && ($api['genre'] ?? '') === 'promotion') {
+                if (!empty($api['au']) && $api['au'] < $date) { $err[] = 'La promotion « ' . $api['nom'] . ' » se termine le ' . sfDate($api['au']) . ', avant la publication.'; }
+                if (!empty($api['du']) && $api['du'] > $date) { $err[] = 'La promotion « ' . $api['nom'] . ' » ne commence que le ' . sfDate($api['du']) . ' : publiez à partir de cette date.'; }
+            }
+        }
+    }
+    $court = $api ? ((string) ($api['court'] ?? '') !== '' ? (string) $api['court'] : (string) $api['nom']) : '';
 
     // Promotion
-    $kind = (string) ($tpl['promo']['kind'] ?? 'aucune');
     $promo = null;
-    if ($kind === 'remise') {
+    if ($api && $kind === 'offre') {
+        $promo = ['kind' => 'offre', 'value' => $court, 'label' => $court];
+    } elseif ($api) {
+        $promo = ['kind' => 'api', 'value' => $court, 'label' => $court];
+    } elseif ($kind === 'remise') {
         $min = (int) ($tpl['promo']['min'] ?? 5); $max = min((int) ($tpl['promo']['max'] ?? 30), $r['remiseMax']);
         $v = (int) ($b['discount'] ?? 0);
         if ($v < $min || $v > $max) { $err[] = 'Remise entre ' . $min . ' et ' . $max . ' %.'; }
@@ -470,7 +549,11 @@ function sfPostCreer(string $shop, array $b, array $session = []): array
 
     // Période
     $du = null; $au = null;
-    if (!empty($tpl['period'])) {
+    if (!empty($tpl['period']) && $api && !empty($api['du']) && !empty($api['au'])) {
+        // Les dates sont celles de la promotion du réseau.
+        $du = (string) $api['du']; $au = (string) $api['au'];
+        if ($promo) { $promo += ['from' => $du, 'to' => $au]; }
+    } elseif (!empty($tpl['period'])) {
         $du = (string) ($b['from'] ?? ''); $au = (string) ($b['to'] ?? '');
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $au) || $au < $du) { $err[] = 'Période invalide (du … au …).'; }
         elseif ((strtotime($au) - strtotime($du)) / 86400 + 1 > $r['promoDureeMax']) { $err[] = 'Une promotion dure au plus ' . $r['promoDureeMax'] . ' jours.'; }
@@ -521,15 +604,24 @@ function sfPostCreer(string $shop, array $b, array $session = []): array
     $vars = ['produit' => $prod['name'] ?? '', 'prix' => $prod['price'] ?? '', 'remise' => $kind === 'remise' ? $promo['value'] : '',
         'offre' => $kind === 'offre' ? $promo['value'] : '', 'prix_promo' => $kind === 'prix' ? $promo['value'] : '', 'du' => $du ? sfDate($du) : '', 'au' => $au ? sfDate($au) : '', 'libre' => $libre];
     $varsNl = array_replace($vars, ['produit' => $prod['nameNl'] ?? ($prod['name'] ?? '')]);
+    // L'offre de TFBuddy : son libellé dans le texte, puis sa mention (dates, boutiques), avant le lien.
+    $texte = sfRemplir((string) ($tpl['text'] ?? ''), $vars); $texteNl = sfRemplir((string) ($tpl['textNl'] ?? ''), $varsNl);
+    if ($api) {
+        $texte = sfAjouter(sfAjouter($texte, (string) $api['libelle']), (string) ($api['mention'] ?? ''));
+        if (trim($texteNl) !== '') { $texteNl = sfAjouter($texteNl, (string) ($api['mentionNl'] ?? '')); }
+    }
     $statut = $r['validation'] === 'toujours' || ($r['validation'] === 'modele' && !empty($tpl['validation'])) ? 'À valider' : 'Programmé';
     $auteur = (($session['via'] ?? '') === 'apercu' ? 'Franchiseur (aperçu) · ' : 'Franchisé · ') . $s['name'];
     $post = ['id' => 'f' . date('ymdHis') . bin2hex(random_bytes(2)), 'origin' => 'franchise', 'author' => $auteur, 'template' => (string) $tpl['id'],
         'type' => (string) ($tpl['type'] ?? 'Produit'), 'title' => mb_substr(sfRemplir((string) ($tpl['title'] ?? $tpl['name']), $vars), 0, 120),
         'shops' => [$shop], 'ch' => [$shop => ['fb' => $fb, 'ig' => $ig]], 'fb' => $fb, 'ig' => $ig, 'status' => $statut, 'date' => $date, 'time' => $time,
-        'text' => sfRemplir((string) ($tpl['text'] ?? ''), $vars), 'textNl' => sfRemplir((string) ($tpl['textNl'] ?? ''), $varsNl), 'langs' => $s['langs'],
+        'text' => $texte, 'textNl' => $texteNl, 'langs' => $s['langs'],
         'img' => $visuel, 'media' => $fixe ? $medias : [['src' => $visuel, 'kind' => 'img', 'name' => 'Visuel du modèle « ' . $tpl['name'] . ' »']],
-        'promo' => $promo, 'product' => $prod['id'] ?? null, 'spread' => 0, 'campaign' => ((string) ($tpl['campaign'] ?? '')) ?: null, 'link' => $lien,
-        'fields' => ['product' => $prod['id'] ?? null, 'discount' => $b['discount'] ?? null, 'offer' => $b['offer'] ?? null, 'promoPrice' => $b['promoPrice'] ?? null,
+        'promo' => $promo, 'product' => $prod['id'] ?? null,
+        'offre' => $api === null ? null : ($api['genre'] === 'formule'
+            ? ['genre' => 'formule', 'nom' => $api['nom'], 'libelle' => $api['libelle'], 'prix' => $api['prix'] ?? null, 'shop' => $shop]
+            : ['genre' => 'promotion', 'id' => (int) $api['id'], 'type' => $api['type'], 'nom' => $api['nom'], 'libelle' => $api['libelle'], 'du' => $api['du'], 'au' => $api['au'], 'tous' => $api['tous'], 'portee' => $api['portee']]), 'spread' => 0, 'campaign' => ((string) ($tpl['campaign'] ?? '')) ?: null, 'link' => $lien,
+        'fields' => ['product' => $prod['id'] ?? null, 'offre' => $api ? ($api['genre'] === 'formule' ? 'formule:' . $api['nom'] : 'promotion:' . $api['id']) : null, 'discount' => $b['discount'] ?? null, 'offer' => $b['offer'] ?? null, 'promoPrice' => $b['promoPrice'] ?? null,
             'from' => $du, 'to' => $au, 'free' => $libre, 'photo' => $photo !== '' ? $photo : null]];
     $out = socStateSave(['changes' => ['posts' => ['upsert' => [$post]]]]);
     $p = socItem('posts', (string) $post['id']) ?? $post;
@@ -766,6 +858,7 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/franchise/calendrier') { return [200, sfCalendrier($shop, (string) ($_GET['du'] ?? ''), (string) ($_GET['au'] ?? ''))]; }
     if ($method === 'GET' && $path === '/franchise/calendrier/stats') { return [200, sfCalStats($shop, (string) ($_GET['id'] ?? ''), (string) ($_GET['compte'] ?? ''))]; }
     if ($method === 'GET' && $path === '/franchise/operations') { return [200, sfOperations($shop)]; }
+    if ($method === 'GET' && $path === '/franchise/catalogue/offres') { return [200, sfOffres($shop, (string) ($_GET['produit'] ?? ''))]; }
     // La photo d'un produit du webshop (R2, sans CORS) servie par le module : le visuel qui la dessine s'exporte.
     if ($method === 'GET' && $path === '/franchise/media/webshop') { return [200, socMediaWebshop((string) ($_GET['u'] ?? ''))]; }
     throw new HttpError(404, 'route inconnue');

@@ -539,6 +539,16 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   abonnés, gagnés / perdus, comptes touchés ; `GET /franchise/instagram/abonnes`, règle
   `voirAnalyse`) et les **interactions des 12 dernières publications** (j'aime + commentaires,
   moyenne et part des abonnés ; un clic montre la publication dans la grille).
+- **Promotions, bundles et formules du produit** (Publier, `GET /franchise/catalogue/offres?produit=`,
+  `sfOffres`) : dès qu'un produit est choisi, celles de TFBuddy qui visent le produit ou sa catégorie
+  et valent dans la boutique (comme « Créer un post » du franchiseur), avec leur portée et leurs dates.
+  « Utiliser » met l'offre sur le visuel (à côté du prix) et, à l'envoi, le serveur la relit (jamais
+  prise telle quelle de l'écran), ajoute au texte son libellé puis sa mention (« Offre valable du … au
+  …, à Halle. », NL : « Aanbod geldig … »), avant la ligne du lien, et garde `offre` sur le post : à
+  la publication, `socVerifierOffres` la revérifie (toujours active, dans ses dates, valable dans la
+  boutique), sinon la publication s'arrête. Modèle « offre spéciale » : la promotion du réseau remplace
+  l'offre de la liste et ses dates la période ; modèle à remise ou à prix promo : il garde la sienne
+  (la promotion du réseau se publie avec un modèle sans remise). « Poser sur la photo » la pose en texte.
 - **Publier** reprend le générateur dans le cadre du modèle : la **photo du webshop**
   du produit (Cloudflare R2, rapatriée par `GET /franchise/media/webshop` pour que le
   visuel s'exporte), l'illustration du catalogue ou sa photo (si le modèle l'ouvre) ;

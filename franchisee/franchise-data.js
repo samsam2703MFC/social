@@ -164,9 +164,13 @@
     if (tpl.product === 'choix' && !STATE.catalogue.some(p => p.id === b.product)) err.push('Choisissez un produit.');
     const p = tpl.promo || {};
     if (p.kind === 'remise') { const max = Math.min(p.max, r.remiseMax); if (!(+b.discount >= p.min && +b.discount <= max)) err.push('Remise entre ' + p.min + ' et ' + max + ' %.'); }
-    if (p.kind === 'offre' && !(p.offres || []).includes(b.offer)) err.push('Choisissez une offre.');
+    const api = b.offre && b.offre.genre ? b.offre : null;  // promotion ou formule de TFBuddy (relue par le serveur)
+    if (api && (p.kind === 'remise' || p.kind === 'prix')) err.push('Ce modèle a sa propre remise : la promotion du réseau se publie avec un modèle sans remise.');
+    if (p.kind === 'offre' && !api && !(p.offres || []).includes(b.offer)) err.push('Choisissez une offre.');
     if (p.kind === 'prix' && !(parseFloat(String(b.promoPrice).replace(',', '.')) > 0)) err.push('Indiquez le prix promotionnel.');
-    if (tpl.period) {
+    if (api && api.au && b.date && api.au < b.date) err.push('La promotion « ' + api.nom + ' » se termine avant la publication.');
+    if (api && api.du && b.date && api.du > b.date) err.push('La promotion « ' + api.nom + ' » ne commence que le ' + dShort(api.du) + ' : publiez à partir de cette date.');
+    if (tpl.period && !(api && api.du && api.au)) {
       if (!b.from || !b.to || b.to < b.from) err.push('Indiquez la période (du … au …).');
       else if ((d2(b.to) - d2(b.from)) / 86400000 + 1 > r.promoDureeMax) err.push('Une promotion dure au plus ' + r.promoDureeMax + ' jours.');
     }
@@ -271,6 +275,27 @@
         { id: 'n2', title: 'Derniers jours de la gamme automne', date: addDays(STATE.today, 3), time: '08:00', status: 'Programmé', own: false, frise: null, src: 'img/illus/seasonal/autumn-range.png' }] });
   }
   /**
+   * Les promotions, bundles et formules liés à un produit du catalogue (TFBuddy), valables dans la boutique,
+   * avec leur mention (dates, boutiques). Comme « Créer un post » du franchiseur.
+   */
+  const OFFRES = new Map();
+  function offres(produit) {
+    if (!produit) return Promise.resolve({ promotions: [], formules: [] });
+    if (DEMO) {
+      const p = (STATE.catalogue || []).find(x => x.id === produit) || {}, d = (n) => addDays(STATE.today, n), f = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
+      return Promise.resolve({ demo: true, erreur: null, formules: [],
+        promotions: [{ id: 1, type: 'offre', nom: p.name + ' 4+1', libelle: '4 + 1 offert (' + (p.name || 'produit') + ')', court: '4+1', du: d(-2), au: d(12), tous: true, portee: 'Toutes les boutiques',
+            mention: 'Offre valable du ' + f(d(-2)) + ' au ' + f(d(12)) + ', dans toutes les boutiques.', mentionNl: 'Aanbod geldig van ' + f(d(-2)) + ' tot ' + f(d(12)) + ', in alle winkels.' },
+          { id: 2, type: 'bundle', nom: 'Duo', libelle: 'Bundle : 2 × ' + (p.name || 'produit') + ' = 9,90 €', court: '9,90 €', du: null, au: null, tous: false, portee: 'Votre boutique',
+            mention: 'Offre valable à ' + STATE.shop.name + '.', mentionNl: 'Aanbod geldig in ' + STATE.shop.name + '.' }] });
+    }
+    if (!OFFRES.has(produit)) {
+      const q = api('GET', '/franchise/catalogue/offres?shop=' + encodeURIComponent(STATE.shop.id) + '&produit=' + encodeURIComponent(produit));
+      OFFRES.set(produit, q); q.catch(() => OFFRES.delete(produit));
+    }
+    return OFFRES.get(produit);
+  }
+  /**
    * À droite de la grille Instagram : les abonnés du compte jour par jour (30 jours : nouveaux, désabonnements)
    * et les comptes touchés, lus en direct chez Meta.
    */
@@ -346,7 +371,7 @@
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, calendrier, calStats, operations, webshopUrl, photoLocale,
+  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, calendrier, calStats, operations, webshopUrl, photoLocale,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();

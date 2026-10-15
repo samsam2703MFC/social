@@ -78,6 +78,30 @@
             </section>
           </sc-if>
 
+          <!-- Promotions, bundles et formules du produit (TFBuddy), comme dans « Créer un post » du franchiseur -->
+          <sc-if value="{{ showOffres }}" hint-placeholder-val="{{ false }}">
+            <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Promotions, bundles et formules de ce produit</span>
+                <span style="font-size:11px;color:#8A847C;">{{ offresSource }}</span>
+              </div>
+              <sc-if value="{{ offresLoading }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Lecture des promotions…</span></sc-if>
+              <sc-if value="{{ noOffres }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A847C;">{{ noOffresLabel }}</span></sc-if>
+              <sc-for list="{{ offresList }}" as="of" hint-placeholder-count="0">
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:{{ of.bg }};border:1px solid {{ of.border }};flex-wrap:wrap;">
+                  <span style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.04em;border-radius:4px;padding:3px 6px;background:{{ of.tagBg }};color:{{ of.tagFg }};flex:0 0 auto;">{{ of.tag }}</span>
+                  <span style="display:flex;flex-direction:column;gap:1px;min-width:160px;flex:1;">
+                    <span style="font-size:12px;font-weight:500;color:#222222;">{{ of.libelle }}</span>
+                    <span style="font-size:11px;color:#666666;">{{ of.note }}</span>
+                  </span>
+                  <sc-if value="{{ of.canPoser }}" hint-placeholder-val="{{ false }}"><button onClick="{{ of.poser }}" title="Poser ce prix ou cette promotion sur la photo, en texte (typo et couleurs de la marque)" style="border:0.5px solid #8D1D2C;background:#FFFFFF;color:#8D1D2C;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;flex:0 0 auto;">Poser sur la photo</button></sc-if>
+                  <button onClick="{{ of.use }}" disabled="{{ of.dis }}" title="{{ of.tip }}" style="border:none;background:{{ of.btnBg }};color:#FFFFFF;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;flex:0 0 auto;opacity:{{ of.op }};">{{ of.btn }}</button>
+                </div>
+              </sc-for>
+              <sc-if value="{{ hasOffreNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:{{ offreNoteFg }};line-height:1.5;">{{ offreNote }}</span></sc-if>
+            </section>
+          </sc-if>
+
           <sc-if value="{{ hasPromo }}" hint-placeholder-val="{{ false }}">
             <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:10px;">
               <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Votre promotion</span>
@@ -88,6 +112,7 @@
                   <span style="font-size:11px;color:#666666;">de {{ dMin }} à {{ dMax }} % (fixé par le réseau)</span>
                 </div>
               </sc-if>
+              <sc-if value="{{ hasApiOffre }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#222222;line-height:1.5;"><strong style="font-weight:600;color:#8D1D2C;">{{ apiOffreLabel }}</strong> · {{ apiOffreSub }}</span></sc-if>
               <sc-if value="{{ isOffre }}" hint-placeholder-val="{{ false }}">
                 <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ offers }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" style="border-radius:8px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;border:0.5px solid {{ o.border }};background:{{ o.bg }};color:{{ o.fg }};">{{ o.label }}</button></sc-for></div>
               </sc-if>
@@ -636,7 +661,9 @@ class Component extends DCLogic {
       pmode: null, couleurRole: null, couleurNom: '', pv: 'fb', tel: false, ws: {}, wsErr: '', jour: null,
       // L'éditeur de visuel (comme « Créer un post » du franchiseur) : réglages par-dessus le visuel du modèle,
       // textes par langue, photos ajoutées et leur cadrage, texte posé sélectionné, médiathèque, contrôle.
-      ...this.visuelVide(), illusOpen: false, illusCat: null, query: '', fCat: '', fSeason: '', qc: [] };
+      ...this.visuelVide(), illusOpen: false, illusCat: null, query: '', fCat: '', fSeason: '', qc: [],
+      // Les promotions, bundles et formules du produit (TFBuddy) : lus par produit ; celle utilisée dans le post.
+      offres: {}, offresLoading: false, apiOffre: null };
     if (!st) return base;
     base.lang = (st.shop.langs || ['fr'])[0];
     let slot = this.firstSlot(st);
@@ -665,7 +692,7 @@ class Component extends DCLogic {
   }
   forTpl(t, st) {
     const p = t.promo || {}, r = st.rules;
-    return { tpl: t.id, product: null, discount: p.kind === 'remise' ? Math.min(p.max, r.remiseMax, Math.max(p.min, 20)) : 0, offer: p.kind === 'offre' ? (p.offres || [])[0] || '' : '',
+    return { tpl: t.id, product: null, apiOffre: null, discount: p.kind === 'remise' ? Math.min(p.max, r.remiseMax, Math.max(p.min, 20)) : 0, offer: p.kind === 'offre' ? (p.offres || [])[0] || '' : '',
       promoPrice: '', free: '', photo: null, pmode: null, ...this.visuelVide(), link: t.link ? 'modele' : 'aucun', fb: !!(t.fb && r.fb && st.shop.fb === 'connected'), ig: !!(t.ig && r.ig && st.shop.igs === 'connected'), errors: [] };
   }
   componentDidMount() { this.lireJour(); this.lirePhoto(); }
@@ -680,7 +707,7 @@ class Component extends DCLogic {
     ['paysage', 'Paysage 1,91:1', '1200 × 630 · toute la largeur du fil sur ordinateur ; plus petit sur mobile.']];
   /** Le visuel : celui du modèle (avec les champs saisis), puis les réglages du franchisé par-dessus. */
   visuel(t, fields, L) {
-    const s = this.state, base = window.SFVisuel.control(t, fields, L);
+    const s = this.state, base = this.controle(t, fields, L);
     return Object.assign({ format: 'carre', fondu: 60, logo: 'auto', textes: [], couleurs: {}, illus: null, fond: null, phraseFont: 'script', phraseColor: 'auto' }, base, s.vo, (s.vt || {})[L] || {});
   }
   V(patch) { this.setState(st => ({ vo: Object.assign({}, st.vo, patch) })); }
@@ -731,7 +758,7 @@ class Component extends DCLogic {
   /** Les valeurs de l'éditeur de visuel (mêmes réglages que « Créer un post » du franchiseur). */
   editeur(t, st, fields, L, prod, seg) {
     const SF = window.SF, s = this.state, on = st.rules.persoVisuel !== false && (t.visual || {}).style !== 'fixe';
-    const v = this.visuel(t, fields, L), base = window.SFVisuel.control(t, fields, L), cur = on ? v : base;
+    const v = this.visuel(t, fields, L), base = this.controle(t, fields, L), cur = on ? v : base;
     const photos = this.photosVisuel(t, prod), nMain = photos.length - (s.xphotos || []).length;
     const role = on ? s.couleurRole : null, P = this.PALETTE();
     const couleurDe = (r) => r === 'phrase' ? (v.phraseColor || 'auto') : ((v.couleurs || {})[r] || 'auto');
@@ -857,7 +884,24 @@ class Component extends DCLogic {
     });
     return out;
   }
-  componentDidUpdate() { this.lireJour(); this.lirePhoto(); }
+  componentDidUpdate() { this.lireJour(); this.lirePhoto(); this.lireOffres(); }
+  /** Les promotions, bundles et formules du produit choisi, lus dans TFBuddy (une fois par produit). */
+  lireOffres() {
+    const SF = window.SF, s = this.state; if (!SF || !SF.state() || !s.tpl || !s.product || s.offres[s.product] || this._offK === s.product) return;
+    const k = this._offK = s.product;
+    this.setState({ offresLoading: true });
+    SF.offres(k).then(r => this.setState(x => ({ offres: Object.assign({}, x.offres, { [k]: r }), offresLoading: false })))
+      .catch(e => { this._offK = null; this.setState(x => ({ offres: Object.assign({}, x.offres, { [k]: { promotions: [], formules: [], erreur: e.message || 'erreur' } }), offresLoading: false })); });
+  }
+  /** L'offre du réseau utilisée dans le post, si elle est bien celle du produit choisi. */
+  offreActive() { const s = this.state, o = s.apiOffre; return o && o.produit === s.product ? o : null; }
+  /** Le visuel du modèle avec les champs saisis ; une promotion du réseau utilisée y prend la place de l'offre. */
+  controle(t, fields, L) {
+    const c = window.SFVisuel.control(t, fields, L), o = this.offreActive();
+    if (!o) return c;
+    // Le prix de la pièce reste (le visuel met l'offre à côté de lui) : « 4,20 € la pièce | 9,90 € le lot ».
+    return Object.assign({}, c, { showPromo: true, promo: o.court || o.nom, promoSub: o.court ? o.nom : '' });
+  }
   componentWillUnmount() {}
   /** Ce qui est déjà prévu le jour choisi : les posts de l'espace et les publications de la Page lues chez Meta. */
   lireJour() {
@@ -900,7 +944,10 @@ class Component extends DCLogic {
     const s = this.state;
     const st = window.SF.state(), t = st.templates.find(x => x.id === s.tpl), prod = s.product ? st.catalogue.find(p => p.id === s.product) : null;
     const mine = t && this.photoMode(t, prod) === 'mine';
-    return { template: s.tpl, product: s.product, discount: s.discount, offer: s.offer, promoPrice: s.promoPrice, from: s.from, to: s.to, free: s.free.trim(), photo: mine ? s.photo : null, link: s.link || 'aucun', fb: s.fb, ig: s.ig, date: s.date, time: s.time };
+    const o = this.offreActive();
+    return { template: s.tpl, product: s.product, discount: s.discount, offer: s.offer, promoPrice: s.promoPrice, from: s.from, to: s.to, free: s.free.trim(), photo: mine ? s.photo : null, link: s.link || 'aucun', fb: s.fb, ig: s.ig, date: s.date, time: s.time,
+      // Promotion ou formule de TFBuddy : le serveur la relit (jamais prise telle quelle) et en écrit le libellé et la mention.
+      offre: o ? (o.genre === 'formule' ? { genre: 'formule', nom: o.nom } : { genre: 'promotion', id: o.id, nom: o.nom, du: o.du, au: o.au }) : null };
   }
   async submit() {
     const SF = window.SF, s = this.state;
@@ -957,10 +1004,18 @@ class Component extends DCLogic {
     const prod = s.product ? st.catalogue.find(p => p.id === s.product) : null, p = t.promo || {}, kind = p.kind || 'aucune';
     const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     const products = st.catalogue.filter(c => !s.q || norm(c.name + ' ' + (c.gamme || '')).includes(norm(s.q)));
-    const fields = { product: prod, discount: s.discount, offer: s.offer, promoPrice: s.promoPrice, from: t.period ? s.from : '', to: t.period ? s.to : '', free: s.free, photo: s.photo };
+    // L'offre du réseau (TFBuddy) utilisée : {offre} d'un modèle « offre », ses dates pour la période.
+    const ao = this.offreActive(), aoDates = !!(ao && ao.du && ao.au);
+    const fields = { product: prod, discount: s.discount, offer: kind === 'offre' && ao ? (ao.court || ao.nom) : s.offer, promoPrice: s.promoPrice,
+      from: t.period ? (aoDates ? ao.du : s.from) : '', to: t.period ? (aoDates ? ao.au : s.to) : '', free: s.free, photo: s.photo };
     const L = s.lang, vars = V.vars(t, fields, L);
     const langs = st.shop.langs || ['fr'];
-    const text = langs.map(l => SF.fill(V.fill(l === 'nl' ? (t.textNl || t.text) : t.text, V.vars(t, fields, l)), l)).filter(x => x.trim()).join('\n\n— — —\n\n');
+    // Le texte : celui du modèle, puis (offre du réseau) son libellé et sa mention, avant la ligne du lien — comme le serveur.
+    const ajoute = (txt, bloc) => { const x = String(txt || ''); bloc = String(bloc || '').trim(); if (!bloc || x.includes(bloc)) return x;
+      const i = x.search(/\n\{lien\}\s*$/); return i >= 0 ? x.slice(0, i) + '\n' + bloc + x.slice(i) : (x.trim() ? x.replace(/\s+$/, '') + '\n' : '') + bloc; };
+    const texteDe = (l) => { const brut = l === 'nl' ? (t.textNl || t.text) : t.text, x = V.fill(brut, V.vars(t, fields, l));
+      return !ao ? x : l === 'nl' ? (t.textNl ? ajoute(x, ao.mentionNl) : x) : ajoute(ajoute(x, ao.libelle), ao.mention); };
+    const text = langs.map(l => SF.fill(texteDe(l), l)).filter(x => x.trim()).join('\n\n— — —\n\n');
     const dMax = Math.min(+p.max || 0, +r.remiseMax || 0), minDate = SF.iso(new Date(Date.now() + r.delaiMinHeures * 3600000)), maxDate = SF.addDays(st.today, r.horizonJours);
     const jours = [1, 2, 3, 4, 5, 6, 0].filter(j => (r.jours || []).includes(j)).map(j => SF.DAYS[j]);
     const val = valOf(t);
@@ -970,12 +1025,34 @@ class Component extends DCLogic {
     return Object.assign(common, {
       eyebrow: 'Publier · modèle du réseau', title: t.name.toUpperCase(), back: () => this.setState({ tpl: null, errors: [] }), tplDescription: t.description || '',
       needProduct: t.product === 'choix', q: s.q, setQ: (e) => this.setState({ q: e.target.value }), qPh: 'Rechercher parmi vos ' + st.catalogue.length + ' produits…',
-      products: products.slice(0, 60).map(c => ({ name: c.name, price: c.price ? c.price + ' €' : '', img: c.photo || SF.media(c.img), fit: c.photo ? 'cover' : 'contain', ring: s.product === c.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)', pick: () => S({ product: c.id }) })),
-      hasPromo: kind !== 'aucune' || !!t.period, isRemise: kind === 'remise', isOffre: kind === 'offre', isPrix: kind === 'prix',
+      products: products.slice(0, 60).map(c => ({ name: c.name, price: c.price ? c.price + ' €' : '', img: c.photo || SF.media(c.img), fit: c.photo ? 'cover' : 'contain', ring: s.product === c.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)', pick: () => S({ product: c.id, apiOffre: null }) })),
+      // Les promotions, bundles et formules du produit (TFBuddy), valables dans la boutique.
+      ...(() => { const O = prod ? s.offres[prod.id] : null, remiseTpl = kind === 'remise' || kind === 'prix', persoOn = st.rules.persoVisuel !== false && (t.visual || {}).style !== 'fixe';
+        const TAG = { bundle: ['Bundle', '#232220', '#F2C9A0'], offre: ['Offre', '#8D1D2C', '#FFFFFF'], remise: ['Remise', '#D97B29', '#FFFFFF'], quantite: ['Quantité', '#8D1D2C', '#FFFFFF'], formule: ['Formule', '#E2F0E8', '#0F6B4A'] };
+        const ligne = (o) => { const on = !!ao && ao.genre === o.genre && (o.genre === 'formule' ? ao.nom === o.nom : ao.id === o.id), [tag, tb, tf] = TAG[o.genre === 'formule' ? 'formule' : o.type] || TAG.offre;
+          const tard = o.du && s.date && o.du > s.date, fini = o.au && s.date && o.au < s.date;
+          const note = o.genre === 'formule' ? (o.court || 'prix de la boutique') + (o.choix && o.choix.length ? ' · au choix : ' + o.choix.join(', ') : '')
+            : o.portee + (o.du && o.au ? ' · du ' + SF.dShort(o.du) + ' au ' + SF.dShort(o.au) : o.au ? ' · jusqu’au ' + SF.dShort(o.au) : o.du ? ' · à partir du ' + SF.dShort(o.du) : '') + (tard ? ' · commence après votre date' : fini ? ' · finie avant votre date' : '');
+          const dis = remiseTpl;
+          return { tag, tagBg: tb, tagFg: tf, libelle: o.libelle, note, bg: on ? '#FBF3F4' : '#FFFFFF', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.10)',
+            btn: on ? 'Dans le post ✓' : 'Utiliser', btnBg: on ? '#1F8A60' : '#8D1D2C', dis, op: dis ? 0.45 : 1,
+            tip: dis ? 'Ce modèle a sa propre remise : prenez un modèle sans remise (ex. « Produit du jour »).' : on ? 'Retirer du post' : 'Sur le visuel, et dans le texte avec sa mention (dates, boutiques)',
+            use: () => { if (!dis) S({ apiOffre: on ? null : Object.assign({ produit: prod.id }, o) }); },
+            canPoser: persoOn, poser: () => this.poserTexte(this.visuel(t, fields, L), o.court || o.nom) }; };
+        const list = O ? (O.promotions || []).map(o => ligne(Object.assign({ genre: 'promotion' }, o))).concat((O.formules || []).map(f => ligne(Object.assign({ genre: 'formule' }, f)))) : [];
+        const note = remiseTpl && list.length ? 'Ce modèle a sa propre remise : pour publier une de ces promotions, prenez « Produit du jour » ou un modèle sans remise.'
+          : ao ? 'Dans le post : « ' + (ao.court || ao.nom) + ' » sur le visuel ; « ' + ao.libelle + ' »' + (ao.mention ? ' et « ' + ao.mention + ' »' : '') + ' dans le texte. Revérifiée dans TFBuddy à la publication.'
+          : list.length ? '« Utiliser » la met sur le visuel et, avec sa mention (dates, boutiques), dans le texte du post.' : '';
+        return { showOffres: t.product === 'choix' && !!prod && (t.visual || {}).style !== 'fixe', offresLoading: s.offresLoading && !O, offresList: list,
+          offresSource: O && O.demo ? 'démonstration' : 'lus dans TFBuddy · valables dans votre boutique',
+          noOffres: !!O && !list.length, noOffresLabel: O && O.erreur ? 'Promotions illisibles pour l’instant : ' + O.erreur : 'Aucune promotion, aucun bundle ni formule pour ce produit dans votre boutique.',
+          hasOffreNote: !!note, offreNote: note, offreNoteFg: remiseTpl ? '#8A4B00' : ao ? '#0F6B4A' : '#666666',
+          hasApiOffre: !!ao && kind !== 'aucune', apiOffreLabel: ao ? (ao.court || ao.nom) : '', apiOffreSub: ao ? 'promotion du réseau (TFBuddy)' + (aoDates ? ', du ' + SF.dShort(ao.du) + ' au ' + SF.dShort(ao.au) : '') : '' }; })(),
+      hasPromo: kind !== 'aucune' || !!t.period, isRemise: kind === 'remise', isOffre: kind === 'offre' && !ao, isPrix: kind === 'prix',
       discount: s.discount, dMin: p.min || 1, dMax, setDiscount: (e) => S({ discount: +e.target.value }),
       offers: (p.offres || []).map(o => Object.assign(chip(s.offer === o), { label: o, pick: () => S({ offer: o }) })),
       promoPrice: s.promoPrice, setPromoPrice: (e) => S({ promoPrice: e.target.value.replace(/[^\d,\.]/g, '') }), basePrice: prod && prod.price ? prod.price + ' €' : '— (choisissez un produit)',
-      needPeriod: !!t.period, from: s.from, to: s.to, maxTo: s.from ? SF.addDays(s.from, r.promoDureeMax - 1) : '', setFrom: (e) => S({ from: e.target.value }), setTo: (e) => S({ to: e.target.value }),
+      needPeriod: !!t.period && !aoDates, from: s.from, to: s.to, maxTo: s.from ? SF.addDays(s.from, r.promoDureeMax - 1) : '', setFrom: (e) => S({ from: e.target.value }), setTo: (e) => S({ to: e.target.value }),
       periodNote: 'au plus ' + r.promoDureeMax + ' jours', minDate, maxDate,
       // Lien : celui du modèle, ou le webshop de la boutique (sa page, celle du produit, sa catégorie).
       ...(() => { const cur = s.link || (t.link ? 'modele' : 'aucun'), wsP = !!(prod && prod.apiId && prod.webshop !== false), wsC = !!(prod && prod.categoryId);
