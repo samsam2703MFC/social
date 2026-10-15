@@ -6,7 +6,9 @@ DirectoryIndex index.html
 # (liens de l'ERP, favoris) ; la page les affiche alors sous leur nom propre.
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^(calendrier|publier|operations|instagram)/$ $1 [R=302,L]
+  # « publier/ » → « publier » (l'adresse demandée, sans la barre finale : jamais le chemin du disque).
+  RewriteCond %{REQUEST_URI} ^(.*/(calendrier|publier|operations|instagram))/$
+  RewriteRule ^ %1 [R=302,L]
   RewriteRule ^calendrier$ Calendrier.dc.html [L]
   RewriteRule ^publier$ Publier.dc.html [L]
   RewriteRule ^operations$ Campagnes.dc.html [L]
