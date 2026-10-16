@@ -38,7 +38,7 @@
 
   // ---------- démonstration ----------
   const TEMPLATES = [{"id": "fp-produit", "order": 1, "name": "Produit du jour", "description": "Mettre un produit de votre vitrine en avant, à son prix.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "{produit}", "text": "{produit} : {prix} € chez L’Atelier By {ville}. Ouvert {horaires}.", "textNl": "{produit}: {prix} € bij L’Atelier By {ville}. Open {horaires}.", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "choix", "visual": {"style": "epure", "eyebrow": "Aujourd’hui en vitrine", "eyebrowNl": "Vandaag in de etalage"}}, {"id": "fp-remise", "order": 2, "name": "Promotion en %", "description": "Une remise sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{produit} -{remise} %", "text": "-{remise} % sur {produit} chez L’Atelier By {ville}, du {du} au {au}. Ouvert {horaires}.", "textNl": "-{remise} % op {produit} bij L’Atelier By {ville}, van {du} tot {au}. Open {horaires}.", "product": "choix", "promo": {"kind": "remise", "min": 10, "max": 30}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "ruby", "eyebrow": "Promotion", "eyebrowNl": "Promotie"}}, {"id": "fp-offre", "order": 3, "name": "Offre spéciale", "description": "4+1, 2+1… sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{offre} · {produit}", "text": "{offre} sur {produit} chez L’Atelier By {ville}, du {du} au {au} !", "textNl": "{offre} op {produit} bij L’Atelier By {ville}, van {du} tot {au}!", "product": "choix", "promo": {"kind": "offre", "offres": ["4+1", "2+1", "1 acheté = 1 offert"]}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "abricot", "eyebrow": "Offre spéciale", "eyebrowNl": "Speciale actie"}}, {"id": "fp-evenement", "order": 4, "name": "Événement en boutique", "description": "Une dégustation, une animation, un horaire spécial.", "active": true, "type": "Événement local", "fb": true, "ig": true, "validation": true, "title": "Événement à {ville}", "text": "Chez L’Atelier By {ville} : {libre}", "textNl": "Bij L’Atelier By {ville}: {libre}", "product": "aucun", "promo": {"kind": "aucune"}, "period": false, "free": 90, "photo": "upload", "visual": {"style": "noir", "eyebrow": "En boutique", "eyebrowNl": "In de winkel"}}, {"id": "fp-vitrine", "order": 5, "name": "Nouveau en vitrine", "description": "Votre photo d’un produit qui arrive.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "Nouveau : {produit}", "text": "Nouveau dans notre vitrine à {ville} : {produit}. À découvrir {horaires} !", "textNl": "Nieuw in onze etalage in {ville}: {produit}. Te ontdekken {horaires}!", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "upload", "visual": {"style": "plein", "eyebrow": "Nouveau", "eyebrowNl": "Nieuw"}}];
-  const RULES = {"actif": true, "validation": "modele", "quotaSemaine": 3, "delaiMinHeures": 24, "horizonJours": 30, "jours": [1, 2, 3, 4, 5, 6, 0], "heureMin": "07:00", "heureMax": "20:00", "fb": true, "ig": true, "remiseMax": 30, "promoDureeMax": 14, "voirReseau": true, "voirCampagnes": true, "voirResultats": true, "voirSuivi": true, "voirAnalyse": true, "voirPublicites": true, "voirBudgetPub": false, "voirCommentaires": true, "voirAvisGoogle": true, "story": true, "recurrenceMax": 8, "persoVisuel": true, "message": "Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By."};
+  const RULES = {"actif": true, "validation": "modele", "quotaSemaine": 3, "delaiMinHeures": 24, "horizonJours": 30, "jours": [1, 2, 3, 4, 5, 6, 0], "heureMin": "07:00", "heureMax": "20:00", "fb": true, "ig": true, "remiseMax": 30, "promoDureeMax": 14, "voirReseau": true, "voirCampagnes": true, "voirResultats": true, "voirSuivi": true, "voirAnalyse": true, "voirPublicites": true, "voirBudgetPub": false, "voirCommentaires": true, "voirAvisGoogle": true, "repondreCommentaires": true, "rouges": "reseau", "delaiReponseHeures": 24, "story": true, "recurrenceMax": 8, "persoVisuel": true, "message": "Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By."};
   // Un modèle créé depuis un post du réseau (« Créer un post » → « Enregistrer comme modèle franchisé ») : visuel figé.
   TEMPLATES.push({ id: 'ft-automne', order: 6, name: 'Gamme automne (visuel du réseau)', description: 'Le post du réseau, prêt à publier sur votre Page.', active: true, type: 'Gamme saisonnière',
     fb: true, ig: false, validation: false, title: 'Gamme automne', text: 'La gamme automne est arrivée chez L’Atelier By {ville} ! Ouvert {horaires}.\n\n{libre}', textNl: 'Het herfstgamma is er bij L’Atelier By {ville}! Open {horaires}.\n\n{libre}',
@@ -78,6 +78,8 @@
     let s = null;
     try { s = JSON.parse(localStorage.getItem('sf.demo.state') || 'null'); } catch (e) {}
     if (!s || s.today !== iso(new Date())) s = demoState();
+    // Démonstration : un commentaire et un avis Google qui attendent la boutique (pastilles du menu).
+    if (!s.alertes) s.alertes = { com: { rouges: 1, oranges: 1, enRetard: 1, pourBoutique: 1, pourReseau: 1 }, google: { rouges: 1, oranges: 1, enRetard: 0, pourBoutique: 1, pourReseau: 1 } };
     return s;
   }
   function demoSave(s) { try { localStorage.setItem('sf.demo.state', JSON.stringify(s)); } catch (e) {} }
@@ -393,7 +395,8 @@
         ['d2', 'Marc B.', 'Jusqu’à quand la promo ?', h(0, '08:40'), 'orange', 'Question promotion', 'Demande la date de fin de la promotion.', 'Répondre avec les dates de la promotion.', 'Bonjour Marc, la promotion court jusqu’à dimanche inclus. À bientôt !'],
         ['d3', 'Julie D.', 'Trop bon !! 😍', h(1, '12:30'), 'vert', 'Compliment', 'Apprécie la tarte.', 'Un j’aime suffit.', 'Merci beaucoup Julie !'],
       ].map(([id, auteur, message, le, couleur, sujet, resume, action, reponse]) => ({ id, canal: 'fb', compte: 'L’Atelier By ' + STATE.shop.name, compteKey: 'fb:demo', boutique: STATE.shop.name,
-        auteur, message, le, masque: false, publication: pub, lienPublication: '', lien: '', couleur, sujet, resume, action, reponse, analyse: 'ia', traite: false, traiteLe: null, traitePar: '' }));
+        auteur, message, le, masque: false, publication: pub, lienPublication: '', lien: '', couleur, sujet, resume, action, reponse, analyse: 'ia', traite: false, traiteLe: null, traitePar: '',
+        responsable: couleur === 'rouge' && STATE.rules.rouges !== 'franchise' ? 'reseau' : 'franchise', enRetard: id === 'd2', escalade: id === 'd2', ageH: id === 'd2' ? 27 : 1, peutRepondre: true, reponseEnvoyee: '' }));
     }
     const liste = DEMO_COM.filter(c => Math.round((d2(STATE.today) - d2(c.le.slice(0, 10))) / 864e5) < jours).map(c => Object.assign({}, c));
     const totaux = { rouge: 0, orange: 0, vert: 0, aClasser: 0, rougeOuverts: 0, orangeOuverts: 0, total: liste.length };
@@ -414,7 +417,8 @@
         ['gd2', 'Sophie L.', 3, 'Bons produits mais beaucoup d’attente le dimanche.', h(9), 'orange', 'Attente le week-end', 'Apprécie les produits, regrette l’attente du dimanche.', 'Remercier et expliquer ce qui est fait pour l’attente.', 'Merci Sophie pour votre retour ! Nous renforçons l’équipe le dimanche matin.'],
         ['gd3', 'Anne B.', 5, 'Délicieux, accueil parfait !', h(20), 'vert', 'Compliment', 'Très satisfaite des produits et de l’accueil.', 'Remercier sous l’avis.', 'Merci beaucoup Anne, à très bientôt !'],
       ].map(([id, auteur, note, message, le, couleur, sujet, resume, action, reponse]) => ({ id, canal: 'gg', shopId: STATE.shop.id, boutique: STATE.shop.name, auteur, note, message, le, masque: false,
-        publication: 'Fiche Google de L’Atelier By ' + STATE.shop.name, lien: '', couleur, sujet, resume, action, reponse, analyse: 'ia', traite: false, traiteLe: null, traitePar: '' }));
+        publication: 'Fiche Google de L’Atelier By ' + STATE.shop.name, lien: '', couleur, sujet, resume, action, reponse, analyse: 'ia', traite: false, traiteLe: null, traitePar: '',
+        responsable: couleur === 'rouge' && STATE.rules.rouges !== 'franchise' ? 'reseau' : 'franchise', enRetard: false, escalade: false, ageH: 3, peutRepondre: false, reponseEnvoyee: '' }));
     }
     const liste = DEMO_GG.filter(c => Math.round((d2(STATE.today) - d2(c.le.slice(0, 10))) / 864e5) < jours).map(c => Object.assign({}, c));
     const totaux = { rouge: 0, orange: 0, vert: 0, aClasser: 0, rougeOuverts: 0, orangeOuverts: 0, total: liste.length };
@@ -424,6 +428,12 @@
       reputation: { cible: 4.6, connecteur: { raccordes: 3, derniereSynchro: STATE.today + ' 07:00' }, reseau: { moyenne: 4.21, avis: 876, notes: 3 },
         magasins: [{ id: STATE.shop.id, nom: STATE.shop.name, note: 4.4, avis: 50, ecart: -0.2, avis5Requis: 25, repartition: rep, raccorde: true, url: '', synchro: STATE.today + ' 07:00',
           lienAvis: 'https://search.google.com/local/writereview?placeid=demo', lienCourt: location.origin + '/social/api/v1/social/avis/' + STATE.shop.id, gagnes7: 2, gagnes30: 6, scans7: 3, scans30: 11 }] } });
+  }
+  function commentaireRepondre(id, message) {
+    if (!DEMO) return api('POST', '/franchise/commentaires/repondre', { shop: STATE.shop.id, id, message });
+    const c = (DEMO_COM || []).find(x => x.id === id), le = STATE.today + ' ' + pad(new Date().getHours()) + ':' + pad(new Date().getMinutes());
+    if (c) { c.reponseEnvoyee = message; c.reponseLe = le; c.reponsePar = 'vous'; c.traite = true; c.traiteLe = le; c.traitePar = 'vous'; c.enRetard = false; }
+    return Promise.resolve({ ok: true, le });
   }
   function commentaireTraiter(id, traite) {
     if (!DEMO) return api('POST', '/franchise/commentaires/traiter', { shop: STATE.shop.id, id, traite });
@@ -493,7 +503,7 @@
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, publicites, commentaires, commentaireTraiter, google, webshopUrl, photoLocale,
+  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, publicites, commentaires, commentaireTraiter, commentaireRepondre, google, webshopUrl, photoLocale,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();

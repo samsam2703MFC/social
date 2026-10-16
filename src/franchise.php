@@ -41,6 +41,9 @@ function sfReglesDefaut(): array
         'voirCommentaires' => true,
         // Les avis Google de la boutique (note, cible, avis 5★ à obtenir, avis classés vert / orange / rouge).
         'voirAvisGoogle' => true,
+        // Qui répond : le franchisé publie lui-même sa réponse sous les commentaires de sa Page ; les rouges sont traités
+        // par le réseau ('reseau') ou par la boutique ('franchise') ; au-delà du délai, un orange non traité remonte au réseau.
+        'repondreCommentaires' => true, 'rouges' => 'reseau', 'delaiReponseHeures' => 24,
         // Le franchisé peut publier en story (story seule, ou post + story) ; et répéter un post (au plus N fois, 0 = non).
         'story' => true, 'recurrenceMax' => 8,
         // Le franchisé peut choisir le format du visuel (carré, portrait) et la couleur de chaque texte (palette de la marque).
@@ -78,6 +81,9 @@ function sfReglesPut(array $in): array
         'voirPublicites' => (bool) ($in['voirPublicites'] ?? true), 'voirBudgetPub' => (bool) ($in['voirBudgetPub'] ?? false),
         'voirCommentaires' => (bool) ($in['voirCommentaires'] ?? true),
         'voirAvisGoogle' => (bool) ($in['voirAvisGoogle'] ?? true),
+        'repondreCommentaires' => (bool) ($in['repondreCommentaires'] ?? true),
+        'rouges' => in_array($in['rouges'] ?? '', ['reseau', 'franchise'], true) ? (string) $in['rouges'] : 'reseau',
+        'delaiReponseHeures' => max(1, min(168, (int) ($in['delaiReponseHeures'] ?? 24))),
         'story' => (bool) ($in['story'] ?? true), 'recurrenceMax' => max(0, min(26, (int) ($in['recurrenceMax'] ?? $d['recurrenceMax']))),
         'accesLibre' => in_array((string) ($in['accesLibre'] ?? ''), array_column(socReseau(), 'id'), true) ? (string) $in['accesLibre'] : '',
         'message' => mb_substr(trim((string) ($in['message'] ?? $d['message'])), 0, 600),
@@ -421,13 +427,33 @@ function sfGoogle(string $shop, array $q): array
         'ia' => ['configure' => (bool) ($e['ia']['configure'] ?? false)]];
 }
 
+/**
+ * Un commentaire (ou un avis Google) que la boutique traite elle-même : de sa Page, partagé par le réseau, et pas un rouge
+ * que le réseau garde (règle « rouges »).
+ */
+function sfCommentairePropre(string $shop, string $id): array
+{
+    $r = Db::row('SELECT shop_id, canal, couleur FROM social_commentaire WHERE id = ?', [$id]);
+    $regles = sfRegles();
+    $regle = $r && $r['canal'] === 'gg' ? 'voirAvisGoogle' : 'voirCommentaires';
+    if (!$regles[$regle]) { throw new HttpError(403, $regle === 'voirAvisGoogle' ? 'avis Google non partagés par le réseau' : 'commentaires non partagés par le réseau'); }
+    if (!$r || (string) $r['shop_id'] !== $shop) { throw new HttpError(404, 'commentaire inconnu'); }
+    if (socComResponsable($r, $regles) !== 'franchise') { throw new HttpError(403, 'Ce commentaire est pris en charge par le réseau.'); }
+    return $r;
+}
+
+/** Le franchisé publie sa réponse sous un commentaire de sa Page (règle « repondreCommentaires »). */
+function sfCommentaireRepondre(string $shop, string $id, string $message, array $session): array
+{
+    if (!sfRegles()['repondreCommentaires']) { throw new HttpError(403, 'Le réseau répond aux commentaires : copiez la réponse proposée.'); }
+    sfCommentairePropre($shop, $id);
+    return socCommentaireRepondre($id, $message, (string) ($session['name'] ?? 'Boutique'));
+}
+
 /** Le franchisé marque traité (ou rouvre) un commentaire ou un avis Google de sa boutique, et seulement de la sienne. */
 function sfCommentaireTraiter(string $shop, string $id, bool $traite): array
 {
-    $r = Db::row('SELECT shop_id, canal FROM social_commentaire WHERE id = ?', [$id]);
-    $regle = $r && $r['canal'] === 'gg' ? 'voirAvisGoogle' : 'voirCommentaires';
-    if (!sfRegles()[$regle]) { throw new HttpError(403, $regle === 'voirAvisGoogle' ? 'avis Google non partagés par le réseau' : 'commentaires non partagés par le réseau'); }
-    if (!$r || (string) $r['shop_id'] !== $shop) { throw new HttpError(404, 'commentaire inconnu'); }
+    $r = sfCommentairePropre($shop, $id);
     return socCommentaireTraiter($id, $traite);
 }
 
@@ -497,6 +523,8 @@ function sfEtat(string $shop, array $session): array
         'webshopPlan' => socWebshopPlanCache(),
         'webshopUrl' => rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/',
         'franchisorUrl' => (string) (socSetting('url_publique') ?? ''),
+        // Ce qui attend la boutique : rouges et oranges non traités, en retard (commentaires et avis Google).
+        'alertes' => socCommentairesAlertes($shop),
     ];
 }
 
@@ -1058,6 +1086,7 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/franchise/publicites') { return [200, sfPublicites($shop)]; }
     if ($method === 'GET' && $path === '/franchise/commentaires') { return [200, sfCommentaires($shop, $_GET)]; }
     if ($method === 'GET' && $path === '/franchise/google') { return [200, sfGoogle($shop, $_GET)]; }
+    if ($method === 'POST' && $path === '/franchise/commentaires/repondre') { $b = body(); return [200, sfCommentaireRepondre($shop, (string) ($b['id'] ?? ''), (string) ($b['message'] ?? ''), $session)]; }
     if ($method === 'POST' && $path === '/franchise/commentaires/traiter') { $b = body(); return [200, sfCommentaireTraiter($shop, (string) ($b['id'] ?? ''), !empty($b['traite']))]; }
     if ($method === 'GET' && $path === '/franchise/catalogue/offres') { return [200, sfOffres($shop, (string) ($_GET['produit'] ?? ''))]; }
     // La photo d'un produit du webshop (R2, sans CORS) servie par le module : le visuel qui la dessine s'exporte.

@@ -71,6 +71,8 @@
               <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;background:{{ r.cBg }};color:{{ r.cFg }};"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.cDot }};"></span>{{ r.couleur }}</span>
               <span style="font-size:12px;font-weight:500;color:#222222;">{{ r.sujet }}</span>
               <span style="font-size:10px;color:#8A847C;">{{ r.source }}</span>
+              <sc-if value="{{ r.hasRetard }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 8px;background:#8D1D2C;color:#FFFFFF;">{{ r.retardTxt }}</span></sc-if>
+              <span style="font-size:10.5px;color:#666666;">{{ r.respTxt }}</span>
             </span>
             <span class="sf-td" style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:4px;min-width:0;">
               <span style="font-size:11px;color:#666666;">{{ r.meta }}</span>
@@ -83,13 +85,22 @@
             </span>
             <span class="sf-td" style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;min-width:0;">
               <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.4;color:#222222;font-weight:500;">{{ r.action }}</span></sc-if>
-              <sc-if value="{{ r.hasReponse }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ r.canReply }}" hint-placeholder-val="{{ false }}">
+                <textarea value="{{ r.brouillon }}" onChange="{{ r.setBrouillon }}" rows="3" placeholder="Votre réponse…" style="width:100%;box-sizing:border-box;font-size:12px;line-height:1.45;color:#222222;background:#F7F3EE;border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;padding:7px 9px;resize:vertical;"></textarea>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button onClick="{{ r.publier }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:6px;padding:5px 10px;font-size:11.5px;font-weight:500;cursor:pointer;opacity:{{ r.publierOp }};">{{ r.publierLabel }}</button>
+                  <button onClick="{{ r.copier }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:500;cursor:pointer;">Copier</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ r.showSuggest }}" hint-placeholder-val="{{ false }}">
                 <span style="font-size:12px;line-height:1.45;color:#444444;background:#F7F3EE;border-radius:8px;padding:7px 9px;">{{ r.reponse }}</span>
                 <button onClick="{{ r.copier }}" style="align-self:flex-start;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:500;cursor:pointer;">Copier la réponse</button>
               </sc-if>
+              <sc-if value="{{ r.hasEnvoyee }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#0F6B4A;background:#E2F0E8;border-radius:8px;padding:7px 9px;">{{ r.envoyeeInfo }}</span></sc-if>
             </span>
             <span class="sf-td sf-tdz" style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;">
-              <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ r.traite }}" onChange="{{ r.toggle }}" style="accent-color:#0F6B4A;margin:0;">Traité</label>
+              <sc-if value="{{ r.canTraiter }}" hint-placeholder-val="{{ true }}"><label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ r.traite }}" onChange="{{ r.toggle }}" style="accent-color:#0F6B4A;margin:0;">Traité</label></sc-if>
+              <sc-if value="{{ r.parReseau }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;line-height:1.4;color:#666666;">{{ r.parReseauTxt }}</span></sc-if>
               <span style="font-size:10px;color:#8A847C;">{{ r.traiteInfo }}</span>
               <sc-if value="{{ r.hasLien }}" hint-placeholder-val="{{ false }}"><a href="{{ r.lien }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;">Répondre ↗</a></sc-if>
             </span>
@@ -106,7 +117,7 @@
 // Les commentaires de la Page de la boutique (et de ses publicités), classés vert / orange / rouge dans le contexte
 // de la publication par le réseau (src/commentaires.php), relus toutes les heures. Le franchisé les marque traités.
 class Component extends DCLogic {
-  state = { jours: 14, couleur: '', nonTraites: false, data: null, loading: true, err: '', msg: '', msgKind: 'ok' };
+  state = { jours: 14, couleur: '', nonTraites: false, data: null, loading: true, err: '', msg: '', msgKind: 'ok' , brouillons: {}, busyRep: '', retard: false};
   componentDidMount() {
     const SF = window.SF, Q = new URLSearchParams(location.search), j = +Q.get('jours'), c = Q.get('couleur');
     if (['rouge', 'orange', 'vert'].includes(c)) this.setState({ couleur: c, nonTraites: c !== 'vert' });
@@ -128,6 +139,20 @@ class Component extends DCLogic {
       this.setState({ data: Object.assign({}, d, { commentaires, totaux }) });
     }).catch(e => this.setState({ msg: 'Non enregistré : ' + (e.message || 'erreur'), msgKind: 'err' }));
   }
+  publier(c) {
+    const X = window.SF, s = this.state;
+    const txt = String((s.brouillons || {})[c.id] ?? c.reponse ?? '').trim();
+    if (!txt) { this.setState({ msg: 'Écrivez une réponse avant de la publier.', msgKind: 'warn' }); return; }
+    if (s.busyRep || !window.confirm('Publier cette réponse sous le commentaire, au nom de la Page ?\n\n« ' + txt + ' »')) return;
+    this.setState({ busyRep: c.id });
+    X.commentaireRepondre(c.id, txt).then(r => {
+      const d = this.state.data; if (!d) return;
+      const le = (r && r.le) || '';
+      const commentaires = d.commentaires.map(x => x.id === c.id ? Object.assign({}, x, { reponseEnvoyee: txt, reponseLe: le, reponsePar: 'vous', traite: true, traiteLe: x.traiteLe || le, traitePar: x.traitePar || 'vous', enRetard: false }) : x);
+      const totaux = Object.assign({}, d.totaux); if (!c.traite && ['rouge', 'orange'].includes(c.couleur)) totaux[c.couleur + 'Ouverts'] -= 1;
+      this.setState({ data: Object.assign({}, d, { commentaires, totaux }), busyRep: '', msg: 'Réponse publiée sous le commentaire.', msgKind: 'ok' });
+    }).catch(e => this.setState({ busyRep: '', msg: 'Réponse non publiée : ' + (e.message || 'erreur'), msgKind: 'err' }));
+  }
   copier(c) {
     const ok = () => this.setState({ msg: 'Réponse copiée : collez-la sous le commentaire sur votre Page (lien « Répondre ↗ »).', msgKind: 'ok' });
     try { navigator.clipboard.writeText(c.reponse).then(ok, () => this.setState({ msg: 'Copie impossible : sélectionnez le texte à la main.', msgKind: 'warn' })); }
@@ -143,14 +168,16 @@ class Component extends DCLogic {
       ['orange', 'À répondre', t.orangeOuverts, t.orange + ' orange' + (t.orange > 1 ? 's' : '') + ' sur la période'],
       ['vert', 'Positifs ou neutres', t.vert, 'rien de particulier à faire'],
       ['', 'Total', t.total, t.aClasser ? t.aClasser + ' en cours de classement' : 'tous classés']]
-      .map(([k, label, value, sub]) => ({ label, value: Number(value || 0).toLocaleString('fr-BE'), sub, dot: C[k][2], fg: k === 'rouge' && value ? '#8D1D2C' : '#222222',
+      .concat([['retard', 'En retard', t.enRetard || 0, 'au-delà du délai de réponse' + ((t.delaiMedianH != null) ? ' · délai médian ' + String(t.delaiMedianH).replace('.', ',') + ' h' : '')]])
+      .map(([k, label, value, sub]) => k === 'retard' ? ({ label, value: String(value), sub, dot: '#8D1D2C', fg: value ? '#8D1D2C' : '#222222',
+        border: s.retard ? '1.5px solid #8D1D2C' : '0.5px solid rgba(34,34,34,0.10)', pick: () => this.setState({ retard: !s.retard, nonTraites: !s.retard ? true : s.nonTraites }) }) : ({ label, value: Number(value || 0).toLocaleString('fr-BE'), sub, dot: C[k][2], fg: k === 'rouge' && value ? '#8D1D2C' : '#222222',
         border: s.couleur === k && k ? '1.5px solid ' + C[k][2] : '0.5px solid rgba(34,34,34,0.10)', pick: pick(k) }));
     const filtres = [['', 'Tous'], ['rouge', 'Rouge'], ['orange', 'Orange'], ['vert', 'Vert']].map(([k, label]) => {
       const on = s.couleur === k;
       return { label, dot: C[k][2], bg: on ? '#232220' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#232220' : 'rgba(34,34,34,0.18)', pick: () => this.setState({ couleur: k }) };
     });
     const liste = ((d && d.commentaires) || []).filter(c => (!s.couleur || c.couleur === s.couleur)
-      && (!s.nonTraites || !c.traite));
+      && (!s.nonTraites || !c.traite) && (!s.retard || c.enRetard));
     // Rouge d'abord, puis orange, puis vert ; à couleur égale, le plus récent d'abord.
     const ordre = { rouge: 0, orange: 1, '': 2, vert: 3 };
     liste.sort((a, b) => ((a.traite ? 1 : 0) - (b.traite ? 1 : 0)) || (ordre[a.couleur || ''] - ordre[b.couleur || '']) || String(b.le).localeCompare(String(a.le)));
@@ -161,7 +188,7 @@ class Component extends DCLogic {
         meta: [c.auteur || 'Anonyme', dl(c.le), (/^(Instagram|Publicité)/.test(c.compte) ? c.compte : (c.canal === 'ig' ? 'Instagram · ' : 'Facebook · ') + c.compte), c.masque ? 'masqué' : ''].filter(Boolean).join(' · '),
         message: c.message || '(sans texte)', hasResume: !!c.resume, resume: c.resume || '', publication: c.publication ? (c.publication.length > 220 ? c.publication.slice(0, 220) + '…' : c.publication) : '—',
         hasLienPub: !!c.lienPublication, lienPub: c.lienPublication || '#', hasAction: !!c.action, action: c.action || '', hasReponse: !!c.reponse, reponse: c.reponse || '',
-        copier: () => this.copier(c), traite: !!c.traite, toggle: () => this.traiter(c), traiteInfo: c.traite ? 'le ' + dl(c.traiteLe) + (c.traitePar ? ' · ' + c.traitePar : '') : '',
+        hasRetard: !!c.enRetard, retardTxt: 'En retard · ' + (c.ageH || 0) + ' h' + (c.escalade ? ' · remonté au réseau' : ''), respTxt: '', canReply: !!c.peutRepondre && !c.reponseEnvoyee && c.responsable === 'franchise' && (st.rules || {}).repondreCommentaires !== false, brouillon: String((s.brouillons || {})[c.id] ?? c.reponse ?? ''), setBrouillon: (e) => this.setState({ brouillons: Object.assign({}, this.state.brouillons, { [c.id]: e.target.value }) }), publier: () => this.publier(c), publierLabel: s.busyRep === c.id ? 'Publication…' : 'Publier la réponse', publierOp: s.busyRep === c.id ? 0.6 : 1, showSuggest: !(!!c.peutRepondre && !c.reponseEnvoyee && c.responsable === 'franchise' && (st.rules || {}).repondreCommentaires !== false) && !!c.reponse && !c.reponseEnvoyee, hasEnvoyee: !!c.reponseEnvoyee, envoyeeInfo: 'Réponse publiée' + (c.reponseLe ? ' le ' + String(c.reponseLe).slice(8, 10) + '/' + String(c.reponseLe).slice(5, 7) + ' à ' + String(c.reponseLe).slice(11, 16) : '') + (c.reponsePar ? ' par ' + c.reponsePar : '') + ' : « ' + (c.reponseEnvoyee || '') + ' »', canTraiter: c.responsable !== 'reseau', parReseau: c.responsable === 'reseau', parReseauTxt: c.traite ? 'Traité par le réseau' : 'Pris en charge par le réseau', copier: () => this.copier(c), traite: !!c.traite, toggle: () => this.traiter(c), traiteInfo: c.traite ? 'le ' + dl(c.traiteLe) + (c.traitePar ? ' · ' + c.traitePar : '') : '',
         hasLien: !!c.lien, lien: c.lien || '#', bg: c.traite ? '#FBFAF8' : '#FFFFFF' };
     });
     const relu = d && d.relu, ia = (d && d.ia) || {}, masque = !!(d && d.hidden) || (st.rules || {}).voirCommentaires === false;

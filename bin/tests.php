@@ -1666,6 +1666,66 @@ $regCom = sfRegles(); sfReglesPut(array_merge($regCom, ['voirCommentaires' => fa
 [, $b] = $fr('GET', '/franchise/commentaires');
 check('franchisé : masqués si le réseau ne les partage pas', $b['hidden'] === true && !$b['commentaires']);
 sfReglesPut($regCom); unset($_COOKIE[SF_COOKIE]);
+echo "Commentaires : répondre depuis l'outil, alertes, retard et escalade, qui traite quoi\n";
+Db::exec('UPDATE social_commentaire SET traite_le = NULL, traite_par = NULL, reponse_envoyee = NULL WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
+Db::exec("UPDATE social_commentaire SET vu_le = ? WHERE id = '111_c1_2'", [date('Y-m-d H:i:s', strtotime('-30 hours'))]);
+Db::exec("UPDATE social_commentaire SET vu_le = NOW() WHERE id IN ('111_c1_1', '111_c1_3', 'igc_1')");
+$_GET = ['jours' => '30']; [, $b] = socRoute('GET', '/commentaires'); $_GET = [];
+$cm = array_column($b['commentaires'], null, 'id');
+check('qui traite : rouge → le réseau (règle par défaut), orange de la boutique → la boutique, Instagram du réseau → le réseau', $cm['111_c1_3']['responsable'] === 'reseau'
+    && $cm['111_c1_2']['responsable'] === 'franchise' && $cm['igc_1']['responsable'] === 'reseau', json_encode(array_column($b['commentaires'], 'responsable', 'id')));
+check('retard : un orange vu il y a 30 h et non traité est en retard et remonte au réseau ; total en retard', $cm['111_c1_2']['enRetard'] === true && $cm['111_c1_2']['escalade'] === true
+    && $cm['111_c1_2']['ageH'] >= 29 && $cm['111_c1_3']['enRetard'] === false && $b['totaux']['enRetard'] === 1, json_encode([$cm['111_c1_2']['ageH'], $b['totaux']]));
+$_GET = ['jours' => '30', 'enRetard' => '1']; [, $b2] = socRoute('GET', '/commentaires'); $_GET = [];
+check('filtre « en retard »', array_column($b2['commentaires'], 'id') === ['111_c1_2']);
+$al = socCommentairesAlertes();
+[, $st] = socRoute('GET', '/state');
+check('alertes du réseau : rouges, oranges, en retard (les pastilles du menu)', $al['com']['rouges'] === 2 && $al['com']['oranges'] === 2 && $al['com']['enRetard'] === 1 && ($st['alertes']['com']['rouges'] ?? null) === 2, json_encode($al));
+$metaAvant = Meta::$transport; $repl = [];
+Meta::$transport = static function (string $m, string $url, array $p) use ($metaAvant, &$repl): array {
+    $path = preg_replace('#^https://graph\.facebook\.com/v[\d.]+/#', '', $url);
+    if ($m === 'POST' && preg_match('#^(\w+)/(comments|replies)$#', $path, $mm)) {
+        $repl[] = [$path, $p];
+        if ($mm[1] === '111_c1_1') { return [403, ['error' => ['message' => '(#10) Application does not have permission for this action', 'code' => 10, 'type' => 'OAuthException']]]; }
+        return [200, ['id' => $mm[1] . '_r']];
+    }
+    return $metaAvant($m, $url, $p);
+};
+$GLOBALS['SOC_BODY'] = ['id' => '111_c1_3', 'message' => '  Bonjour Paul, nous sommes désolés.  Écrivez-nous en message privé.  ']; [$codeR, $rR] = socRoute('POST', '/commentaires/repondre'); unset($GLOBALS['SOC_BODY']);
+$c3 = Db::row("SELECT * FROM social_commentaire WHERE id = '111_c1_3'");
+check('réponse publiée sous le commentaire Facebook, au nom de la Page (son token), puis marqué traité', $codeR === 200 && ($repl[0][0] ?? '') === '111_c1_3/comments' && ($repl[0][1]['access_token'] ?? '') === 'PT111'
+    && ($repl[0][1]['message'] ?? '') === 'Bonjour Paul, nous sommes désolés. Écrivez-nous en message privé.' && $c3['reponse_envoyee'] !== null && $c3['reponse_id'] === '111_c1_3_r' && $c3['traite_le'] !== null, json_encode([$repl, $rR]));
+$GLOBALS['SOC_BODY'] = ['id' => 'igc_1', 'message' => 'Basiliekstraat 12, Halle.']; [$codeI] = socRoute('POST', '/commentaires/repondre'); unset($GLOBALS['SOC_BODY']);
+check('réponse Instagram : /replies, avec le token de la Page qui porte le compte', $codeI === 200 && ($repl[1][0] ?? '') === 'igc_1/replies' && ($repl[1][1]['access_token'] ?? '') === 'PT111');
+$err = static function (string $route, array $b): array { $GLOBALS['SOC_BODY'] = $b; try { $r = socRoute('POST', $route); return [$r[0], '']; } catch (HttpError $e) { return [$e->status, $e->getMessage()]; } finally { unset($GLOBALS['SOC_BODY']); } };
+[$cP, $mP] = $err('/commentaires/repondre', ['id' => '111_c1_1', 'message' => 'Merci !']);
+[$cV] = $err('/commentaires/repondre', ['id' => '111_c1_2', 'message' => '   ']);
+check('Meta refuse (permission) : 422 avec la permission à accorder ; réponse vide : 422 ; rien n’est marqué traité', $cP === 422 && str_contains($mP, 'pages_manage_engagement') && $cV === 422
+    && Db::row("SELECT traite_le FROM social_commentaire WHERE id = '111_c1_1'")['traite_le'] === null, $mP);
+Db::exec("INSERT INTO social_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur, note) VALUES ('gg_test', 'gg', 'gg:4', '4', 'X', 'Bof', NOW(), 0, NOW(), 'orange', 3)");
+[$cG, $mG] = $err('/commentaires/repondre', ['id' => 'gg_test', 'message' => 'Merci']);
+check('avis Google : pas de réponse par API (la fiche Google), dit pourquoi', $cG === 422 && str_contains($mG, 'fiche Google'));
+Db::exec("DELETE FROM social_commentaire WHERE id = 'gg_test'");
+// Espace franchisé
+sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
+[$cF] = $fr('POST', '/franchise/commentaires/repondre', ['id' => '111_c1_2', 'message' => 'Bonjour Marc, jusqu’à dimanche !']);
+[$cF2] = $fr('POST', '/franchise/commentaires/traiter', ['id' => '111_c1_3', 'traite' => false]);
+[$cF3] = $fr('POST', '/franchise/commentaires/repondre', ['id' => '111_c1_3', 'message' => 'Désolé']);
+check('franchisé : répond lui-même à un orange de sa Page (au nom de sa Page) ; un rouge est pris en charge par le réseau (403)', $cF === 200 && (end($repl)[0] ?? '') === '111_c1_2/comments'
+    && Db::row("SELECT reponse_par FROM social_commentaire WHERE id = '111_c1_2'")['reponse_par'] === 'Gérant Halle' && $cF2 === 403 && $cF3 === 403, json_encode([$cF, $cF2, $cF3]));
+[, $etF] = $fr('GET', '/franchise/etat');
+check('franchisé : ses alertes dans son état (ce que la boutique doit traiter)', isset($etF['alertes']['com']['pourBoutique']) && $etF['alertes']['com']['rouges'] === 0, json_encode($etF['alertes'] ?? null));
+$regV2 = sfRegles();
+sfReglesPut(array_merge($regV2, ['rouges' => 'franchise']));
+[$cF4] = $fr('POST', '/franchise/commentaires/traiter', ['id' => '111_c1_3', 'traite' => true]);
+sfReglesPut(array_merge($regV2, ['repondreCommentaires' => false]));
+[$cF5] = $fr('POST', '/franchise/commentaires/repondre', ['id' => '111_c1_2', 'message' => 'Re']);
+check('règles : rouges confiés à la boutique → elle les traite ; réponse depuis l’outil coupée → 403 ; délai borné', $cF4 === 200 && $cF5 === 403
+    && sfReglesPut(array_merge($regV2, ['delaiReponseHeures' => 999]))['delaiReponseHeures'] === 168);
+sfReglesPut($regV2); unset($_COOKIE[SF_COOKIE]);
+Meta::$transport = $metaAvant;
+$_GET = ['jours' => '30']; [, $b] = socRoute('GET', '/commentaires'); $_GET = [];
+check('délai médian de traitement (rouges et oranges traités)', is_float($b['totaux']['delaiMedianH']) && $b['totaux']['delaiMedianH'] >= 0, json_encode($b['totaux']));
 Db::exec("DELETE FROM social_commentaire WHERE id = 'wavre_c1'");
 Db::exec('DELETE FROM social_commentaire WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
 

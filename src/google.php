@@ -193,8 +193,8 @@ function socGoogleAvisSync(): array
             ? ' (note de la fiche : ' . number_format((float) $f['note'], 1, ',', '') . ' sur ' . (int) $f['avis'] . ' avis)' : '');
         $lien = (string) ($f['url'] ?? '');
         $note = max(1, min(5, (int) $a['note']));
-        Db::exec('INSERT INTO social_commentaire (id, canal, objet_id, shop_id, post_id, pub_id, auteur, message, cree_le, masque, maj_le, compte, compte_nom, objet_texte, objet_lien, lien, note)'
-            . ' VALUES (?,?,?,?,NULL,NULL,?,?,?,0,?,?,?,?,?,?,?)'
+        Db::exec('INSERT INTO social_commentaire (id, canal, objet_id, shop_id, post_id, pub_id, auteur, message, cree_le, masque, maj_le, compte, compte_nom, objet_texte, objet_lien, lien, note, vu_le)'
+            . ' VALUES (?,?,?,?,NULL,NULL,?,?,?,0,?,?,?,?,?,?,?,NOW())'
             . ' ON DUPLICATE KEY UPDATE note = VALUES(note), shop_id = VALUES(shop_id), compte = VALUES(compte), compte_nom = VALUES(compte_nom),'
             . ' objet_texte = VALUES(objet_texte), objet_lien = VALUES(objet_lien), lien = VALUES(lien)',
             [socGoogleAvisId($sid, $a['auteur'], $a['le'], $note), 'gg', 'gg:' . $sid, $sid, mb_substr($a['auteur'], 0, 160), mb_substr($a['texte'], 0, 5000),

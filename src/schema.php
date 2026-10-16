@@ -115,7 +115,9 @@ function socInstall(): void
         'lien' => 'VARCHAR(500) NULL', 'couleur' => 'VARCHAR(6) NULL', 'sujet' => 'VARCHAR(80) NULL', 'resume' => 'VARCHAR(300) NULL', 'action' => 'VARCHAR(300) NULL',
         'reponse' => 'TEXT NULL', 'analyse' => 'VARCHAR(10) NULL', 'analyse_le' => 'DATETIME NULL', 'traite_le' => 'DATETIME NULL', 'traite_par' => 'VARCHAR(120) NULL',
         // Les avis Google (src/google.php, canal gg) : la note en étoiles.
-        'note' => 'TINYINT NULL']);
+        'note' => 'TINYINT NULL',
+        // Première lecture (le délai de réponse part de là), et la réponse publiée depuis l'outil (src/commentaires.php).
+        'vu_le' => 'DATETIME NULL', 'reponse_envoyee' => 'TEXT NULL', 'reponse_id' => 'VARCHAR(80) NULL', 'reponse_le' => 'DATETIME NULL', 'reponse_par' => 'VARCHAR(120) NULL']);
 
     Db::exec('CREATE TABLE IF NOT EXISTS social_modele_franchise (id VARCHAR(64) PRIMARY KEY, nom VARCHAR(160) NULL, type VARCHAR(60) NULL,'
         . 'actif TINYINT NOT NULL DEFAULT 1, ordre INT NULL, validation TINYINT NULL, texte_fr TEXT NULL, texte_nl TEXT NULL, data LONGTEXT NOT NULL, ' . $maj . ')' . $t);

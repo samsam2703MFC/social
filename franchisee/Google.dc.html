@@ -89,7 +89,7 @@
       <div style="flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:8px;">
         <span style="font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:#666666;">Faire venir des avis</span>
         <span style="font-size:15px;font-weight:500;line-height:1.35;">{{ objectifTxt }}</span>
-        <span style="font-size:12.5px;line-height:1.5;color:#444444;">Le client scanne le QR code avec son téléphone : la fenêtre « Donner un avis » de votre fiche s’ouvre. Demandez-le aux clients contents, au moment où ils vous remercient.</span>
+        <span style="font-size:12.5px;line-height:1.5;color:#444444;">Le client scanne le QR code avec son téléphone : la fenêtre « Donner un avis » de votre fiche s’ouvre. Demandez-le aux clients contents, au moment où ils vous remercient. Le lien ci-dessous sert pour vos messages et e-mails.</span>
         <span style="font-size:12px;font-weight:500;color:{{ gagnesCol }};">{{ gagnesTxt }}</span>
         <div style="display:flex;gap:6px;">
           <input readonly value="{{ lienCourt }}" style="flex:1 1 auto;min-width:0;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 9px;background:#FBF8F4;">
@@ -129,6 +129,8 @@
               <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;background:{{ r.cBg }};color:{{ r.cFg }};"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.cDot }};"></span>{{ r.couleur }}</span>
               <span style="font-size:12px;font-weight:500;color:#222222;">{{ r.sujet }}</span>
               <span style="font-size:10px;color:#8A847C;">{{ r.source }}</span>
+              <sc-if value="{{ r.hasRetard }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 8px;background:#8D1D2C;color:#FFFFFF;">{{ r.retardTxt }}</span></sc-if>
+              <span style="font-size:10.5px;color:#666666;">{{ r.respTxt }}</span>
             </span>
             <span class="sf-td" style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:4px;min-width:0;">
               <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -141,13 +143,22 @@
             </span>
             <span class="sf-td" style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;min-width:0;">
               <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.4;color:#222222;font-weight:500;">{{ r.action }}</span></sc-if>
-              <sc-if value="{{ r.hasReponse }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ r.canReply }}" hint-placeholder-val="{{ false }}">
+                <textarea value="{{ r.brouillon }}" onChange="{{ r.setBrouillon }}" rows="3" placeholder="Votre réponse…" style="width:100%;box-sizing:border-box;font-size:12px;line-height:1.45;color:#222222;background:#F7F3EE;border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;padding:7px 9px;resize:vertical;"></textarea>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button onClick="{{ r.publier }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:6px;padding:5px 10px;font-size:11.5px;font-weight:500;cursor:pointer;opacity:{{ r.publierOp }};">{{ r.publierLabel }}</button>
+                  <button onClick="{{ r.copier }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:500;cursor:pointer;">Copier</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ r.showSuggest }}" hint-placeholder-val="{{ false }}">
                 <span style="font-size:12px;line-height:1.45;color:#444444;background:#F7F3EE;border-radius:8px;padding:7px 9px;">{{ r.reponse }}</span>
                 <button onClick="{{ r.copier }}" style="align-self:flex-start;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:500;cursor:pointer;">Copier la réponse</button>
               </sc-if>
+              <sc-if value="{{ r.hasEnvoyee }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#0F6B4A;background:#E2F0E8;border-radius:8px;padding:7px 9px;">{{ r.envoyeeInfo }}</span></sc-if>
             </span>
             <span class="sf-td sf-tdz" style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;">
-              <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ r.traite }}" onChange="{{ r.toggle }}" style="accent-color:#0F6B4A;margin:0;">Traité</label>
+              <sc-if value="{{ r.canTraiter }}" hint-placeholder-val="{{ true }}"><label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ r.traite }}" onChange="{{ r.toggle }}" style="accent-color:#0F6B4A;margin:0;">Traité</label></sc-if>
+              <sc-if value="{{ r.parReseau }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;line-height:1.4;color:#666666;">{{ r.parReseauTxt }}</span></sc-if>
               <span style="font-size:10px;color:#8A847C;">{{ r.traiteInfo }}</span>
               <sc-if value="{{ r.hasLien }}" hint-placeholder-val="{{ false }}"><a href="{{ r.lien }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;">Fiche Google ↗</a></sc-if>
             </span>
@@ -166,7 +177,7 @@
 // moyenne du réseau (la Réputation digitale du BO) ; ses avis classés vert / orange / rouge, à marquer traités
 // (src/google.php). La lecture chez Google et le classement restent au réseau (toutes les heures).
 class Component extends DCLogic {
-  state = { jours: 365, couleur: '', nonTraites: false, data: null, loading: true, err: '', msg: '', msgKind: 'ok' };
+  state = { jours: 365, couleur: '', nonTraites: false, data: null, loading: true, err: '', msg: '', msgKind: 'ok' , brouillons: {}, busyRep: '', retard: false};
   componentDidMount() {
     const Q = new URLSearchParams(location.search), j = +Q.get('jours'), c = Q.get('couleur');
     if (['rouge', 'orange', 'vert'].includes(c)) this.setState({ couleur: c, nonTraites: c !== 'vert' });
@@ -218,13 +229,15 @@ class Component extends DCLogic {
       ['orange', 'À répondre', t.orangeOuverts, t.orange + ' orange' + (t.orange > 1 ? 's' : '') + ' sur la période'],
       ['vert', 'Positifs', t.vert, 'un merci sous l’avis suffit'],
       ['', 'Avis lus', t.total, t.aClasser ? t.aClasser + ' en cours de classement' : 'tous classés']]
-      .map(([k, label, value, sub]) => ({ label, value: fI(value), sub, dot: C[k][2], fg: k === 'rouge' && value ? '#8D1D2C' : '#222222',
+      .concat([['retard', 'En retard', t.enRetard || 0, 'au-delà du délai de réponse' + ((t.delaiMedianH != null) ? ' · délai médian ' + String(t.delaiMedianH).replace('.', ',') + ' h' : '')]])
+      .map(([k, label, value, sub]) => k === 'retard' ? ({ label, value: String(value), sub, dot: '#8D1D2C', fg: value ? '#8D1D2C' : '#222222',
+        border: s.retard ? '1.5px solid #8D1D2C' : '0.5px solid rgba(34,34,34,0.10)', pick: () => this.setState({ retard: !s.retard, nonTraites: !s.retard ? true : s.nonTraites }) }) : ({ label, value: fI(value), sub, dot: C[k][2], fg: k === 'rouge' && value ? '#8D1D2C' : '#222222',
         border: s.couleur === k && k ? '1.5px solid ' + C[k][2] : '0.5px solid rgba(34,34,34,0.10)', pick: pick(k) }));
     const filtres = [['', 'Tous'], ['rouge', 'Rouge'], ['orange', 'Orange'], ['vert', 'Vert']].map(([k, label]) => {
       const on = s.couleur === k;
       return { label, dot: C[k][2], bg: on ? '#232220' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#232220' : 'rgba(34,34,34,0.18)', pick: () => this.setState({ couleur: k }) };
     });
-    const liste = ((d && d.avis) || []).filter(c => (!s.couleur || c.couleur === s.couleur) && (!s.nonTraites || !c.traite));
+    const liste = ((d && d.avis) || []).filter(c => (!s.couleur || c.couleur === s.couleur) && (!s.nonTraites || !c.traite) && (!s.retard || c.enRetard));
     const ordre = { rouge: 0, orange: 1, '': 2, vert: 3 };
     liste.sort((a, b) => ((a.traite ? 1 : 0) - (b.traite ? 1 : 0)) || (ordre[a.couleur || ''] - ordre[b.couleur || '']) || String(b.le).localeCompare(String(a.le)));
     const an = String(st.today || '').slice(0, 4);
@@ -236,7 +249,7 @@ class Component extends DCLogic {
         message: !c.message ? 'Note sans commentaire.' : c.message.length > 280 && !(s.ouverts || {})[c.id] ? c.message.slice(0, 260).replace(/\s+\S*$/, '') + ' …' : c.message,
         hasPlus: (c.message || '').length > 280, plusTxt: (s.ouverts || {})[c.id] ? 'Réduire' : 'Lire tout', plus: () => this.setState({ ouverts: Object.assign({}, s.ouverts, { [c.id]: !(s.ouverts || {})[c.id] }) }), msgCol: c.message ? '#222222' : '#8A847C', hasResume: !!c.resume, resume: c.resume || '',
         hasAction: !!c.action, action: c.action || '', hasReponse: !!c.reponse, reponse: c.reponse || '',
-        copier: () => this.copier(c), traite: !!c.traite, toggle: () => this.traiter(c), traiteInfo: c.traite ? 'le ' + (c.traiteLe ? SF.dShort(c.traiteLe.slice(0, 10)) + ' ' + c.traiteLe.slice(11, 16) : '') + (c.traitePar ? ' · ' + c.traitePar : '') : '',
+        hasRetard: !!c.enRetard, retardTxt: 'En retard · ' + (c.ageH || 0) + ' h' + (c.escalade ? ' · remonté au réseau' : ''), respTxt: '', canReply: false, brouillon: String((s.brouillons || {})[c.id] ?? c.reponse ?? ''), setBrouillon: (e) => this.setState({ brouillons: Object.assign({}, this.state.brouillons, { [c.id]: e.target.value }) }), publierLabel: s.busyRep === c.id ? 'Publication…' : 'Publier la réponse', publierOp: s.busyRep === c.id ? 0.6 : 1, showSuggest: !(false) && !!c.reponse && !c.reponseEnvoyee, hasEnvoyee: !!c.reponseEnvoyee, envoyeeInfo: 'Réponse publiée' + (c.reponseLe ? ' le ' + String(c.reponseLe).slice(8, 10) + '/' + String(c.reponseLe).slice(5, 7) + ' à ' + String(c.reponseLe).slice(11, 16) : '') + (c.reponsePar ? ' par ' + c.reponsePar : '') + ' : « ' + (c.reponseEnvoyee || '') + ' »', canTraiter: c.responsable !== 'reseau', parReseau: c.responsable === 'reseau', parReseauTxt: c.traite ? 'Traité par le réseau' : 'Pris en charge par le réseau', copier: () => this.copier(c), traite: !!c.traite, toggle: () => this.traiter(c), traiteInfo: c.traite ? 'le ' + (c.traiteLe ? SF.dShort(c.traiteLe.slice(0, 10)) + ' ' + c.traiteLe.slice(11, 16) : '') + (c.traitePar ? ' · ' + c.traitePar : '') : '',
         hasLien: !!c.lien, lien: c.lien || '#', bg: c.traite ? '#FBFAF8' : '#FFFFFF' };
     });
     const relu = d && d.relu, ia = (d && d.ia) || {};
@@ -256,13 +269,15 @@ class Component extends DCLogic {
       moyenne: fN(res.moyenne), etoilesReseau: etoiles(res.moyenne), reseauTxt: 'Moyenne du réseau · ' + fI(res.avis) + ' avis sur ' + fI(res.notes) + ' boutique' + (res.notes > 1 ? 's' : ''),
       synchroTxt: co.derniereSynchro ? 'Notes relues chez Google le ' + SF.dShort(co.derniereSynchro.slice(0, 10)) + ' à ' + co.derniereSynchro.slice(11, 16) + ' par le réseau.' : '',
       ...(() => {
-        if (!ok || !m || !m.lienCourt) return { hasQr: false };
+        // Le QR code et les affiches mènent directement à la fenêtre d'avis Google (un papier imprimé ne dépend pas du serveur).
+        if (!ok || !m || !m.lienAvis) return { hasQr: false };
         let img = '';
-        try { const q = window.qrcode(0, 'M'); q.addData(m.lienCourt + '?s=qr'); q.make(); img = q.createDataURL(6, 2); } catch (e) {}
-        const aff = (f) => 'Affiche avis.html?u=' + encodeURIComponent(m.lienCourt) + '&nom=' + encodeURIComponent(st.shop.name) + '&langues=' + encodeURIComponent((st.shop.langs || ['fr']).join(',')) + '&format=' + f;
-        return { hasQr: true, qrImg: img, lienCourt: m.lienCourt + '?s=lien', copierLien: () => this.copierLien(m.lienCourt + '?s=lien'), afficheA5: aff('a5'), afficheA6: aff('a6'),
+        try { const q = window.qrcode(0, 'M'); q.addData(m.lienAvis); q.make(); img = q.createDataURL(5, 2); } catch (e) {}
+        const aff = (f) => 'Affiche avis.html?u=' + encodeURIComponent(m.lienAvis) + '&nom=' + encodeURIComponent(st.shop.name) + '&langues=' + encodeURIComponent((st.shop.langs || ['fr']).join(',')) + '&format=' + f;
+        const suivi = m.lienCourt ? m.lienCourt + '?s=lien' : m.lienAvis;
+        return { hasQr: true, qrImg: img, lienCourt: suivi, copierLien: () => this.copierLien(suivi), afficheA5: aff('a5'), afficheA6: aff('a6'),
           objectifTxt: m.avis5Requis ? 'Objectif : ' + m.avis5Requis + ' avis 5★ pour atteindre ' + fN(cible) : 'Votre note est à la cible : gardez le rythme des avis.',
-          gagnesTxt: m.gagnes7 == null ? 'Avis gagnés : suivi à partir d’aujourd’hui.' : 'Avis gagnés : ' + (m.gagnes7 > 0 ? '+' : '') + m.gagnes7 + ' en 7 jours · ' + (m.gagnes30 > 0 ? '+' : '') + m.gagnes30 + ' en 30 jours · QR scanné ' + (m.scans30 || 0) + ' fois en 30 jours',
+          gagnesTxt: m.gagnes7 == null ? 'Avis gagnés : suivi à partir d’aujourd’hui.' : 'Avis gagnés : ' + (m.gagnes7 > 0 ? '+' : '') + m.gagnes7 + ' en 7 jours · ' + (m.gagnes30 > 0 ? '+' : '') + m.gagnes30 + ' en 30 jours' + (m.scans30 ? ' · ' + m.scans30 + ' clic' + (m.scans30 > 1 ? 's' : '') + ' sur votre lien en 30 jours' : ''),
           gagnesCol: (m.gagnes7 || 0) > 0 ? '#2d7a3e' : '#666666' };
       })(),
       showAvis: !!d && !masque, kpis, filtres,

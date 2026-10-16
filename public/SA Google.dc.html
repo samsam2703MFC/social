@@ -117,6 +117,8 @@
               <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;background:{{ r.cBg }};color:{{ r.cFg }};"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.cDot }};"></span>{{ r.couleur }}</span>
               <span style="font-size:12px;font-weight:500;color:#222222;">{{ r.sujet }}</span>
               <span style="font-size:10px;color:#8A847C;">{{ r.source }}</span>
+              <sc-if value="{{ r.hasRetard }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 8px;background:#8D1D2C;color:#FFFFFF;">{{ r.retardTxt }}</span></sc-if>
+              <span style="font-size:10.5px;color:#666666;">{{ r.respTxt }}</span>
             </span>
             <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:4px;min-width:0;">
               <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -129,10 +131,18 @@
             </span>
             <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;min-width:0;">
               <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.4;color:#222222;font-weight:500;">{{ r.action }}</span></sc-if>
-              <sc-if value="{{ r.hasReponse }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ r.canReply }}" hint-placeholder-val="{{ false }}">
+                <textarea value="{{ r.brouillon }}" onChange="{{ r.setBrouillon }}" rows="3" placeholder="Votre réponse…" style="width:100%;box-sizing:border-box;font-size:12px;line-height:1.45;color:#222222;background:#F7F3EE;border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;padding:7px 9px;resize:vertical;"></textarea>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button onClick="{{ r.publier }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:6px;padding:5px 10px;font-size:11.5px;font-weight:500;cursor:pointer;opacity:{{ r.publierOp }};">{{ r.publierLabel }}</button>
+                  <button onClick="{{ r.copier }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:500;cursor:pointer;">Copier</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ r.showSuggest }}" hint-placeholder-val="{{ false }}">
                 <span style="font-size:12px;line-height:1.45;color:#444444;background:#F7F3EE;border-radius:8px;padding:7px 9px;">{{ r.reponse }}</span>
                 <button onClick="{{ r.copier }}" style="align-self:flex-start;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:500;cursor:pointer;">Copier la réponse</button>
               </sc-if>
+              <sc-if value="{{ r.hasEnvoyee }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#0F6B4A;background:#E2F0E8;border-radius:8px;padding:7px 9px;">{{ r.envoyeeInfo }}</span></sc-if>
             </span>
             <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;">
               <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ r.traite }}" onChange="{{ r.toggle }}" style="accent-color:#0F6B4A;margin:0;">Traité</label>
@@ -191,11 +201,12 @@
       <div onClick="{{ stop }}" style="background:#FFFFFF;border-radius:14px;max-width:420px;width:100%;padding:20px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;box-shadow:0 16px 40px rgba(35,34,32,0.3);">
         <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Faire venir des avis · L’Atelier By {{ qr.nom }}</span>
         <img src="{{ qr.img }}" alt="QR code vers la fiche Google" style="width:220px;height:220px;image-rendering:pixelated;border:6px solid #FFFFFF;outline:2px solid #8D1D2C;border-radius:6px;">
-        <span style="font-size:12.5px;line-height:1.5;color:#444444;">Le client scanne avec l’appareil photo de son téléphone : la fenêtre « Donner un avis » de la fiche Google s’ouvre. Chaque scan est compté ({{ qr.scans }}).</span>
+        <span style="font-size:12.5px;line-height:1.5;color:#444444;">Le client scanne avec l’appareil photo de son téléphone : la fenêtre « Donner un avis » de la fiche Google s’ouvre directement.</span>
         <div style="display:flex;gap:6px;width:100%;">
           <input readonly value="{{ qr.lien }}" style="flex:1 1 auto;min-width:0;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 9px;background:#FBF8F4;">
           <button onClick="{{ qr.copier }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:500;cursor:pointer;">Copier</button>
         </div>
+        <sc-if value="{{ qr.hasSuivi }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;line-height:1.45;color:#666666;">Pour un message ou un e-mail : le <button onClick="{{ qr.copierSuivi }}" style="border:none;background:none;padding:0;color:#8D1D2C;font-size:11.5px;font-weight:500;cursor:pointer;text-decoration:underline;">lien suivi</button> compte les clics ({{ qr.scans }}).</span></sc-if>
         <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
           <a href="{{ qr.afficheA5 }}" target="_blank" rel="noopener" style="border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;background:#8D1D2C;color:#FFFFFF;text-decoration:none;">Affiche A5</a>
           <a href="{{ qr.afficheA6 }}" target="_blank" rel="noopener" style="border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;border:0.5px solid rgba(34,34,34,0.18);color:#222222;text-decoration:none;">Chevalet de comptoir A6</a>
@@ -213,7 +224,7 @@
 // lus) et les avis eux-mêmes, classés vert / orange / rouge comme les commentaires (src/google.php). Le module lit les
 // tables du BO ; « Synchroniser chez Google » demande au BO de relire les fiches (appel facturé par Google).
 class Component extends DCLogic {
-  state = { jours: 365, couleur: '', shop: '', nonTraites: false, data: null, loading: true, err: '', busy: '', msg: '', msgKind: 'ok', qrShop: '' };
+  state = { jours: 365, couleur: '', shop: '', nonTraites: false, data: null, loading: true, err: '', busy: '', msg: '', msgKind: 'ok', qrShop: '' , brouillons: {}, busyRep: '', retard: false};
   componentDidMount() {
     const SA = window.SA, j = SA && +SA.param('jours'), c = SA && SA.param('couleur'), sh = SA && SA.param('shop');
     if (['rouge', 'orange', 'vert'].includes(c)) this.setState({ couleur: c, nonTraites: c !== 'vert' });
@@ -285,7 +296,7 @@ class Component extends DCLogic {
     const mags = ((ok && rp.magasins) || []).slice().sort((a, b) => (a.note == null) - (b.note == null) || (a.note == null ? a.nom.localeCompare(b.nom) : a.note - b.note));
     const avisTous = (d && d.avis) || [];
     const gagnes = (m) => m.gagnes7 == null ? 'Avis gagnés : suivi à partir d’aujourd’hui' : 'Avis gagnés : ' + (m.gagnes7 > 0 ? '+' : '') + m.gagnes7 + ' en 7 j · ' + (m.gagnes30 > 0 ? '+' : '') + m.gagnes30 + ' en 30 j'
-      + (rp && rp.suiviDepuis && SA ? ' (suivi depuis le ' + SA.dShort(rp.suiviDepuis) + ')' : '') + ' · ' + (m.scans30 || 0) + ' scan' + ((m.scans30 || 0) > 1 ? 's' : '') + ' du QR en 30 j';
+      + (rp && rp.suiviDepuis && SA ? ' (suivi depuis le ' + SA.dShort(rp.suiviDepuis) + ')' : '') + (m.scans30 ? ' · ' + m.scans30 + ' clic' + (m.scans30 > 1 ? 's' : '') + ' sur le lien suivi en 30 j' : '');
     const cartes = mags.map(m => {
       const sans = m.note == null || !m.avis, atteint = !sans && m.note >= cible, jm = jauges(m.repartition, m.avis);
       const nAvis = avisTous.filter(a => a.shopId === m.id).length;
@@ -296,7 +307,7 @@ class Component extends DCLogic {
         effort: m.avis5Requis == null ? (sans ? 'Raccordez la fiche dans le BO pour suivre la note.' : 'Cible inatteignable par ajout d’avis.') : m.avis5Requis === 0 ? 'À la cible — rien à rattraper.' : m.avis5Requis + ' avis 5★ pour atteindre ' + fN(cible),
         effortBg: sans ? '#F4EFE8' : atteint ? 'rgba(45,122,62,.08)' : 'rgba(141,29,44,.05)', effortFg: sans ? '#666666' : atteint ? '#2d7a3e' : '#8D1D2C',
         hasBarres: jm.lus > 0, barres: jm.barres, echantillon: jm.echantillon,
-        gagnes: sans ? '' : gagnes(m), hasLien: !!m.lienCourt, demander: () => this.setState({ qrShop: m.id }),
+        gagnes: sans ? '' : gagnes(m), hasLien: !!m.lienAvis, demander: () => this.setState({ qrShop: m.id }),
         hasAvis: nAvis > 0, voirTxt: 'Voir ses ' + nAvis + ' avis', voir: () => { this.setState({ shop: m.id }); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} } };
     });
 
@@ -307,13 +318,15 @@ class Component extends DCLogic {
       ['orange', 'À répondre', t.orangeOuverts, t.orange + ' orange' + (t.orange > 1 ? 's' : '') + ' sur la période'],
       ['vert', 'Positifs', t.vert, 'un merci sous l’avis suffit'],
       ['', 'Avis lus', t.total, t.aClasser ? t.aClasser + ' à classer (relire)' : 'tous classés']]
-      .map(([k, label, value, sub]) => ({ label, value: fI(value), sub, dot: C[k][2], fg: k === 'rouge' && value ? '#8D1D2C' : '#222222',
+      .concat([['retard', 'En retard', t.enRetard || 0, 'au-delà du délai de réponse' + ((t.delaiMedianH != null) ? ' · délai médian ' + String(t.delaiMedianH).replace('.', ',') + ' h' : '')]])
+      .map(([k, label, value, sub]) => k === 'retard' ? ({ label, value: String(value), sub, dot: '#8D1D2C', fg: value ? '#8D1D2C' : '#222222',
+        border: s.retard ? '1.5px solid #8D1D2C' : '0.5px solid rgba(34,34,34,0.10)', pick: () => this.setState({ retard: !s.retard, nonTraites: !s.retard ? true : s.nonTraites }) }) : ({ label, value: fI(value), sub, dot: C[k][2], fg: k === 'rouge' && value ? '#8D1D2C' : '#222222',
         border: s.couleur === k && k ? '1.5px solid ' + C[k][2] : '0.5px solid rgba(34,34,34,0.10)', pick: pick(k) }));
     const filtres = [['', 'Tous'], ['rouge', 'Rouge'], ['orange', 'Orange'], ['vert', 'Vert']].map(([k, label]) => {
       const on = s.couleur === k;
       return { label, dot: C[k][2], bg: on ? '#232220' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#232220' : 'rgba(34,34,34,0.18)', pick: () => this.setState({ couleur: k }) };
     });
-    const liste = avisTous.filter(c => (!s.couleur || c.couleur === s.couleur) && (!s.shop || c.shopId === s.shop) && (!s.nonTraites || !c.traite));
+    const liste = avisTous.filter(c => (!s.couleur || c.couleur === s.couleur) && (!s.shop || c.shopId === s.shop) && (!s.nonTraites || !c.traite) && (!s.retard || c.enRetard));
     const ordre = { rouge: 0, orange: 1, '': 2, vert: 3 };
     liste.sort((a, b) => ((a.traite ? 1 : 0) - (b.traite ? 1 : 0)) || (ordre[a.couleur || ''] - ordre[b.couleur || '']) || String(b.le).localeCompare(String(a.le)));
     const dl = (x) => SA && x ? SA.dShort(x.slice(0, 10)) + (x.slice(0, 4) !== SA.TODAY.slice(0, 4) ? '/' + x.slice(2, 4) : '') : '';
@@ -324,7 +337,7 @@ class Component extends DCLogic {
         message: !c.message ? 'Note sans commentaire.' : c.message.length > 280 && !(s.ouverts || {})[c.id] ? c.message.slice(0, 260).replace(/\s+\S*$/, '') + ' …' : c.message,
         hasPlus: (c.message || '').length > 280, plusTxt: (s.ouverts || {})[c.id] ? 'Réduire' : 'Lire tout', plus: () => this.setState({ ouverts: Object.assign({}, s.ouverts, { [c.id]: !(s.ouverts || {})[c.id] }) }), msgCol: c.message ? '#222222' : '#8A847C', hasResume: !!c.resume, resume: c.resume || '',
         hasAction: !!c.action, action: c.action || '', hasReponse: !!c.reponse, reponse: c.reponse || '',
-        copier: () => this.copier(c), traite: !!c.traite, toggle: () => this.traiter(c), traiteInfo: c.traite ? 'le ' + (SA && c.traiteLe ? SA.dShort(c.traiteLe.slice(0, 10)) + ' ' + c.traiteLe.slice(11, 16) : '') + (c.traitePar ? ' · ' + c.traitePar : '') : '',
+        hasRetard: !!c.enRetard, retardTxt: 'En retard · ' + (c.ageH || 0) + ' h' + (c.escalade ? ' · remonté au réseau' : ''), respTxt: c.responsable === 'reseau' ? 'À traiter par le réseau' : 'À traiter par la boutique' + (c.escalade ? ' (en retard : le réseau peut répondre)' : ''), canReply: false, brouillon: String((s.brouillons || {})[c.id] ?? c.reponse ?? ''), setBrouillon: (e) => this.setState({ brouillons: Object.assign({}, this.state.brouillons, { [c.id]: e.target.value }) }), publierLabel: s.busyRep === c.id ? 'Publication…' : 'Publier la réponse', publierOp: s.busyRep === c.id ? 0.6 : 1, showSuggest: !(false) && !!c.reponse && !c.reponseEnvoyee, hasEnvoyee: !!c.reponseEnvoyee, envoyeeInfo: 'Réponse publiée' + (c.reponseLe ? ' le ' + String(c.reponseLe).slice(8, 10) + '/' + String(c.reponseLe).slice(5, 7) + ' à ' + String(c.reponseLe).slice(11, 16) : '') + (c.reponsePar ? ' par ' + c.reponsePar : '') + ' : « ' + (c.reponseEnvoyee || '') + ' »', copier: () => this.copier(c), traite: !!c.traite, toggle: () => this.traiter(c), traiteInfo: c.traite ? 'le ' + (SA && c.traiteLe ? SA.dShort(c.traiteLe.slice(0, 10)) + ' ' + c.traiteLe.slice(11, 16) : '') + (c.traitePar ? ' · ' + c.traitePar : '') : '',
         hasLien: !!c.lien, lien: c.lien || '#', bg: c.traite ? '#FBFAF8' : '#FFFFFF' };
     });
     const relu = d && d.relu, ia = (d && d.ia) || {};
@@ -332,11 +345,14 @@ class Component extends DCLogic {
     const rg = (d && d.reglages) || { actif: true, heure: 6, dernier: null }, dern = rg.dernier;
     const mq = mags.find(m => m.id === s.qrShop);
     let qr = null;
-    if (mq && mq.lienCourt) {
+    // Le QR code et les affiches mènent DIRECTEMENT à la fenêtre d'avis Google : un papier imprimé ne doit dépendre ni du
+    // serveur du module ni de son adresse. Le lien court (qui compte les clics) sert aux messages et aux e-mails.
+    if (mq && mq.lienAvis) {
       let img = '';
-      try { const q = window.qrcode(0, 'M'); q.addData(mq.lienCourt + '?s=qr'); q.make(); img = q.createDataURL(6, 2); } catch (e) {}
-      const aff = (f) => 'Affiche avis.html?u=' + encodeURIComponent(mq.lienCourt) + '&nom=' + encodeURIComponent(mq.nom) + '&langues=' + encodeURIComponent((mq.langs || ['fr']).join(',')) + '&format=' + f;
-      qr = { nom: mq.nom, img, lien: mq.lienCourt + '?s=lien', lienAvis: mq.lienAvis || '#', scans: (mq.scans30 || 0) + ' en 30 jours', copier: () => this.copierLien(mq.lienCourt + '?s=lien'), afficheA5: aff('a5'), afficheA6: aff('a6') };
+      try { const q = window.qrcode(0, 'M'); q.addData(mq.lienAvis); q.make(); img = q.createDataURL(5, 2); } catch (e) {}
+      const aff = (f) => 'Affiche avis.html?u=' + encodeURIComponent(mq.lienAvis) + '&nom=' + encodeURIComponent(mq.nom) + '&langues=' + encodeURIComponent((mq.langs || ['fr']).join(',')) + '&format=' + f;
+      qr = { nom: mq.nom, img, lien: mq.lienAvis, lienSuivi: (mq.lienCourt || '') + '?s=lien', hasSuivi: !!mq.lienCourt, lienAvis: mq.lienAvis, scans: (mq.scans30 || 0) + ' clic' + ((mq.scans30 || 0) > 1 ? 's' : '') + ' en 30 jours',
+        copier: () => this.copierLien(mq.lienAvis), copierSuivi: () => this.copierLien((mq.lienCourt || '') + '?s=lien'), afficheA5: aff('a5'), afficheA6: aff('a6') };
     }
     return {
       periods: [[30, '30 j'], [90, '90 j'], [365, '1 an'], [3650, 'Tout']].map(([j, label]) => ({ label, bg: s.jours === j ? '#232220' : 'transparent', fg: s.jours === j ? '#FFFFFF' : '#444444', pick: () => this.load(j) })),
@@ -355,7 +371,7 @@ class Component extends DCLogic {
       coCol: co.configure ? '#444444' : '#8D1D2C', coW: co.configure ? 400 : 500,
       coAide: co.configure ? 'Google ne rend que 5 avis par fiche et par lecture : le BO les accumule à chaque synchronisation (appel facturé par Google). La clé et le raccordement des fiches se règlent dans le BO.'
         : 'Renseignez la clé Google Places dans les Paramètres du BO, puis raccordez chaque fiche dans Réputation digitale.',
-      gagnesTxt: res.gagnes7 == null ? '' : 'Avis gagnés : ' + (res.gagnes7 > 0 ? '+' : '') + fI(res.gagnes7) + ' en 7 j · ' + (res.gagnes30 > 0 ? '+' : '') + fI(res.gagnes30) + ' en 30 j · ' + fI(res.scans30) + ' scans du QR',
+      gagnesTxt: res.gagnes7 == null ? '' : 'Avis gagnés : ' + (res.gagnes7 > 0 ? '+' : '') + fI(res.gagnes7) + ' en 7 j · ' + (res.gagnes30 > 0 ? '+' : '') + fI(res.gagnes30) + ' en 30 j' + (res.scans30 ? ' · ' + fI(res.scans30) + ' clics sur les liens suivis' : ''),
       gagnesCol: (res.gagnes7 || 0) > 0 ? '#2d7a3e' : '#666666',
       autoActif: !!rg.actif, toggleAuto: () => this.reglages({ actif: !rg.actif, heure: rg.heure }), autoHeure: String(rg.heure),
       setAutoHeure: (e) => this.reglages({ actif: rg.actif, heure: +e.target.value }), heures: Array.from({ length: 24 }, (_, h) => ({ v: String(h), l: h + ' h' })),

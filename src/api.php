@@ -122,6 +122,7 @@ function socRoute(string $method, string $path): array
         $dark = socDarkCommentsSync();
         return [200, ['sync' => $sync + ['dark' => $dark['lus'] ?? 0], 'analyse' => socCommentairesAnalyser()] + socCommentairesListe(['jours' => $b['jours'] ?? 14])];
     }
+    if ($method === 'POST' && $path === '/commentaires/repondre') { $b = body(); return [200, socCommentaireRepondre((string) ($b['id'] ?? ''), (string) ($b['message'] ?? ''))]; }
     if ($method === 'POST' && $path === '/commentaires/traiter') { $b = body(); return [200, socCommentaireTraiter((string) ($b['id'] ?? ''), !empty($b['traite']))]; }
     // Les avis Google : la Réputation digitale du BO (ses tables, lues) et les avis classés (src/google.php).
     if ($method === 'GET' && $path === '/google') { return [200, socGoogleEcran($_GET)]; }

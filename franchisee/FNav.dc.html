@@ -62,7 +62,7 @@
           <div style="display:flex;flex-direction:column;gap:1px;margin:2px 0 6px 19px;padding-left:9px;border-left:1px solid rgba(34,34,34,0.12);">
             <sc-for list="{{ it.subs }}" as="sb" hint-placeholder-count="4">
               <a href="{{ sb.href }}" onClick="{{ sb.click }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;text-decoration:none;font-size:12.5px;font-weight:{{ sb.w }};color:{{ sb.fg }};background:{{ sb.bg }};" style-hover="background:#F4EFE8;">
-                <span style="width:14px;text-align:center;font-size:11px;color:{{ sb.icFg }};flex:0 0 auto;">{{ sb.ic }}</span>{{ sb.label }}
+                <span style="width:14px;text-align:center;font-size:11px;color:{{ sb.icFg }};flex:0 0 auto;">{{ sb.ic }}</span>{{ sb.label }}<sc-if value="{{ sb.hasN }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#D97B29;color:#FFFFFF;font-size:9.5px;font-weight:600;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ sb.n }}</span></sc-if>
               </a>
             </sc-for>
           </div>
@@ -125,14 +125,16 @@ class Component extends DCLogic {
     let memo = null; try { const v = localStorage.getItem('sf.nav.reseaux'); memo = v === '1' ? true : v === '0' ? false : null; } catch (e) {}
     const open = this.state.open != null ? this.state.open : memo != null ? memo : active === 'cal';
     const toggle = () => { try { localStorage.setItem('sf.nav.reseaux', open ? '0' : '1'); } catch (e) {} this.setState({ open: !open }); };
+    // Ce qui attend la boutique : commentaires et avis Google à traiter par elle (pastilles).
+    const al = st.alertes || {}, nCom = ((al.com || {}).pourBoutique) || 0, nGg = ((al.google || {}).pourBoutique) || 0;
     const subs = [['cal', 'Calendrier', '▦', SF.href('cal')]]
       .concat(r.voirAnalyse !== false ? [['analyse', 'Vues et abonnés', '∿', SF.href('cal', 'vue=analyse')]] : [])
       .concat(r.voirSuivi !== false ? [['suivi', 'Suivi de ma boutique', '↗', SF.href('cal', 'vue=suivi')]] : [])
-      .concat(r.voirCommentaires !== false ? [['com', 'Commentaires', '❝', SF.href('com')]] : [])
-      .concat(r.voirAvisGoogle !== false ? [['google', 'Avis Google', '★', SF.href('google')]] : [])
+      .concat(r.voirCommentaires !== false ? [['com', 'Commentaires', '❝', SF.href('com'), nCom]] : [])
+      .concat(r.voirAvisGoogle !== false ? [['google', 'Avis Google', '★', SF.href('google'), nGg]] : [])
       .concat([['pub', 'Créer un post', '+', SF.href('pub')]])
-      .map(([k, label, ic, href]) => { const on = active === 'cal' && k === sub;
-        return { label, ic, href, fg: on ? '#8D1D2C' : '#333333', w: on ? 600 : 400, bg: on ? '#F4EFE8' : 'transparent', icFg: on ? '#8D1D2C' : '#8A847C',
+      .map(([k, label, ic, href, n]) => { const on = active === 'cal' && k === sub;
+        return { label, ic, href, n: n || 0, hasN: (n || 0) > 0, fg: on ? '#8D1D2C' : '#333333', w: on ? 600 : 400, bg: on ? '#F4EFE8' : 'transparent', icFg: on ? '#8D1D2C' : '#8A847C',
           click: (e) => { this.setState({ drawer: false }); if (typeof pick === 'function' && VUES.includes(k) && VUES.includes(sub)) { e.preventDefault(); pick(k); } } }; });
     // « Mes promotions » est retiré : les posts à valider ou refusés se signalent sur « Mes réseaux ».
     const defs = [['cal', 'Mes réseaux', refused || pending, refused ? '#8D1D2C' : '#D97B29']].concat(r.voirCampagnes !== false || r.voirPublicites !== false ? [['camp', 'Publicités et opérations', 0, '#8D1D2C']] : []).concat(st.grilleInstagram || st.instagramUnique ? [['ig', st.instagramUnique ? 'Grille Instagram du réseau' : 'Grille Instagram', 0, '#8D1D2C']] : []);
@@ -152,12 +154,12 @@ class Component extends DCLogic {
       isApercu: st.me.via === 'apercu', fermerApercu: () => SF.fermerApercu(), isDemo: SF.demo, resetDemo: () => SF.reset(),
       // Téléphone : le tiroir et la barre du bas (les écrans du quotidien ; le reste est dans le menu).
       drawerOpen: this.state.drawer ? 'true' : 'false', ouvrir: () => this.setState({ drawer: true }), fermer: () => this.setState({ drawer: false }),
-      topBadge: refused + pending > 0,
+      topBadge: refused + pending + nCom + nGg > 0,
       bas: [['cal', 'Calendrier', '▦', SF.href('cal'), ['cal', 'analyse', 'suivi'], refused + pending]]
-        .concat(r.voirCommentaires !== false ? [['com', 'Commentaires', '❝', SF.href('com'), ['com'], 0]] : [])
+        .concat(r.voirCommentaires !== false ? [['com', 'Commentaires', '❝', SF.href('com'), ['com'], nCom]] : [])
         .concat([['pub', 'Créer', '+', SF.href('pub'), ['pub'], 0]])
         .concat(r.voirCampagnes !== false || r.voirPublicites !== false ? [['camp', 'Publicités', '◎', SF.href('camp'), ['camp'], 0]] : [])
-        .concat(r.voirAvisGoogle !== false ? [['google', 'Avis Google', '★', SF.href('google'), ['google'], 0]] : [])
+        .concat(r.voirAvisGoogle !== false ? [['google', 'Avis Google', '★', SF.href('google'), ['google'], nGg]] : [])
         .map(([k, label, ic, href, pages, badge]) => { const on = pages.includes(sub), creer = k === 'pub';
           return { label, ic, href, current: on ? 'page' : 'false', fg: on ? '#8D1D2C' : '#555555', w: 500, badge, hasBadge: badge > 0,
             size: creer ? '44px' : '26px', lift: creer ? '-18px' : '0', radius: creer ? '50%' : '8px', icSize: creer ? '24px' : '14px',
