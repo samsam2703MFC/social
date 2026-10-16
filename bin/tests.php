@@ -1800,6 +1800,20 @@ $gg = array_column(Db::rows("SELECT * FROM social_commentaire WHERE canal = 'gg'
 check('sans clé Claude : la note d’abord (1★ rouge, 3★ orange, 4-5★ vert), même pour un avis ancien ou sans texte',
     $gg[$idG('g1')]['couleur'] === 'rouge' && $gg[$idG('g3')]['couleur'] === 'orange' && $gg[$idG('g2')]['couleur'] === 'vert' && $gg[$idG('g4')]['couleur'] === 'vert', json_encode(array_column($gg, 'couleur', 'id')));
 check('règles : un bon avis avec une réserve est orange, pas rouge', socCommentaireRegles('Très bon mais vendeuse impolie', 4)['couleur'] === 'orange' && socCommentaireRegles('Super ? oui !', 5)['couleur'] === 'vert');
+check('règles : « jamais déçus », « pas déçu », « nulle part ailleurs » ne sont pas des reproches ; « un peu déçu » reste une réserve',
+    socCommentaireRegles('En sucré ou en salé, nous ne sommes jamais déçus !', 5)['couleur'] === 'vert' && socCommentaireRegles('Pas déçu du détour', null)['couleur'] === 'vert'
+    && socCommentaireRegles('Introuvable nulle part ailleurs', null)['couleur'] === 'vert' && socCommentaireRegles('Super, mais un peu déçu par la tarte au citron', 4)['couleur'] === 'orange'
+    && socCommentaireRegles('Très déçu, plus jamais', null)['couleur'] === 'rouge');
+Db::exec("INSERT INTO social_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur, sujet, analyse, note) VALUES
+    ('gg_rep1', 'gg', 'gg:4', '4', 'X', 'Nous ne sommes jamais déçus !', NOW(), 0, NOW(), 'orange', 'Bon avis, une réserve', 'regles', 5),
+    ('gg_rep2', 'gg', 'gg:4', '4', 'Y', 'Nous ne sommes jamais déçus !', NOW(), 0, NOW(), 'orange', 'Bon avis, une réserve', 'regles', 5)");
+Db::exec("UPDATE social_commentaire SET traite_le = NOW() WHERE id = 'gg_rep2'");
+socSettingPut('commentaires_regles_version', 1, false); $iaRep = socSetting('commentaires_ia_reprise'); socSettingPut('commentaires_ia_reprise', 'test', false);
+socCommentairesReprise();
+check('règles changées : ce qu’elles avaient classé est reclassé une fois (pas ce qui est traité)', Db::row("SELECT couleur FROM social_commentaire WHERE id = 'gg_rep1'")['couleur'] === 'vert'
+    && Db::row("SELECT couleur FROM social_commentaire WHERE id = 'gg_rep2'")['couleur'] === 'orange' && (int) socSetting('commentaires_regles_version') === SOC_COM_REGLES_VERSION);
+socSettingPut('commentaires_ia_reprise', $iaRep, false);
+Db::exec("DELETE FROM social_commentaire WHERE id IN ('gg_rep1','gg_rep2')");
 Db::exec("UPDATE social_commentaire SET couleur = NULL WHERE canal = 'gg'");
 socSettingPut('anthropic_api_key', 'sk-test-cle', true); $iaAppels = []; $iaMode = 'ok';
 socCommentairesAnalyser();
@@ -1980,10 +1994,10 @@ $a1 = socItem('ads', 'a1');
 check('reprise à la main : la pause automatique est levée pour de bon (gardée par le serveur)', $a1['status'] === 'Active' && ($a1['autoPauseLevee'] ?? false) === true && isset($a1['autoPause']['cpc']));
 $appels = []; socAdsSync();
 check('pub reprise à la main : plus jamais repausée par la règle', socItem('ads', 'a1')['status'] === 'Active' && $pausesA1() === 0);
-check('verdict : sans clic après la dépense minimale → pause ; autre devise sans seuil → rien ; campagne Meta → rien',
+check('verdict : sans clic après la dépense minimale → pause ; autre devise sans seuil, campagne Meta, pub de notoriété → rien',
     array_key_exists('cpc', $vz = socPubPauseVerdict(['devise' => 'CHF'], 25.0, 0) ?? []) && $vz['cpc'] === null && str_contains($vz['texte'], 'aucun clic')
     && socPubPauseVerdict(['devise' => 'PLN'], 500.0, 1) === null && socPubPauseVerdict(['devise' => 'CHF', 'origin' => 'meta'], 500.0, 1) === null
-    && socPubPauseVerdict(['devise' => 'CHF'], 10.0, 1) === null);
+    && socPubPauseVerdict(['devise' => 'CHF'], 10.0, 1) === null && socPubPauseVerdict(['devise' => 'CHF', 'spec' => ['objective' => 'OUTCOME_AWARENESS']], 500.0, 1) === null);
 socPubReglesPut(['pauseActive' => false, 'seuils' => []]);
 
 // Meilleurs posts de la semaine : la Page de Halle (interactions lues) et son Instagram.

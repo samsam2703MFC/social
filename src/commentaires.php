@@ -18,6 +18,8 @@ const SOC_COM_PAR_POST = 50;     // commentaires au plus par publication
 const SOC_COM_LOT_IA = 25;       // commentaires par appel à Claude
 const SOC_COM_MAX_ANALYSE = 100; // commentaires classés au plus par passage (coût borné)
 const SOC_COM_COULEURS = ['rouge', 'orange', 'vert'];
+// Version des règles de classement (sans Claude) : quand elle change, ce qu'elles ont classé est reclassé une fois.
+const SOC_COM_REGLES_VERSION = 2;
 
 /**
  * Relit chez Meta les commentaires des publications récentes de chaque Page et de chaque compte Instagram.
@@ -88,6 +90,7 @@ function socCommentaireGarder(string $canal, array $x, array $objet, array $comp
  */
 function socCommentairesAnalyser(int $max = SOC_COM_MAX_ANALYSE): array
 {
+    socCommentairesReprise();
     // Un avis Google se classe à tout âge : la fiche les garde visibles des mois durant.
     $rows = Db::rows('SELECT c.id, c.canal, c.message, c.objet_texte, c.pub_id, c.post_id, c.compte_nom, c.note FROM social_commentaire c'
         . " WHERE c.couleur IS NULL AND (c.cree_le >= ? OR c.canal = 'gg') ORDER BY c.cree_le DESC LIMIT " . max(1, min(500, $max)), [date('Y-m-d H:i:s', strtotime('-60 days'))]);
@@ -110,6 +113,28 @@ function socCommentairesAnalyser(int $max = SOC_COM_MAX_ANALYSE): array
         }
     }
     return ['classes' => $classes, 'ia' => SocIa::configured(), 'erreur' => $erreur];
+}
+
+/**
+ * Reprend ce que les règles ont classé : une fois quand les règles changent (version), et une fois quand la clé Claude
+ * arrive (les commentaires de 60 jours et les avis Google non traités repassent alors par Claude). Ce qui est traité
+ * ne bouge pas.
+ */
+function socCommentairesReprise(): void
+{
+    if ((int) (socSetting('commentaires_regles_version') ?? 1) < SOC_COM_REGLES_VERSION) {
+        foreach (Db::rows("SELECT id, canal, message, note FROM social_commentaire WHERE analyse = 'regles' AND traite_le IS NULL") as $r) {
+            $a = socCommentaireRegles((string) $r['message'], $r['canal'] === 'gg' ? (int) $r['note'] : null);
+            Db::exec('UPDATE social_commentaire SET couleur = ?, sujet = ?, action = ? WHERE id = ?',
+                [$a['couleur'], mb_substr((string) $a['sujet'], 0, 80), mb_substr((string) $a['action'], 0, 300), (string) $r['id']]);
+        }
+        socSettingPut('commentaires_regles_version', SOC_COM_REGLES_VERSION, false);
+    }
+    if (SocIa::configured() && !socSetting('commentaires_ia_reprise')) {
+        Db::exec("UPDATE social_commentaire SET couleur = NULL WHERE analyse = 'regles' AND traite_le IS NULL AND (cree_le >= ? OR canal = 'gg')",
+            [date('Y-m-d H:i:s', strtotime('-60 days'))]);
+        socSettingPut('commentaires_ia_reprise', date('Y-m-d H:i:s'), false);
+    }
 }
 
 /** Le contexte d'un commentaire : la publication commentée (Page, Instagram) ou le post du module (dark post, pub). */
@@ -168,6 +193,9 @@ TXT;
 function socCommentaireRegles(string $msg, ?int $note = null): array
 {
     $m = mb_strtolower($msg);
+    // Les tournures niées ou figées ne sont pas des reproches : « jamais déçus », « pas déçu », « nulle part ailleurs »…
+    $m = preg_replace(['/\b(jamais|pas|point|nooit|niet|never|not)\s+(été\s+|eté\s+|been\s+)?(d[ée]çu\w*|teleurgesteld|disappointed)/u',
+        '/\bnulle\s+part\b/u', '/\b(pas|rien)\s+(de\s+)?mal\b/u'], ' ', $m) ?? $m;
     if ($note !== null && $note >= 1) {
         if ($note <= 2) { return ['couleur' => 'rouge', 'sujet' => 'Avis négatif', 'resume' => '', 'action' => 'Répondre sous l’avis : s’excuser et inviter la personne à contacter la boutique.', 'reponse' => '']; }
         if ($note === 3) { return ['couleur' => 'orange', 'sujet' => 'Avis mitigé', 'resume' => '', 'action' => 'Répondre sous l’avis en reprenant le point soulevé.', 'reponse' => '']; }

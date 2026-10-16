@@ -7,7 +7,8 @@ declare(strict_types=1);
  *  - Règle de pause (marque, `pub_regles`, désactivée par défaut) : à la relecture horaire des pubs (socAdsSync), une
  *    pub du module active dont le coût par clic dépasse le seuil, une fois une dépense minimale atteinte, est mise en
  *    pause chez Meta. Les seuils sont par devise de compte publicitaire (un compte en złotys n'a pas les seuils d'un
- *    compte en euros). Une pub reprise à la main après une pause automatique n'est plus jamais repausée.
+ *    compte en euros). Une pub reprise à la main après une pause automatique n'est plus jamais repausée, et une pub
+ *    de notoriété (qui ne vise pas le clic) n'est pas jugée au coût par clic.
  *  - Les meilleurs posts de la semaine (marque) : les publications des 7 derniers jours de chaque Page et de chaque
  *    Instagram, lues chez Meta, classées par interactions (réactions, commentaires, partages) et rapportées à la
  *    médiane du compte ; le meilleur de chaque boutique, prêt à booster (l'assistant de pub s'ouvre prérempli).
@@ -60,6 +61,9 @@ function socPubPauseVerdict(array $ad, float $spent, int $clics, ?array $regles 
 {
     $regles ??= socPubRegles();
     if (!$regles['pauseActive'] || !empty($ad['autoPauseLevee']) || ($ad['origin'] ?? '') === 'meta') { return null; }
+    // Une pub de notoriété (couverture, impressions) ne vise pas le clic : le coût par clic ne la juge pas.
+    $obj = (string) (($ad['spec']['objective'] ?? '') ?: ($ad['metaObjective'] ?? ''));
+    if (in_array($obj, ['OUTCOME_AWARENESS', 'REACH', 'BRAND_AWARENESS'], true)) { return null; }
     $dev = strtoupper((string) (($ad['devise'] ?? '') ?: 'EUR'));
     $s = $regles['seuils'][$dev] ?? null;
     if (!$s || $spent < (float) $s['depenseMin']) { return null; }
