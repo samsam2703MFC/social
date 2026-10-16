@@ -6,7 +6,8 @@ declare(strict_types=1);
  *
  *  - Les chiffres viennent des tables du BO, LUES seulement : `ceo_shop_reputation` (note et nombre d'avis de
  *    la fiche, tels que Google les affiche) et `ceo_shop_review` (les avis rapatriés, accumulés à chaque
- *    synchronisation : Google n'en rend que cinq par appel). Le module n'appelle pas Google lui-même : la
+ *    synchronisation : Google n'en rend que cinq par appel) ; si cette base ne les montre pas, de l'API du BO
+ *    (`GET {cockpit}/reputation`, l'écran Réputation digitale). Le module n'appelle pas Google lui-même : la
  *    synchronisation reste celle du BO (`POST {cockpit}/reputation/sync`), lancée d'ici par un geste, comme
  *    dans le BO — chaque appel à Google est facturé.
  *  - Les calculs sont ceux du BO (src/endpoints.php, ep_reputation) : moyenne réseau PONDÉRÉE par le nombre
@@ -66,93 +67,134 @@ function socGoogleRepartition(array $par): array
 }
 
 /**
+ * Ce que le BO sait de la réputation, sous une seule forme : ses tables si cette base les montre (même base que le
+ * BO), sinon son API — `GET {cockpit}/reputation`, celle de l'écran Réputation digitale (l'utilisateur MySQL du
+ * module peut ne pas voir les tables du BO). Par l'API, les avis sont les cinq derniers de chaque fiche : le cron les
+ * recopie toutes les heures, les nouveaux s'ajoutent à ceux déjà gardés.
+ * Rend ['source' => base|api, 'cible', 'configure', 'derniere', 'fiches' => [boutique => {note, avis, raccorde, url,
+ * synchro}], 'par' => [boutique => [étoiles => n]], 'avis' => [{shop, auteur, note, texte, le}]] ou ['indispo', 'cible', 'raison'].
+ */
+function socGoogleBo(): array
+{
+    $map = socGoogleShopIds();
+    $vers = static fn (string $id): string => $map[$id] ?? $id;
+    $fiches = []; $par = []; $avis = [];
+    if (socGoogleDispo()) {
+        $derniere = null;
+        foreach (Db::rows('SELECT * FROM ceo_shop_reputation') as $r) {
+            $fiches[$vers((string) $r['shop_id'])] = ['note' => $r['rating_avg'] !== null ? (float) $r['rating_avg'] : null, 'avis' => (int) $r['rating_count'],
+                'raccorde' => (string) ($r['place_id'] ?? '') !== '', 'url' => ($r['profile_url'] ?? null) ?: null, 'synchro' => $r['synced_at'] !== null ? substr((string) $r['synced_at'], 0, 16) : null];
+            if ($r['synced_at'] !== null && ($derniere === null || $r['synced_at'] > $derniere)) { $derniere = (string) $r['synced_at']; }
+        }
+        foreach (Db::rows('SELECT shop_id, rating, COUNT(*) n FROM ceo_shop_review GROUP BY shop_id, rating') as $r) {
+            $sid = $vers((string) $r['shop_id']);
+            $par[$sid][(int) $r['rating']] = ($par[$sid][(int) $r['rating']] ?? 0) + (int) $r['n'];
+        }
+        foreach (Db::rows('SELECT shop_id, author, rating, comment, reviewed_at FROM ceo_shop_review ORDER BY reviewed_at DESC, id DESC LIMIT 2000') as $r) {
+            $avis[] = ['shop' => $vers((string) $r['shop_id']), 'auteur' => (string) ($r['author'] ?? ''), 'note' => (int) $r['rating'], 'texte' => (string) ($r['comment'] ?? ''), 'le' => (string) $r['reviewed_at']];
+        }
+        $g = boSetting('google');
+        return ['source' => 'base', 'cible' => socGoogleCible(), 'configure' => trim((string) (is_array($g) ? ($g['cle'] ?? '') : '')) !== '' || (string) (boConfig()['googleApiKey'] ?? '') !== '',
+            'derniere' => $derniere !== null ? substr($derniere, 0, 16) : null, 'fiches' => $fiches, 'par' => $par, 'avis' => $avis];
+    }
+    try { [$code, $j] = BoCockpit::requete('GET', '/reputation'); }
+    catch (HttpError $e) { return ['indispo' => true, 'cible' => socGoogleCible(), 'raison' => 'La Réputation digitale du BO est illisible : ' . $e->getMessage()]; }
+    if ($code !== 200 || !isset($j['magasins']) || !is_array($j['magasins'])) {
+        return ['indispo' => true, 'cible' => socGoogleCible(), 'raison' => !empty($j['indispo']) ? (string) ($j['raison'] ?? 'Réputation indisponible dans le BO.')
+            : 'La Réputation digitale du BO est illisible (HTTP ' . $code . ').'];
+    }
+    foreach ($j['magasins'] as $m) {
+        if (!is_array($m) || !isset($m['id'])) { continue; }
+        $sid = $vers((string) $m['id']);
+        $fiches[$sid] = ['note' => isset($m['note']) && is_numeric($m['note']) ? (float) $m['note'] : null, 'avis' => (int) ($m['avis'] ?? 0),
+            'raccorde' => (string) ($m['placeId'] ?? '') !== '', 'url' => ($m['url'] ?? null) ?: null, 'synchro' => isset($m['synchro']) ? substr((string) $m['synchro'], 0, 16) : null];
+        foreach ((array) ($m['repartition']['niveaux'] ?? []) as $l) { if ((int) ($l['n'] ?? 0) > 0) { $par[$sid][(int) $l['note']] = (int) $l['n']; } }
+        foreach ((array) ($m['derniers'] ?? []) as $a) {
+            if (!is_array($a) || !preg_match('/^\d{4}-\d{2}-\d{2}/', (string) ($a['le'] ?? ''))) { continue; }
+            $avis[] = ['shop' => $sid, 'auteur' => (string) ($a['auteur'] ?? ''), 'note' => (int) ($a['note'] ?? 0), 'texte' => (string) ($a['texte'] ?? ''),
+                'le' => substr((string) $a['le'], 0, 10) . ' 12:00:00'];  // le BO ne rend que le jour
+        }
+    }
+    $c = $j['cible'] ?? SOC_GG_CIBLE;
+    return ['source' => 'api', 'cible' => is_numeric($c) && $c >= 1 && $c <= 5 ? (float) $c : SOC_GG_CIBLE, 'configure' => !empty($j['connecteur']['configure']),
+        'derniere' => isset($j['connecteur']['derniereSynchro']) ? substr((string) $j['connecteur']['derniereSynchro'], 0, 16) : null, 'fiches' => $fiches, 'par' => $par, 'avis' => $avis];
+}
+
+/** L'identifiant d'un avis dans le module : le même, qu'il soit lu dans les tables du BO ou par son API. */
+function socGoogleAvisId(string $shop, string $auteur, string $le, int $note): string
+{
+    return 'gg_' . substr(sha1($shop . '|' . $auteur . '|' . substr($le, 0, 10) . '|' . $note), 0, 24);
+}
+
+/**
  * La réputation du réseau et de chaque boutique (ou d'une seule : `$shop`, le réseau restant calculé sur tout le
  * réseau), comme l'écran Réputation digitale du BO.
  */
-function socGoogleReputation(?string $shop = null): array
+function socGoogleReputation(?string $shop = null, ?array $bo = null): array
 {
-    $cible = socGoogleCible();
-    if (!socGoogleDispo()) {
-        return ['indispo' => true, 'cible' => $cible, 'raison' => 'Les tables de réputation du BO (ceo_shop_reputation, ceo_shop_review) sont absentes de cette base.'];
-    }
-    $map = socGoogleShopIds();
-    $vers = static fn (string $id): string => $map[$id] ?? $id;
-    $agr = [];
-    foreach (Db::rows('SELECT * FROM ceo_shop_reputation') as $r) { $agr[$vers((string) $r['shop_id'])] = $r; }
-    $par = [];
-    foreach (Db::rows('SELECT shop_id, rating, COUNT(*) n FROM ceo_shop_review GROUP BY shop_id, rating') as $r) {
-        $sid = $vers((string) $r['shop_id']);
-        $par[$sid][(int) $r['rating']] = ($par[$sid][(int) $r['rating']] ?? 0) + (int) $r['n'];
-    }
-
+    $bo ??= socGoogleBo();
+    if (!empty($bo['indispo'])) { return $bo; }
+    $cible = (float) $bo['cible'];
     $magasins = []; $sommeNotes = 0.0; $sommeAvis = 0; $parReseau = [];
     foreach (socReseau() as $s) {
         $id = (string) $s['id'];
-        $a = $agr[$id] ?? null;
-        $note = ($a && $a['rating_avg'] !== null) ? (float) $a['rating_avg'] : null;
-        $n = $a ? (int) $a['rating_count'] : 0;
+        $a = $bo['fiches'][$id] ?? null;
+        $note = $a['note'] ?? null;
+        $n = $a ? (int) $a['avis'] : 0;
         if ($note !== null && $n > 0) { $sommeNotes += $note * $n; $sommeAvis += $n; }
-        foreach ($par[$id] ?? [] as $k => $v) { $parReseau[$k] = ($parReseau[$k] ?? 0) + $v; }
+        foreach ($bo['par'][$id] ?? [] as $k => $v) { $parReseau[$k] = ($parReseau[$k] ?? 0) + $v; }
         $magasins[] = ['id' => $id, 'nom' => (string) $s['name'], 'note' => $note, 'avis' => $n,
             'ecart' => $note !== null ? round($note - $cible, 2) : null, 'avis5Requis' => socGoogleAvis5($note, $n, $cible),
-            'repartition' => socGoogleRepartition($par[$id] ?? []), 'raccorde' => ($a['place_id'] ?? '') !== '' && $a !== null,
-            'url' => ($a['profile_url'] ?? null) ?: null, 'synchro' => ($a && $a['synced_at'] !== null) ? substr((string) $a['synced_at'], 0, 16) : null];
+            'repartition' => socGoogleRepartition($bo['par'][$id] ?? []), 'raccorde' => (bool) ($a['raccorde'] ?? false),
+            'url' => $a['url'] ?? null, 'synchro' => $a['synchro'] ?? null];
     }
     $moyenne = $sommeAvis > 0 ? round($sommeNotes / $sommeAvis, 2) : null;
     $notes = array_values(array_filter(array_column($magasins, 'note'), static fn ($v) => $v !== null));
-    $derniere = null;
-    foreach ($agr as $r) { if ($r['synced_at'] !== null && ($derniere === null || $r['synced_at'] > $derniere)) { $derniere = $r['synced_at']; } }
-    $g = boSetting('google');
-    $configure = trim((string) (is_array($g) ? ($g['cle'] ?? '') : '')) !== '' || (string) (boConfig()['googleApiKey'] ?? '') !== '';
-    $out = [
-        'cible' => $cible,
-        'connecteur' => ['configure' => $configure, 'raccordes' => count(array_filter($agr, static fn ($r) => (string) ($r['place_id'] ?? '') !== '')),
-            'derniereSynchro' => $derniere !== null ? substr((string) $derniere, 0, 16) : null],
+    return [
+        'cible' => $cible, 'source' => $bo['source'],
+        'connecteur' => ['configure' => (bool) $bo['configure'], 'raccordes' => count(array_filter($bo['fiches'], static fn ($f) => $f['raccorde'])), 'derniereSynchro' => $bo['derniere']],
         'reseau' => ['moyenne' => $moyenne, 'avis' => $sommeAvis, 'magasins' => count($magasins), 'notes' => count($notes),
             'sousCible' => count(array_filter($notes, static fn ($v) => $v < $cible)), 'avis5Requis' => socGoogleAvis5($moyenne, $sommeAvis, $cible),
             'repartition' => socGoogleRepartition($parReseau)],
         'magasins' => $shop === null ? $magasins : array_values(array_filter($magasins, static fn ($m) => $m['id'] === $shop)),
     ];
-    return $out;
 }
 
 /**
  * Recopie les avis rapatriés par le BO dans `social_commentaire` (canal `gg`), pour les classer et les suivre
- * comme les commentaires. Un avis déjà connu garde son classement et son suivi. Rend ['lus', 'indispo'].
+ * comme les commentaires. Un avis déjà connu garde son classement et son suivi. Rend ['lus', 'indispo', 'source'].
  */
 function socGoogleAvisSync(): array
 {
-    if (!socGoogleDispo()) { return ['lus' => 0, 'indispo' => true]; }
-    $map = socGoogleShopIds();
-    $fiches = [];
-    foreach (Db::rows('SELECT * FROM ceo_shop_reputation') as $r) { $fiches[(string) $r['shop_id']] = $r; }
+    $bo = socGoogleBo();
+    if (!empty($bo['indispo'])) { return ['lus' => 0, 'indispo' => true, 'raison' => $bo['raison'] ?? '']; }
     $noms = [];
     foreach (socShops() as $s) { $noms[(string) $s['id']] = (string) $s['name']; }
     $lus = 0; $now = date('Y-m-d H:i:s');
-    foreach (Db::rows('SELECT id, shop_id, author, rating, comment, reviewed_at FROM ceo_shop_review ORDER BY reviewed_at DESC, id DESC LIMIT 2000') as $r) {
-        $ceo = (string) $r['shop_id'];
-        $sid = $map[$ceo] ?? $ceo;
-        $f = $fiches[$ceo] ?? null;
+    foreach ($bo['avis'] as $a) {
+        $sid = $a['shop'];
+        $f = $bo['fiches'][$sid] ?? null;
         $nom = $noms[$sid] ?? $sid;
-        $fiche = 'Fiche Google de L’Atelier By ' . $nom . ($f && $f['rating_avg'] !== null
-            ? ' (note de la fiche : ' . number_format((float) $f['rating_avg'], 1, ',', '') . ' sur ' . (int) $f['rating_count'] . ' avis)' : '');
-        $lien = (string) ($f['profile_url'] ?? '');
+        $fiche = 'Fiche Google de L’Atelier By ' . $nom . ($f && $f['note'] !== null
+            ? ' (note de la fiche : ' . number_format((float) $f['note'], 1, ',', '') . ' sur ' . (int) $f['avis'] . ' avis)' : '');
+        $lien = (string) ($f['url'] ?? '');
+        $note = max(1, min(5, (int) $a['note']));
         Db::exec('INSERT INTO social_commentaire (id, canal, objet_id, shop_id, post_id, pub_id, auteur, message, cree_le, masque, maj_le, compte, compte_nom, objet_texte, objet_lien, lien, note)'
             . ' VALUES (?,?,?,?,NULL,NULL,?,?,?,0,?,?,?,?,?,?,?)'
-            . ' ON DUPLICATE KEY UPDATE message = VALUES(message), note = VALUES(note), shop_id = VALUES(shop_id), compte = VALUES(compte), compte_nom = VALUES(compte_nom),'
+            . ' ON DUPLICATE KEY UPDATE note = VALUES(note), shop_id = VALUES(shop_id), compte = VALUES(compte), compte_nom = VALUES(compte_nom),'
             . ' objet_texte = VALUES(objet_texte), objet_lien = VALUES(objet_lien), lien = VALUES(lien)',
-            ['gg_' . $r['id'], 'gg', 'gg:' . $sid, $sid, mb_substr((string) ($r['author'] ?? ''), 0, 160), mb_substr((string) ($r['comment'] ?? ''), 0, 5000),
-                (string) $r['reviewed_at'], $now, mb_substr($sid, 0, 40), mb_substr('Google · ' . $nom, 0, 160), $fiche, mb_substr($lien, 0, 500), mb_substr($lien, 0, 500),
-                max(1, min(5, (int) $r['rating']))]);
+            [socGoogleAvisId($sid, $a['auteur'], $a['le'], $note), 'gg', 'gg:' . $sid, $sid, mb_substr($a['auteur'], 0, 160), mb_substr($a['texte'], 0, 5000),
+                $a['le'], $now, mb_substr($sid, 0, 40), mb_substr('Google · ' . $nom, 0, 160), $fiche, mb_substr($lien, 0, 500), mb_substr($lien, 0, 500), $note]);
         $lus++;
     }
-    socSettingPut('google_avis_relus', ['le' => $now, 'lus' => $lus], false);
-    return ['lus' => $lus, 'indispo' => false];
+    socSettingPut('google_avis_relus', ['le' => $now, 'lus' => $lus, 'source' => $bo['source']], false);
+    return ['lus' => $lus, 'indispo' => false, 'source' => $bo['source']];
 }
 
 /**
- * Le cockpit du BO, pour son seul geste « Synchroniser » de la Réputation digitale (Google Places) : le module
- * le déclenche, le BO appelle Google avec SA clé et écrit SES tables. La session du cockpit suit l'appel.
+ * Le cockpit du BO, pour la Réputation digitale : sa lecture (`GET /reputation`) quand cette base ne montre pas ses
+ * tables, et son geste « Synchroniser » (Google Places) — le module le déclenche, le BO appelle Google avec SA clé et
+ * écrit SES tables. La session du cockpit suit l'appel.
  */
 final class BoCockpit
 {
@@ -167,20 +209,20 @@ final class BoCockpit
         return array_values(array_unique($l));
     }
 
-    /** POST JSON ; la première adresse qui répond. Rend [code HTTP, réponse décodée]. */
-    public static function post(string $path, array $body): array
+    /** GET ou POST JSON ; la première adresse qui répond. Rend [code HTTP, réponse décodée]. */
+    public static function requete(string $method, string $path, array $body = []): array
     {
         $err = 'aucune adresse';
         foreach (self::candidates() as $b) {
             $url = $b . '/' . ltrim($path, '/');
-            if (self::$transport) { [$code, $txt] = (self::$transport)('POST', $url, $body); }
+            if (self::$transport) { [$code, $txt] = (self::$transport)($method, $url, $body); }
             else {
                 $ch = curl_init($url);
                 $h = ['Accept: application/json', 'Content-Type: application/json'];
                 $c = (string) ($_COOKIE[BO_AUTH_COOKIE] ?? '');
                 if ($c !== '') { $h[] = 'Cookie: ' . BO_AUTH_COOKIE . '=' . rawurlencode($c); }
-                curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_POSTFIELDS => json_encode($body),
-                    CURLOPT_TIMEOUT => 90, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_HTTPHEADER => $h]);
+                curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => $method === 'POST' ? 90 : 20, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_HTTPHEADER => $h]
+                    + ($method === 'POST' ? [CURLOPT_POST => true, CURLOPT_POSTFIELDS => json_encode($body)] : []));
                 $r = curl_exec($ch);
                 $code = $r === false ? 0 : (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 $txt = $r === false ? '' : (string) $r;
@@ -198,7 +240,7 @@ final class BoCockpit
 /** « Synchroniser chez Google » : le BO relit les fiches, puis le module recopie et classe les nouveaux avis. */
 function socGoogleSynchroniser(): array
 {
-    [$code, $j] = BoCockpit::post('/reputation/sync', []);
+    [$code, $j] = BoCockpit::requete('POST', '/reputation/sync');
     if ($code === 401) { throw new HttpError(422, 'Le cockpit du BO demande une connexion : reconnectez-vous au BO, puis réessayez.'); }
     if ($code < 200 || $code >= 300 || !empty($j['error'])) {
         throw new HttpError($code === 422 ? 422 : 502, 'Synchronisation Google : ' . ((string) ($j['error'] ?? '') ?: 'HTTP ' . $code));

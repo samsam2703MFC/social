@@ -1670,9 +1670,35 @@ Db::exec("DELETE FROM social_commentaire WHERE id = 'wavre_c1'");
 Db::exec('DELETE FROM social_commentaire WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
 
 echo "Avis Google : la Réputation digitale du BO (tables lues), avis classés vert / orange / rouge, espace franchisé\n";
+BoCockpit::$transport = static fn (string $m, string $url, array $body): array => [0, ''];
 [$code, $b] = socRoute('GET', '/google');
-check('sans les tables de réputation du BO : indisponible, dit pourquoi, pas d’erreur', $code === 200 && ($b['reputation']['indispo'] ?? false) === true
-    && str_contains((string) $b['reputation']['raison'], 'ceo_shop_reputation') && $b['avis'] === []);
+check('ni tables du BO visibles ni cockpit joignable : indisponible, dit pourquoi, pas d’erreur', $code === 200 && ($b['reputation']['indispo'] ?? false) === true
+    && str_contains((string) $b['reputation']['raison'], 'injoignable') && $b['avis'] === [] && socGoogleAvisSync()['lus'] === 0);
+// Tables invisibles pour le module (droits MySQL) : la Réputation digitale lue par l'API du BO, telle qu'elle la rend.
+$cockpitGet = [];
+BoCockpit::$transport = static function (string $m, string $url, array $body) use (&$cockpitGet): array {
+    $cockpitGet[] = $m . ' ' . $url;
+    return [200, json_encode(['cible' => 4.6, 'connecteur' => ['configure' => true, 'empreinte' => 'AIzaSy…zlkQ', 'raccordes' => 2, 'derniereSynchro' => '2026-10-11 19:49'],
+        'reseau' => ['moyenne' => 4.58, 'avis' => 122], 'magasins' => [
+        ['id' => '4', 'nom' => 'Atelier by - Halle', 'ville' => 'Halle', 'note' => 4.4, 'avis' => 50, 'placeId' => 'P-HAL', 'url' => 'https://maps.google.com/?cid=1', 'synchro' => '2026-10-11 19:49',
+            'repartition' => ['lus' => 2, 'niveaux' => [['note' => 5, 'n' => 1], ['note' => 4, 'n' => 0], ['note' => 3, 'n' => 0], ['note' => 2, 'n' => 0], ['note' => 1, 'n' => 1]]],
+            'derniers' => [['auteur' => 'Paul R.', 'note' => 1, 'texte' => 'Un cheveu dans la tarte, inadmissible.', 'le' => '2026-09-20', 'repondu' => null],
+                ['auteur' => 'Anne B.', 'note' => 5, 'texte' => 'Délicieux !', 'le' => '2026-09-08', 'repondu' => null]]],
+        ['id' => '5', 'nom' => 'Wavre', 'ville' => 'Wavre', 'note' => 4.7, 'avis' => 72, 'placeId' => 'P-WAV', 'url' => null, 'synchro' => '2026-10-10 08:00',
+            'repartition' => ['lus' => 0, 'niveaux' => []], 'derniers' => []]]])];
+};
+[$code, $b] = socRoute('GET', '/google');
+$rpA = $b['reputation']; $mgA = array_column($rpA['magasins'] ?? [], null, 'id');
+check('par l’API du BO (GET /reputation du cockpit) : mêmes calculs, clé jamais rendue', $code === 200 && ($rpA['source'] ?? '') === 'api' && str_ends_with((string) ($cockpitGet[0] ?? ''), '/api/cockpit/reputation')
+    && $rpA['reseau']['moyenne'] === 4.58 && $rpA['reseau']['avis5Requis'] === 7 && $mgA['4']['avis5Requis'] === 25 && $rpA['connecteur']['configure'] === true && $rpA['connecteur']['raccordes'] === 2
+    && !str_contains(json_encode($b), 'AIza'), json_encode($rpA));
+$sA = socGoogleAvisSync(); socGoogleAvisSync();
+$ggA = Db::rows("SELECT id, shop_id, note, cree_le FROM social_commentaire WHERE canal = 'gg'");
+check('par l’API : les derniers avis recopiés une seule fois (relus toutes les heures), à leur boutique', $sA['lus'] === 2 && $sA['source'] === 'api' && count($ggA) === 2
+    && $ggA[0]['shop_id'] === '4', json_encode($ggA));
+$idApi = socGoogleAvisId('4', 'Paul R.', '2026-09-20', 1);
+Db::exec("UPDATE social_commentaire SET traite_le = NOW() WHERE id = ?", [$idApi]);
+BoCockpit::$transport = null;
 // Les tables du BO, telles que son installeur les crée (src/installer.php du BO).
 $pdo->exec("CREATE TABLE ceo_shop_reputation (shop_id VARCHAR(8) PRIMARY KEY, place_id VARCHAR(120) NULL, profile_url VARCHAR(400) NULL, rating_avg DECIMAL(3,2) NULL, rating_count INT NOT NULL DEFAULT 0, synced_at DATETIME NULL)");
 $pdo->exec("CREATE TABLE ceo_shop_review (id BIGINT AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(8) NOT NULL, source VARCHAR(20) NOT NULL DEFAULT 'google', external_id VARCHAR(160) NULL, author VARCHAR(120) NULL, rating TINYINT NOT NULL, comment TEXT NULL, reviewed_at DATETIME NOT NULL, replied_at DATETIME NULL, UNIQUE KEY uq_review_source (source, external_id))");
@@ -1702,7 +1728,10 @@ check('clé Google du BO : jamais rendue, seulement son existence', ($rp['connec
 $pdo->exec("DELETE FROM ceo_app_setting WHERE `key` = 'google'");
 $s = socGoogleAvisSync();
 $gg = array_column(Db::rows("SELECT * FROM social_commentaire WHERE canal = 'gg'"), null, 'id');
-$idG = static fn (string $ext) => 'gg_' . Db::row('SELECT id FROM ceo_shop_review WHERE external_id = ?', [$ext])['id'];
+$auteurs = ['g1' => 'Paul R.', 'g2' => 'Anne B.', 'g3' => 'Luc D.', 'g4' => 'Eva', 'g5' => 'Tom'];
+$idG = static fn (string $ext) => (string) Db::row("SELECT id FROM social_commentaire WHERE canal = 'gg' AND auteur = ?", [$auteurs[$ext]])['id'];
+check('même avis lu par l’API puis dans les tables du BO : le même, son suivi gardé', isset($gg[$idApi]) && $gg[$idApi]['traite_le'] !== null && $idG('g1') === $idApi);
+Db::exec("UPDATE social_commentaire SET traite_le = NULL WHERE canal = 'gg'");
 check('avis recopiés pour les classer : boutique du module, note, fiche en contexte, lien de la fiche', $s['lus'] === 4 && count($gg) === 4 && $gg[$idG('g1')]['shop_id'] === '4'
     && (int) $gg[$idG('g1')]['note'] === 1 && str_contains((string) $gg[$idG('g1')]['objet_texte'], 'Fiche Google de L’Atelier By Halle (note de la fiche : 4,4 sur 50 avis)')
     && $gg[$idG('g4')]['shop_id'] === '5' && $gg[$idG('g1')]['lien'] === 'https://maps.google.com/?cid=1', json_encode([$s, array_column($gg, 'shop_id', 'id')]));
