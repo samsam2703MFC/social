@@ -39,17 +39,22 @@ function socIso(string $jour, string $heure): string
     return $d->format('Y-m-d\TH:i:sO');
 }
 
-/** Les ids Meta des centres d'intérêt, par nom (Targeting Search, mémorisé). */
+/**
+ * Les ids Meta des centres d'intérêt, par nom (Targeting Search, mémorisé). La recherche rend encore des
+ * intérêts que Meta a abandonnés (et refuse ensuite dans un ad set) : ceux-là sont écartés.
+ */
 function socInterets(array $noms): array
 {
     $memo = (array) (socSetting('meta_cache_interets') ?? []);
+    $ab = socInteretsAbandonnes();
     $out = [];
     foreach ($noms as $n) {
         $n = (string) $n;
-        if (!isset($memo[$n])) {
+        if (!isset($memo[$n]) || isset($ab[(string) $memo[$n]['id']])) {
             try {
-                $r = Meta::call('GET', 'search', ['type' => 'adinterest', 'q' => $n, 'locale' => 'fr_FR', 'limit' => 1]);
-                $hit = $r['data'][0] ?? null;
+                $r = Meta::call('GET', 'search', ['type' => 'adinterest', 'q' => $n, 'locale' => 'fr_FR', 'limit' => 5]);
+                $hit = null;
+                foreach ((array) ($r['data'] ?? []) as $x) { if (!isset($ab[(string) ($x['id'] ?? '')])) { $hit = $x; break; } }
                 $memo[$n] = $hit ? ['id' => (string) $hit['id'], 'name' => (string) $hit['name']] : null;
             } catch (MetaError $e) { $memo[$n] = null; }
         }
@@ -57,6 +62,22 @@ function socInterets(array $noms): array
     }
     socSettingPut('meta_cache_interets', $memo);
     return $out;
+}
+
+/** Les centres d'intérêt que Meta a abandonnés : id → nom. */
+function socInteretsAbandonnes(): array { return (array) (socSetting('meta_interets_abandonnes') ?? []); }
+
+/**
+ * Meta refuse un ad set dont le ciblage contient un centre d'intérêt abandonné, et les nomme dans son message
+ * (« deprecated_interest_id »). Les note (écartés des recherches suivantes) et rend leurs ids ; [] pour une autre erreur.
+ */
+function socInteretsRefuses(MetaError $e): array
+{
+    if (!preg_match_all('/"deprecated_interest_id"\s*:\s*"?(\d+)"?(?:\s*,\s*"deprecated_interest_name"\s*:\s*"((?:[^"\\\\]|\\\\.)*)")?/', $e->getMessage(), $m, PREG_SET_ORDER)) { return []; }
+    $ab = socInteretsAbandonnes();
+    foreach ($m as $x) { $ab[$x[1]] = isset($x[2]) ? (string) json_decode('"' . $x[2] . '"') : ''; }
+    socSettingPut('meta_interets_abandonnes', $ab);
+    return array_values(array_unique(array_column($m, 1)));
 }
 
 /** La clé de locale Meta d'une langue (`targeting.locales`). */
@@ -130,7 +151,7 @@ function socAdCreate(array $ad): array
     $nCamp = $reseau ? 1 : count($cibles);
     $cbo = ($w['budgetLevel'] ?? 'adset') === 'campaign';
     $enchere = (string) (($w['bid'] ?? '') ?: 'LOWEST_COST_WITHOUT_CAP');
-    $erreurs = []; $crees = 0;
+    $erreurs = []; $crees = 0; $retraits = [];
     $interets = !empty($w['interests']) ? socInterets((array) $w['interests']) : [];
     $variantes = socVariantes($w);
     $dark = ($w['crea'] ?? 'existing') === 'new';
@@ -155,7 +176,7 @@ function socAdCreate(array $ad): array
             $campaignId = (string) ($c['id'] ?? '');
 
             // Un ad set (et une créa, une pub) par boutique et par langue.
-            $jeux = [];
+            $jeux = []; $creesAvant = $crees;
             foreach ($ids as $sid) {
                 $langs = $shops[$sid]['langs'] ?: ['fr'];
                 foreach ($langs as $L) { $jeux[] = [$sid, $L, count($langs) > 1]; }
@@ -185,7 +206,18 @@ function socAdCreate(array $ad): array
                     if (in_array((string) ($w['bid'] ?? ''), SOC_ENCHERES_MONTANT, true) && !empty($w['bidAmount'])) { $as['bid_amount'] = socCents($w['bidAmount']); }
                     if ($isLeads || ($w['objective'] ?? '') === 'OUTCOME_ENGAGEMENT') { $as['promoted_object'] = ['page_id' => $shop['ids']['page_id']]; }
                     elseif (($w['objective'] ?? '') === 'OUTCOME_SALES') { $as['promoted_object'] = ['pixel_id' => $shop['ids']['pixel_id'], 'custom_event_type' => 'PURCHASE']; }
-                    $r = Meta::call('POST', $act . '/adsets', $as);
+                    // Centre d'intérêt abandonné par Meta (refus qui le nomme) : retiré du ciblage, noté, ad set renvoyé.
+                    for ($essai = 0; ; $essai++) {
+                        try { $r = Meta::call('POST', $act . '/adsets', $as); break; }
+                        catch (MetaError $e) {
+                            $refuses = $essai < 3 ? socInteretsRefuses($e) : [];
+                            $retires = array_values(array_filter($interets, static fn ($i) => in_array((string) $i['id'], $refuses, true)));
+                            if (!$retires) { throw $e; }
+                            foreach ($retires as $i) { $retraits[(string) $i['id']] = (string) $i['name']; }
+                            $interets = array_values(array_filter($interets, static fn ($i) => !in_array((string) $i['id'], $refuses, true)));
+                            if ($interets) { $as['targeting']['flexible_spec'] = [['interests' => $interets]]; } else { unset($as['targeting']['flexible_spec']); }
+                        }
+                    }
                     $obj['adset_id'] = (string) ($r['id'] ?? '');
 
                 } catch (MetaError $e) {
@@ -218,10 +250,14 @@ function socAdCreate(array $ad): array
                     socMetaObjectAdd($o);
                 }
             }
+            // Aucune pub créée sous cette campagne : elle ne reste pas chez Meta, vide (une relance en crée une nouvelle).
+            if ($crees === $creesAvant && $campaignId !== '') { try { Meta::call('DELETE', $campaignId); } catch (MetaError $e) { /* vide et en pause : sans effet */ } }
         } catch (MetaError $e) {
             $erreurs[] = $nomU . ' : ' . $e->getMessage();
         }
     }
+    $ad['note'] = $retraits ? 'Ciblage : ' . implode(', ', array_map(static fn ($n) => '« ' . $n . ' »', $retraits))
+        . (count($retraits) > 1 ? ' retirés' : ' retiré') . ' (centre d’intérêt abandonné par Meta).' : null;
     if ($crees === 0) {
         $ad['status'] = 'Refusée';
         $ad['reason'] = 'Non créée chez Meta — ' . implode(' · ', $erreurs);
@@ -230,7 +266,7 @@ function socAdCreate(array $ad): array
         $ad['status'] = ($w['status'] ?? '') === 'PAUSED' && ($w['adStatus'] ?? '') === 'PAUSED' ? 'En pause' : 'En revue';
         $ad['reason'] = $erreurs ? 'Créée partiellement — ' . implode(' · ', $erreurs) : null;
     }
-    socLog(socUser(), 'Publicité', '« ' . ($ad['name'] ?? '') . ' » envoyée à Meta : ' . $crees . ' pub(s) créée(s)' . ($erreurs ? ', ' . count($erreurs) . ' échec(s)' : ''));
+    socLog(socUser(), 'Publicité', '« ' . ($ad['name'] ?? '') . ' » envoyée à Meta : ' . $crees . ' pub(s) créée(s)' . ($erreurs ? ', ' . count($erreurs) . ' échec(s)' : '') . ($ad['note'] ? ' · ' . $ad['note'] : ''));
     return $ad;
 }
 

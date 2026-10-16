@@ -189,6 +189,14 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
         return [200, $path === 'act_2000' ? ['currency' => 'PLN', 'min_campaign_group_spend_cap' => '50000', 'min_daily_budget' => 500] : ['currency' => 'EUR', 'min_campaign_group_spend_cap' => '10000', 'min_daily_budget' => 100]];
     }
     if ($m === 'GET' && preg_match('#^act_\d+$#', $path)) { return [200, ['name' => 'Compte ' . $path, 'account_status' => 1]]; }
+    // Centres d'intérêt : « Pâtisserie » d'abord rendu sous un id abandonné par Meta ; « Refus » fait refuser l'ad set.
+    if ($m === 'GET' && $path === 'search' && ($p['q'] ?? '') === 'Pâtisserie') { return [200, ['data' => [['id' => '6003999001', 'name' => 'Pâtisserie'], ['id' => '6003999002', 'name' => 'Pâtisserie fine']]]]; }
+    if ($m === 'GET' && $path === 'search' && ($p['q'] ?? '') === 'Refus') { return [200, ['data' => [['id' => '6003000666', 'name' => 'Refus']]]]; }
+    if ($m === 'POST' && preg_match('#^act_\d+/adsets$#', $path) && str_contains((string) ($p['targeting'] ?? ''), '6003999001')) {
+        return [400, ['error' => ['code' => 100, 'message' => 'Invalid parameter', 'error_user_msg' => 'Veuillez mettre à jour la spécification cible pour les supprimer ou les remplacer par d’autres options. Autres options pertinentes : '
+            . '[{"deprecated_interest_id":"6003999001","deprecated_interest_name":"P\\u00e2tisserie","alternative_interest_id":"6003436950375","alternative_interest_name":"Restaurants"}]']]];
+    }
+    if ($m === 'POST' && preg_match('#^act_\d+/adsets$#', $path) && str_contains((string) ($p['targeting'] ?? ''), '6003000666')) { return [400, ['error' => ['code' => 100, 'message' => 'Invalid parameter']]]; }
     if ($m === 'GET' && $path === 'search') { return [200, ['data' => ($p['type'] ?? '') === 'adlocale' ? [['key' => 9, 'name' => 'French (All)'], ['key' => 14, 'name' => 'Dutch']] : [['id' => '6003107902', 'name' => $p['q']]]]]; }
     // Campagnes déjà présentes chez Meta (récupération) : seul act_2001 en a.
     if ($m === 'GET' && $path === 'act_2001/insights' && ($p['level'] ?? '') === 'ad') { return [200, ['data' => $GLOBALS['META_DEPENSES'] ?? []]]; }
@@ -560,6 +568,24 @@ check('synchro : statut Meta ACTIVE, dépense relue', socItem('ads', 'a1')['stat
 check('dépense en colonne', Db::row("SELECT depense FROM social_publicite WHERE id = 'a1'")['depense'] === '121.50');
 socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a2', 'name' => 'Sans spec', 'shops' => ['5'], 'status' => 'En revue']]]]]);
 check('pub sans description d’assistant : refusée avec motif', socItem('ads', 'a2')['status'] === 'Refusée');
+// Centre d'intérêt abandonné par Meta : retiré du ciblage, ad set renvoyé, écarté des recherches suivantes.
+$pubTest = static fn (string $id, array $interets) => ['id' => $id, 'name' => 'Test ' . $id, 'shops' => ['5'], 'scope' => 'boutique', 'budgetType' => 'quotidien', 'budget' => 10, 'cap' => 0,
+    'spent' => 0, 'start' => $spec['start'], 'end' => $spec['end'], 'status' => 'En revue', 'radius' => 8, 'post' => 'p1', 'spec' => array_merge($spec, ['shops' => ['5'], 'interests' => $interets])];
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [$pubTest('a9', ['Boulangerie', 'Pâtisserie'])]]]]);
+$a9 = socItem('ads', 'a9'); $as9 = $appelsVers('#^act_\d+/adsets$#');
+check('intérêt abandonné : retiré, ad set renvoyé, pub créée et notée', $a9['status'] !== 'Refusée' && count($as9) === 2 && str_contains($as9[0][2]['targeting'], '6003999001')
+    && !str_contains($as9[1][2]['targeting'], '6003999001') && str_contains($as9[1][2]['targeting'], '6003107902') && str_contains((string) ($a9['note'] ?? ''), '« Pâtisserie »'),
+    json_encode([$a9['status'], $a9['reason'] ?? null, $a9['note'] ?? null, count($as9)]));
+check('intérêt abandonné : écarté des recherches suivantes', (socInteretsAbandonnes()['6003999001'] ?? '') === 'Pâtisserie' && (socInterets(['Pâtisserie'])[0]['id'] ?? '') === '6003999002');
+// Aucun ad set créé : la campagne vide ne reste pas chez Meta.
+$appels = []; $GLOBALS['SUPPRIMES'] = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [$pubTest('a10', ['Refus'])]]]]);
+$camp10 = (string) (Db::row("SELECT campaign_id FROM social_meta_objet WHERE kind = 'ad' AND local_id = 'a10'")['campaign_id'] ?? '');
+check('aucun ad set : pub refusée, campagne vide supprimée chez Meta', socItem('ads', 'a10')['status'] === 'Refusée' && $camp10 !== ''
+    && in_array($camp10, array_column($GLOBALS['SUPPRIMES'], 0), true), json_encode([$camp10, $GLOBALS['SUPPRIMES']]));
+socStateSave(['changes' => ['ads' => ['delete' => ['a9', 'a10']]]]);
+socSettingPut('meta_interets_abandonnes', null); socSettingPut('meta_cache_interets', null);
 
 echo "Dark posts : réservés à la publicité\n";
 $video = 'data:video/mp4;base64,' . base64_encode(str_repeat("\x00\x00\x00\x18ftypmp42", 30));
