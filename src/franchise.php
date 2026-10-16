@@ -35,6 +35,8 @@ function sfReglesDefaut(): array
         'remiseMax' => 30, 'promoDureeMax' => 14, 'voirReseau' => true, 'voirCampagnes' => true, 'voirResultats' => true, 'voirSuivi' => true,
         // L'analyse des vues (Page, Instagram, publications) et de l'évolution des abonnés, sans le budget.
         'voirAnalyse' => true,
+        // Les publicités Meta qui touchent la boutique (réseau et boutique seule) ; leur budget et leur dépense, à part.
+        'voirPublicites' => true, 'voirBudgetPub' => false,
         // Le franchisé peut publier en story (story seule, ou post + story) ; et répéter un post (au plus N fois, 0 = non).
         'story' => true, 'recurrenceMax' => 8,
         // Le franchisé peut choisir le format du visuel (carré, portrait) et la couleur de chaque texte (palette de la marque).
@@ -69,6 +71,7 @@ function sfReglesPut(array $in): array
         'promoDureeMax' => max(1, min(90, (int) ($in['promoDureeMax'] ?? $d['promoDureeMax']))),
         'voirReseau' => (bool) ($in['voirReseau'] ?? true), 'voirCampagnes' => (bool) ($in['voirCampagnes'] ?? true), 'voirResultats' => (bool) ($in['voirResultats'] ?? true), 'voirSuivi' => (bool) ($in['voirSuivi'] ?? true),
         'voirAnalyse' => (bool) ($in['voirAnalyse'] ?? true), 'persoVisuel' => (bool) ($in['persoVisuel'] ?? true),
+        'voirPublicites' => (bool) ($in['voirPublicites'] ?? true), 'voirBudgetPub' => (bool) ($in['voirBudgetPub'] ?? false),
         'story' => (bool) ($in['story'] ?? true), 'recurrenceMax' => max(0, min(26, (int) ($in['recurrenceMax'] ?? $d['recurrenceMax']))),
         'accesLibre' => in_array((string) ($in['accesLibre'] ?? ''), array_column(socReseau(), 'id'), true) ? (string) $in['accesLibre'] : '',
         'message' => mb_substr(trim((string) ($in['message'] ?? $d['message'])), 0, 600),
@@ -328,6 +331,56 @@ function sfOperations(string $shop): array
             'posts' => $posts, 'metaPosts' => $meta, 'ads' => $ads];
     }
     return ['hidden' => false, 'operations' => $out];
+}
+
+/**
+ * Les publicités Meta qui touchent la boutique, rattachées à une opération ou non : celles du réseau (plusieurs
+ * boutiques, ou la marque) et celles de sa boutique seule. En cours, à venir, terminées depuis moins de 30 jours ;
+ * pas celles que Meta a refusé de créer. Résultats si le réseau les partage (voirResultats), budget et dépense
+ * seulement avec voirBudgetPub. Lecture seule.
+ */
+function sfPublicites(string $shop): array
+{
+    $r = sfRegles();
+    if (!$r['voirPublicites']) { return ['hidden' => true, 'reseau' => [], 'boutique' => []]; }
+    if (socShop($shop) === null) { throw new HttpError(404, 'boutique inconnue'); }
+    $noms = array_column(socReseau(), 'name', 'id');
+    $ops = []; foreach (socOperations() as $o) { $ops[$o['id']] = $o['name']; }
+    $today = date('Y-m-d'); $limite = date('Y-m-d', strtotime('-30 days'));
+    $LIB = ['Active' => 'Diffusée', 'En revue' => 'En vérification chez Meta', 'En pause' => 'En pause', 'Budget épuisé' => 'Budget atteint'];
+    $out = ['hidden' => false, 'budget' => (bool) $r['voirBudgetPub'], 'resultats' => (bool) $r['voirResultats'], 'reseau' => [], 'boutique' => []];
+    foreach (socItems('ads') as $a) {
+        $statut = (string) ($a['status'] ?? '');
+        if ($statut === 'Refusée' || !empty($a['gone'])) { continue; }
+        $shops = array_values(array_map('strval', (array) ($a['shops'] ?? [])));
+        if ($shops && !in_array($shop, $shops, true)) { continue; }
+        $debut = (string) ($a['start'] ?? ''); $fin = (string) ($a['end'] ?? '');
+        $phase = in_array($statut, ['Terminée', 'Arrêtée'], true) || ($fin !== '' && $fin < $today) ? 'terminee' : ($debut > $today ? 'avenir' : 'encours');
+        if ($phase === 'terminee' && ($fin !== '' ? $fin : $debut) < $limite) { continue; }
+        $reseau = ($a['scope'] ?? '') === 'reseau' || count($shops) !== 1;
+        $post = !empty($a['post']) ? socItem('posts', (string) $a['post']) : null;
+        $item = ['id' => (string) $a['id'], 'name' => (string) ($a['name'] ?? ''), 'objective' => (string) ($a['objective'] ?? ''),
+            'status' => $phase === 'terminee' ? 'Terminée' : ($phase === 'avenir' ? 'À venir' : ($LIB[$statut] ?? $statut)), 'phase' => $phase,
+            'start' => $debut ?: null, 'end' => $fin ?: null, 'radius' => $a['radius'] ?? null, 'operation' => $ops[(string) ($a['campaign'] ?? '')] ?? null,
+            'img' => (string) (($a['thumb'] ?? '') ?: ($post['img'] ?? '')) ?: null, 'reseau' => $reseau,
+            'shops' => $reseau ? array_values(array_filter(array_map(static fn ($id) => $noms[$id] ?? null, $shops))) : []];
+        if ($r['voirResultats']) {
+            $ins = (array) ($a['insights'] ?? []);
+            $st = array_filter((array) ($a['stats'] ?? []), 'is_array');
+            $item['stats'] = $ins ? ['impressions' => $ins['impressions'] ?? null, 'reach' => $ins['reach'] ?? null, 'clicks' => $ins['clicks'] ?? null]
+                : ($st ? ['impressions' => array_sum(array_column($st, 'impressions')), 'reach' => null, 'clicks' => array_sum(array_column($st, 'clicks'))] : null);
+        }
+        if ($r['voirBudgetPub']) {
+            $item += ['budget' => (float) ($a['budget'] ?? 0), 'budgetType' => (string) ($a['budgetType'] ?? ''), 'spent' => (float) ($a['spent'] ?? 0),
+                'devise' => (string) (($a['devise'] ?? '') ?: 'EUR')];
+        }
+        $out[$reseau ? 'reseau' : 'boutique'][] = $item;
+    }
+    $ordre = ['encours' => 0, 'avenir' => 1, 'terminee' => 2];
+    foreach (['reseau', 'boutique'] as $k) {
+        usort($out[$k], static fn ($x, $y) => ($ordre[$x['phase']] <=> $ordre[$y['phase']]) ?: strcmp((string) $y['start'], (string) $x['start']));
+    }
+    return $out;
 }
 
 /** Une publication Meta rattachée (Page de la boutique ou Instagram du réseau), relue chez Meta ; le lien seul si Meta refuse. */
@@ -954,6 +1007,7 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/franchise/calendrier') { return [200, sfCalendrier($shop, (string) ($_GET['du'] ?? ''), (string) ($_GET['au'] ?? ''))]; }
     if ($method === 'GET' && $path === '/franchise/calendrier/stats') { return [200, sfCalStats($shop, (string) ($_GET['id'] ?? ''), (string) ($_GET['compte'] ?? ''))]; }
     if ($method === 'GET' && $path === '/franchise/operations') { return [200, sfOperations($shop)]; }
+    if ($method === 'GET' && $path === '/franchise/publicites') { return [200, sfPublicites($shop)]; }
     if ($method === 'GET' && $path === '/franchise/catalogue/offres') { return [200, sfOffres($shop, (string) ($_GET['produit'] ?? ''))]; }
     // La photo d'un produit du webshop (R2, sans CORS) servie par le module : le visuel qui la dessine s'exporte.
     if ($method === 'GET' && $path === '/franchise/media/webshop') { return [200, socMediaWebshop((string) ($_GET['u'] ?? ''))]; }

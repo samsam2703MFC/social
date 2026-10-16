@@ -1318,6 +1318,32 @@ $opF = array_column($b['operations'] ?? [], null, 'id')['bo-1'] ?? null;
 check('opération du Marketing où figure la boutique : posts et pub rattachés, publication de sa Page (lecture seule)', $code === 200 && $opF
     && in_array('p1', array_column($opF['posts'], 'id'), true) && in_array('mfb-111_9001', array_column($opF['metaPosts'], 'id'), true) && count($opF['ads']) >= 1 && $opF['budget'] == 200, json_encode($opF));
 check('métriques de la boutique (Meta + ventes) et objectif à sa part du budget', is_array($opF['result']) && array_key_exists('spend', $opF['result']) && $opF['goalShop'] == 500, json_encode([$opF['result'] ?? null, $opF['goalShop'] ?? null]));
+// Publicités en cours, rattachées ou non à une opération : celles du réseau et celles de la boutique seule.
+$jP = static fn (int $n) => date('Y-m-d', strtotime(($n >= 0 ? '+' : '') . $n . ' days'));
+$pubs = [['id' => 'pubR', 'name' => 'Réseau automne', 'scope' => 'reseau', 'shops' => ['4', '5'], 'status' => 'Active', 'start' => $jP(-3), 'end' => $jP(10), 'budget' => 40, 'spent' => 12,
+        'budgetType' => 'quotidien', 'devise' => 'PLN', 'insights' => ['impressions' => 1000, 'reach' => 600, 'clicks' => 20]],
+    ['id' => 'pubB', 'name' => 'Halle seule', 'scope' => 'boutique', 'shops' => ['4'], 'status' => 'En pause', 'start' => $jP(-1), 'end' => null, 'budget' => 10, 'spent' => 2, 'budgetType' => 'quotidien'],
+    ['id' => 'pubX', 'name' => 'Wavre seule', 'scope' => 'boutique', 'shops' => ['5'], 'status' => 'Active', 'start' => $jP(-1), 'end' => null],
+    ['id' => 'pubRef', 'name' => 'Refusée', 'scope' => 'boutique', 'shops' => ['4'], 'status' => 'Refusée', 'start' => $jP(1), 'end' => null],
+    ['id' => 'pubOld', 'name' => 'Ancienne', 'scope' => 'boutique', 'shops' => ['4'], 'status' => 'Terminée', 'start' => $jP(-90), 'end' => $jP(-60)]];
+foreach ($pubs as $x) { socItemPut('ads', $x); }
+$regPub = sfRegles();
+[$code, $b] = $fr('GET', '/franchise/publicites');
+$idsR = array_column($b['reseau'] ?? [], 'id'); $idsB = array_column($b['boutique'] ?? [], 'id');
+$pR = array_column($b['reseau'] ?? [], null, 'id')['pubR'] ?? [];
+check('publicités en cours : réseau et boutique seule, hors opération comprises ; ni celles d’une autre boutique, ni refusées, ni anciennes',
+    $code === 200 && in_array('pubR', $idsR, true) && in_array('pubB', $idsB, true) && !array_intersect(['pubX', 'pubRef', 'pubOld'], array_merge($idsR, $idsB))
+    && $pR['status'] === 'Diffusée' && ($pR['stats']['reach'] ?? null) === 600 && in_array('Halle', $pR['shops'], true), json_encode($b));
+check('publicités : budget et dépense cachés par défaut', !array_key_exists('budget', $pR) && $b['budget'] === false);
+sfReglesPut(array_merge($regPub, ['voirBudgetPub' => true]));
+[, $b] = $fr('GET', '/franchise/publicites');
+$pR = array_column($b['reseau'] ?? [], null, 'id')['pubR'] ?? [];
+check('publicités : budget et dépense si le réseau les partage', ($pR['budget'] ?? null) == 40 && ($pR['spent'] ?? null) == 12 && ($pR['devise'] ?? '') === 'PLN');
+sfReglesPut(array_merge($regPub, ['voirPublicites' => false]));
+[, $b] = $fr('GET', '/franchise/publicites');
+check('publicités : masquées si le réseau ne les partage pas', $b['hidden'] === true && !$b['reseau'] && !$b['boutique']);
+sfReglesPut($regPub);
+foreach ($pubs as $x) { socItemDelete('ads', $x['id']); }
 $ftLien = array_merge($ftFixe, ['id' => 'ftlien', 'campaign' => 'bo-1', 'link' => '{webshop}']);
 socStateSave(['changes' => ['ftemplates' => ['upsert' => [$ftLien]]]]);
 $jL = date('Y-m-d', strtotime('monday +3 weeks'));

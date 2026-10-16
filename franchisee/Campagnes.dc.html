@@ -22,9 +22,36 @@
     <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }}</div></sc-if>
     <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
     <header style="display:flex;flex-direction:column;gap:4px;">
-      <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Opérations du réseau où figure L’Atelier By {{ shopName }}</span>
-      <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">OPERATIONS DU RESEAU</h1>
+      <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Publicités et opérations du réseau pour L’Atelier By {{ shopName }}</span>
+      <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">PUBLICITES ET OPERATIONS</h1>
     </header>
+    <sc-if value="{{ pubShow }}" hint-placeholder-val="{{ true }}">
+    <section style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.10);padding:18px 20px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;flex-direction:column;gap:3px;"><span style="font-size:18px;font-weight:500;">Publicités en cours</span><span style="font-size:12px;color:#666666;">{{ pubSub }}</span></div>
+      <sc-if value="{{ pubLoading }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#666666;">Lecture des publicités…</span></sc-if>
+      <sc-if value="{{ pubErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#8D1D2C;">Les publicités n’ont pas pu être lues : rechargez la page.</span></sc-if>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;">
+        <sc-for list="{{ pubCols }}" as="col" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:8px;min-width:0;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">{{ col.title }}</span>
+            <sc-if value="{{ col.empty }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#666666;background:#FBF8F4;border-radius:8px;padding:10px 12px;">{{ col.emptyText }}</span></sc-if>
+            <sc-for list="{{ col.items }}" as="p" hint-placeholder-count="1">
+              <div style="display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:10px;background:#FBF8F4;">
+                <img src="{{ p.img }}" alt="" style="width:48px;height:48px;border-radius:8px;object-fit:cover;background:#F4EFE8;flex:0 0 auto;">
+                <span style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 auto;">
+                  <span style="display:flex;align-items:flex-start;gap:8px;justify-content:space-between;"><span style="font-size:13px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</span><span style="font-size:10px;font-weight:600;border-radius:999px;padding:2px 8px;background:{{ p.bg }};color:{{ p.fg }};white-space:nowrap;">{{ p.status }}</span></span>
+                  <span style="font-size:11px;line-height:1.4;color:#666666;">{{ p.meta }}</span>
+                  <sc-if value="{{ p.hasShops }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.4;color:#666666;">{{ p.shops }}</span></sc-if>
+                  <sc-if value="{{ p.hasStats }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#444444;">{{ p.stats }}</span></sc-if>
+                  <sc-if value="{{ p.hasBudget }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#444444;">{{ p.budget }}</span></sc-if>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+    </sc-if>
     <sc-if value="{{ hidden }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Le réseau ne partage pas les opérations dans l’espace boutique.</div></sc-if>
     <sc-if value="{{ none }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Aucune opération du réseau ne concerne votre boutique pour l’instant.</div></sc-if>
     <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:16px;font-size:13px;color:#666666;">Lecture des opérations du réseau…</div></sc-if>
@@ -80,10 +107,11 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { data: null, err: '' };
+  state = { data: null, err: '', pubs: null };
   componentDidMount() {
     const SF = window.SF; if (!SF || !SF.state() || !SF.operations) return;
     SF.operations().then(d => this.setState({ data: d })).catch(e => this.setState({ data: { operations: [] }, err: e.message || 'erreur' }));
+    if (SF.publicites) SF.publicites().then(d => this.setState({ pubs: d })).catch(() => this.setState({ pubs: { reseau: [], boutique: [], erreur: true } }));
   }
   renderVals() {
     const SF = window.SF, st = SF && SF.state(), s = this.state;
@@ -124,7 +152,22 @@ class Component extends DCLogic {
         items, noLinked: !items.length, linkedLabel: nP + ' post' + (nP > 1 ? 's' : '') + ' · ' + nA + ' publicité' + (nA > 1 ? 's' : '') };
     });
     const hidden = !!(s.data && s.data.hidden) || st.rules.voirCampagnes === false;
-    return { ok: true, hasError: !!s.err, error: s.err, shopName: st.shop.name, loading: !s.data, hidden, none: !!s.data && !hidden && camps.length === 0, camps };
+    // Les publicités Meta qui touchent la boutique : celles du réseau et celles de la boutique seule (lecture seule).
+    const P = s.pubs, pubHidden = !!(P && P.hidden) || st.rules.voirPublicites === false;
+    const PH = { encours: ['#E2F0E8', '#0F6B4A'], avenir: ['#F2C9A0', '#6b4420'], terminee: ['#EAE4DC', '#555555'] };
+    const argent = (v, dev) => !dev || dev === 'EUR' ? SF.eur(v) : Math.round(v || 0).toLocaleString('fr-BE') + ' ' + dev;
+    const carte = (p) => { const [bg, fg] = PH[p.phase] || PH.encours, x = p.stats;
+      return { img: p.img ? SF.media(p.img) : 'img/illus/customer-facing/webshop.png', name: p.name, status: p.status, bg, fg,
+        meta: [p.objective, p.start ? (p.end ? 'du ' + SF.dLabel(p.start) + ' au ' + SF.dLabel(p.end) : 'depuis le ' + SF.dLabel(p.start)) : '',
+          p.radius ? p.radius + ' km autour ' + (p.reseau ? 'de chaque boutique' : 'de la boutique') : '', p.operation ? 'opération « ' + p.operation + ' »' : ''].filter(Boolean).join(' · '),
+        hasShops: !!(p.reseau && p.shops && p.shops.length), shops: p.shops && p.shops.length ? 'Boutiques : ' + p.shops.join(', ') : '',
+        hasStats: !!(x && (x.impressions || x.reach || x.clicks)), stats: x ? [x.reach ? fmt(x.reach) + ' personnes touchées' : '', x.impressions ? fmt(x.impressions) + ' affichages' : '', x.clicks ? fmt(x.clicks) + ' clics' : ''].filter(Boolean).join(' · ') : '',
+        hasBudget: p.budget != null, budget: p.budget != null ? 'Budget ' + argent(p.budget, p.devise) + (p.budgetType === 'quotidien' ? ' par jour' : ' au total') + ' · dépensé ' + argent(p.spent, p.devise) + ' · payé par le réseau' : '' }; };
+    const pubCols = [['Pour tout le réseau', P ? P.reseau || [] : [], 'Aucune publicité du réseau ne passe en ce moment autour de votre boutique.'],
+      ['Pour votre boutique', P ? P.boutique || [] : [], 'Aucune publicité propre à votre boutique pour le moment.']]
+      .map(([title, list, emptyText]) => ({ title, items: list.map(carte), empty: !!P && !P.erreur && !list.length, emptyText }));
+    return { ok: true, pubShow: !pubHidden, pubLoading: !P, pubErr: !!(P && P.erreur), pubCols,
+      pubSub: 'Les publicités Meta qui passent autour de ' + st.shop.name + ', décidées et payées par le réseau · en cours, à venir et terminées depuis moins d’un mois · lecture seule', hasError: !!s.err, error: s.err, shopName: st.shop.name, loading: !s.data, hidden, none: !!s.data && !hidden && camps.length === 0, camps };
   }
 }
 </script>
