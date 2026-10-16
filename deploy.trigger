@@ -92,3 +92,4 @@ Relivraison : offre visible sur le visuel des modèles « offre » — 2026-10-1
 Relivraison : espace boutique, adresses sans .dc.html — 2026-10-15T19:33:12Z
 Relivraison : adresses propres, barre finale — 2026-10-15T19:34:50Z
 Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:24:23Z
+2026-10-16T11:51:32Z publicites boutiques et rayon
