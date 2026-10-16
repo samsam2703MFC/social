@@ -107,6 +107,7 @@ function socRoute(string $method, string $path): array
         return [200, ['dernier' => socIdsAuto(true), 'config' => socIdsAutoConfig(), 'shops' => socShops(), 'brand' => socBrand(), 'portefeuille' => socSetting('meta_portefeuille')]];
     }
     // Les campagnes déjà présentes chez Meta (src/metacampagnes.php), puis l'état des pubs du module.
+    if ($method === 'GET' && $path === '/meta/comptes') { return [200, ['comptes' => socComptesMinimums(!empty($_GET['forcer']))]]; }
     if ($method === 'GET' && $path === '/meta/campagnes') { return [200, ['import' => socSetting('meta_campagnes_import'), 'comptes' => array_values(socComptesPub())]]; }
     if ($method === 'POST' && $path === '/meta/campagnes/rafraichir') {
         $r = socCampagnesMetaImporter();

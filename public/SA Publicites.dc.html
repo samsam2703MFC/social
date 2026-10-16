@@ -106,7 +106,7 @@
               <sc-if value="{{ d.canPause }}" hint-placeholder-val="{{ false }}"><button onClick="{{ pause }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Mettre en pause</button></sc-if>
               <sc-if value="{{ d.canResume }}" hint-placeholder-val="{{ false }}"><button onClick="{{ resume }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Reprendre</button></sc-if>
               <sc-if value="{{ d.canTopUp }}" hint-placeholder-val="{{ false }}"><button onClick="{{ topUp }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">{{ d.topUpLabel }}</button></sc-if>
-              <sc-if value="{{ d.canFix }}" hint-placeholder-val="{{ false }}"><button onClick="{{ fixAd }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Corriger et resoumettre</button></sc-if>
+              <sc-if value="{{ d.canFix }}" hint-placeholder-val="{{ false }}"><button onClick="{{ fixAd }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">{{ d.fixLabel }}</button></sc-if>
               <sc-if value="{{ d.canStop }}" hint-placeholder-val="{{ false }}"><button onClick="{{ stop }}" style="border:none;background:transparent;color:#8D1D2C;padding:8px 4px;font-size:13px;font-weight:500;cursor:pointer;">Arrêter</button></sc-if>
             </div>
             <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Campagne du Marketing (opération) — pour le Retour sur opération<select value="{{ d.campaign }}" onChange="{{ attach }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="">Hors opération</option><sc-for list="{{ d.campOptions }}" as="c" hint-placeholder-count="0"><option value="{{ c.id }}">{{ c.name }}</option></sc-for></select></label>
@@ -221,7 +221,7 @@
             </div>
             <div style="display:flex;gap:12px;flex-wrap:wrap;">
               <label style="flex:1 1 220px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Stratégie d'enchère <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">bid_strategy</span><select value="{{ w.bid }}" onChange="{{ setBid }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><sc-for list="{{ bidOptions }}" as="b" hint-placeholder-count="0"><option value="{{ b.id }}">{{ b.label }}</option></sc-for></select></label>
-              <label style="flex:0 1 150px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Plafond de dépense (€) <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">spend_cap · {{ capCents }}</span><input type="number" value="{{ w.spendCap }}" onChange="{{ setSpendCap }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
+              <label style="flex:0 1 150px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">{{ capLabel }} <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">spend_cap · {{ capCents }}</span><input type="number" min="0" value="{{ w.spendCap }}" onChange="{{ setSpendCap }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"><span style="font-size:11px;color:#666666;font-weight:400;">{{ capHint }}</span></label>
               <span style="flex:0 1 150px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Type d'achat <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">buying_type</span><span style="font-size:13px;padding:8px 0;">Enchères · AUCTION</span></span>
             </div>
           </sc-if>
@@ -242,7 +242,7 @@
               <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">{{ amountLabel }} <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">{{ amountTech }}</span><input type="number" min="1" value="{{ w.amount }}" onChange="{{ setAmount }}" style="width:110px;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
               <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Début <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">start_time</span><input type="date" value="{{ w.start }}" onChange="{{ setStart }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
               <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Fin <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">{{ endTech }}</span><input type="date" value="{{ w.end }}" onChange="{{ setEnd }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
-              <sc-if value="{{ needsBidAmount }}" hint-placeholder-val="{{ false }}"><label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Enchère max (€) <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">bid_amount · {{ bidCents }}</span><input type="number" step="0.05" value="{{ w.bidAmount }}" onChange="{{ setBidAmount }}" style="width:100px;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label></sc-if>
+              <sc-if value="{{ needsBidAmount }}" hint-placeholder-val="{{ false }}"><label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">{{ bidLabel }} <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">bid_amount · {{ bidCents }}</span><input type="number" step="0.05" value="{{ w.bidAmount }}" onChange="{{ setBidAmount }}" style="width:100px;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label></sc-if>
             </div>
             <div style="background:#F4EFE8;border-radius:8px;padding:10px 12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
               <sc-for list="{{ budgetFacts }}" as="b" hint-placeholder-count="3"><span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:11px;color:#666666;">{{ b.label }}</span><span style="font-size:15px;font-weight:500;color:{{ b.color }};">{{ b.value }}</span></span></sc-for>
@@ -443,16 +443,23 @@ class Component extends DCLogic {
     const p = postId ? st.posts.find(x => x.id === postId) : null, propres = st.shops.filter(s => s.ads === 'connected' && !s.test).map(s => s.id);
     const account = propres.length || !(meta.networkAccount || SA.META.networkAccount) ? 'boutique' : 'reseau';
     const shops = account === 'boutique' ? propres : p ? SA.SHOPS.map(s => s.id).filter(id => (p.shops || []).includes(id)) : [];
-    this.setState({ wizOpen: true, step: 1, err: '', w: { name: (camp ? camp.name : 'Campagne') + ' · trafic', campaign: c || '', account, objective: 'OUTCOME_TRAFFIC', special: [], budgetLevel: 'adset', bid: 'LOWEST_COST_WITHOUT_CAP', bidAmount: 0.6, spendCap: 400, status: 'PAUSED',
+    this.setState({ wizOpen: true, step: 1, err: '', replaceId: null, w: { name: (camp ? camp.name : 'Campagne') + ' · trafic', campaign: c || '', account, objective: 'OUTCOME_TRAFFIC', special: [], budgetLevel: 'adset', bid: 'LOWEST_COST_WITHOUT_CAP', bidAmount: 0.6, spendCap: 400, status: 'PAUSED',
       goal: 'LINK_CLICKS', dest: 'WEBSITE', budgetType: 'daily', amount: 10, start: SA.addDays(SA.TODAY, 1), end: SA.addDays(SA.TODAY, 15), shops, radius, ageMin: 25, ageMax: 60, gender: 'all', interests: ['Boulangerie', 'Brunch'], platforms: ['facebook', 'instagram'], advantage: false,
       dsaB: (meta.dsa || SA.META.dsa).beneficiary, dsaP: (meta.dsa || SA.META.dsa).payor, crea: 'existing', post: null, message: '', headline: '', messageNl: '', headlineNl: '', description: '', link: 'https://www.latelierby.be', cta: 'GET_DIRECTIONS',
       urlTags: 'utm_source=facebook&utm_medium=paid&utm_campaign=' + (c || 'hors-campagne'), leadForm: '', adName: '', adStatus: 'PAUSED', pixel: true, variants: [] } });
+    // Devise et minimums du compte, relus chez Meta au plus toutes les 12 h (le serveur les garde).
+    if (SA.live && SA.comptesMeta) SA.comptesMeta().then(() => this.setState({ comptesLus: Date.now() })).catch(() => {});
     // Ouvert depuis « Créer un post » : le post choisi, ses textes ; un dark post part en « Dark post ».
     if (p) {
       const sid0 = shops[0] || (SA.SHOPS[0] || {}).id, title = (p.montage && p.montage.m && p.montage.m.title) || p.title || '';
       this.setState(s => ({ w: Object.assign({}, s.w, { crea: p.dark ? 'new' : 'existing', post: p.id, name: title + ' · ' + (p.dark ? 'dark post' : 'post sponsorisé'),
         message: SA.fill(p.text || '', sid0, null, 'fr'), messageNl: SA.fill(p.textNl || '', sid0, null, 'nl'), headline: title, adName: title + (p.dark ? ' · dark post' : ' · sponsorisé') }) }));
     }
+  }
+  // Une pub que Meta n'a pas créée : l'assistant rouvert avec ses réglages ; à l'envoi, la nouvelle remplace l'ancienne.
+  reprendre(a) {
+    this.openWiz(a.spec.campaign || '');
+    this.setState(s => ({ replaceId: a.id, w: Object.assign({}, s.w, a.spec, { adName: a.spec.adName || a.name }) }));
   }
   async importMeta() {
     const SA = window.SA;
@@ -474,7 +481,10 @@ class Component extends DCLogic {
     // Une campagne Meta sans date de fin court « en continu » : son total courant s'arrête à aujourd'hui.
     const endOf = (a) => a.end || (a.start > SA.TODAY ? a.start : SA.TODAY);
     const totalOf = (a) => a.budgetType === 'quotidien' ? a.budget * (SA.daysBetween(a.start, endOf(a)) + 1) : a.budget;
-    const money = (a, v, dec = 0) => !a.devise || a.devise === 'EUR' ? SA.eur(v, dec) : SA.fmt(v, dec) + ' ' + a.devise;
+    const devOf = (a) => a.devise || (a.origin !== 'meta' && a.scope === 'reseau' ? ((SA.META.comptes || {})[SA.META.networkAccount] || {}).devise : '') || 'EUR';
+    const money = (a, v, dec = 0) => SA.argent(v, devOf(a), dec);
+    // Refusée avant toute création chez Meta : on la reprend dans l'assistant (la renvoyer telle quelle ne créerait rien).
+    const nonCreee = (a) => a.origin !== 'meta' && !!a.spec && /^Non créée chez Meta/.test(a.reason || '');
     const period = (a) => SA.dShort(a.start) + ' → ' + (a.end ? SA.dShort(a.end) : 'en continu');
     const nMeta = ads.filter(a => a.origin === 'meta').length, src = s.src;
     const order = { 'Refusée': 0, 'Budget épuisé': 1, 'En revue': 2, 'Active': 3, 'En pause': 4, 'Arrêtée': 5, 'Terminée': 6 };
@@ -494,7 +504,7 @@ class Component extends DCLogic {
     });
     const active = ads.filter(a => a.status === 'Active');
     // Les comptes publicitaires n'ont pas tous la même devise : un total par devise.
-    const sumMoney = (list) => { const by = {}; list.forEach(a => { const k = a.devise || 'EUR'; by[k] = (by[k] || 0) + (a.spent || 0); }); const ks = Object.keys(by).sort((x, y) => (x === 'EUR' ? -1 : y === 'EUR' ? 1 : x.localeCompare(y)));
+    const sumMoney = (list) => { const by = {}; list.forEach(a => { const k = devOf(a); by[k] = (by[k] || 0) + (a.spent || 0); }); const ks = Object.keys(by).sort((x, y) => (x === 'EUR' ? -1 : y === 'EUR' ? 1 : x.localeCompare(y)));
       return ks.length ? ks.map(k => k === 'EUR' ? SA.eur(by[k]) : SA.fmt(Math.round(by[k])) + ' ' + k).join(' + ') : SA.eur(0); };
     const monthAds = ads.filter(a => endOf(a) >= SA.TODAY.slice(0, 8) + '01');
     const kpis = [
@@ -516,7 +526,7 @@ class Component extends DCLogic {
       const isMeta = a.origin === 'meta', ins = a.insights || {}, imp = SA.metaImport && SA.metaImport();
       d = { name: a.name, objective: a.objective, sub: [a.objective, a.radius ? 'rayon ' + a.radius + ' km' : '', isMeta ? period(a) : ''].filter(Boolean).join(' · '),
         status: a.status, stBg: sc.bg, stFg: sc.fg, spent: money(a, a.spent), left: tot ? money(a, Math.max(0, tot - a.spent)) : '—', cap: a.cap ? money(a, a.cap) : '—',
-        canFix: a.status === 'Refusée' && !isMeta, topUpLabel: '+ 100 ' + (a.devise && a.devise !== 'EUR' ? a.devise : '€') + (isMeta ? ' de plafond' : ' de budget'), isMeta,
+        canFix: a.status === 'Refusée' && !isMeta, fixLabel: nonCreee(a) ? 'Reprendre dans l\u2019assistant' : 'Corriger et resoumettre', topUpLabel: '+ 100 ' + SA.devSym(devOf(a)) + (isMeta ? ' de plafond' : ' de budget'), isMeta,
         lienMeta: a.lienMeta || '#', hasNote: isMeta && !!(a.note || a.gone), note: a.note || '',
         metaFacts: isMeta ? [(a.accountName ? a.accountName + ' · ' : '') + (a.account || ''), a.devise && a.devise !== 'EUR' ? 'montants en ' + a.devise : '', (a.nAds || 0) + ' pub(s) dans ' + (a.nAdsets || 0) + ' ensemble(s)',
           a.metaObjective || '', 'relue ' + (a.syncedAt ? 'le ' + SA.dShort(a.syncedAt.slice(0, 10)) + ' à ' + a.syncedAt.slice(11, 16) : '—')].filter(Boolean).join(' · ') : '',
@@ -525,8 +535,8 @@ class Component extends DCLogic {
           ins.engagement != null ? ['Interactions', SA.fmt(ins.engagement)] : null, ins.videoViews != null ? ['Vues vidéo', SA.fmt(ins.videoViews)] : null, ins.leads != null ? ['Prospects', SA.fmt(ins.leads)] : null]
           .filter(Boolean).map(([k, v]) => ({ k, v })) : [],
         campaign: a.campaign || '', campOptions: camps.map(c => ({ id: c.id, name: c.name + (c.status === 'terminée' ? ' (terminée)' : '') })),
-        bars: a.spent ? bars.map((v, i) => ({ h: Math.round(v / max * 100) + '%', c: v > dailyCap * 1.15 ? '#D97B29' : '#8D1D2C', tip: 'J' + (i + 1) + ' · ' + SA.eur(v * (a.spent / acc)) })) : [],
-        capAlert: a.status === 'Active' && a.spent / tot >= 0.85, capText: 'Alerte dépassement : ' + SA.pct(a.spent / tot) + ' du plafond consommé. La diffusion s\u2019arrêtera automatiquement à ' + SA.eur(a.cap) + '.',
+        bars: a.spent ? bars.map((v, i) => ({ h: Math.round(v / max * 100) + '%', c: v > dailyCap * 1.15 ? '#D97B29' : '#8D1D2C', tip: 'J' + (i + 1) + ' · ' + money(a, v * (a.spent / acc)) })) : [],
+        capAlert: a.status === 'Active' && a.spent / tot >= 0.85, capText: 'Alerte dépassement : ' + SA.pct(a.spent / tot) + ' du plafond consommé. La diffusion s\u2019arrêtera automatiquement à ' + money(a, a.cap) + '.',
         exhausted: a.status === 'Budget épuisé', refused: a.status === 'Refusée', reason: a.reason || '',
         canPause: a.status === 'Active', canResume: a.status === 'En pause', canTopUp: a.status === 'Budget épuisé', canStop: ['Active', 'En pause', 'Budget épuisé', 'En revue'].includes(a.status) };
       const stats = Array.isArray(a.stats) ? a.stats : [], best = stats.reduce((b, x) => x.ctr != null && x.impressions >= 300 && (!b || x.ctr > b.ctr) ? x : b, null);
@@ -536,7 +546,7 @@ class Component extends DCLogic {
       const ab = a.ab || null, AB = { gagnante: ['#E2F0E8', '#0F6B4A'], tendance: ['#FFF8EC', '#8A4B00'], egalite: ['#F4EFE8', '#444444'], tot: ['#F4EFE8', '#666666'] }, [abBg, abFg] = AB[ab && ab.statut] || AB.tot;
       Object.assign(d, { hasAb: !!(ab && ab.texte) && stats.length > 1, abTexte: ab ? ab.texte : '', abBg, abFg });
       Object.assign(d, { hasStats: stats.length > 1, stats: stats.map(x => ({ variant: x.variant, best: best && best.variant === x.variant ? ' ★' : '', w: best && best.variant === x.variant ? 600 : 400, c: best && best.variant === x.variant ? '#0F6B4A' : '#222222',
-          impressions: SA.fmt(x.impressions), clicks: SA.fmt(x.clicks), ctr: x.ctr == null ? '—' : SA.pct(x.ctr), spend: SA.eur(x.spend) })),
+          impressions: SA.fmt(x.impressions), clicks: SA.fmt(x.clicks), ctr: x.ctr == null ? '—' : SA.pct(x.ctr), spend: money(a, x.spend) })),
         isDark: !!a.dark, darkCount: dark.length || 'en attente', darkNote: dark.length ? 'Relus chez Meta après la création de la pub (et toutes les heures).' : (SA.live ? 'Ils apparaissent ici dès que Meta les a créés (relu toutes les heures).' : 'Mode démonstration : créez une pub « Dark post » pour voir la liste.'),
         dark: dark.map(x => ({ label: ((SA.byId(SA.SHOPS, x.shop) || {}).name || x.shop) + (multi ? ' · ' + String(x.lang).toUpperCase() : '') + (a.variants > 1 ? ' · ' + x.variant : ''), hasFb: !!x.link, link: x.link, hasIg: !!x.linkIg, linkIg: x.linkIg,
           comments: x.comments ? x.comments + ' comm.' + (x.hidden ? ' (' + x.hidden + ' masqué' + (x.hidden > 1 ? 's' : '') + ')' : '') : '' })),
@@ -557,6 +567,13 @@ class Component extends DCLogic {
       const obj = M.objectives.find(o => o.id === w.objective) || M.objectives[1];
       const special = w.special.length > 0, minR = special ? 15 : 1;
       const propres = st.shops.filter(sh => sh.ads === 'connected' && !sh.test), reseauAcc = meta.networkAccount || M.networkAccount;
+      // Meta compte dans la devise du compte publicitaire (le compte réseau peut être en złotys) et refuse ce qui est sous ses minimums.
+      const actW = w.account === 'reseau' ? reseauAcc : ((meta.ids || M.ids)[w.shops[0] || (SA.SHOPS[0] || {}).id] || {}).ad_account_id;
+      const cpt = (M.comptes || {})[actW] || {}, dev = cpt.devise || 'EUR', m$ = (v, d) => SA.argent(v, dev, d), sym = SA.devSym(dev);
+      const capErr = () => { const parCamp = w.account === 'boutique' ? w.spendCap / Math.max(1, w.shops.length) : w.spendCap;
+        return w.spendCap > 0 && cpt.minCap && parCamp < cpt.minCap ? 'Meta exige un plafond de dépense d\u2019au moins ' + m$(cpt.minCap) + (w.account === 'boutique' && w.shops.length > 1 ? ' par campagne, soit ' + m$(cpt.minCap * w.shops.length) + ' pour ' + w.shops.length + ' boutiques' : '') + ' sur ce compte : relevez-le ou videz le champ (pas de plafond).' : ''; };
+      const budErr = () => { if (!cpt.minDaily) return ''; const min = w.budgetType === 'daily' ? cpt.minDaily : cpt.minDaily * days, unite = w.budgetType === 'daily' ? ' par jour' : ' au total';
+        return w.amount / parJeux < min ? 'Meta exige au moins ' + m$(cpt.minDaily, 2) + ' par jour et par ad set sur ce compte : mettez au moins ' + m$(Math.ceil(min * parJeux)) + unite + (parJeux > 1 ? ' (' + parJeux + ' ad sets)' : '') + '.' : ''; };
       const days = Math.max(1, SA.daysBetween(w.start, w.end) + 1);
       const perUnit = w.account === 'boutique' ? w.shops.length : 1;
       const est = w.budgetType === 'daily' ? w.amount * days * perUnit : w.amount * perUnit;
@@ -574,19 +591,22 @@ class Component extends DCLogic {
       const ids = (sid) => (meta.ids || M.ids)[sid] || {};
       const accFor = (sid) => w.account === 'reseau' ? M.networkAccount : ids(sid).ad_account_id;
       const promoted = isLeads || w.objective === 'OUTCOME_ENGAGEMENT' ? '{ page_id }' : w.objective === 'OUTCOME_SALES' ? '{ pixel_id: ' + ids(w.shops[0] || (SA.SHOPS[0] || {}).id).pixel_id + ', custom_event_type: PURCHASE }' : '—';
-      const errFor = (step) => step === 1 && !w.name.trim() ? 'Nommez la campagne.' : step === 2 && !w.shops.length ? (w.account === 'boutique' && !propres.length ? 'Aucune boutique n\u2019a son propre compte publicitaire : revenez à l\u2019étape 1 et choisissez « Compte réseau ».' : 'Cochez au moins une boutique dans « Boutiques et rayon de diffusion ».') : step === 2 && (w.end < w.start || w.amount <= 0) ? 'Vérifiez les dates et le montant.' : step === 2 && (!w.dsaB.trim() || !w.dsaP.trim()) ? 'Bénéficiaire et payeur sont obligatoires pour cibler l\u2019UE.' : step === 3 && !w.post ? 'Choisissez un post ou un visuel.' : step === 3 && isLeads && !w.leadForm ? 'Choisissez un formulaire de leads.' : step === 3 && w.crea === 'existing' && (w.variants || []).some(v => !v.post) ? 'Choisissez le post de chaque variante.' : step === 4 && !w.adName.trim() ? 'Nommez la pub.' : '';
+      const errFor = (step) => step === 1 && !w.name.trim() ? 'Nommez la campagne.' : step === 1 && w.account === 'reseau' && capErr() ? capErr() : step === 2 && !w.shops.length ? (w.account === 'boutique' && !propres.length ? 'Aucune boutique n\u2019a son propre compte publicitaire : revenez à l\u2019étape 1 et choisissez « Compte réseau ».' : 'Cochez au moins une boutique dans « Boutiques et rayon de diffusion ».') : step === 2 && (w.end < w.start || w.amount <= 0) ? 'Vérifiez les dates et le montant.' : step === 2 && capErr() ? capErr() : step === 2 && budErr() ? budErr() : step === 2 && (!w.dsaB.trim() || !w.dsaP.trim()) ? 'Bénéficiaire et payeur sont obligatoires pour cibler l\u2019UE.' : step === 3 && !w.post ? 'Choisissez un post ou un visuel.' : step === 3 && isLeads && !w.leadForm ? 'Choisissez un formulaire de leads.' : step === 3 && w.crea === 'existing' && (w.variants || []).some(v => !v.post) ? 'Choisissez le post de chaque variante.' : step === 4 && !w.adName.trim() ? 'Nommez la pub.' : '';
       const sid0 = w.shops[0] || (SA.SHOPS[0] || {}).id, geoOf = (sid) => ({ latitude: M.geo[sid][0], longitude: M.geo[sid][1], radius: w.radius[sid], distance_unit: 'kilometer' });
       const budgetKey = w.budgetType === 'daily' ? 'daily_budget' : 'lifetime_budget';
+      // Seules les enchères plafonnées prennent un montant ; « coût le plus bas » n'en a pas (comme le serveur, SOC_ENCHERES_MONTANT).
+      const encheresMontant = ['LOWEST_COST_WITH_BID_CAP', 'COST_CAP', 'LOWEST_COST_WITH_MIN_ROAS'];
       // Comme le serveur : le montant se partage entre les ad sets du compte (une boutique bilingue en a deux).
       const nJeux = (ids_) => Math.max(1, ids_.reduce((x, id) => x + Math.max(1, SA.langsOf(id).length), 0)), parJeux = nJeux(w.account === 'reseau' ? w.shops : [sid0]);
       const campBody = Object.assign({ name: w.name, objective: w.objective, status: w.status, special_ad_categories: w.special, buying_type: 'AUCTION', bid_strategy: w.bid, spend_cap: SA.cents(w.spendCap) },
         w.budgetLevel === 'campaign' ? { [budgetKey]: SA.cents(w.amount) } : { is_adset_budget_sharing_enabled: false });
+      if (!(w.spendCap > 0)) delete campBody.spend_cap;
       const targeting = { geo_locations: { custom_locations: [geoOf(sid0)] }, age_min: w.ageMin, age_max: w.ageMax, publisher_platforms: w.platforms,
         flexible_spec: w.interests.length ? [{ interests: w.interests.map((n, i) => ({ id: '6003' + (107902 + i * 37), name: n })) }] : undefined, targeting_automation: { advantage_audience: w.advantage ? 1 : 0 } };
       if (w.gender !== 'all') targeting.genders = [w.gender === 'men' ? 1 : 2];
       const adsetBody = Object.assign({ name: w.name + ' · ' + SA.byId(SA.SHOPS, sid0).name, campaign_id: '{campaign_id}', status: w.status, billing_event: 'IMPRESSIONS', optimization_goal: w.goal },
         obj.dest[0] ? { destination_type: w.dest } : {}, w.budgetLevel === 'adset' ? { [budgetKey]: SA.cents(w.amount / parJeux) } : {},
-        { start_time: w.start + 'T07:00:00+0200', end_time: w.end + 'T22:00:00+0200' }, /CAP|ROAS/.test(w.bid) ? { bid_amount: SA.cents(w.bidAmount) } : {},
+        { start_time: w.start + 'T07:00:00+0200', end_time: w.end + 'T22:00:00+0200' }, encheresMontant.includes(w.bid) ? { bid_amount: SA.cents(w.bidAmount) } : {},
         promoted !== '—' ? { promoted_object: isLeads || w.objective === 'OUTCOME_ENGAGEMENT' ? { page_id: ids(sid0).page_id } : { pixel_id: ids(sid0).pixel_id, custom_event_type: 'PURCHASE' } } : {},
         { dsa_beneficiary: w.dsaB, dsa_payor: w.dsaP, targeting });
       const cta = { type: w.cta, value: isLeads ? { lead_gen_form_id: w.leadForm || '{lead_gen_form_id}' } : { link: w.link } };
@@ -609,18 +629,19 @@ class Component extends DCLogic {
         hasSpecial: special,
         accShop: () => propres.length && W({ account: 'boutique', shops: w.shops.filter(id => propres.some(sh => sh.id === id)) }), accNet: () => W({ account: 'reseau' }),
         asDis: !propres.length, asOp: propres.length ? 1 : 0.45, asCursor: propres.length ? 'pointer' : 'not-allowed', asTitle: propres.length ? 'Chaque boutique paie sur son propre compte publicitaire' : 'Aucune boutique n\u2019a encore son propre compte publicitaire',
-        accountNote: w.account === 'boutique' ? 'Chaque boutique paie sur son compte : ' + propres.map(sh => sh.name + ' (' + ids(sh.id).ad_account_id + ')').join(', ') + '. Les boutiques se cochent à l\u2019étape 2.'
-          : (reseauAcc ? 'Compte réseau ' + reseauAcc + ' : une campagne, un ad set par boutique cochée à l\u2019étape 2 (sa zone, sa Page).' : 'Compte réseau non renseigné : Paramètres → API Meta.') + (propres.length ? '' : ' Aucune boutique n\u2019a encore son propre compte publicitaire.'),
+        bidLabel: 'Enchère max (' + sym + ')', capLabel: 'Plafond de dépense (' + sym + ')', capHint: (cpt.minCap ? 'Minimum Meta : ' + m$(cpt.minCap) + ' · ' : '') + 'vide = pas de plafond',
+        accountNote: (dev !== 'EUR' ? 'Ce compte facture en ' + dev + ' : tous les montants de l\u2019assistant sont en ' + dev + ', pas en euros. ' : '') + (w.account === 'boutique' ? 'Chaque boutique paie sur son compte : ' + propres.map(sh => sh.name + ' (' + ids(sh.id).ad_account_id + ')').join(', ') + '. Les boutiques se cochent à l\u2019étape 2.'
+          : (reseauAcc ? 'Compte réseau ' + reseauAcc + ' : une campagne, un ad set par boutique cochée à l\u2019étape 2 (sa zone, sa Page).' : 'Compte réseau non renseigné : Paramètres → API Meta.') + (propres.length ? '' : ' Aucune boutique n\u2019a encore son propre compte publicitaire.')),
         blAdset: () => W({ budgetLevel: 'adset' }), blCamp: () => W({ budgetLevel: 'campaign' }), stPaused: () => W({ status: 'PAUSED' }), stActive: () => W({ status: 'ACTIVE' }),
         bidOptions: M.bidStrategies.map(([id, label]) => ({ id, label: label + ' · ' + id })), setBid: (e) => W({ bid: e.target.value }), setSpendCap: (e) => W({ spendCap: +e.target.value }), capCents: SA.cents(w.spendCap),
         goalOptions: obj.goals, setGoal: (e) => W({ goal: e.target.value }), hasDest: !!obj.dest[0], destOptions: obj.dest, setDest: (e) => W({ dest: e.target.value }), promotedObject: promoted,
         budgetAtCampaign: w.budgetLevel === 'campaign', btDaily: () => W({ budgetType: 'daily', amount: 10 }), btTotal: () => W({ budgetType: 'lifetime', amount: 300 }),
-        amountLabel: (w.budgetType === 'daily' ? 'Montant / jour' : 'Montant total') + (w.account === 'boutique' ? ' par boutique (€)' : ' (€) · réparti entre les boutiques'), amountTech: budgetKey + ' = ' + SA.cents(w.amount), endTech: w.budgetType === 'lifetime' ? 'end_time *' : 'end_time',
+        amountLabel: (w.budgetType === 'daily' ? 'Montant / jour' : 'Montant total') + (w.account === 'boutique' ? ' par boutique (' + sym + ')' : ' (' + sym + ') · réparti entre les boutiques'), amountTech: budgetKey + ' = ' + SA.cents(w.amount), endTech: w.budgetType === 'lifetime' ? 'end_time *' : 'end_time',
         setAmount: (e) => W({ amount: +e.target.value }), setStart: (e) => W({ start: e.target.value }), setEnd: (e) => W({ end: e.target.value }),
-        needsBidAmount: /CAP|ROAS/.test(w.bid), setBidAmount: (e) => W({ bidAmount: +e.target.value }), bidCents: SA.cents(w.bidAmount),
-        budgetFacts: [{ label: 'Durée', value: days + ' jours', color: '#222222' }, { label: 'Dépense estimée', value: SA.eur(est), color: est > w.spendCap ? '#8D1D2C' : '#222222' }, { label: 'Plafond (spend_cap)', value: SA.eur(w.spendCap), color: '#222222' }].concat(camp ? [{ label: 'Reste sur l’opération', value: SA.eur(campLeft), color: campLeft < est ? '#8A4B00' : '#0F6B4A' }] : []),
-        overCap: est > w.spendCap, overCapText: 'La dépense estimée (' + SA.eur(est) + ') dépasse le plafond de ' + SA.eur(w.spendCap) + ' : la diffusion s\u2019arrêtera au plafond, soit environ ' + Math.floor(days * w.spendCap / est) + ' jours sur ' + days + '.',
-        overCamp: !!camp && campLeft < est, overCampText: camp ? 'Il reste ' + SA.eur(campLeft) + ' sur le budget de « ' + camp.name + ' ».' : '',
+        needsBidAmount: encheresMontant.includes(w.bid), setBidAmount: (e) => W({ bidAmount: +e.target.value }), bidCents: SA.cents(w.bidAmount),
+        budgetFacts: [{ label: 'Durée', value: days + ' jours', color: '#222222' }, { label: 'Dépense estimée', value: m$(est), color: w.spendCap > 0 && est > w.spendCap ? '#8D1D2C' : '#222222' }, { label: 'Plafond (spend_cap)', value: w.spendCap > 0 ? m$(w.spendCap) : 'aucun', color: '#222222' }].concat(camp && dev === 'EUR' ? [{ label: 'Reste sur l’opération', value: SA.eur(campLeft), color: campLeft < est ? '#8A4B00' : '#0F6B4A' }] : []),
+        overCap: w.spendCap > 0 && est > w.spendCap, overCapText: 'La dépense estimée (' + m$(est) + ') dépasse le plafond de ' + m$(w.spendCap) + ' : la diffusion s\u2019arrêtera au plafond, soit environ ' + Math.floor(days * w.spendCap / est) + ' jours sur ' + days + '.',
+        overCamp: !!camp && dev === 'EUR' && campLeft < est, overCampText: camp ? 'Il reste ' + SA.eur(campLeft) + ' sur le budget de « ' + camp.name + ' ».' : '',
         audHelp: 'Cochez les boutiques autour desquelles diffuser, puis réglez le rayon de chacune. ' + (w.account === 'reseau' ? 'Chaque boutique cochée a son ad set : sa zone, sa Page Facebook, sa langue ; le budget se répartit entre elles.'
           : 'Chaque boutique paie sur son propre compte.' + (propres.length < st.shops.filter(sh => !sh.test).length ? ' Une boutique sans compte publicitaire propre ne se coche qu\u2019en « Compte réseau ».' : '')),
         audShops: st.shops.filter(sh => !sh.test).map(sh => { const ok = (w.account === 'reseau' || sh.ads === 'connected'), on = w.shops.includes(sh.id); return { name: sh.name, on, dis: !ok, rDis: !on, radius: w.radius[sh.id], min: minR, bg: ok ? '#FFFFFF' : '#FCFAF7',
@@ -659,7 +680,7 @@ class Component extends DCLogic {
         setAdName: (e) => W({ adName: e.target.value }), adPaused: () => W({ adStatus: 'PAUSED' }), adActive: () => W({ adStatus: 'ACTIVE' }), togglePixel: () => W({ pixel: !w.pixel }), pixelId: ids(sid0).pixel_id,
         createNote: w.account === 'boutique' ? 'Franchise Buddy crée ' + w.shops.length + ' jeux campagne / ad set / créa / pub, un par compte publicitaire de boutique, avec le rayon de chaque boutique.' : 'Franchise Buddy crée une campagne sur le compte réseau ' + reseauAcc + ', avec un ad set par boutique (' + w.shops.length + ') : sa zone, sa Page.',
         recapImg: post ? post.img : 'img/illus/decorative/bubble.png',
-        recap: [['Objectif', obj.label + ' · ' + w.objective], ['Opération', camp ? camp.name : 'Hors opération'], ['Comptes', w.account === 'boutique' ? w.shops.length + ' comptes boutique' : 'Compte réseau'], ['Optimisation', w.goal + (obj.dest[0] ? ' → ' + w.dest : '')], ['Audience', w.ageMin + '–' + w.ageMax + ' ans · ' + w.shops.map(id => SA.byId(SA.SHOPS, id).name + ' ' + w.radius[id] + ' km').join(', ')], ['Créa', (w.crea === 'existing' ? 'Post sponsorisé · ' : 'Dark post · ' + fmt.label + ' · ') + (post ? post.title : '—') + ' · ' + M.ctaLabels[w.cta]], ['Variantes', (w.variants || []).length ? (1 + w.variants.length) + ' (A' + w.variants.map((_, i) => ', ' + String.fromCharCode(66 + i)).join('') + ') · une pub par variante' : 'Une seule'], ['Budget', (w.budgetType === 'daily' ? SA.eur(w.amount) + ' / jour' : SA.eur(w.amount) + ' total') + ' · plafond ' + SA.eur(w.spendCap) + ' · ' + (w.budgetLevel === 'campaign' ? 'CBO' : 'ABO')], ['Diffusion', SA.dLabel(w.start) + ' → ' + SA.dLabel(w.end) + ' · statut ' + w.status]].map(([k, v]) => ({ k, v })),
+        recap: [['Objectif', obj.label + ' · ' + w.objective], ['Opération', camp ? camp.name : 'Hors opération'], ['Comptes', w.account === 'boutique' ? w.shops.length + ' comptes boutique' : 'Compte réseau'], ['Optimisation', w.goal + (obj.dest[0] ? ' → ' + w.dest : '')], ['Audience', w.ageMin + '–' + w.ageMax + ' ans · ' + w.shops.map(id => SA.byId(SA.SHOPS, id).name + ' ' + w.radius[id] + ' km').join(', ')], ['Créa', (w.crea === 'existing' ? 'Post sponsorisé · ' : 'Dark post · ' + fmt.label + ' · ') + (post ? post.title : '—') + ' · ' + M.ctaLabels[w.cta]], ['Variantes', (w.variants || []).length ? (1 + w.variants.length) + ' (A' + w.variants.map((_, i) => ', ' + String.fromCharCode(66 + i)).join('') + ') · une pub par variante' : 'Une seule'], ['Budget', (w.budgetType === 'daily' ? m$(w.amount) + ' / jour' : m$(w.amount) + ' total') + ' · ' + (w.spendCap > 0 ? 'plafond ' + m$(w.spendCap) : 'sans plafond') + ' · ' + (w.budgetLevel === 'campaign' ? 'CBO' : 'ABO')], ['Diffusion', SA.dLabel(w.start) + ' → ' + SA.dLabel(w.end) + ' · statut ' + w.status]].map(([k, v]) => ({ k, v })),
         callsNote: ((w.variants || []).length ? (1 + w.variants.length) + ' variantes : une créa et une pub par variante · ' : '') + (w.shops.some(id => SA.langsOf(id).length > 1) ? 'boutique bilingue : un ad set par langue (targeting.locales nl / fr) · ' : '') + 'exemple pour ' + SA.byId(SA.SHOPS, sid0).name + (w.shops.length > 1 ? ', répété pour chaque boutique' : '') + (w.account === 'reseau' ? ' · compte réseau ' + reseauAcc : ''),
         calls: [['POST ' + base + accFor(sid0) + '/campaigns', campBody], ['POST ' + base + accFor(sid0) + '/adsets', adsetBody], ['POST ' + base + accFor(sid0) + '/adcreatives', creaBody], ['POST ' + base + accFor(sid0) + '/ads', adBody]].map(([title, body]) => ({ title, body: J(body) })),
         canBack: s.step > 1, back: () => this.setState({ step: s.step - 1, err: '' }), stepErr: s.err, fwdLabel: s.step === 5 ? 'Envoyer à Meta' : 'Continuer',
@@ -667,8 +688,9 @@ class Component extends DCLogic {
           const e = errFor(s.step); if (e) { this.setState({ err: e }); return; }
           if (s.step < 5) { this.setState({ step: s.step + 1 }); return; }
           const ad = { id: 'a' + Date.now(), name: w.adName, campaign: w.campaign || null, objective: obj.label, metaObjective: w.objective, shops: w.shops, scope: w.account === 'reseau' ? 'reseau' : 'boutique', budgetType: w.budgetType === 'daily' ? 'quotidien' : 'total',
-            budget: w.account === 'boutique' ? w.amount * w.shops.length : w.amount, cap: w.spendCap, spent: 0, start: w.start, end: w.end, status: w.status === 'PAUSED' && w.adStatus === 'PAUSED' ? 'En pause' : 'En revue', radius: Math.round(w.shops.reduce((x, id) => x + w.radius[id], 0) / w.shops.length), post: w.post, leadForm: w.leadForm || null, dark: w.crea === 'new', variants: 1 + (w.variants || []).length, spec: SA.live ? w : undefined };
-          SA.save({ ads: st.ads.concat(ad) }); SA.log('Sarah Lambert (Franchiseur)', 'Publicité', '« ' + ad.name + ' » créée (' + w.objective + (ad.dark ? ', dark post' : '') + ')');
+            budget: w.account === 'boutique' ? w.amount * w.shops.length : w.amount, cap: w.spendCap, spent: 0, start: w.start, end: w.end, status: w.status === 'PAUSED' && w.adStatus === 'PAUSED' ? 'En pause' : 'En revue', radius: Math.round(w.shops.reduce((x, id) => x + w.radius[id], 0) / w.shops.length), post: w.post, leadForm: w.leadForm || null, dark: w.crea === 'new', variants: 1 + (w.variants || []).length, devise: dev, spec: SA.live ? w : undefined };
+          // Reprise d'une pub que Meta n'a pas créée : la nouvelle remplace l'ancienne.
+          SA.save({ ads: st.ads.filter(x => x.id !== s.replaceId).concat(ad) }); SA.log('Sarah Lambert (Franchiseur)', 'Publicité', '« ' + ad.name + ' » créée (' + w.objective + (ad.dark ? ', dark post' : '') + ')');
           if (!SA.live && ad.dark) w.shops.forEach(sid => SA.langsOf(sid).forEach(L => [w.post].concat((w.variants || []).map(v => v.post || w.post)).forEach((pid, k) =>
             SA.DARK.push({ ad: ad.id, post: pid, shop: sid, lang: L, variant: String.fromCharCode(65 + k), story: 'demo', ig: '', link: '', linkIg: '', comments: 0, hidden: 0 }))));
           this.setState({ wizOpen: false, selId: ad.id }); this.toast(ad.status === 'En pause' ? 'Publicité créée en pause : activez-la quand vous êtes prêt.' : 'Publicité envoyée : en revue chez Meta.');
@@ -698,7 +720,7 @@ class Component extends DCLogic {
             border: act === id ? (id === 'active' ? '#0F6B4A' : '#8D1D2C') : 'rgba(34,34,34,0.18)', pick: () => this.setState({ act: id }) })); })(),
       noRows: !sorted.length, noRowsText: act === 'active' ? 'Aucune publicité active pour l’instant. Voir « Non actives » ou « Toutes ».' : act === 'inactive' ? 'Aucune publicité non active.' : 'Aucune publicité.',
       srcTabs: (() => { const base = ads.filter(byAct), nM = base.filter(a => a.origin === 'meta').length; return [['all', 'Toutes sources (' + base.length + ')'], ['module', 'Créées ici (' + (base.length - nM) + ')'], ['meta', 'Récupérées de Meta (' + nM + ')']]; })().map(([id, label]) => ({ label, bg: src === id ? '#8D1D2C' : '#FFFFFF', fg: src === id ? '#FFFFFF' : '#222222', border: src === id ? '#8D1D2C' : 'rgba(34,34,34,0.18)', pick: () => this.setState({ src: id }) })),
-      fixAd: () => { this.upd(a.id, { status: 'En revue', reason: null }, '« ' + a.name + ' » corrigée et resoumise'); this.toast('Publicité resoumise à Meta.'); },
+      fixAd: () => { if (nonCreee(a)) { this.reprendre(a); return; } this.upd(a.id, { status: 'En revue', reason: null }, '« ' + a.name + ' » corrigée et resoumise'); this.toast('Publicité resoumise à Meta.'); },
       showComments: () => { if (!a) return; if (s.com && s.com.ad === a.id && s.com.open) this.setState({ com: Object.assign({}, s.com, { open: false }) }); else this.comments(a, false); },
       syncComments: () => a && this.comments(a, true),
       hasToast: !!s.toast, toast: s.toast,

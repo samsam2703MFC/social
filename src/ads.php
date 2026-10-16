@@ -26,6 +26,9 @@ declare(strict_types=1);
 
 const SOC_AD_STATUT = ['Active' => 'ACTIVE', 'En pause' => 'PAUSED', 'Arrêtée' => 'ARCHIVED'];
 
+/** Les stratégies d'enchère qui prennent un montant (`bid_amount`) ; pas « coût le plus bas » (LOWEST_COST_WITHOUT_CAP). */
+const SOC_ENCHERES_MONTANT = ['LOWEST_COST_WITH_BID_CAP', 'COST_CAP', 'LOWEST_COST_WITH_MIN_ROAS'];
+
 /** Montant en centimes : 20 € → 2000. */
 function socCents(mixed $eur): int { return (int) round(((float) $eur) * 100); }
 
@@ -175,7 +178,7 @@ function socAdCreate(array $ad): array
                         'dsa_beneficiary' => (string) ($w['dsaB'] ?? ''), 'dsa_payor' => (string) ($w['dsaP'] ?? ''), 'targeting' => $targeting];
                     if (!empty($w['dest']) && $w['dest'] !== '') { $as['destination_type'] = (string) $w['dest']; }
                     if ($parJeu > 0) { $as[$budgetKey] = socCents($parJeu); }
-                    if (preg_match('/CAP|ROAS/', (string) ($w['bid'] ?? '')) && !empty($w['bidAmount'])) { $as['bid_amount'] = socCents($w['bidAmount']); }
+                    if (in_array((string) ($w['bid'] ?? ''), SOC_ENCHERES_MONTANT, true) && !empty($w['bidAmount'])) { $as['bid_amount'] = socCents($w['bidAmount']); }
                     if ($isLeads || ($w['objective'] ?? '') === 'OUTCOME_ENGAGEMENT') { $as['promoted_object'] = ['page_id' => $shop['ids']['page_id']]; }
                     elseif (($w['objective'] ?? '') === 'OUTCOME_SALES') { $as['promoted_object'] = ['pixel_id' => $shop['ids']['pixel_id'], 'custom_event_type' => 'PURCHASE']; }
                     $r = Meta::call('POST', $act . '/adsets', $as);

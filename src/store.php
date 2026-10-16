@@ -203,7 +203,7 @@ function socStateGet(): array
         'activity' => array_map(static fn ($r) => ['at' => substr((string) $r['at'], 0, 16), 'who' => $r['who'], 'what' => $r['what'], 'detail' => $r['detail']],
             Db::rows('SELECT le AS at, qui AS who, quoi AS what, detail FROM social_activite ORDER BY le DESC, id DESC LIMIT 400')),
         'meta' => ['version' => Meta::config()['version'], 'dsa' => (array) (socSetting('meta_dsa') ?? ($d['dsa'] ?? [])),
-            'networkAccount' => socBrand()['ids']['ad_account_id'], 'ids' => $ids, 'geo' => $geo,
+            'networkAccount' => socBrand()['ids']['ad_account_id'], 'ids' => $ids, 'geo' => $geo, 'comptes' => socComptesConnus(),
             'lastCheck' => $checked ? max($checked) : null],
         'results' => socResults(),
         'catalogue' => socCatalogue(),

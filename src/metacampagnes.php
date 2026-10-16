@@ -70,6 +70,54 @@ function socComptesPub(): array
 /** Montant Meta (unités mineures, en texte) → montant de l'écran. */
 function socMontantMeta(mixed $v): float { return is_numeric($v) ? round(((float) $v) / 100, 2) : 0.0; }
 
+/**
+ * La devise et les minimums de Meta de chaque compte publicitaire, pour que l'assistant « Nouvelle
+ * publicité » compte dans la bonne devise et signale avant l'envoi ce que Meta refuserait : plafond
+ * de dépense d'une campagne (`min_campaign_group_spend_cap`) et budget quotidien d'un ad set
+ * (`min_daily_budget`), en unités de la devise du compte. Relus chez Meta au plus toutes les 12 h
+ * (ou à la demande), gardés dans `meta_comptes_minimums`.
+ * Rend act_… → ['devise', 'minCap' => ?float, 'minDaily' => ?float, 'erreur' => ?string].
+ */
+function socComptesMinimums(bool $forcer = false): array
+{
+    $mem = socSetting('meta_comptes_minimums');
+    $avant = is_array($mem) ? (array) ($mem['comptes'] ?? []) : [];
+    $frais = is_array($mem) && !empty($mem['le']) && strtotime((string) $mem['le']) > time() - 12 * 3600;
+    if (($frais && !$forcer) || !Meta::configured()) { return socComptesConnus(); }
+    $out = [];
+    foreach (socComptesPub() as $act => $c) {
+        $l = ($avant[$act] ?? []) + ['devise' => (string) $c['devise'], 'minCap' => null, 'minDaily' => null];
+        $l['erreur'] = null;
+        try {
+            $r = Meta::call('GET', $act, ['fields' => 'currency,min_campaign_group_spend_cap,min_daily_budget']);
+            $l['devise'] = (string) ($r['currency'] ?? $l['devise']);
+            $l['minCap'] = is_numeric($r['min_campaign_group_spend_cap'] ?? null) ? socMontantMeta($r['min_campaign_group_spend_cap']) : null;
+            $l['minDaily'] = is_numeric($r['min_daily_budget'] ?? null) ? socMontantMeta($r['min_daily_budget']) : null;
+        } catch (MetaError $e) {
+            $l['erreur'] = mb_substr($e->getMessage(), 0, 300);
+        }
+        $out[$act] = $l;
+    }
+    socSettingPut('meta_comptes_minimums', ['le' => date('Y-m-d H:i:s'), 'comptes' => $out]);
+    return socComptesConnus();
+}
+
+/** Ce qu'on sait déjà des comptes (sans appeler Meta) : minimums gardés, devise du portefeuille et de la dernière relecture. */
+function socComptesConnus(): array
+{
+    $mem = socSetting('meta_comptes_minimums');
+    $out = is_array($mem) ? (array) ($mem['comptes'] ?? []) : [];
+    $pf = socSetting('meta_portefeuille'); $imp = socSetting('meta_campagnes_import');
+    $listes = array_merge((array) (is_array($pf) ? ($pf['comptes'] ?? []) : []), (array) (is_array($imp) ? ($imp['comptes'] ?? []) : []));
+    foreach ($listes as $a) {
+        $id = socActId((string) ($a['id'] ?? ''));
+        if ($id === '' || (string) ($a['devise'] ?? '') === '' || !empty($out[$id]['devise'])) { continue; }
+        $out[$id] = ($out[$id] ?? ['minCap' => null, 'minDaily' => null, 'erreur' => null]);
+        $out[$id]['devise'] = (string) $a['devise'];
+    }
+    return $out;
+}
+
 /** Les campagnes déjà créées par le module (jamais réimportées). */
 function socCampagnesDuModule(): array
 {
@@ -169,6 +217,8 @@ function socCampagnesMetaImporter(bool $journal = true): array
     }
     $rapport['total'] = $rapport['importees'] + $rapport['majs'];
     socSettingPut('meta_campagnes_import', $rapport);
+    // Devise et minimums des comptes (au plus toutes les 12 h) : l'assistant les a sans attendre Meta.
+    try { socComptesMinimums(); } catch (Throwable $e) { /* relus à l'ouverture de l'assistant */ }
     if ($journal) {
         socLog(socUser(), 'Publicité', 'Campagnes Meta relues : ' . count($rapport['comptes']) . ' compte(s), ' . $rapport['importees'] . ' nouvelle(s), '
             . $rapport['majs'] . ' mise(s) à jour' . ($rapport['disparues'] ? ', ' . $rapport['disparues'] . ' disparue(s)' : '') . ($rapport['erreurs'] ? ' — ' . count($rapport['erreurs']) . ' erreur(s)' : ''));

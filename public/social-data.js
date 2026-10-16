@@ -199,6 +199,9 @@
   const byId = (arr, id) => arr.find(x => x.id === id) || (arr === SHOPS ? TEST_SHOPS.find(x => x.id === id) : undefined);
   const fmt = (n, d = 0) => n == null || !isFinite(n) ? '—' : n.toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d });
   const eur = (n, d = 0) => n == null || !isFinite(n) ? '—' : fmt(n, d) + ' €';
+  // Un montant dans la devise d'un compte publicitaire (Meta compte dans la devise du compte, pas forcément en euros).
+  const devSym = (dev) => !dev || dev === 'EUR' ? '€' : dev;
+  const argent = (n, dev, d = 0) => !dev || dev === 'EUR' ? eur(n, d) : n == null || !isFinite(n) ? '—' : fmt(n, d) + ' ' + dev;
   const pct = (n, d = 0) => n == null || !isFinite(n) ? '—' : fmt(n * 100, d) + ' %';
   // Une date absente ou illisible (objet incomplet en base) ne doit pas faire tomber un écran : « — ».
   const d2 = (s) => { const [y, m, d] = String(s || TODAY).split('-').map(Number); return new Date(y, (m || 1) - 1, d || 1); };
@@ -484,6 +487,8 @@
       wavre: { page_id: '104857392091', ad_account_id: 'act_1428806', instagram_user_id: '17841400006', pixel_id: '880112' },
     },
     networkAccount: 'act_1428800',
+    // Devise et minimums de Meta par compte publicitaire (GET /meta/comptes) : act_… → { devise, minCap, minDaily }.
+    comptes: { act_1428800: { devise: 'EUR', minCap: 100, minDaily: 1 } },
     dsa: { beneficiary: "L'Atelier By SRL", payor: "L'Atelier By SRL" },
     permissions: [['business_management', 'Full access'], ['pages_show_list', 'Full access'], ['pages_manage_posts', 'Full access'], ['pages_read_engagement', 'Full access'], ['instagram_basic', 'Full access'], ['instagram_content_publish', 'Full access'], ['ads_management', 'Full access'], ['pages_manage_ads', 'Full access'], ['leads_retrieval', 'Limited access'], ['pages_manage_engagement', 'Full access'], ['instagram_manage_comments', 'Full access']],
     objectives: [
@@ -560,7 +565,7 @@
     if (L.catalogue && L.catalogue.length) swap(CATALOGUE, L.catalogue);
     Object.keys(RESULTS).forEach(k => delete RESULTS[k]); Object.assign(RESULTS, L.results || {});
     const m = L.meta || {};
-    META.version = m.version || META.version; META.dsa = m.dsa || META.dsa; META.ids = m.ids || {}; META.networkAccount = m.networkAccount || '';
+    META.version = m.version || META.version; META.dsa = m.dsa || META.dsa; META.ids = m.ids || {}; META.networkAccount = m.networkAccount || ''; META.comptes = m.comptes || {};
     if (META.versions.indexOf(META.version) < 0) META.versions = META.versions.concat(META.version);
     // Sans position connue, l'assistant Publicités garde un centre (Bruxelles) pour son aperçu ;
     // le serveur, lui, refuse de créer une pub sans la vraie position (ou l'adresse géocodée).
@@ -795,11 +800,12 @@
   else window.addEventListener('focus', () => { refresh(); });
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
-    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT, calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, charte, relire, ia: () => (LIVE && LIVE.ia) || { configure: false, modele: '' }, suivi, avatar,
+    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT,
+    comptesMeta: () => LIVE ? api('GET', '/meta/comptes').then(r => { META.comptes = (r && r.comptes) || META.comptes; return META.comptes; }) : Promise.resolve(META.comptes), calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, charte, relire, ia: () => (LIVE && LIVE.ia) || { configure: false, modele: '' }, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.
     ctype, rattacher, webshopUrl, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
     igUnique: () => LIVE ? !!LIVE.instagramUnique : true, reseau, marque, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
     TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, TEST_SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
-    byId, fmt, eur, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param, embed };
+    byId, fmt, eur, argent, devSym, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param, embed };
 })();

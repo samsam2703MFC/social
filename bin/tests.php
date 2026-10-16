@@ -184,6 +184,10 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
     if ($m === 'GET' && preg_match('#^(1790\d+)/comments$#', $path, $mm)) {
         return [200, ['data' => [['id' => 'igc' . $mm[1], 'username' => 'marc.b', 'text' => 'On passe samedi', 'timestamp' => date('c')]]]];
     }
+    // Devise et minimums d'un compte publicitaire : le compte réseau act_2000 est en złotys (500 PLN de plafond minimum).
+    if ($m === 'GET' && preg_match('#^act_\d+$#', $path) && str_contains((string) ($p['fields'] ?? ''), 'min_campaign_group_spend_cap')) {
+        return [200, $path === 'act_2000' ? ['currency' => 'PLN', 'min_campaign_group_spend_cap' => '50000', 'min_daily_budget' => 500] : ['currency' => 'EUR', 'min_campaign_group_spend_cap' => '10000', 'min_daily_budget' => 100]];
+    }
     if ($m === 'GET' && preg_match('#^act_\d+$#', $path)) { return [200, ['name' => 'Compte ' . $path, 'account_status' => 1]]; }
     if ($m === 'GET' && $path === 'search') { return [200, ['data' => ($p['type'] ?? '') === 'adlocale' ? [['key' => 9, 'name' => 'French (All)'], ['key' => 14, 'name' => 'Dutch']] : [['id' => '6003107902', 'name' => $p['q']]]]]; }
     // Campagnes déjà présentes chez Meta (récupération) : seul act_2001 en a.
@@ -526,7 +530,7 @@ $GLOBALS['BO_PANNE'] = true;
 $panne = socOperations(true);
 check('API Marketing injoignable : aucune opération, motif clair', $panne === [] && str_contains((string) socOperationsErreur(), 'HTTP 503'));
 unset($GLOBALS['BO_PANNE']); socOperations(true);
-$spec = ['name' => 'Automne trafic', 'objective' => 'OUTCOME_TRAFFIC', 'status' => 'ACTIVE', 'special' => [], 'bid' => 'LOWEST_COST_WITHOUT_CAP', 'spendCap' => 300,
+$spec = ['name' => 'Automne trafic', 'objective' => 'OUTCOME_TRAFFIC', 'status' => 'ACTIVE', 'special' => [], 'bid' => 'LOWEST_COST_WITHOUT_CAP', 'bidAmount' => 0.6, 'spendCap' => 300,
     'budgetLevel' => 'adset', 'budgetType' => 'daily', 'amount' => 10, 'account' => 'boutique', 'shops' => ['4', '5'], 'radius' => ['4' => 8, '5' => 10],
     'goal' => 'LINK_CLICKS', 'dest' => 'WEBSITE', 'start' => date('Y-m-d'), 'end' => date('Y-m-d', strtotime('+20 days')), 'ageMin' => 18, 'ageMax' => 65, 'gender' => 'all',
     'interests' => ['Boulangerie'], 'platforms' => ['facebook', 'instagram'], 'advantage' => false, 'dsaB' => "L'Atelier By SRL", 'dsaP' => "L'Atelier By SRL",
@@ -538,6 +542,7 @@ $a1 = socItem('ads', 'a1');
 check('pub créée chez Meta → En revue', $a1['status'] === 'En revue', (string) ($a1['reason'] ?? ''));
 check('un jeu par compte boutique (2 campagnes)', count($appelsVers('#^act_\d+/campaigns$#')) === 2);
 check('Halle bilingue : 2 ad sets (NL, FR) avec locales', count(array_filter($appelsVers('#^act_1001/adsets$#'), static fn ($a) => str_contains($a[2]['targeting'], '"locales"'))) === 2);
+check('coût le plus bas : pas de bid_amount', !array_filter($appelsVers('#^act_\d+/adsets$#'), static fn ($a) => isset($a[2]['bid_amount'])));
 check('montants en centimes (10 € → 1000 par jour)', str_contains(json_encode($appelsVers('#^act_1002/adsets$#')[0][2] ?? []), '"daily_budget":1000'));
 check('rayon en km sur la position de la boutique', str_contains($appelsVers('#^act_1002/adsets$#')[0][2]['targeting'] ?? '', '"radius":10'));
 check('post sponsorisé : object_story_id du post publié', preg_match('/^111_\d+$/', (string) ($appelsVers('#^act_1001/adcreatives$#')[0][2]['object_story_id'] ?? '')) === 1);
@@ -896,6 +901,18 @@ check('objets Meta : une ligne par pub, avec sa boutique (Retour sur campagne)',
 check('les pubs importées ne sont pas relues pub par pub', !array_filter($appels, static fn ($a) => $a[0] === 'GET' && in_array($a[1], ['7201', '7201/insights'], true)));
 check('brouillon sans date (1970 chez Meta) : daté de sa création', $m3['start'] === date('Y-m-d', strtotime('-1 day')) && $m3['end'] === null && $m3['budget'] == 0, json_encode($m3));
 check('compte rendu gardé et rendu dans l’état', (socStateGet()['metaImport']['importees'] ?? null) === 3);
+// Devise et minimums des comptes (assistant « Nouvelle publicité ») : lus chez Meta, gardés 12 h, rendus dans l'état.
+$minLus = static fn (array $ap) => count(array_filter($ap, static fn ($a) => str_contains((string) ($a[2]['fields'] ?? ''), 'min_campaign_group_spend_cap')));
+check('comptes : la relecture des campagnes lit aussi devise et minimums', $minLus($appels) > 0 && (socSetting('meta_comptes_minimums')['comptes']['act_2000']['devise'] ?? '') === 'PLN');
+$appels = [];
+[$code, $b] = socRoute('GET', '/meta/comptes');
+$cp = $b['comptes'] ?? [];
+check('comptes : minimums en unités de la devise (500 PLN de plafond, 5 PLN par jour)', $code === 200 && ($cp['act_2000']['devise'] ?? '') === 'PLN' && ($cp['act_2000']['minCap'] ?? null) == 500
+    && ($cp['act_2000']['minDaily'] ?? null) == 5 && ($cp['act_2001']['minCap'] ?? null) == 100, json_encode($cp));
+check('comptes : gardés 12 h (pas de nouvel appel à Meta)', $minLus($appels) === 0);
+$_GET['forcer'] = '1'; socRoute('GET', '/meta/comptes'); unset($_GET['forcer']);
+check('comptes : relus à la demande', $minLus($appels) > 0);
+check('comptes : rendus dans l’état', (socStateGet()['meta']['comptes']['act_2000']['minCap'] ?? null) == 500);
 $appels = [];
 $r = socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($m1, ['status' => 'En pause', 'name' => 'Renommée', 'campaign' => 'bo-1', 'budget' => 999])]]]]);
 $m1 = socItem('ads', 'meta-7001');
