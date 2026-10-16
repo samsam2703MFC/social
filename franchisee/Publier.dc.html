@@ -582,6 +582,29 @@
             </div>
           </section>
 
+          <!-- Format (post, story seule, post + story) et répétition (post récurrent) -->
+          <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:10px;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Format et répétition</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <sc-for list="{{ formats }}" as="fo" hint-placeholder-count="3"><button onClick="{{ fo.pick }}" disabled="{{ fo.dis }}" title="{{ fo.tip }}" style="display:flex;align-items:center;gap:7px;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid {{ fo.border }};background:{{ fo.bg }};color:{{ fo.fg }};opacity:{{ fo.op }};"><span style="display:inline-block;width:{{ fo.w }};height:{{ fo.h }};border-radius:2px;border:1.5px solid {{ fo.fg }};box-sizing:border-box;"></span>{{ fo.label }}</button></sc-for>
+            </div>
+            <span style="font-size:11px;color:#666666;line-height:1.5;">{{ formatNote }}</span>
+            <sc-if value="{{ hasRecurrence }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <span style="font-size:12px;font-weight:500;color:#444444;margin-right:2px;">Répéter</span>
+                <sc-for list="{{ recFreqs }}" as="rf" hint-placeholder-count="5"><button onClick="{{ rf.pick }}" disabled="{{ rf.dis }}" title="{{ rf.tip }}" style="border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid {{ rf.border }};background:{{ rf.bg }};color:{{ rf.fg }};opacity:{{ rf.op }};">{{ rf.label }}</button></sc-for>
+                <sc-if value="{{ recOn }}" hint-placeholder-val="{{ false }}"><label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#444444;">
+                  <input type="number" min="2" max="{{ recMax }}" value="{{ recN }}" onChange="{{ setRecN }}" style="width:56px;font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 6px;">fois · au plus {{ recMax }}</label></sc-if>
+              </div>
+              <sc-if value="{{ recOn }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                  <sc-for list="{{ recDates }}" as="rd" hint-placeholder-count="0"><span title="{{ rd.tip }}" style="font-size:11px;font-weight:600;border-radius:6px;padding:4px 8px;background:{{ rd.bg }};color:{{ rd.fg }};">{{ rd.label }}</span></sc-for>
+                </div>
+                <span style="font-size:11px;color:{{ recNoteFg }};line-height:1.5;">{{ recNote }}</span>
+              </sc-if>
+            </sc-if>
+          </section>
+
           <sc-if value="{{ hasErrors }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;"><sc-for list="{{ errors }}" as="er" hint-placeholder-count="0"><span style="font-size:12px;color:#8D1D2C;">{{ er }}</span></sc-for></div></sc-if>
           <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap;">
             <span style="font-size:12px;color:#666666;">{{ submitNote }}</span>
@@ -615,6 +638,13 @@
                 <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;">
                   <span style="width:32px;height:32px;border-radius:50%;background:#8D1D2C;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #FFFFFF,0 0 0 3.5px #D97B29;"><img src="img/logo-white.png" alt="" style="width:22px;height:auto;"></span>
                   <span style="display:flex;flex-direction:column;"><span style="font-size:13px;font-weight:600;color:#262626;">{{ igHandle }}</span><span style="font-size:11px;color:#8e8e8e;">{{ shopCity }}</span></span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isStoryPv }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#0B0B0B;">
+                  <span style="width:28px;height:28px;border-radius:50%;background:#8D1D2C;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #0B0B0B,0 0 0 3.5px #D97B29;flex:0 0 auto;"><img src="img/logo-white.png" alt="" style="width:19px;height:auto;"></span>
+                  <span style="display:flex;flex-direction:column;min-width:0;"><span style="font-size:12px;font-weight:600;color:#FFFFFF;">{{ pageName }}</span><span style="font-size:10px;color:#BDBDBD;">Story · {{ whenLabel }} · 24 h</span></span>
+                  <span style="margin-left:auto;font-size:10px;color:#BDBDBD;text-align:right;line-height:1.3;">ni texte<br>ni lien</span>
                 </div>
               </sc-if>
               <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}"><dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-text-pick="{{ onTextPick }}" on-label-move="{{ onLabelMove }}" on-label-select="{{ onLabelSelect }}" on-label-edit="{{ onLabelEdit }}" on-label-delete="{{ onLabelDelete }}" hint-size="100%,380px"></dc-import></sc-if>
@@ -663,7 +693,9 @@ class Component extends DCLogic {
       // textes par langue, photos ajoutées et leur cadrage, texte posé sélectionné, médiathèque, contrôle.
       ...this.visuelVide(), illusOpen: false, illusCat: null, query: '', fCat: '', fSeason: '', qc: [],
       // Les promotions, bundles et formules du produit (TFBuddy) : lus par produit ; celle utilisée dans le post.
-      offres: {}, offresLoading: false, apiOffre: null };
+      offres: {}, offresLoading: false, apiOffre: null,
+      // Format : post (fil), story seule, post + story ; répétition : une fois, chaque jour / semaine / 2 semaines / mois, N fois.
+      format: 'post', rec: 'une', recN: 4 };
     if (!st) return base;
     base.lang = (st.shop.langs || ['fr'])[0];
     let slot = this.firstSlot(st);
@@ -692,7 +724,7 @@ class Component extends DCLogic {
   }
   forTpl(t, st) {
     const p = t.promo || {}, r = st.rules;
-    return { tpl: t.id, product: null, apiOffre: null, discount: p.kind === 'remise' ? Math.min(p.max, r.remiseMax, Math.max(p.min, 20)) : 0, offer: p.kind === 'offre' ? (p.offres || [])[0] || '' : '',
+    return { tpl: t.id, product: null, apiOffre: null, format: 'post', rec: 'une', discount: p.kind === 'remise' ? Math.min(p.max, r.remiseMax, Math.max(p.min, 20)) : 0, offer: p.kind === 'offre' ? (p.offres || [])[0] || '' : '',
       promoPrice: '', free: '', photo: null, pmode: null, ...this.visuelVide(), link: t.link ? 'modele' : 'aucun', fb: !!(t.fb && r.fb && st.shop.fb === 'connected'), ig: !!(t.ig && r.ig && st.shop.igs === 'connected'), errors: [] };
   }
   componentDidMount() { this.lireJour(); this.lirePhoto(); }
@@ -708,8 +740,10 @@ class Component extends DCLogic {
   /** Le visuel : celui du modèle (avec les champs saisis), puis les réglages du franchisé par-dessus. */
   visuel(t, fields, L) {
     const s = this.state, base = this.controle(t, fields, L);
-    return Object.assign({ format: 'carre', fondu: 60, logo: 'auto', textes: [], couleurs: {}, illus: null, fond: null, phraseFont: 'script', phraseColor: 'auto' }, base, s.vo, (s.vt || {})[L] || {});
+    return Object.assign({ format: 'carre', fondu: 60, logo: 'auto', textes: [], couleurs: {}, illus: null, fond: null, phraseFont: 'script', phraseColor: 'auto' }, base, s.vo, (s.vt || {})[L] || {}, this.vueStory() ? { format: 'story' } : {});
   }
+  /** La story est-elle à l'écran ? (story seule, ou l'onglet « Story » d'un post + story) : le visuel passe en 9:16. */
+  vueStory() { const s = this.state; return s.format === 'story' || (s.format === 'post_story' && s.pv === 'story'); }
   V(patch) { this.setState(st => ({ vo: Object.assign({}, st.vo, patch) })); }
   VT(L, key, val) { this.setState(st => ({ vt: Object.assign({}, st.vt, { [L]: Object.assign({}, (st.vt || {})[L], { [key]: val }) }) })); }
   /** Les photos du visuel : celle du modèle (webshop, illustration ou la sienne), puis celles ajoutées, avec leur cadrage. */
@@ -758,7 +792,7 @@ class Component extends DCLogic {
   /** Les valeurs de l'éditeur de visuel (mêmes réglages que « Créer un post » du franchiseur). */
   editeur(t, st, fields, L, prod, seg) {
     const SF = window.SF, s = this.state, on = st.rules.persoVisuel !== false && (t.visual || {}).style !== 'fixe';
-    const v = this.visuel(t, fields, L), base = this.controle(t, fields, L), cur = on ? v : base;
+    const v = this.visuel(t, fields, L), base = Object.assign({}, this.controle(t, fields, L), this.vueStory() ? { format: 'story' } : {}), cur = on ? v : base;
     const photos = this.photosVisuel(t, prod), nMain = photos.length - (s.xphotos || []).length;
     const role = on ? s.couleurRole : null, P = this.PALETTE();
     const couleurDe = (r) => r === 'phrase' ? (v.phraseColor || 'auto') : ((v.couleurs || {})[r] || 'auto');
@@ -947,7 +981,8 @@ class Component extends DCLogic {
     const o = this.offreActive();
     return { template: s.tpl, product: s.product, discount: s.discount, offer: s.offer, promoPrice: s.promoPrice, from: s.from, to: s.to, free: s.free.trim(), photo: mine ? s.photo : null, link: s.link || 'aucun', fb: s.fb, ig: s.ig, date: s.date, time: s.time,
       // Promotion ou formule de TFBuddy : le serveur la relit (jamais prise telle quelle) et en écrit le libellé et la mention.
-      offre: o ? (o.genre === 'formule' ? { genre: 'formule', nom: o.nom } : { genre: 'promotion', id: o.id, nom: o.nom, du: o.du, au: o.au }) : null };
+      offre: o ? (o.genre === 'formule' ? { genre: 'formule', nom: o.nom } : { genre: 'promotion', id: o.id, nom: o.nom, du: o.du, au: o.au }) : null,
+      format: s.format || 'post', recurrence: s.rec && s.rec !== 'une' ? { freq: s.rec, n: +s.recN || 2 } : null };
   }
   async submit() {
     const SF = window.SF, s = this.state;
@@ -969,10 +1004,19 @@ class Component extends DCLogic {
         }
         // L'export se fait sans la sélection d'un texte (le cadre en pointillé n'a rien à faire dans le visuel publié).
         if (this.state.couleurRole || this.state.txtSel) { await new Promise(r => this.setState({ couleurRole: null, txtSel: null }, r)); await new Promise(r => setTimeout(r, 150)); }
-        b.visual = await this._api.toImage({ jpeg: true, pixelRatio: SF.live ? 1 : 0.5, quality: 0.9 });
+        const exporter = () => this._api.toImage({ jpeg: true, pixelRatio: SF.live ? 1 : 0.5, quality: 0.9 });
+        const vue = async (pv) => { if (this.state.pv !== pv) { await new Promise(r => this.setState({ pv }, r)); await new Promise(r => setTimeout(r, 700)); } };
+        if (s.format === 'post_story') {
+          // Post + story : le visuel du fil, puis le même en story (9:16).
+          await vue('fb'); b.visual = await exporter();
+          await vue('story'); b.visualStory = await exporter();
+        } else {
+          b.visual = await exporter();
+        }
       }
       const p = await SF.createPost(b);
-      location.href = SF.href('cal', 'post=' + encodeURIComponent(p.id) + '&ok=' + (p.status === 'À valider' ? 'valider' : 'prog'));
+      const n = b.recurrence ? +b.recurrence.n : 1;
+      location.href = SF.href('cal', 'post=' + encodeURIComponent(p.id) + '&ok=' + (p.status === 'À valider' ? 'valider' : 'prog') + (n > 1 ? '&n=' + n : '') + (b.format !== 'post' ? '&f=' + b.format : ''));
     } catch (e) { this.setState({ busy: false, errors: [e.message] }); }
   }
   renderVals() {
@@ -1077,6 +1121,27 @@ class Component extends DCLogic {
           hasThumb: !!thumb, thumb: thumb || '', canUpload: mode === 'mine', photoBtn: s.photo ? 'Changer de photo' : 'Importer une photo', photoNote: note, photoNoteFg: mode === 'webshop' && s.wsErr ? '#8A4B00' : '#666666',
           onPhoto: async (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; const d = await this.readPhoto(f); if (d) S({ photo: d, pmode: 'mine' }); } }; })(),
       date: s.date, time: s.time, hMin: r.heureMin, hMax: r.heureMax, setDate: (e) => S({ date: e.target.value }), setTime: (e) => S({ time: e.target.value }), channels: chans,
+      // Format : post (fil), story seule (9:16, 24 h, ni texte ni lien), post + story ; puis la répétition.
+      ...(() => { const fixe = (t.visual || {}).style === 'fixe', storyOff = r.story === false;
+        const F = [['post', 'Post (fil)', '12px', '12px', ''], ['story', 'Story seule', '9px', '15px', ''], ['post_story', 'Post + story', '12px', '12px', '']];
+        const formats = F.map(([k, label, w, h]) => { const on = (s.format || 'post') === k, dis = k !== 'post' && (storyOff || fixe);
+          return { label, w, h, dis, op: dis ? 0.45 : 1, bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)',
+            tip: dis ? (fixe ? 'Ce modèle a un visuel du réseau : il ne part qu’en post.' : 'Le réseau n’ouvre pas les stories.') : '',
+            pick: () => { if (!dis) S({ format: k, pv: k === 'story' ? 'story' : (s.pv === 'story' ? 'fb' : s.pv), txtSel: null }); } }; });
+        const formatNote = { post: 'Le post part dans le fil de votre Page' + (chans.some(c => c.label.startsWith('Instagram')) ? ' et d’Instagram' : '') + ', avec son texte et son lien.',
+          story: 'Une story reste 24 h en haut de votre Page' + (chans.some(c => c.label.startsWith('Instagram')) ? ' et d’Instagram' : '') + ' : ni texte ni lien, tout est sur le visuel, au format story (9:16).',
+          post_story: 'Le post part dans le fil, et la même création en story (9:16, 24 h, ni texte ni lien) à la même heure. Onglet « Story » de l’aperçu pour la régler.' }[s.format || 'post'];
+        const max = +r.recurrenceMax || 0, recOn = max >= 2 && s.rec && s.rec !== 'une', n = Math.max(2, Math.min(max || 2, +s.recN || 2));
+        const recFreqs = [['une', 'Une fois'], ['jour', 'Chaque jour'], ['semaine', 'Chaque semaine'], ['2semaines', 'Toutes les 2 semaines'], ['mois', 'Chaque mois']].map(([k, label]) => {
+          const on = (s.rec || 'une') === k, dis = k !== 'une' && !!t.period;
+          return { label, dis, op: dis ? 0.45 : 1, bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)',
+            tip: dis ? 'Une promotion datée ne se répète pas.' : '', pick: () => { if (!dis) S({ rec: k, recN: n }); } }; });
+        const D = recOn ? SF.serieDates(Object.assign(this.body(), { recurrence: { freq: s.rec, n } })) : [], ko = D.filter(x => !x.ok);
+        return { formats, formatNote, hasRecurrence: max >= 2, recFreqs, recOn, recMax: max, recN: n, setRecN: (e) => S({ recN: Math.max(2, Math.min(max, +e.target.value || 2)) }),
+          recDates: D.map(x => ({ label: SF.dShort(x.date) + (x.ok ? '' : ' ✕'), tip: SF.dLabel(x.date) + (x.ok ? '' : ' : ' + x.motif), bg: x.ok ? '#E2F0E8' : '#F6DCDF', fg: x.ok ? '#0F6B4A' : '#8D1D2C' })),
+          recNote: ko.length ? ko.length + ' date(s) hors des règles du réseau (survolez-les) : changez la date, la répétition ou le nombre de fois.'
+            : D.length + ' posts, du ' + SF.dShort(D[0] ? D[0].date : s.date) + ' au ' + SF.dShort(D.length ? D[D.length - 1].date : s.date) + ' à ' + s.time + '. Chaque date est un post à part : vous pourrez en annuler une, ou toute la série, depuis le calendrier.' + (val ? ' Le réseau valide chaque date.' : ''),
+          recNoteFg: ko.length ? '#8D1D2C' : '#666666' }; })(),
       // Le jour choisi : ce qui est déjà prévu (posts de l'espace, publications de la Page et de l'Instagram lues chez Meta).
       ...(() => { const d = s.date, J = s.jour && s.jour.date === d ? s.jour : null, mins = (h) => { const [a, b] = String(h || '0:0').split(':').map(Number); return a * 60 + (b || 0); };
         const items = st.posts.filter(p => p.date === d && p.status !== 'Refusé').map(p => ({ time: p.time, who: p.own ? 'mon post' : 'réseau', title: p.title, dot: p.own ? '#8D1D2C' : '#B8B2A8', fb: !!p.fb }))
@@ -1094,9 +1159,11 @@ class Component extends DCLogic {
       langNote: langs.length > 1 ? 'Boutique bilingue : la légende part en ' + langs.map(x => x.toUpperCase()).join(' et ') + ' ; le visuel est dans la langue choisie.' : '',
       pageName: st.shop.page || ('L’Atelier By ' + st.shop.name), whenLabel: s.date ? SF.dLabel(s.date) + ' à ' + s.time : '', pvText: text || '—',
       // Aperçu : le fil Facebook, ou Instagram si le post y part ; dans un téléphone sur demande.
-      ...(() => { const igOn = chans.some(c => c.label.startsWith('Instagram') && c.on), pv = igOn && s.pv === 'ig' ? 'ig' : 'fb', tel = !!s.tel;
-        const tab = (k, label) => { const [bg, fg] = seg(pv === k); return { label, bg, fg, pick: () => this.setState({ pv: k }) }; };
-        return { hasPvTabs: igOn, pvTabs: [tab('fb', 'Facebook'), tab('ig', 'Instagram')], isFbPv: pv === 'fb', isIgPv: pv === 'ig',
+      ...(() => { const igOn = chans.some(c => c.label.startsWith('Instagram') && c.on), tel = !!s.tel, fmt = s.format || 'post';
+        const pv = fmt === 'story' ? 'story' : fmt === 'post_story' && s.pv === 'story' ? 'story' : igOn && s.pv === 'ig' ? 'ig' : 'fb';
+        const tab = (k, label) => { const [bg, fg] = seg(pv === k); return { label, bg, fg, pick: () => this.setState({ pv: k, txtSel: null }) }; };
+        const tabs = fmt === 'story' ? [] : [tab('fb', 'Facebook')].concat(igOn ? [tab('ig', 'Instagram')] : []).concat(fmt === 'post_story' ? [tab('story', 'Story')] : []);
+        return { hasPvTabs: tabs.length > 1, pvTabs: tabs, isFbPv: pv === 'fb', isIgPv: pv === 'ig', isStoryPv: pv === 'story',
           igHandle: String(st.shop.ig || '').replace(/^@?/, '') || 'latelierby', shopCity: 'L’Atelier By ' + st.shop.name,
           tel, telToggle: () => this.setState({ tel: !tel }), telBtnBg: tel ? '#8D1D2C' : '#FFFFFF', telBtnFg: tel ? '#FFFFFF' : '#444444',
           telB: tel ? '10px solid #0B0B0B' : '0', telR: tel ? '44px' : '10px', telSh: tel ? '0 12px 32px rgba(0,0,0,0.20)' : 'none', telW: tel ? '360px' : '100%',

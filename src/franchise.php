@@ -35,6 +35,8 @@ function sfReglesDefaut(): array
         'remiseMax' => 30, 'promoDureeMax' => 14, 'voirReseau' => true, 'voirCampagnes' => true, 'voirResultats' => true, 'voirSuivi' => true,
         // L'analyse des vues (Page, Instagram, publications) et de l'évolution des abonnés, sans le budget.
         'voirAnalyse' => true,
+        // Le franchisé peut publier en story (story seule, ou post + story) ; et répéter un post (au plus N fois, 0 = non).
+        'story' => true, 'recurrenceMax' => 8,
         // Le franchisé peut choisir le format du visuel (carré, portrait) et la couleur de chaque texte (palette de la marque).
         'persoVisuel' => true,
         // En attendant l'ERP (pas de point d'accroche franchise_session) : l'espace s'ouvre sans connexion
@@ -67,6 +69,7 @@ function sfReglesPut(array $in): array
         'promoDureeMax' => max(1, min(90, (int) ($in['promoDureeMax'] ?? $d['promoDureeMax']))),
         'voirReseau' => (bool) ($in['voirReseau'] ?? true), 'voirCampagnes' => (bool) ($in['voirCampagnes'] ?? true), 'voirResultats' => (bool) ($in['voirResultats'] ?? true), 'voirSuivi' => (bool) ($in['voirSuivi'] ?? true),
         'voirAnalyse' => (bool) ($in['voirAnalyse'] ?? true), 'persoVisuel' => (bool) ($in['persoVisuel'] ?? true),
+        'story' => (bool) ($in['story'] ?? true), 'recurrenceMax' => max(0, min(26, (int) ($in['recurrenceMax'] ?? $d['recurrenceMax']))),
         'accesLibre' => in_array((string) ($in['accesLibre'] ?? ''), array_column(socReseau(), 'id'), true) ? (string) $in['accesLibre'] : '',
         'message' => mb_substr(trim((string) ($in['message'] ?? $d['message'])), 0, 600),
     ];
@@ -273,7 +276,8 @@ function sfPostVue(array $p, string $shop): array
         'time' => (string) ($p['time'] ?? ''), 'status' => $statut, 'img' => (string) ($p['img'] ?? ''), 'text' => (string) ($p['text'] ?? ''), 'textNl' => (string) ($p['textNl'] ?? ''),
         'own' => $propre, 'template' => (string) ($p['template'] ?? ''), 'promo' => $p['promo'] ?? null, 'refus' => $propre ? ($p['refus'] ?? null) : null,
         'fb' => (bool) (($p['ch'][$shop]['fb'] ?? null) ?? ($p['fb'] ?? false)), 'ig' => (bool) (($p['ch'][$shop]['ig'] ?? null) ?? ($p['ig'] ?? false)),
-        'reason' => $ko ? (string) ($ko[0]['reason'] ?? '') : null, 'campaign' => $p['campaign'] ?? null];
+        'reason' => $ko ? (string) ($ko[0]['reason'] ?? '') : null, 'campaign' => $p['campaign'] ?? null,
+        'story' => $p['story'] ?? null, 'serie' => $propre ? ($p['serie'] ?? null) : null];
 }
 
 /**
@@ -481,6 +485,11 @@ function sfPostCreer(string $shop, array $b, array $session = []): array
     $ig = !empty($b['ig']) && !empty($tpl['ig']) && $r['ig'] && !socIgUnique();
     if (!$fb && !$ig) { $err[] = 'Choisissez au moins un canal autorisé (Facebook ou Instagram).'; }
 
+    // Format : post (fil), story seule, ou post + story (la story : un visuel 9:16, sans texte ni lien).
+    $format = in_array($b['format'] ?? 'post', ['post', 'story', 'post_story'], true) ? (string) ($b['format'] ?? 'post') : 'post';
+    if ($format !== 'post' && !$r['story']) { $err[] = 'Le réseau n’ouvre pas les stories dans cet espace.'; }
+    if ($format !== 'post' && (($tpl['visual']['style'] ?? '') === 'fixe')) { $err[] = 'Ce modèle a un visuel du réseau : il ne part qu’en post.'; }
+
     // Date et heure
     $date = (string) ($b['date'] ?? ''); $time = (string) ($b['time'] ?? '');
     $t = preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $time) ? strtotime($date . ' ' . $time) : false;
@@ -585,6 +594,12 @@ function sfPostCreer(string $shop, array $b, array $session = []): array
         $visuel = (string) ($b['visual'] ?? '');
         if (!preg_match('#^data:image/(jpeg|png|webp);base64,#', $visuel) || strlen($visuel) > 6_000_000) { $err[] = 'Le visuel n’a pas pu être préparé : rechargez la page.'; }
     }
+    $visuelStory = null;
+    if ($format === 'story' && !$fixe && !sfFormatStory($visuel)) { $err[] = 'Une story demande un visuel au format story (9:16) : rechargez la page.'; }
+    if ($format === 'post_story' && !$fixe) {
+        $visuelStory = (string) ($b['visualStory'] ?? '');
+        if (!sfFormatStory($visuelStory) || strlen($visuelStory) > 6_000_000) { $err[] = 'Le visuel de la story n’a pas pu être préparé : rechargez la page.'; $visuelStory = null; }
+    }
     $photoMode = (string) ($tpl['photo'] ?? 'catalogue');
     $photo = (string) ($b['photo'] ?? '');
     if ($photoMode === 'upload' && !preg_match('#^data:image/#', $photo)) { $err[] = 'Ajoutez votre photo.'; }
@@ -598,6 +613,36 @@ function sfPostCreer(string $shop, array $b, array $session = []): array
         'categorie' => !empty($prod['categoryId']) ? '{webshop_categorie}' : '{webshop}',
         default => '',
     };
+
+    // Répétition : chaque date suit les règles du réseau (horizon, jours, heures, quota de sa semaine),
+    // et une promotion du réseau doit valoir à chaque date.
+    $dates = [$date];
+    $rec = is_array($b['recurrence'] ?? null) ? $b['recurrence'] : null;
+    $freq = $rec ? (string) ($rec['freq'] ?? '') : '';
+    if ($rec && $freq !== '' && $freq !== 'une') {
+        $n = (int) ($rec['n'] ?? 0);
+        if ($r['recurrenceMax'] < 2) { $err[] = 'Le réseau n’ouvre pas les posts récurrents dans cet espace.'; }
+        elseif (!in_array($freq, ['jour', 'semaine', '2semaines', 'mois'], true)) { $err[] = 'Répétition inconnue.'; }
+        elseif ($n < 2 || $n > $r['recurrenceMax']) { $err[] = 'Répétez le post de 2 à ' . $r['recurrenceMax'] . ' fois.'; }
+        elseif (!empty($tpl['period'])) { $err[] = 'Une promotion datée ne se répète pas : publiez-la une fois.'; }
+        elseif ($t !== false) {
+            $dates = sfDatesSerie($date, $freq, $n);
+            $parSemaine = [];
+            foreach ($dates as $k => $d) {
+                $parSemaine[sfLundi($d)] = ($parSemaine[sfLundi($d)] ?? 0) + 1;
+                if ($k === 0) { continue; }
+                $tk = strtotime($d . ' ' . $time);
+                $quand = sfDate($d);
+                if ($tk > time() + $r['horizonJours'] * 86400) { $err[] = 'Le ' . $quand . ' est au-delà de ' . $r['horizonJours'] . ' jours : répétez-le moins de fois.'; break; }
+                if (!in_array((int) date('w', $tk), $r['jours'], true)) { $err[] = 'Le ' . $quand . ' (' . SF_JOURS[(int) date('w', $tk)] . ') n’est pas ouvert à la publication.'; }
+                if (sfQuotaUtilise($shop, $d) + $parSemaine[sfLundi($d)] > $r['quotaSemaine']) { $err[] = 'Quota atteint la semaine du ' . sfDate(sfLundi($d)) . ' : ' . $r['quotaSemaine'] . ' post(s) par semaine.'; }
+                if ($api && ($api['genre'] ?? '') === 'promotion' && ((!empty($api['au']) && $api['au'] < $d) || (!empty($api['du']) && $api['du'] > $d))) {
+                    $err[] = 'La promotion « ' . $api['nom'] . ' » ne vaut pas le ' . $quand . ' : répétez-la moins de fois.';
+                }
+            }
+            if (($parSemaine[sfLundi($date)] ?? 1) > 1 && sfQuotaUtilise($shop, $date) + $parSemaine[sfLundi($date)] > $r['quotaSemaine']) { $err[] = 'Quota atteint : ' . $r['quotaSemaine'] . ' post(s) par semaine pour votre boutique.'; }
+        }
+    }
 
     if ($err) { throw new HttpError(422, implode(' ', array_unique($err))); }
 
@@ -617,33 +662,84 @@ function sfPostCreer(string $shop, array $b, array $session = []): array
         'shops' => [$shop], 'ch' => [$shop => ['fb' => $fb, 'ig' => $ig]], 'fb' => $fb, 'ig' => $ig, 'status' => $statut, 'date' => $date, 'time' => $time,
         'text' => $texte, 'textNl' => $texteNl, 'langs' => $s['langs'],
         'img' => $visuel, 'media' => $fixe ? $medias : [['src' => $visuel, 'kind' => 'img', 'name' => 'Visuel du modèle « ' . $tpl['name'] . ' »']],
+        // Story : seule (le visuel 9:16 remplace le post dans le fil), ou aussi (le post, puis sa story : `storyImg`).
+        'story' => ['post' => null, 'story' => 'seule', 'post_story' => 'aussi'][$format], 'storyImg' => $visuelStory,
         'promo' => $promo, 'product' => $prod['id'] ?? null,
         'offre' => $api === null ? null : ($api['genre'] === 'formule'
             ? ['genre' => 'formule', 'nom' => $api['nom'], 'libelle' => $api['libelle'], 'prix' => $api['prix'] ?? null, 'shop' => $shop]
             : ['genre' => 'promotion', 'id' => (int) $api['id'], 'type' => $api['type'], 'nom' => $api['nom'], 'libelle' => $api['libelle'], 'du' => $api['du'], 'au' => $api['au'], 'tous' => $api['tous'], 'portee' => $api['portee']]), 'spread' => 0, 'campaign' => ((string) ($tpl['campaign'] ?? '')) ?: null, 'link' => $lien,
         'fields' => ['product' => $prod['id'] ?? null, 'offre' => $api ? ($api['genre'] === 'formule' ? 'formule:' . $api['nom'] : 'promotion:' . $api['id']) : null, 'discount' => $b['discount'] ?? null, 'offer' => $b['offer'] ?? null, 'promoPrice' => $b['promoPrice'] ?? null,
             'from' => $du, 'to' => $au, 'free' => $libre, 'photo' => $photo !== '' ? $photo : null]];
-    $out = socStateSave(['changes' => ['posts' => ['upsert' => [$post]]]]);
+    // Un post récurrent : une occurrence par date, chacune un post (validée, annulée, publiée à part), liées par leur série.
+    $posts = [];
+    $serie = count($dates) > 1 ? ['id' => 's' . substr((string) $post['id'], 1), 'freq' => $freq, 'n' => count($dates)] : null;
+    foreach ($dates as $k => $d) {
+        $posts[] = array_replace($post, ['id' => $k === 0 ? $post['id'] : $post['id'] . '-' . ($k + 1), 'date' => $d,
+            'serie' => $serie ? $serie + ['rang' => $k + 1] : null]);
+    }
+    $out = socStateSave(['changes' => ['posts' => ['upsert' => $posts]]]);
     $p = socItem('posts', (string) $post['id']) ?? $post;
     if ($out['errors']) {
         // Refusé par une règle du réseau (verrou d'une frise…) : on ne garde pas un post que le franchisé ne voit pas.
-        socItemDelete('posts', (string) $post['id']);
-        socUnqueue((string) $post['id']);
+        foreach ($posts as $x) { socItemDelete('posts', (string) $x['id']); socUnqueue((string) $x['id']); }
         throw new HttpError(409, implode(' · ', array_column($out['errors'], 'error')));
     }
+    $quoi = ['post' => '', 'story' => ' (story)', 'post_story' => ' (post + story)'][$format];
     socLog($auteur, $statut === 'À valider' ? 'Proposition' : 'Programmation',
-        '« ' . $p['title'] . ' » (' . $tpl['name'] . ') le ' . sfDate($date) . ' à ' . $time . ($statut === 'À valider' ? ' — à valider' : ''));
+        '« ' . $p['title'] . ' »' . $quoi . ' (' . $tpl['name'] . ') le ' . sfDate($date) . ' à ' . $time
+        . ($serie ? ', répété ' . count($dates) . ' fois (' . ['jour' => 'chaque jour', 'semaine' => 'chaque semaine', '2semaines' => 'toutes les 2 semaines', 'mois' => 'chaque mois'][$freq] . ', jusqu’au ' . sfDate(end($dates)) . ')' : '')
+        . ($statut === 'À valider' ? ' — à valider' : ''));
     return sfPostVue($p, $shop);
 }
 
-/** Annule un post du franchisé tant qu'il n'est pas publié. */
-function sfPostAnnuler(string $shop, string $id): void
+/** Un visuel au format story (9:16, de 1,7 à 1,85 fois plus haut que large), en data: (image) ? */
+function sfFormatStory(string $data): bool
+{
+    if (!preg_match('#^data:image/(jpeg|png|webp);base64,#', $data, $m)) { return false; }
+    $bin = base64_decode(substr($data, strlen($m[0])), true);
+    $dim = $bin !== false ? @getimagesizefromstring($bin) : false;
+    if (!$dim || $dim[0] <= 0) { return false; }
+    $k = $dim[1] / $dim[0];
+    return $k >= 1.7 && $k <= 1.85;
+}
+
+/** Les dates d'un post récurrent : la première, puis chaque jour, semaine, 2 semaines ou mois (même jour du mois, borné). */
+function sfDatesSerie(string $date, string $freq, int $n): array
+{
+    $out = [];
+    $t0 = strtotime($date . ' 12:00:00');
+    for ($k = 0; $k < $n; $k++) {
+        if ($freq === 'mois') {
+            $y = (int) date('Y', $t0); $mo = (int) date('n', $t0) + $k; $y += intdiv($mo - 1, 12); $mo = ($mo - 1) % 12 + 1;
+            $out[] = sprintf('%04d-%02d-%02d', $y, $mo, min((int) date('j', $t0), (int) date('t', mktime(12, 0, 0, $mo, 1, $y))));
+        } else {
+            $out[] = date('Y-m-d', strtotime('+' . ($k * ['jour' => 1, 'semaine' => 7, '2semaines' => 14][$freq]) . ' days', $t0));
+        }
+    }
+    return $out;
+}
+
+/**
+ * Annule un post du franchisé tant qu'il n'est pas publié ; `$serie` : et toutes les occurrences de sa
+ * série qui ne sont pas encore parties (celles déjà publiées restent). Rend le nombre de posts retirés.
+ */
+function sfPostAnnuler(string $shop, string $id, bool $serie = false): int
 {
     $p = socItem('posts', $id);
-    if ($p === null || ($p['origin'] ?? '') !== 'franchise' || array_map('strval', (array) ($p['shops'] ?? [])) !== [$shop]) { throw new HttpError(404, 'post introuvable'); }
-    if (!in_array((string) ($p['status'] ?? ''), ['À valider', 'Programmé', 'Brouillon'], true)) { throw new HttpError(409, 'Ce post est déjà publié : il ne peut plus être annulé.'); }
-    socStateSave(['changes' => ['posts' => ['delete' => [$id]]]]);
-    socLog('Franchisé · ' . (socShop($shop)['name'] ?? $shop), 'Annulation', '« ' . ($p['title'] ?? $id) . ' » retiré');
+    $aMoi = static fn (?array $x) => $x !== null && ($x['origin'] ?? '') === 'franchise' && array_map('strval', (array) ($x['shops'] ?? [])) === [$shop];
+    $ouvert = static fn (array $x) => in_array((string) ($x['status'] ?? ''), ['À valider', 'Programmé', 'Brouillon'], true);
+    if (!$aMoi($p)) { throw new HttpError(404, 'post introuvable'); }
+    $ids = [];
+    if ($serie && !empty($p['serie']['id'])) {
+        foreach (socItems('posts') as $x) { if ($aMoi($x) && ($x['serie']['id'] ?? '') === $p['serie']['id'] && $ouvert($x)) { $ids[] = (string) $x['id']; } }
+    }
+    if (!$ids) {
+        if (!$ouvert($p)) { throw new HttpError(409, 'Ce post est déjà publié : il ne peut plus être annulé.'); }
+        $ids = [$id];
+    }
+    socStateSave(['changes' => ['posts' => ['delete' => $ids]]]);
+    socLog('Franchisé · ' . (socShop($shop)['name'] ?? $shop), 'Annulation', '« ' . ($p['title'] ?? $id) . ' » retiré' . (count($ids) > 1 ? ' (' . count($ids) . ' dates de la série)' : ''));
+    return count($ids);
 }
 
 /**
@@ -850,7 +946,7 @@ function sfRoute(string $method, string $path): ?array
     sfExiger($shop);
     if ($method === 'GET' && $path === '/franchise/etat') { return [200, sfEtat($shop, $session)]; }
     if ($method === 'POST' && $path === '/franchise/posts') { return [200, ['post' => sfPostCreer($shop, body(), $session), 'quota' => ['used' => sfQuotaUtilise($shop, date('Y-m-d')), 'max' => sfRegles()['quotaSemaine']]]]; }
-    if ($method === 'POST' && preg_match('#^/franchise/posts/([\w.\-]{1,64})/annuler$#', $path, $m)) { sfPostAnnuler($shop, $m[1]); return [200, ['ok' => true]]; }
+    if ($method === 'POST' && preg_match('#^/franchise/posts/([\w.\-]{1,64})/annuler$#', $path, $m)) { return [200, ['ok' => true, 'retires' => sfPostAnnuler($shop, $m[1], !empty(body()['serie']))]]; }
     if ($method === 'GET' && $path === '/franchise/suivi') { return [200, sfSuivi($shop, (int) ($_GET['jours'] ?? 28))]; }
     if ($method === 'GET' && $path === '/franchise/vues') { return [200, sfVues($shop, (int) ($_GET['jours'] ?? 28))]; }
     if ($method === 'GET' && $path === '/franchise/instagram') { return [200, sfInstagram($shop)]; }

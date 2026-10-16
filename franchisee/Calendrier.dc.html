@@ -184,6 +184,7 @@
                 </div>
               </sc-if>
               <span style="font-size:12px;color:#666666;">{{ sel.when }} · {{ sel.channels }} · {{ sel.origin }}</span>
+              <sc-if value="{{ sel.hasSerie }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;background:#F4EFE8;color:#444444;">↻ {{ sel.serieLabel }}</span></sc-if>
               <sc-if value="{{ sel.hasOp }}" hint-placeholder-val="{{ false }}"><a href="{{ sel.opHref }}" style="align-self:flex-start;font-size:12px;font-weight:500;border-radius:999px;padding:3px 10px;background:#F4EFE8;color:#444444;text-decoration:none;">Opération · {{ sel.opName }} →</a></sc-if>
               <sc-if value="{{ sel.hasPromo }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;font-size:12px;font-weight:600;border-radius:6px;padding:3px 8px;background:#8D1D2C;color:#FFFFFF;">{{ sel.promo }}</span></sc-if>
               <sc-if value="{{ sel.hasRefus }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5;"><strong style="font-weight:600;">Refusé par le réseau :</strong> {{ sel.refus }}</div></sc-if>
@@ -203,6 +204,7 @@
               <p style="margin:0;font-size:13px;line-height:1.5;color:#1c1e21;white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;">{{ sel.text }}</p>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <sc-if value="{{ sel.hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ sel.link }}" target="_blank" rel="noopener" style="border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;background:#232220;color:#FFFFFF;text-decoration:none;">{{ sel.linkLabel }}</a></sc-if>
+                <sc-if value="{{ sel.canCancelSerie }}" hint-placeholder-val="{{ false }}"><button onClick="{{ cancelSerie }}" style="border:0.5px solid rgba(141,29,44,0.45);background:#FFFFFF;color:#8D1D2C;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Annuler toute la série</button></sc-if>
                 <sc-if value="{{ sel.canCancel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ cancel }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">{{ sel.cancelLabel }}</button></sc-if>
                 <sc-if value="{{ sel.canRedo }}" hint-placeholder-val="{{ false }}"><a href="{{ sel.redoHref }}" style="border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;background:#8D1D2C;color:#FFFFFF;text-decoration:none;">Refaire avec ce modèle</a></sc-if>
               </div>
@@ -406,7 +408,9 @@ class Component extends DCLogic {
     if ([7, 28, 90].includes(+q.get('jours'))) patch.jours = +q.get('jours');
     if (q.get('post')) patch.selId = q.get('post');
     this.setState(patch, () => this.loadMeta(false));
-    if (q.get('ok')) this.toast(q.get('ok') === 'valider' ? 'Envoyé : le réseau valide votre post avant publication.' : 'Programmé : il partira à l’heure prévue.');
+    if (q.get('ok')) { const n = +q.get('n') || 1, f = { story: 'Story', post_story: 'Post + story' }[q.get('f')] || '';
+      this.toast((f ? f + ' · ' : '') + (q.get('ok') === 'valider' ? 'Envoyé : le réseau valide ' + (n > 1 ? 'chacune des ' + n + ' dates' : 'votre post') + ' avant publication.'
+        : 'Programmé' + (n > 1 ? ' : ' + n + ' dates, chacune à l’heure prévue.' : ' : il partira à l’heure prévue.'))); }
   }
   componentDidUpdate() { this.loadMeta(false); this.loadStats(); this.loadSuivi(); this.loadVues(); }
   componentWillUnmount() { clearTimeout(this._tt); window.removeEventListener('sf-change', this._h); }
@@ -652,7 +656,7 @@ class Component extends DCLogic {
     const stColor = (p) => p.meta ? (p.status === 'Programmé' ? SF.STATUS['Programmé'] : { bg: '#E2F0E8', fg: '#0F6B4A' }) : (SF.STATUS[p.status] || SF.STATUS['Brouillon']);
     const view = (p) => {
       const c = stColor(p), acc = p.meta ? accOf(p.account) : null;
-      const who = p.meta ? (p.channel === 'Instagram' ? 'Instagram' + (acc && acc.reseau ? ' réseau' : '') : 'Ma Page') : p.own ? 'Mon post · ' + p.status : 'Réseau';
+      const who = p.meta ? (p.channel === 'Instagram' ? 'Instagram' + (acc && acc.reseau ? ' réseau' : '') : 'Ma Page') : p.own ? (p.story === 'seule' ? 'Ma story · ' : p.story === 'aussi' ? 'Mon post + story · ' : 'Mon post · ') + p.status + (p.serie ? ' · ↻ ' + p.serie.rang + '/' + p.serie.n : '') : 'Réseau';
       const bar = p.meta ? META_C[p.channel] : p.own ? (p.status === 'Refusé' || p.status === 'Échec' ? '#8D1D2C' : p.status === 'À valider' ? '#E3B155' : p.status === 'Publié' ? '#1F8A60' : '#D97B29') : '#B8B2A8';
       const r = p.stats || {}, react = p.meta && r.reactions != null ? '♥ ' + fmt(r.reactions) + (r.comments ? ' · 💬 ' + fmt(r.comments) : '') : '';
       const whoShort = p.meta ? (p.channel === 'Instagram' ? 'IG' : 'Page') : p.own ? 'moi' : 'réseau';
@@ -726,11 +730,15 @@ class Component extends DCLogic {
       const c = SF.STATUS[sp.status] || SF.STATUS['Brouillon'], L = (st.shop.langs || ['fr'])[0], tpl = st.templates.find(t => t.id === sp.template);
       const op = sp.campaign ? (st.campaigns || []).find(x => x.id === sp.campaign) : null;
       sel = { isMeta: false, title: sp.title, status: sp.own ? sp.status : 'Réseau · ' + sp.status, stBg: c.bg, stFg: c.fg, hasImg: !!sp.img, img: SF.media(sp.img), fit: 'contain',
-        when: SF.dLabel(sp.date) + ' à ' + sp.time, channels: [sp.fb ? 'Facebook' : '', sp.ig ? 'Instagram' : ''].filter(Boolean).join(' + ') || '—', origin: sp.own ? 'votre post' : 'post du réseau',
+        when: SF.dLabel(sp.date) + ' à ' + sp.time, origin: sp.own ? 'votre post' : 'post du réseau',
+        // Story seule : la story remplace le post ; post + story : les deux, à la même heure.
+        channels: ((c) => sp.story === 'seule' ? 'Story ' + c : sp.story === 'aussi' ? c + ' · post + story' : c)([sp.fb ? 'Facebook' : '', sp.ig ? 'Instagram' : ''].filter(Boolean).join(' + ') || '—'),
+        hasSerie: !!(sp.own && sp.serie), serieLabel: sp.serie ? 'Post récurrent · date ' + sp.serie.rang + ' sur ' + sp.serie.n + ' · ' + ({ jour: 'chaque jour', semaine: 'chaque semaine', '2semaines': 'toutes les 2 semaines', mois: 'chaque mois' }[sp.serie.freq] || '') : '',
+        canCancelSerie: !!(sp.own && sp.serie) && st.posts.filter(x => x.serie && x.serie.id === sp.serie.id && ['À valider', 'Programmé', 'Refusé', 'Brouillon'].includes(x.status) && SF.at(x.date, x.time) > nowMs).length > 1,
         hasPromo: !!sp.promo, promo: sp.promo ? sp.promo.label + (sp.promo.from ? ' · du ' + SF.dShort(sp.promo.from) + ' au ' + SF.dShort(sp.promo.to) : '') : '',
         hasRefus: !!sp.refus, refus: sp.refus || '', hasReason: !!sp.reason, reason: sp.reason ? 'Publication en échec : ' + sp.reason : '', pending: sp.own && sp.status === 'À valider',
         hasTiles: false, tiles: [], hasStatsNote: false, text: SF.fill(L === 'nl' && sp.textNl ? sp.textNl : sp.text, L) || '', hasLink: false,
-        canCancel: sp.own && ['À valider', 'Programmé', 'Refusé'].includes(sp.status) && SF.at(sp.date, sp.time) > nowMs, cancelLabel: sp.status === 'Refusé' ? 'Retirer' : 'Annuler ce post',
+        canCancel: sp.own && ['À valider', 'Programmé', 'Refusé'].includes(sp.status) && SF.at(sp.date, sp.time) > nowMs, cancelLabel: sp.status === 'Refusé' ? 'Retirer' : sp.serie ? 'Annuler cette date' : 'Annuler ce post',
         canRedo: sp.own && !!tpl, redoHref: SF.href('pub', 'template=' + encodeURIComponent(sp.template || '')),
         hasOp: !!op, opName: op ? op.name : '', opHref: SF.href('camp') };
     }
@@ -767,7 +775,8 @@ class Component extends DCLogic {
       dows: ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'], cells, weekCols,
       listHead: ['Date', 'Heure', '', 'Publication', 'Où', 'Type', 'Réactions', 'Statut'], listRows, listEmpty: listRows.length === 0,
       hasSel: !!sp, sel, closeSel: () => this.setState({ selId: null }),
-      cancel: async () => { if (!sp || !window.confirm('Annuler « ' + sp.title + ' » ?')) return; try { await SF.cancelPost(sp.id); this.setState({ selId: null }); this.toast('Post retiré de votre calendrier.'); } catch (e) { this.toast(e.message); } },
+      cancel: async () => { if (!sp || !window.confirm('Annuler « ' + sp.title + ' »' + (sp.serie ? ' (cette date seulement)' : '') + ' ?')) return; try { await SF.cancelPost(sp.id); this.setState({ selId: null }); this.toast('Post retiré de votre calendrier.'); } catch (e) { this.toast(e.message); } },
+      cancelSerie: async () => { if (!sp || !window.confirm('Annuler toutes les dates à venir de « ' + sp.title + ' » ?')) return; try { const n = await SF.cancelPost(sp.id, true); this.setState({ selId: null }); this.toast(n + ' date(s) retirée(s) de votre calendrier.'); } catch (e) { this.toast(e.message); } },
       upcoming, noNext: upcoming.length === 0,
       legend: [{ c: '#8D1D2C', n: 'Mes posts' }, { c: '#B8B2A8', n: 'Posts du réseau' }, { c: '#1877F2', n: 'Ma Page (lu chez Meta)' }, { c: '#DD2A7B', n: 'Instagram (lu chez Meta)' }],
       hasToast: !!s.toast, toast: s.toast,

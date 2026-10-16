@@ -545,6 +545,19 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   abonnés, gagnés / perdus, comptes touchés ; `GET /franchise/instagram/abonnes`, règle
   `voirAnalyse`) et les **interactions des 12 dernières publications** (j'aime + commentaires,
   moyenne et part des abonnés ; un clic montre la publication dans la grille).
+- **Format et répétition** (Publier) : **Post (fil)**, **Story seule** (le visuel en 9:16 part en story sur
+  la Page et l'Instagram de la boutique, 24 h, ni texte ni lien) ou **Post + story** (le post dans le fil,
+  puis la même création en story à la même heure : l'écran exporte deux visuels, celui du fil et celui de
+  l'onglet « Story » de l'aperçu). Côté file (`src/publish.php`) : canaux `fb_story` (la photo non publiée,
+  puis `/{page}/photo_stories`) et `ig_story` (`media_type` STORIES, puis `media_publish`), à côté de `fb` /
+  `ig` ; le serveur refuse une story dont le visuel n'est pas en 9:16 (`sfFormatStory`). **Post récurrent** :
+  chaque jour, chaque semaine, toutes les 2 semaines ou chaque mois, de 2 à `recurrenceMax` fois (règle du
+  réseau, 8 par défaut, 0 = fermé) : une occurrence par date, chacune un post à part (validée, publiée,
+  annulée séparément) lié aux autres par `serie` ; chaque date suit les règles (horizon, jours, heures,
+  quota de sa semaine, dates de la promotion utilisée), l'écran les liste et marque celles qui sortent des
+  règles ; une promotion datée ne se répète pas. Au calendrier : « Annuler cette date » ou « Annuler toute
+  la série » (les dates encore à venir). Règles du franchiseur : « Publier en story » (`story`) et « Post
+  récurrent : au plus N fois » (`recurrenceMax`).
 - **Promotions, bundles et formules du produit** (Publier, `GET /franchise/catalogue/offres?produit=`,
   `sfOffres`) : dès qu'un produit est choisi, celles de TFBuddy qui visent le produit ou sa catégorie
   et valent dans la boutique (comme « Créer un post » du franchiseur), avec leur portée et leurs dates.

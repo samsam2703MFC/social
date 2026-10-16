@@ -84,6 +84,8 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
         return [200, ['data' => [['id' => '111', 'name' => 'L\'Atelier By Halle', 'access_token' => 'PT111', 'instagram_business_account' => ['id' => '17841']],
                                  ['id' => '222', 'name' => 'L\'Atelier By Wavre', 'access_token' => 'PT222']]]];
     }
+    // Story d'une Page : la photo (non publiée) puis la story.
+    if ($m === 'POST' && preg_match('#^(111|222)/photo_stories$#', $path, $mm)) { return [200, ['success' => true, 'post_id' => $mm[1] . '_s' . $id()]]; }
     if ($m === 'POST' && preg_match('#^(111|222)/(photos|feed|videos)$#', $path, $mm)) {
         if (isset($restreinte[$mm[1]])) { return [400, ['error' => ['code' => 368, 'message' => 'Page restreinte']]]; }
         return [200, $mm[2] === 'photos' ? ['id' => $id(), 'post_id' => $mm[1] . '_' . $id()] : ['id' => $mm[1] . '_' . $id()]];
@@ -673,7 +675,7 @@ check('phrase libre : pas de lien', $code === 422 && str_contains($b['error'], '
 [$code, $b] = $fr('POST', '/franchise/posts', ['template' => 'fp-produit', 'product' => 'p1', 'fb' => true, 'ig' => false, 'date' => $j3, 'time' => '09:00', 'visual' => $vis]);
 $pp = socItem('posts', (string) ($b['post']['id'] ?? ''));
 check('produit du jour (sans validation) : programmé et en file, Facebook seul', $code === 200 && $pp['status'] === 'Programmé'
-    && Db::rows('SELECT canal FROM social_publication WHERE content_id = ?', [$pp['id']]) === [['canal' => 'fb']] && $b['quota']['used'] === 2);
+    && Db::rows('SELECT canal FROM social_publication WHERE content_id = ?', [$pp['id']]) === [['canal' => 'fb']] && sfQuotaUtilise('4', $j3) === 2, json_encode([$code, $b, Db::rows('SELECT canal FROM social_publication WHERE content_id = ?', [$pp['id'] ?? ''])]));
 socStateSave(['changes' => ['posts' => ['upsert' => [array_merge(socItem('posts', $pf['id']), ['status' => 'Brouillon', 'refus' => 'Remise trop forte pour cette période'])]]]]);
 [$code, $et] = $fr('GET', '/franchise/etat');
 $vue = array_values(array_filter($et['posts'], static fn ($x) => $x['id'] === $pf['id']))[0] ?? [];
@@ -1651,6 +1653,77 @@ check('promotion arrêtée dans TFBuddy avant la publication : la publication s�
 foreach ([$po, $po2] as $x) { if ($x) { socItemDelete('posts', (string) $x['id']); socUnqueue((string) $x['id']); } }
 socSettingPut('tfb_cache_promos', null, false); socSettingPut('tfb_cache_catalogue_4', null, false);
 sfReglesPut($regAvant);
+unset($_COOKIE[SF_COOKIE]);
+
+echo "Espace franchisé : story seule, post + story, post récurrent\n";
+$regAvant = sfRegles(); $igUniqueAvant = socSetting('instagram_unique');
+socSettingPut('instagram_unique', false, false);
+sfReglesPut(array_merge($regAvant, ['actif' => true, 'quotaSemaine' => 50, 'horizonJours' => 60, 'validation' => 'modele', 'jours' => [0, 1, 2, 3, 4, 5, 6], 'heureMin' => '07:00', 'heureMax' => '20:00', 'fb' => true, 'ig' => true, 'story' => true, 'recurrenceMax' => 8]));
+$png = static function (int $w, int $h): string { $im = imagecreatetruecolor($w, $h); imagefill($im, 0, 0, imagecolorallocate($im, 141, 29, 44)); ob_start(); imagepng($im); return 'data:image/png;base64,' . base64_encode((string) ob_get_clean()); };
+$visCarre = $png(108, 108); $visStory = $png(108, 192);
+sfSessionOuvrir(['4'], 'Test stories', 'code');
+$jj = static fn (int $n) => date('Y-m-d', strtotime(($n >= 0 ? '+' : '') . $n . ' days'));
+$base = ['template' => 'fp-produit', 'product' => 'p1', 'fb' => true, 'ig' => true, 'date' => $jj(3), 'time' => '10:00'];
+$lignes = static fn (string $id) => array_map(static fn ($r) => $r['shop_id'] . ':' . $r['canal'], Db::rows('SELECT shop_id, canal FROM social_publication WHERE content_id = ? ORDER BY canal', [$id]));
+[$code, $b] = $fr('POST', '/franchise/posts', array_merge($base, ['format' => 'story', 'visual' => $visStory]));
+$ps = socItem('posts', (string) ($b['post']['id'] ?? ''));
+check('story seule : le visuel 9:16 part en story sur la Page et l’Instagram, pas dans le fil', $code === 200 && ($ps['story'] ?? null) === 'seule' && ($b['post']['story'] ?? null) === 'seule'
+    && $lignes($ps['id']) === ['4:fb_story', '4:ig_story'], json_encode([$code, $b, $ps ? $lignes($ps['id']) : null]));
+Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = ?", [$ps['id']]);
+$appels = [];
+socRunQueue($ps['id']);
+$photoStory = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === '111/photos'));
+$fbStory = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === '111/photo_stories'));
+$igStory = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === '17841/media'));
+check('story Facebook : la photo non publiée, puis la story (photo_stories) ; story Instagram : media_type STORIES, puis publication',
+    ($photoStory[0][2]['published'] ?? null) === 'false' && !empty($fbStory[0][2]['photo_id']) && ($igStory[0][2]['media_type'] ?? '') === 'STORIES'
+    && str_contains((string) ($igStory[0][2]['image_url'] ?? ''), 'uploads/') && !isset($igStory[0][2]['caption'])
+    && (bool) array_filter($appels, static fn ($a) => $a[1] === '17841/media_publish') && socItem('posts', $ps['id'])['status'] === 'Publié', json_encode(array_column($appels, 1)));
+[$code, $b] = $fr('POST', '/franchise/posts', array_merge($base, ['format' => 'post_story', 'ig' => false, 'visual' => $visCarre, 'visualStory' => $visStory, 'time' => '11:00']));
+$pps = socItem('posts', (string) ($b['post']['id'] ?? ''));
+check('post + story : le post dans le fil, puis sa story (son propre visuel 9:16, écrit en fichier)', $code === 200 && ($pps['story'] ?? null) === 'aussi'
+    && str_starts_with((string) $pps['storyImg'], 'uploads/') && $pps['storyImg'] !== $pps['img'] && $lignes($pps['id']) === ['4:fb', '4:fb_story'], json_encode([$code, $b]));
+Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = ?", [$pps['id']]);
+$appels = [];
+socRunQueue($pps['id']);
+$ph = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === '111/photos'));
+check('post + story : la photo du post (avec son texte), puis la photo de la story (9:16, non publiée)', count($ph) === 2 && isset($ph[0][2]['caption'])
+    && str_ends_with((string) $ph[1][2]['url'], basename((string) $pps['storyImg'])) && ($ph[1][2]['published'] ?? null) === 'false', json_encode($ph));
+$sfRefus = static function (array $patch, string $attendu) use ($fr, $base, $visStory): bool {
+    [$code, $b] = $fr('POST', '/franchise/posts', array_merge($base + ['visual' => $visStory], $patch));
+    return $code === 422 && str_contains((string) ($b['error'] ?? ''), $attendu);
+};
+check('story : un visuel qui n’est pas au format story (9:16) est refusé', $sfRefus(['format' => 'story', 'visual' => $visCarre], 'format story'));
+sfReglesPut(array_merge(sfRegles(), ['story' => false]));
+check('stories fermées par le réseau : refusées', $sfRefus(['format' => 'story'], 'n’ouvre pas les stories'));
+sfReglesPut(array_merge(sfRegles(), ['story' => true]));
+
+[$code, $b] = $fr('POST', '/franchise/posts', array_merge($base, ['format' => 'post', 'ig' => false, 'visual' => $visCarre, 'time' => '12:00', 'recurrence' => ['freq' => 'semaine', 'n' => 3]]));
+$serie = array_values(array_filter(socItems('posts'), static fn ($x) => ($x['serie']['id'] ?? '') !== '' && ($x['serie']['id'] ?? '') === ($b['post']['serie']['id'] ?? '-')));
+usort($serie, static fn ($a, $c) => strcmp($a['date'], $c['date']));
+check('post récurrent : chaque semaine, 3 fois — un post par date, liés par leur série, chacun dans la file', $code === 200 && count($serie) === 3
+    && array_column($serie, 'date') === [$jj(3), $jj(10), $jj(17)] && array_column(array_column($serie, 'serie'), 'rang') === [1, 2, 3]
+    && !array_filter($serie, static fn ($x) => $lignes($x['id']) !== ['4:fb']), json_encode([$code, $b, array_column($serie, 'date')]));
+check('dates d’une série : chaque mois, le même jour (borné à la fin du mois) ; toutes les 2 semaines', sfDatesSerie('2027-01-31', 'mois', 3) === ['2027-01-31', '2027-02-28', '2027-03-31']
+    && sfDatesSerie('2027-01-04', '2semaines', 3) === ['2027-01-04', '2027-01-18', '2027-02-01'] && sfDatesSerie('2027-01-04', 'jour', 2) === ['2027-01-04', '2027-01-05']);
+check('série au-delà de l’horizon du réseau : refusée', $sfRefus(['format' => 'post', 'visual' => $visCarre, 'time' => '13:00', 'recurrence' => ['freq' => 'semaine', 'n' => 10]], 'Répétez le post de 2 à 8 fois')
+    && $sfRefus(['format' => 'post', 'visual' => $visCarre, 'time' => '13:00', 'recurrence' => ['freq' => 'mois', 'n' => 4]], 'au-delà de 60 jours'));
+sfReglesPut(array_merge(sfRegles(), ['jours' => [1, 2, 3, 4, 5], 'quotaSemaine' => 50]));
+$lundi = date('Y-m-d', strtotime('next monday', strtotime('+2 days')));
+check('série sur un jour fermé (le week-end) : refusée avec la date', $sfRefus(['format' => 'post', 'visual' => $visCarre, 'date' => $lundi, 'time' => '13:00', 'recurrence' => ['freq' => 'jour', 'n' => 7]], '(sam.) n’est pas ouvert'));
+sfReglesPut(array_merge(sfRegles(), ['jours' => [0, 1, 2, 3, 4, 5, 6], 'quotaSemaine' => 2]));
+check('série qui dépasse le quota d’une semaine : refusée', $sfRefus(['format' => 'post', 'visual' => $visCarre, 'date' => $lundi, 'time' => '14:00', 'recurrence' => ['freq' => 'jour', 'n' => 3]], 'Quota atteint'));
+sfReglesPut(array_merge(sfRegles(), ['quotaSemaine' => 50]));
+check('une promotion datée ne se répète pas', $sfRefus(['template' => 'fp-remise', 'format' => 'post', 'visual' => $visCarre, 'discount' => 20, 'from' => $jj(3), 'to' => $jj(5), 'recurrence' => ['freq' => 'semaine', 'n' => 2]], 'ne se répète pas'));
+sfReglesPut(array_merge(sfRegles(), ['recurrenceMax' => 0]));
+check('posts récurrents fermés par le réseau : refusés', $sfRefus(['format' => 'post', 'visual' => $visCarre, 'recurrence' => ['freq' => 'semaine', 'n' => 2]], 'n’ouvre pas les posts récurrents'));
+sfReglesPut(array_merge(sfRegles(), ['recurrenceMax' => 8]));
+[$code, $an] = $fr('POST', '/franchise/posts/' . $serie[1]['id'] . '/annuler', ['shop' => '4']);
+check('annuler une date de la série : celle-là seule', $code === 200 && $an['retires'] === 1 && socItem('posts', $serie[1]['id']) === null && socItem('posts', $serie[2]['id']) !== null);
+[$code, $an] = $fr('POST', '/franchise/posts/' . $serie[0]['id'] . '/annuler', ['shop' => '4', 'serie' => true]);
+check('annuler toute la série : les dates encore à venir', $code === 200 && $an['retires'] === 2 && socItem('posts', $serie[0]['id']) === null && socItem('posts', $serie[2]['id']) === null);
+foreach ([$ps, $pps] as $x) { if ($x) { Db::exec('DELETE FROM social_publication WHERE content_id = ?', [$x['id']]); socItemDelete('posts', (string) $x['id']); } }
+sfReglesPut($regAvant); socSettingPut('instagram_unique', $igUniqueAvant, false);
 unset($_COOKIE[SF_COOKIE]);
 
 echo "API HTTP (routeur)\n";

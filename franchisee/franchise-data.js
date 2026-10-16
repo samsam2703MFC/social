@@ -38,7 +38,7 @@
 
   // ---------- démonstration ----------
   const TEMPLATES = [{"id": "fp-produit", "order": 1, "name": "Produit du jour", "description": "Mettre un produit de votre vitrine en avant, à son prix.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "{produit}", "text": "{produit} : {prix} € chez L’Atelier By {ville}. Ouvert {horaires}.", "textNl": "{produit}: {prix} € bij L’Atelier By {ville}. Open {horaires}.", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "choix", "visual": {"style": "epure", "eyebrow": "Aujourd’hui en vitrine", "eyebrowNl": "Vandaag in de etalage"}}, {"id": "fp-remise", "order": 2, "name": "Promotion en %", "description": "Une remise sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{produit} -{remise} %", "text": "-{remise} % sur {produit} chez L’Atelier By {ville}, du {du} au {au}. Ouvert {horaires}.", "textNl": "-{remise} % op {produit} bij L’Atelier By {ville}, van {du} tot {au}. Open {horaires}.", "product": "choix", "promo": {"kind": "remise", "min": 10, "max": 30}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "ruby", "eyebrow": "Promotion", "eyebrowNl": "Promotie"}}, {"id": "fp-offre", "order": 3, "name": "Offre spéciale", "description": "4+1, 2+1… sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{offre} · {produit}", "text": "{offre} sur {produit} chez L’Atelier By {ville}, du {du} au {au} !", "textNl": "{offre} op {produit} bij L’Atelier By {ville}, van {du} tot {au}!", "product": "choix", "promo": {"kind": "offre", "offres": ["4+1", "2+1", "1 acheté = 1 offert"]}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "abricot", "eyebrow": "Offre spéciale", "eyebrowNl": "Speciale actie"}}, {"id": "fp-evenement", "order": 4, "name": "Événement en boutique", "description": "Une dégustation, une animation, un horaire spécial.", "active": true, "type": "Événement local", "fb": true, "ig": true, "validation": true, "title": "Événement à {ville}", "text": "Chez L’Atelier By {ville} : {libre}", "textNl": "Bij L’Atelier By {ville}: {libre}", "product": "aucun", "promo": {"kind": "aucune"}, "period": false, "free": 90, "photo": "upload", "visual": {"style": "noir", "eyebrow": "En boutique", "eyebrowNl": "In de winkel"}}, {"id": "fp-vitrine", "order": 5, "name": "Nouveau en vitrine", "description": "Votre photo d’un produit qui arrive.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "Nouveau : {produit}", "text": "Nouveau dans notre vitrine à {ville} : {produit}. À découvrir {horaires} !", "textNl": "Nieuw in onze etalage in {ville}: {produit}. Te ontdekken {horaires}!", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "upload", "visual": {"style": "plein", "eyebrow": "Nouveau", "eyebrowNl": "Nieuw"}}];
-  const RULES = {"actif": true, "validation": "modele", "quotaSemaine": 3, "delaiMinHeures": 24, "horizonJours": 30, "jours": [1, 2, 3, 4, 5, 6, 0], "heureMin": "07:00", "heureMax": "20:00", "fb": true, "ig": true, "remiseMax": 30, "promoDureeMax": 14, "voirReseau": true, "voirCampagnes": true, "voirResultats": true, "voirSuivi": true, "voirAnalyse": true, "persoVisuel": true, "message": "Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By."};
+  const RULES = {"actif": true, "validation": "modele", "quotaSemaine": 3, "delaiMinHeures": 24, "horizonJours": 30, "jours": [1, 2, 3, 4, 5, 6, 0], "heureMin": "07:00", "heureMax": "20:00", "fb": true, "ig": true, "remiseMax": 30, "promoDureeMax": 14, "voirReseau": true, "voirCampagnes": true, "voirResultats": true, "voirSuivi": true, "voirAnalyse": true, "story": true, "recurrenceMax": 8, "persoVisuel": true, "message": "Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By."};
   // Un modèle créé depuis un post du réseau (« Créer un post » → « Enregistrer comme modèle franchisé ») : visuel figé.
   TEMPLATES.push({ id: 'ft-automne', order: 6, name: 'Gamme automne (visuel du réseau)', description: 'Le post du réseau, prêt à publier sur votre Page.', active: true, type: 'Gamme saisonnière',
     fb: true, ig: false, validation: false, title: 'Gamme automne', text: 'La gamme automne est arrivée chez L’Atelier By {ville} ! Ouvert {horaires}.\n\n{libre}', textNl: 'Het herfstgamma is er bij L’Atelier By {ville}! Open {horaires}.\n\n{libre}',
@@ -143,18 +143,49 @@
     const tpl = STATE.templates.find(t => t.id === body.template), v = window.SFVisuel.vars(tpl, Object.assign({}, body, { product: STATE.catalogue.find(p => p.id === body.product) }), 'fr');
     const r = STATE.rules, statut = r.validation === 'toujours' || (r.validation === 'modele' && tpl.validation) ? 'À valider' : 'Programmé';
     const k = (tpl.promo || {}).kind || 'aucune';
-    const post = { id: 'demo' + Date.now(), date: body.date, time: body.time, title: window.SFVisuel.fill(tpl.title || tpl.name, v), status: statut, own: true, type: tpl.type, img: body.visual || ((tpl.visual || {}).style === 'fixe' ? media((tpl.visual.media || [])[0] ? tpl.visual.media[0].src : tpl.visual.src) : ''), text: window.SFVisuel.fill(tpl.text, v), textNl: window.SFVisuel.fill(tpl.textNl, v),
+    const dates = body.recurrence && body.recurrence.freq && body.recurrence.freq !== 'une' ? datesSerie(body.date, body.recurrence.freq, +body.recurrence.n) : [body.date];
+    const post = { id: 'demo' + Date.now(), date: body.date, story: { story: 'seule', post_story: 'aussi' }[body.format] || null, time: body.time, title: window.SFVisuel.fill(tpl.title || tpl.name, v), status: statut, own: true, type: tpl.type, img: body.visual || ((tpl.visual || {}).style === 'fixe' ? media((tpl.visual.media || [])[0] ? tpl.visual.media[0].src : tpl.visual.src) : ''), text: window.SFVisuel.fill(tpl.text, v), textNl: window.SFVisuel.fill(tpl.textNl, v),
       fb: !!body.fb, ig: !!body.ig, template: tpl.id, refus: null, reason: null, campaign: tpl.campaign || null, link: body.link || 'aucun',
       promo: k === 'aucune' ? null : { kind: k, value: k === 'remise' ? +body.discount : k === 'offre' ? body.offer : body.promoPrice, label: k === 'remise' ? '-' + body.discount + ' %' : k === 'offre' ? body.offer : body.promoPrice + ' €', from: body.from || null, to: body.to || null } };
-    STATE.posts = STATE.posts.concat(post); STATE.quota.used++; demoSave(STATE); emit(); return post;
+    const serie = dates.length > 1 ? { id: 's' + post.id, freq: body.recurrence.freq, n: dates.length } : null;
+    const posts = dates.map((d, i) => Object.assign({}, post, { id: post.id + (i ? '-' + (i + 1) : ''), date: d, serie: serie ? Object.assign({ rang: i + 1 }, serie) : null }));
+    STATE.posts = STATE.posts.concat(posts); STATE.quota.used++; demoSave(STATE); emit(); return posts[0];
   }
-  async function cancelPost(id) {
-    if (!DEMO) { await api('POST', '/franchise/posts/' + encodeURIComponent(id) + '/annuler', { shop: STATE.shop.id }); }
-    const p = STATE.posts.find(x => x.id === id);
-    STATE.posts = STATE.posts.filter(x => x.id !== id);
+  /** Annule un post non publié ; `serie` : et les dates encore à venir de sa série. */
+  async function cancelPost(id, serie) {
+    if (!DEMO) { await api('POST', '/franchise/posts/' + encodeURIComponent(id) + '/annuler', { shop: STATE.shop.id, serie: !!serie }); }
+    const p = STATE.posts.find(x => x.id === id), sid = serie && p && p.serie ? p.serie.id : null;
+    const out = STATE.posts.filter(x => sid ? x.serie && x.serie.id === sid && ['À valider', 'Programmé', 'Refusé', 'Brouillon'].includes(x.status) : x.id === id);
+    STATE.posts = STATE.posts.filter(x => !out.includes(x));
     if (p && p.status !== 'Refusé' && STATE.quota.used > 0) STATE.quota.used--;
     if (DEMO) demoSave(STATE);
     emit();
+    return out.length;
+  }
+  /** Les dates d'un post récurrent (comme le serveur) : chaque jour, semaine, 2 semaines ou mois (même jour, borné). */
+  function datesSerie(date, freq, n) {
+    const out = [], d0 = d2(date);
+    for (let k = 0; k < n; k++) {
+      if (freq === 'mois') { const y = d0.getFullYear(), m = d0.getMonth() + k; out.push(iso(new Date(y, m, Math.min(d0.getDate(), new Date(y, m + 1, 0).getDate())))); }
+      else out.push(addDays(date, k * ({ jour: 1, semaine: 7, '2semaines': 14 }[freq] || 7)));
+    }
+    return out;
+  }
+  const lundi = (d) => addDays(d, -((d2(d).getDay() + 6) % 7));
+  /** Chaque date d'une série face aux règles du réseau (horizon, jours, quota de sa semaine, promotion) : [{date, rang, ok, motif}]. */
+  function serieDates(b) {
+    const r = STATE.rules, rec = b.recurrence;
+    if (!rec || !rec.freq || rec.freq === 'une' || !b.date) return [];
+    const parSemaine = {}, api = b.offre && b.offre.genre === 'promotion' ? b.offre : null;
+    const deja = (d) => STATE.posts.filter(p => p.own && p.status !== 'Refusé' && p.date && lundi(p.date) === lundi(d)).length;
+    return datesSerie(b.date, rec.freq, Math.max(2, +rec.n || 2)).map((d, k) => {
+      const w = lundi(d); parSemaine[w] = (parSemaine[w] || 0) + 1;
+      const motif = at(d, b.time || '12:00') > Date.now() + r.horizonJours * 86400000 ? 'au-delà de ' + r.horizonJours + ' jours'
+        : !(r.jours || []).includes(d2(d).getDay()) ? 'jour fermé à la publication'
+        : deja(d) + parSemaine[w] > r.quotaSemaine ? 'quota de la semaine atteint (' + r.quotaSemaine + ')'
+        : api && ((api.au && api.au < d) || (api.du && api.du > d)) ? 'la promotion ne vaut pas ce jour-là' : '';
+      return { date: d, rang: k + 1, ok: !motif, motif };
+    });
   }
 
   /** Les règles du réseau appliquées à une saisie (l'écran les montre ; le serveur les impose). */
@@ -191,6 +222,18 @@
       if (/https?:\/\/|www\.|@\w|#\w/i.test(f)) err.push('Pas de lien, de compte (@) ni de hashtag.');
     }
     if (tpl.photo === 'upload' && !b.photo) err.push('Ajoutez votre photo.');
+    // Story seule, ou post + story ; post récurrent.
+    if (b.format && b.format !== 'post') {
+      if (r.story === false) err.push('Le réseau n’ouvre pas les stories dans cet espace.');
+      if ((tpl.visual || {}).style === 'fixe') err.push('Ce modèle a un visuel du réseau : il ne part qu’en post.');
+    }
+    const rec = b.recurrence;
+    if (rec && rec.freq && rec.freq !== 'une') {
+      if (!(+r.recurrenceMax >= 2)) err.push('Le réseau n’ouvre pas les posts récurrents dans cet espace.');
+      else if (!(+rec.n >= 2 && +rec.n <= +r.recurrenceMax)) err.push('Répétez le post de 2 à ' + r.recurrenceMax + ' fois.');
+      else if (tpl.period) err.push('Une promotion datée ne se répète pas : publiez-la une fois.');
+      else { const ko = serieDates(b).filter(x => !x.ok); if (ko.length) err.push('Le ' + dLabel(ko[0].date) + ' : ' + ko[0].motif + (ko.length > 1 ? ' (et ' + (ko.length - 1) + ' autre(s) date(s))' : '') + '.'); }
+    }
     return err;
   }
   /** Ferme l'aperçu du franchiseur (la session du gérant, elle, est celle de l'ERP). */
@@ -381,7 +424,7 @@
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, calendrier, calStats, operations, webshopUrl, photoLocale,
+  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, webshopUrl, photoLocale,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();

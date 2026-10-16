@@ -185,6 +185,26 @@ function socCanaux(array $post, string $shopId): array
 }
 
 /**
+ * Les canaux d'une boutique pour un post, stories comprises : `story` = 'seule' (la story remplace le
+ * post dans le fil : fb_story / ig_story) ou 'aussi' (le post, puis sa story) ; sinon fb / ig.
+ */
+function socCanauxPost(array $post, string $shopId): array
+{
+    $base = socCanaux($post, $shopId);
+    return match ((string) ($post['story'] ?? '')) {
+        'seule' => array_map(static fn ($c) => $c . '_story', $base),
+        'aussi' => array_merge($base, array_map(static fn ($c) => $c . '_story', $base)),
+        default => $base,
+    };
+}
+
+/** Le nom d'un canal de la file, tel que le calendrier le montre. */
+function socCanalNom(string $canal): string
+{
+    return match ($canal) { 'ig' => 'Instagram', 'fb_story' => 'Story Facebook', 'ig_story' => 'Story Instagram', default => 'Facebook' };
+}
+
+/**
  * (Re)met un post dans la file. Les lignes déjà publiées sont gardées ; les
  * autres sont recalculées (date, boutiques, canaux, étalement).
  */
@@ -201,22 +221,23 @@ function socQueue(array $post, bool $maintenant = false): int
     $k = 0;
     // Instagram unique : le post part une seule fois sur le compte de la marque (dès qu'une boutique visée l'a coché).
     $unique = socIgUnique();
-    $igReseau = false;
+    $igReseau = [];
     $tests = $unique ? array_column(array_filter(socShops(), static fn ($s) => !empty($s['test'])), 'id') : [];
     foreach ($shops as $i => $sid) {
         $off = ($n > 1 && $spread > 0 && !$maintenant) ? (int) round($i * $spread / ($n - 1) * 60) : 0;
-        foreach (socCanaux($post, (string) $sid) as $c) {
+        foreach (socCanauxPost($post, (string) $sid) as $c) {
             // Instagram unique : un magasin test ne publie jamais sur le compte du réseau.
-            if ($c === 'ig' && $unique) { if (!in_array((string) $sid, $tests, true)) { $igReseau = true; } continue; }
+            if (str_starts_with($c, 'ig') && $unique) { if (!in_array((string) $sid, $tests, true)) { $igReseau[$c] = true; } continue; }
             if (isset($deja[$sid . '|' . $c])) { continue; }
             Db::exec('INSERT INTO social_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
                 [$id, (string) $sid, $c, date('Y-m-d H:i:s', $t0 + $off), 'attente', date('Y-m-d H:i:s')]);
             $k++;
         }
     }
-    if ($igReseau && !isset($deja['marque|ig'])) {
+    foreach (array_keys($igReseau) as $c) {
+        if (isset($deja['marque|' . $c])) { continue; }
         Db::exec('INSERT INTO social_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
-            [$id, 'marque', 'ig', date('Y-m-d H:i:s', $t0), 'attente', date('Y-m-d H:i:s')]);
+            [$id, 'marque', $c, date('Y-m-d H:i:s', $t0), 'attente', date('Y-m-d H:i:s')]);
         $k++;
     }
     return $k;
@@ -272,13 +293,7 @@ function socPublishIg(array $post, array $shop, string $message): string
     if ($video !== null) {
         $c = Meta::call('POST', $ig . '/media', ['media_type' => 'REELS', 'video_url' => socPublicUrl($video), 'caption' => $message], $tok);
         $cid = (string) ($c['id'] ?? '');
-        // La vidéo se traite chez Meta avant de pouvoir être publiée.
-        for ($i = 0; $i < 20; $i++) {
-            $s = Meta::call('GET', $cid, ['fields' => 'status_code'], $tok);
-            if (($s['status_code'] ?? '') === 'FINISHED') { break; }
-            if (($s['status_code'] ?? '') === 'ERROR') { throw new MetaError('Instagram a refusé la vidéo', 2207026); }
-            sleep(3);
-        }
+        socIgAttendre($cid, $tok);
     } elseif (count($imgs) > 1) {
         $kids = [];
         foreach (array_slice($imgs, 0, 10) as $u) {
@@ -297,12 +312,63 @@ function socPublishIg(array $post, array $shop, string $message): string
     return (string) ($r['id'] ?? '');
 }
 
+/** Une vidéo se traite chez Meta avant de pouvoir être publiée : on attend que le conteneur soit prêt. */
+function socIgAttendre(string $cid, ?string $tok): void
+{
+    for ($i = 0; $i < 20; $i++) {
+        $s = Meta::call('GET', $cid, ['fields' => 'status_code'], $tok);
+        if (($s['status_code'] ?? '') === 'FINISHED') { return; }
+        if (($s['status_code'] ?? '') === 'ERROR') { throw new MetaError('Instagram a refusé la vidéo', 2207026); }
+        if (!Meta::$sleep) { sleep(3); } else { (Meta::$sleep)(3); }
+    }
+}
+
+/** L'image d'une story : son visuel 9:16 (`storyImg`, post + story), sinon le visuel du post (story seule). */
+function socStoryMedia(array $post): array
+{
+    [$imgs, $video] = socMedias($post);
+    $img = (string) ($post['storyImg'] ?? '');
+    if ($img !== '' && !str_starts_with($img, 'data:')) { return [$img, null]; }
+    return [$imgs[0] ?? null, $imgs ? null : $video];
+}
+
+/**
+ * Publie une story sur une Page Facebook : la photo d'abord, non publiée, puis la story
+ * (`/{page}/photo_stories`). Une story n'a ni texte ni lien : tout est sur le visuel.
+ */
+function socPublishFbStory(array $post, array $shop): string
+{
+    $pid = (string) $shop['ids']['page_id'];
+    if ($pid === '') { throw new MetaError('page_id non renseigné pour ' . $shop['name'], 100); }
+    $tok = Meta::pageToken($pid);
+    [$img] = socStoryMedia($post);
+    if ($img === null) { throw new MetaError('une story Facebook demande une image', 100); }
+    $p = Meta::call('POST', $pid . '/photos', ['url' => socPublicUrl($img), 'published' => false], $tok);
+    $r = Meta::call('POST', $pid . '/photo_stories', ['photo_id' => (string) ($p['id'] ?? '')], $tok);
+    return (string) ($r['post_id'] ?? $r['id'] ?? '');
+}
+
+/** Publie une story Instagram (`media_type` STORIES : image, ou vidéo traitée d'abord). */
+function socPublishIgStory(array $post, array $shop): string
+{
+    $ig = (string) $shop['ids']['instagram_user_id'];
+    if ($ig === '') { throw new MetaError('compte Instagram non rattaché à ' . $shop['name'], 100); }
+    $tok = socIgToken($ig, (string) $shop['ids']['page_id']);
+    [$img, $video] = socStoryMedia($post);
+    if ($img === null && $video === null) { throw new MetaError('une story Instagram demande une image ou une vidéo', 100); }
+    $c = Meta::call('POST', $ig . '/media', $img !== null ? ['media_type' => 'STORIES', 'image_url' => socPublicUrl($img)] : ['media_type' => 'STORIES', 'video_url' => socPublicUrl((string) $video)], $tok);
+    $cid = (string) ($c['id'] ?? '');
+    if ($img === null) { socIgAttendre($cid, $tok); }
+    $r = Meta::call('POST', $ig . '/media_publish', ['creation_id' => $cid], $tok);
+    return (string) ($r['id'] ?? '');
+}
+
 /** Le motif lisible d'une erreur Meta, avec son code — ce que montre le calendrier. */
 function socMotif(MetaError $e, string $canal): string
 {
     $code = $e->metaCode;
     $quoi = match (true) {
-        $code === 190 => ($canal === 'ig' ? 'Token Instagram' : 'Token de la Page') . ' expiré ou non attribué',
+        $code === 190 => (str_starts_with($canal, 'ig') ? 'Token Instagram' : 'Token de la Page') . ' expiré ou non attribué',
         $code === 368 => 'Page restreinte par Meta',
         $code === 2 || $e->transient => 'Délai dépassé côté Graph API — relance possible',
         default => 'Refus de Meta',
@@ -334,7 +400,10 @@ function socRunQueue(?string $postId = null, int $max = 60): array
             // Les offres du post encore exactes (prix, promotion) dans TFBuddy, sinon la publication s'arrête.
             if ((string) $r['shop_id'] !== 'marque' && ($ecarts = socVerifierOffres($post, (string) $r['shop_id']))) { throw new SocBlocage(implode(' ; ', $ecarts)); }
             $msg = socMessage($post, $shop, (string) $r['canal']);
-            $mid = $r['canal'] === 'ig' ? socPublishIg($post, $shop, $msg) : socPublishFb($post, $shop, $msg);
+            $mid = match ((string) $r['canal']) {
+                'ig' => socPublishIg($post, $shop, $msg), 'fb_story' => socPublishFbStory($post, $shop), 'ig_story' => socPublishIgStory($post, $shop),
+                default => socPublishFb($post, $shop, $msg),
+            };
             Db::exec("UPDATE social_publication SET statut = 'publie', meta_id = ?, erreur = NULL, code_erreur = NULL, maj_le = ? WHERE id = ?", [$mid, date('Y-m-d H:i:s'), $r['id']]);
         } catch (SocBlocage $e) {
             Db::exec("UPDATE social_publication SET statut = 'echec', erreur = ?, code_erreur = 0, maj_le = ? WHERE id = ?",
@@ -373,7 +442,7 @@ function socSyncPostStatus(string $postId): ?array
     $okShops = []; $ko = [];
     foreach ($rows as $r) {
         if ($r['statut'] === 'publie') { $okShops[$r['shop_id']] = true; }
-        else { $ko[] = ['shop' => (string) $r['shop_id'], 'channel' => $r['canal'] === 'ig' ? 'Instagram' : 'Facebook', 'reason' => (string) $r['erreur'], 'code' => (int) $r['code_erreur']]; }
+        else { $ko[] = ['shop' => (string) $r['shop_id'], 'channel' => socCanalNom((string) $r['canal']), 'reason' => (string) $r['erreur'], 'code' => (int) $r['code_erreur']]; }
     }
     foreach ($ko as $k) { unset($okShops[$k['shop']]); }
     $shopsKo = array_values(array_unique(array_column($ko, 'shop')));
@@ -445,9 +514,9 @@ function socPostSupprimer(string $id, bool $chezMeta): array
         foreach (socShops() as $s) { $shops[$s['id']] = $s; }
         foreach ($lignes as $r) {
             $sid = (string) $r['shop_id'];
-            $ig = $r['canal'] === 'ig';
+            $ig = str_starts_with((string) $r['canal'], 'ig');
             $shop = $sid === 'marque' ? socIgCompteReseau($post) : ($shops[$sid] ?? null);
-            $quoi = ['shop' => $sid, 'shopName' => $sid === 'marque' ? 'Instagram du réseau' : (string) ($shop['name'] ?? $sid), 'channel' => $ig ? 'Instagram' : 'Facebook'];
+            $quoi = ['shop' => $sid, 'shopName' => $sid === 'marque' ? 'Instagram du réseau' : (string) ($shop['name'] ?? $sid), 'channel' => socCanalNom((string) $r['canal'])];
             try {
                 if ($shop === null) { throw new MetaError('boutique inconnue ou fermée', 0); }
                 $tok = $ig ? socIgToken((string) $shop['ids']['instagram_user_id'], (string) $shop['ids']['page_id']) : Meta::pageToken((string) $shop['ids']['page_id']);
