@@ -101,3 +101,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-10-16T12:51:37Z meta app mode live
 2026-10-16T13:10:11Z publicites budget et statut
 2026-10-16T13:39:42Z franchise publicites en cours
+2026-10-16T13:42:11Z franchise publicites rangement
