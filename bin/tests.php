@@ -197,6 +197,9 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
             . '[{"deprecated_interest_id":"6003999001","deprecated_interest_name":"P\\u00e2tisserie","alternative_interest_id":"6003436950375","alternative_interest_name":"Restaurants"}]']]];
     }
     if ($m === 'POST' && preg_match('#^act_\d+/adsets$#', $path) && str_contains((string) ($p['targeting'] ?? ''), '6003000666')) { return [400, ['error' => ['code' => 100, 'message' => 'Invalid parameter']]]; }
+    if ($m === 'POST' && preg_match('#^act_\d+/adcreatives$#', $path) && ($p['name'] ?? '') === 'Créa · App en dev') {
+        return [400, ['error' => ['code' => 100, 'error_subcode' => 1885183, 'message' => 'Invalid parameter', 'error_user_msg' => 'La publication du contenu publicitaire de la publicité a été créé par une application en cours de développement. Elle doit être publique pour créer cette publicité.']]];
+    }
     if ($m === 'GET' && $path === 'search') { return [200, ['data' => ($p['type'] ?? '') === 'adlocale' ? [['key' => 9, 'name' => 'French (All)'], ['key' => 14, 'name' => 'Dutch']] : [['id' => '6003107902', 'name' => $p['q']]]]]; }
     // Campagnes déjà présentes chez Meta (récupération) : seul act_2001 en a.
     if ($m === 'GET' && $path === 'act_2001/insights' && ($p['level'] ?? '') === 'ad') { return [200, ['data' => $GLOBALS['META_DEPENSES'] ?? []]]; }
@@ -625,6 +628,8 @@ socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a12', 'name' => 'It
     'start' => $spec['start'], 'end' => $spec['end'], 'status' => 'En revue', 'radius' => 8, 'post' => 'd1', 'spec' => array_merge($spec3, ['shops' => ['5'], 'variants' => [], 'cta' => 'GET_DIRECTIONS'])]]]]]);
 $cta12 = json_decode((string) ($appelsVers('#^act_\d+/adcreatives$#')[0][2]['object_story_spec'] ?? '{}'), true);
 $lien12 = (string) ($cta12['link_data']['child_attachments'][0]['call_to_action']['value']['link'] ?? $cta12['link_data']['call_to_action']['value']['link'] ?? '');
+try { Meta::call('POST', 'act_1002/adcreatives', ['name' => 'Créa · App en dev']); $devMsg = ''; } catch (MetaError $e) { $devMsg = $e->getMessage(); }
+check('app Meta en développement : le refus dit quoi faire (mode Live)', str_contains($devMsg, 'en cours de développement') && str_contains($devMsg, 'mode Live'), $devMsg);
 check('domaine de conversion : celui du lien (webshop.atelierby.be → atelierby.be)', socDomaineConversion('https://webshop.atelierby.be/?shop=4') === 'atelierby.be' && socDomaineConversion('https://www.latelierby.be') === 'latelierby.be' && socDomaineConversion('') === '');
 check('bouton « Itinéraire » : position de la boutique (fbgeo://), pas une adresse web', str_starts_with($lien12, 'fbgeo://') && socItem('ads', 'a12')['status'] !== 'Refusée', $lien12);
 socStateSave(['changes' => ['ads' => ['delete' => ['a12']]]]);

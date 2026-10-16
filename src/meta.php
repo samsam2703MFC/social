@@ -114,6 +114,10 @@ final class Meta
                 throw new MetaError('limite d’appels Meta atteinte : ' . $msg, $ec, $code, true);
             }
             if ($code === 0) { throw new MetaError('Meta injoignable : ' . $msg, 2, 0, true); }
+            // L'app Meta du module en mode Développement : Meta le dit sans dire quoi faire.
+            if (preg_match('/en cours de d[ée]veloppement|in development mode/iu', $msg)) {
+                $msg .= ' → À faire une fois : passer l’app Meta du module en mode Live (developers.facebook.com → l’app → interrupteur « Mode de l’app » en haut).';
+            }
             throw new MetaError($msg !== '' ? $msg : 'réponse illisible de Meta', $ec, $code, $ec === 2 || $code >= 500);
         }
         throw new MetaError('limite d’appels Meta atteinte', 4, 429, true);

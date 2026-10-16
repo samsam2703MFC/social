@@ -160,5 +160,9 @@ MySQL** (ses tables `social_*`) et **l'accès HTTPS à l'API TFBuddy et à Meta*
    générer le token, puis le saisir avec l'App ID et la clé secrète ; cliquer
    « Rafraîchir » dans Portefeuille Business Manager, vérifier les
    correspondances, « Tester toutes les connexions ».
+   L'app Meta doit être en mode **Live** (developers.facebook.com → l'app →
+   interrupteur « Mode de l'app ») : en mode Développement, Meta refuse les
+   dark posts dans une pub (« créé par une application en cours de
+   développement ») et traite comme non publics les contenus que l'app crée.
 5. Côté API TFBuddy : 4xx au lieu de 500 pour les paramètres manquants,
    paramètres décrits dans le swagger, routes `/cases` à corriger.
