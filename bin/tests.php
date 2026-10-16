@@ -1898,6 +1898,40 @@ Db::exec("DELETE FROM social_commentaire WHERE canal = 'gg'");
 $pdo->exec("DELETE FROM ceo_shop WHERE id = '5'"); $pdo->exec('DROP TABLE ceo_shop_reputation'); $pdo->exec('DROP TABLE ceo_shop_review'); $pdo->exec("DELETE FROM ceo_app_setting WHERE `key` = 'reputationCible'");
 Db::hasTable('ceo_shop_reputation', true); Db::hasTable('ceo_shop_review', true);
 
+echo "Bilan de la semaine : régularité, réactivité, avis, classement ; « Ma semaine » du franchisé\n";
+$hier = date('Y-m-d', strtotime('-1 day'));
+$base = array_column(socBilanCalculer()['lignes'], null, 'id');
+socItemPut('posts', ['id' => 'bil1', 'date' => $hier, 'time' => '10:00', 'title' => 'B1', 'status' => 'Publié', 'origin' => 'franchise', 'shops' => ['4'], 'fb' => true, 'ig' => false]);
+socItemPut('posts', ['id' => 'bil2', 'date' => $hier, 'time' => '11:00', 'title' => 'B2', 'status' => 'Publié', 'shops' => ['4', '5'], 'fb' => true, 'ig' => false]);
+socItemPut('posts', ['id' => 'bil3', 'date' => date('Y-m-d', strtotime('-10 days')), 'time' => '11:00', 'title' => 'B3', 'status' => 'Publié', 'shops' => ['5'], 'fb' => true, 'ig' => false]);
+socItemPut('posts', ['id' => 'bil4', 'date' => $hier, 'time' => '12:00', 'title' => 'B4', 'status' => 'Programmé', 'shops' => ['5'], 'fb' => true, 'ig' => false]);
+$ilya = static fn (int $h) => date('Y-m-d H:i:s', strtotime('-' . $h . ' hours'));
+foreach ([['bc1', '4', 'orange', $ilya(5), $ilya(3)], ['bc2', '4', 'rouge', $ilya(30), null], ['bc3', '5', 'orange', $ilya(50), $ilya(8)]] as [$id, $sh, $col, $vu, $tr]) {
+    Db::exec('INSERT INTO social_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur, vu_le, traite_le) VALUES (?,?,?,?,?,?,?,0,?,?,?,?)',
+        [$id, 'fb', 'x', $sh, 'A', 'M', $vu, $vu, $col, $vu, $tr]);
+}
+$bil = socBilan(true);
+$L = array_column($bil['lignes'], null, 'id');
+check('régularité : posts publiés sur 7 jours (réseau et boutique), pas les programmés ni les anciens ; quota de la semaine', $L['4']['posts'] - $base['4']['posts'] === 2 && $L['4']['postsBoutique'] - $base['4']['postsBoutique'] === 1
+    && $L['5']['posts'] - $base['5']['posts'] === 1 && $L['4']['quotaUtilise'] >= 1 && $L['4']['quota'] === sfRegles()['quotaSemaine'], json_encode([$L['4']['posts'] ?? null, $L['5']['posts'] ?? null]));
+check('réactivité : à traiter, en retard, part traitée dans le délai (30 j), délai médian', $L['4']['enRetard'] === 1 && $L['4']['rouges'] === 1 && $L['4']['dansDelaiPct'] === 100
+    && $L['5']['dansDelaiPct'] === 0 && $L['4']['delaiMedianH'] === 2.0 && $L['5']['delaiMedianH'] === 42.0, json_encode([$L['4']['dansDelaiPct'] ?? null, $L['4']['delaiMedianH'] ?? null, $L['5']['delaiMedianH'] ?? null]));
+check('classement : rang par critère et rang général ; la boutique réactive passe devant', $L['4']['rangs']['reactivite'] === 1 && $L['5']['rangs']['reactivite'] === 2 && $L['4']['rangs']['regularite'] === 1
+    && $L['4']['rang'] === 1 && $bil['reseau']['enRetard'] >= 1 && $bil['reseau']['boutiques'] === count($bil['lignes']), json_encode(array_map(static fn ($l) => [$l['id'], $l['rangs'], $l['rang']], $bil['lignes'])));
+socItemPut('posts', ['id' => 'bil5', 'date' => $hier, 'time' => '13:00', 'title' => 'B5', 'status' => 'Publié', 'shops' => ['5'], 'fb' => true, 'ig' => false]);
+[$cB, $bB] = socRoute('GET', '/bilan');
+$_GET = ['forcer' => '1']; [, $bF] = socRoute('GET', '/bilan'); $_GET = [];
+check('gardé par le cron (deux heures) ; « Recalculer » le refait', $cB === 200 && array_column($bB['lignes'], null, 'id')['5']['posts'] === $L['5']['posts'] && array_column($bF['lignes'], null, 'id')['5']['posts'] === $L['5']['posts'] + 1);
+sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
+[$cS, $sem] = $fr('GET', '/franchise/semaine');
+check('franchisé : sa ligne, la moyenne des autres boutiques, son rang ; jamais la ligne d’une autre boutique', $cS === 200 && ($sem['ligne']['id'] ?? '') === '4' && isset($sem['moyenne']['posts'])
+    && ($sem['ligne']['rang'] ?? null) === 1 && !isset($sem['lignes']) && !str_contains(json_encode($sem), '"Wavre"'), json_encode($sem));
+$regB = sfRegles(); sfReglesPut(array_merge($regB, ['voirClassement' => false]));
+[, $sem2] = $fr('GET', '/franchise/semaine');
+check('franchisé : classement masqué si le réseau ne le partage pas', !isset($sem2['ligne']['rang']) && !isset($sem2['ligne']['rangs']) && $sem2['classement'] === false);
+sfReglesPut($regB); unset($_COOKIE[SF_COOKIE]);
+Db::exec("DELETE FROM social_content WHERE id IN ('bil1','bil2','bil3','bil4','bil5')"); Db::exec("DELETE FROM social_commentaire WHERE id IN ('bc1','bc2','bc3')"); socSettingPut('bilan_cache', null, false);
+
 echo "Idées de posts : promotions sans post, opérations, gammes, heures creuses (BO)\n";
 $auj = date('Y-m-d'); $j = static fn (int $n) => date('Y-m-d', strtotime($auj . ' ' . ($n >= 0 ? '+' : '') . $n . ' days'));
 socSettingPut('tfb_cache_promos', ['le' => time(), 'items' => [

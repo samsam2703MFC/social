@@ -57,6 +57,25 @@
     <sc-if value="{{ hasMessage }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-left:3px solid #8D1D2C;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.55;color:#3A3530;">{{ message }}</div></sc-if>
 
     <sc-if value="{{ isCal }}" hint-placeholder-val="{{ true }}">
+    <!-- Ma semaine : régularité, ce qui attend, avis Google, abonnés ; et mon rang dans le réseau (src/bilan.php). -->
+    <sc-if value="{{ msShow }}" hint-placeholder-val="{{ false }}">
+    <section style="background:#232220;color:#FFFFFF;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#E8D9C4;">Ma semaine · {{ msPeriode }}</span>
+        <sc-if value="{{ msHasRang }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;background:{{ msRangBg }};color:#FFFFFF;">{{ msRang }}</span></sc-if>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+        <sc-for list="{{ msTuiles }}" as="t" hint-placeholder-count="4">
+          <a href="{{ t.href }}" style="text-decoration:none;color:#FFFFFF;background:rgba(255,255,255,0.07);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;">
+            <span style="font-size:11px;color:#E8D9C4;">{{ t.label }}</span>
+            <span style="font-size:20px;font-weight:300;color:{{ t.fg }};">{{ t.value }}</span>
+            <span style="font-size:11px;line-height:1.35;color:#CFC6BA;">{{ t.sub }}</span>
+          </a>
+        </sc-for>
+      </div>
+      <span style="font-size:12px;line-height:1.45;color:#F4EFE8;">{{ msConseil }}</span>
+    </section>
+    </sc-if>
     <!-- Indicateurs -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
       <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="5">
@@ -408,6 +427,7 @@ class Component extends DCLogic {
     if ([7, 28, 90].includes(+q.get('jours'))) patch.jours = +q.get('jours');
     if (q.get('post')) patch.selId = q.get('post');
     this.setState(patch, () => this.loadMeta(false));
+    if (SF.maSemaine) SF.maSemaine().then(ms => this.setState({ ms })).catch(() => {});
     if (q.get('ok')) { const n = +q.get('n') || 1, f = { story: 'Story', post_story: 'Post + story' }[q.get('f')] || '';
       this.toast((f ? f + ' · ' : '') + (q.get('ok') === 'valider' ? 'Envoyé : le réseau valide ' + (n > 1 ? 'chacune des ' + n + ' dates' : 'votre post') + ' avant publication.'
         : 'Programmé' + (n > 1 ? ' : ' + n + ' dates, chacune à l’heure prévue.' : ' : il partira à l’heure prévue.'))); }
@@ -755,6 +775,24 @@ class Component extends DCLogic {
       ok: true, hasError: false, shopName: st.shop.name, periodTitle: analyse ? 'VUES ET ABONNÉS' : suivi ? 'SUIVI DE MA BOUTIQUE' : label,
       // Les onglets de « Mes réseaux » (et son menu) : calendrier, vues et abonnés, suivi changent sans recharger la page.
       onglet: analyse ? 'analyse' : suivi ? 'suivi' : 'cal', isCal: !horsCal, isSuivi: suivi, isAnalyse: analyse,
+      ...(() => {
+        const ms = s.ms, l = ms && ms.ligne;
+        if (!l) return { msShow: false };
+        const moy = ms.moyenne || {}, ord = (r) => r === 1 ? '1er' : r + 'e', al = st.alertes || {};
+        const aMoi = ((al.com || {}).pourBoutique || 0) + ((al.google || {}).pourBoutique || 0);
+        const tuiles = [
+          ['Posts de la boutique', l.quotaUtilise + ' / ' + l.quota, 'cette semaine · ' + l.posts + ' publiés en 7 j avec le réseau' + (moy.posts != null ? ' (autres boutiques : ' + String(moy.posts).replace('.', ',') + ')' : ''), l.quotaUtilise >= l.quota ? '#9FD8B5' : '#FFFFFF', SF.href('pub')],
+          ['À traiter', String(aMoi), (l.enRetard ? l.enRetard + ' en retard · ' : '') + (l.dansDelaiPct != null ? l.dansDelaiPct + ' % traités dans le délai' : 'commentaires et avis Google'), aMoi ? '#F2B8A8' : '#9FD8B5', SF.href('com')],
+          ['Avis Google', l.note != null ? String(Number(l.note).toFixed(2)).replace('.', ',') + ' ★' : '—', (l.avisGagnes != null ? (l.avisGagnes > 0 ? '+' : '') + l.avisGagnes + ' avis en 7 j' : 'suivi en cours') + (l.avis5Requis ? ' · objectif ' + l.avis5Requis + ' avis 5★' : ''), '#FFFFFF', SF.href('google')],
+          ['Abonnés', l.abonnesNet != null ? (l.abonnesNet > 0 ? '+' : '') + Number(l.abonnesNet).toLocaleString('fr-BE') : '—', 'en 7 j' + (moy.abonnesNet != null ? ' (autres boutiques : ' + (moy.abonnesNet > 0 ? '+' : '') + String(moy.abonnesNet).replace('.', ',') + ')' : ''), '#FFFFFF', SF.href('cal', 'vue=analyse')],
+        ].map(([label, value, sub, fg, href]) => ({ label, value, sub, fg, href }));
+        const conseil = aMoi > 0 ? 'Commencez par répondre : ' + aMoi + ' commentaire' + (aMoi > 1 ? 's' : '') + ' ou avis vous attend' + (aMoi > 1 ? 'ent' : '') + '.'
+          : l.quotaUtilise < Math.min(1, l.quota) ? 'Aucun post de votre boutique cette semaine : un modèle du réseau prend deux minutes (« Créer un post »).'
+          : l.avis5Requis > 0 ? 'Votre note progresse avec chaque avis 5★ : imprimez l’affiche « Laissez-nous un avis » (Avis Google).'
+          : 'Belle semaine : continuez comme ça.';
+        return { msShow: true, msPeriode: 'du ' + SF.dShort(ms.du) + ' au ' + SF.dShort(ms.au), msTuiles: tuiles, msConseil: conseil,
+          msHasRang: !!(ms.classement && l.rang), msRang: l.rang ? ord(l.rang) + ' sur ' + ms.boutiques + ' boutiques' : '', msRangBg: l.rang === 1 ? '#8D1D2C' : 'rgba(255,255,255,0.18)' };
+      })(),
       onOnglet: (k) => { if (k === 'cal') { if (horsCal) this.setState({ view: s.calView || 'month', hov: null }); return; }
         if (k !== s.view && ['suivi', 'analyse'].includes(k)) this.setState({ view: k, calView: horsCal ? s.calView : s.view, selId: null, hov: null }); },
       eyebrow: analyse ? 'Vues et abonnés · L’Atelier By ' + st.shop.name + ' · ce que vos clients voient de vous sur Facebook et Instagram'

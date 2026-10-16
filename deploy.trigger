@@ -111,3 +111,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-10-16T17:52:59Z vue mobile libelles barre du bas
 2026-10-16T18:44:12Z avis google qr suivi synchro auto
 2026-10-16T18:51:30Z commentaires reponse alertes escalade
+2026-10-16T18:57:09Z bilan des boutiques ma semaine

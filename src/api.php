@@ -34,6 +34,7 @@ require_once __DIR__ . '/recommandations.php';
 require_once __DIR__ . '/detourage.php';
 require_once __DIR__ . '/commentaires.php';
 require_once __DIR__ . '/google.php';
+require_once __DIR__ . '/bilan.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -126,6 +127,8 @@ function socRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/commentaires/traiter') { $b = body(); return [200, socCommentaireTraiter((string) ($b['id'] ?? ''), !empty($b['traite']))]; }
     // Les avis Google : la Réputation digitale du BO (ses tables, lues) et les avis classés (src/google.php).
     if ($method === 'GET' && $path === '/google') { return [200, socGoogleEcran($_GET)]; }
+    // Le bilan de la semaine, boutique par boutique (src/bilan.php).
+    if ($method === 'GET' && $path === '/bilan') { return [200, socBilan(!empty($_GET['forcer']))]; }
     if ($method === 'POST' && $path === '/google/reglages') { return [200, ['reglages' => socGoogleReglagesPut(body())]]; }
     if ($method === 'POST' && $path === '/google/relire') {
         $b = body();
