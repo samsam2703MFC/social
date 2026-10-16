@@ -336,7 +336,7 @@ function sfOperations(string $shop): array
 /**
  * Les publicités Meta qui touchent la boutique, rattachées à une opération ou non : celles du réseau (plusieurs
  * boutiques, ou la marque) et celles de sa boutique seule. En cours, à venir, terminées depuis moins de 30 jours ;
- * pas celles que Meta a refusé de créer. Résultats si le réseau les partage (voirResultats), budget et dépense
+ * pas celles que Meta a refusé de créer, ni celles en pause depuis plus de 30 jours. Résultats si le réseau les partage (voirResultats), budget et dépense
  * seulement avec voirBudgetPub. Lecture seule.
  */
 function sfPublicites(string $shop): array
@@ -357,7 +357,9 @@ function sfPublicites(string $shop): array
         $debut = (string) ($a['start'] ?? ''); $fin = (string) ($a['end'] ?? '');
         $phase = in_array($statut, ['Terminée', 'Arrêtée'], true) || ($fin !== '' && $fin < $today) ? 'terminee' : ($debut > $today ? 'avenir' : 'encours');
         if ($phase === 'terminee' && ($fin !== '' ? $fin : $debut) < $limite) { continue; }
-        $reseau = ($a['scope'] ?? '') === 'reseau' || count($shops) !== 1;
+        if ($statut === 'En pause' && $debut < $limite) { continue; }  // en pause de longue date : pas « en route »
+        // Réseau ou boutique selon les boutiques visées, pas selon le compte qui paie (une pub de Halle peut passer par le compte réseau).
+        $reseau = count($shops) !== 1;
         $post = !empty($a['post']) ? socItem('posts', (string) $a['post']) : null;
         $item = ['id' => (string) $a['id'], 'name' => (string) ($a['name'] ?? ''), 'objective' => (string) ($a['objective'] ?? ''),
             'status' => $phase === 'terminee' ? 'Terminée' : ($phase === 'avenir' ? 'À venir' : ($LIB[$statut] ?? $statut)), 'phase' => $phase,

@@ -1325,7 +1325,9 @@ $pubs = [['id' => 'pubR', 'name' => 'Réseau automne', 'scope' => 'reseau', 'sho
     ['id' => 'pubB', 'name' => 'Halle seule', 'scope' => 'boutique', 'shops' => ['4'], 'status' => 'En pause', 'start' => $jP(-1), 'end' => null, 'budget' => 10, 'spent' => 2, 'budgetType' => 'quotidien'],
     ['id' => 'pubX', 'name' => 'Wavre seule', 'scope' => 'boutique', 'shops' => ['5'], 'status' => 'Active', 'start' => $jP(-1), 'end' => null],
     ['id' => 'pubRef', 'name' => 'Refusée', 'scope' => 'boutique', 'shops' => ['4'], 'status' => 'Refusée', 'start' => $jP(1), 'end' => null],
-    ['id' => 'pubOld', 'name' => 'Ancienne', 'scope' => 'boutique', 'shops' => ['4'], 'status' => 'Terminée', 'start' => $jP(-90), 'end' => $jP(-60)]];
+    ['id' => 'pubOld', 'name' => 'Ancienne', 'scope' => 'boutique', 'shops' => ['4'], 'status' => 'Terminée', 'start' => $jP(-90), 'end' => $jP(-60)],
+    ['id' => 'pubS', 'name' => 'Halle par le compte réseau', 'scope' => 'reseau', 'shops' => ['4'], 'status' => 'Active', 'start' => $jP(-2), 'end' => null],
+    ['id' => 'pubP', 'name' => 'En pause depuis février', 'scope' => 'reseau', 'shops' => ['4', '5'], 'status' => 'En pause', 'start' => $jP(-200), 'end' => null]];
 foreach ($pubs as $x) { socItemPut('ads', $x); }
 $regPub = sfRegles();
 [$code, $b] = $fr('GET', '/franchise/publicites');
@@ -1334,6 +1336,8 @@ $pR = array_column($b['reseau'] ?? [], null, 'id')['pubR'] ?? [];
 check('publicités en cours : réseau et boutique seule, hors opération comprises ; ni celles d’une autre boutique, ni refusées, ni anciennes',
     $code === 200 && in_array('pubR', $idsR, true) && in_array('pubB', $idsB, true) && !array_intersect(['pubX', 'pubRef', 'pubOld'], array_merge($idsR, $idsB))
     && $pR['status'] === 'Diffusée' && ($pR['stats']['reach'] ?? null) === 600 && in_array('Halle', $pR['shops'], true), json_encode($b));
+check('publicités : rangées selon les boutiques visées (Halle seule par le compte réseau → boutique) ; pauses anciennes écartées',
+    in_array('pubS', $idsB, true) && !in_array('pubP', array_merge($idsR, $idsB), true), json_encode([$idsR, $idsB]));
 check('publicités : budget et dépense cachés par défaut', !array_key_exists('budget', $pR) && $b['budget'] === false);
 sfReglesPut(array_merge($regPub, ['voirBudgetPub' => true]));
 [, $b] = $fr('GET', '/franchise/publicites');
