@@ -201,7 +201,7 @@ function socStateGet(): array
         'ftemplates' => sfModeles(),
         'franchise' => ['rules' => sfRegles(), 'url' => (string) (socSetting('url_franchise') ?? '/social_franchisee/')],
         // Commentaires et avis Google à traiter (rouges, oranges, en retard) : les pastilles du menu.
-        'alertes' => socCommentairesAlertes() + ['boost' => socBoostEnAttente()],
+        'alertes' => socCommentairesAlertes() + ['boost' => socBoostEnAttente(), 'messages' => socMessagesAlertes()],
         'activity' => array_map(static fn ($r) => ['at' => substr((string) $r['at'], 0, 16), 'who' => $r['who'], 'what' => $r['what'], 'detail' => $r['detail']],
             Db::rows('SELECT le AS at, qui AS who, quoi AS what, detail FROM social_activite ORDER BY le DESC, id DESC LIMIT 400')),
         'meta' => ['version' => Meta::config()['version'], 'dsa' => (array) (socSetting('meta_dsa') ?? ($d['dsa'] ?? [])),

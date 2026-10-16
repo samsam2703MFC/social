@@ -37,6 +37,7 @@ require_once __DIR__ . '/google.php';
 require_once __DIR__ . '/bilan.php';
 require_once __DIR__ . '/kit.php';
 require_once __DIR__ . '/boost.php';
+require_once __DIR__ . '/messages.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -134,6 +135,13 @@ function socRoute(string $method, string $path): array
     if ($method === 'GET' && $path === '/kit') { return [200, socKitVue()]; }
     if ($method === 'POST' && $path === '/kit') { return [200, socKitPut((array) (body()['items'] ?? []))]; }
     // La publicité pilotée (src/boost.php) : règle de pause, meilleurs posts à booster, demandes des boutiques.
+    // Les messages privés Instagram (src/messages.php).
+    if ($method === 'GET' && $path === '/messages') { return [200, socMessages($_GET)]; }
+    if ($method === 'GET' && $path === '/messages/conversation') { return [200, socMsgConversation((string) ($_GET['id'] ?? ''))]; }
+    if ($method === 'POST' && $path === '/messages/relire') { return [200, ['synchro' => socMessagesSync()] + socMessages((array) (body()['q'] ?? []))]; }
+    if ($method === 'POST' && $path === '/messages/repondre') { $b = body(); return [200, socMsgRepondre((string) ($b['id'] ?? ''), (string) ($b['texte'] ?? ''))]; }
+    if ($method === 'POST' && $path === '/messages/traiter') { $b = body(); return [200, socMsgTraiter((string) ($b['id'] ?? ''), !empty($b['traite']))]; }
+    if ($method === 'POST' && $path === '/messages/attribuer') { $b = body(); return [200, socMsgAttribuer((string) ($b['id'] ?? ''), (string) ($b['shop'] ?? ''), (string) ($b['note'] ?? ''))]; }
     if ($method === 'GET' && $path === '/pub/regles') { return [200, socPubRegles()]; }
     if ($method === 'POST' && $path === '/pub/regles') { return [200, socPubReglesPut((array) (body()['regles'] ?? []))]; }
     if ($method === 'GET' && $path === '/pub/meilleurs') { return [200, socBoostMeilleurs(!empty($_GET['forcer']))]; }

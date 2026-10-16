@@ -2064,6 +2064,84 @@ Meta::$transport = $metaAvantB;
 foreach (['ab1', 'ab2', 'ab3'] as $x) { socItemDelete('ads', $x); Db::exec("DELETE FROM social_meta_objet WHERE kind = 'ad' AND local_id = ?", [$x]); }
 Db::exec('DELETE FROM social_boost_demande'); socSettingPut('pub_meilleurs_cache', null, false); socSettingPut('pub_regles', null, false);
 
+echo "Messages privés Instagram : la marque trie, répond, confie à une boutique ; la boutique répond\n";
+$metaAvantM = Meta::$transport; $mEnvois = [];
+Meta::$transport = static function (string $m, string $url, array $p) use ($metaAvantM, &$mEnvois): array {
+    $path = preg_replace('#^https://graph\.facebook\.com/v[\d.]+/#', '', $url);
+    $msg = static fn (string $id, string $de, string $user, string $txt, string $quand) => ['id' => $id, 'created_time' => date('c', strtotime($quand)), 'from' => ['id' => $de, 'username' => $user], 'message' => $txt];
+    if ($m === 'GET' && $path === '111/conversations' && ($p['platform'] ?? '') === 'instagram') {
+        if (!empty($GLOBALS['MSG_REFUS'])) { return [403, ['error' => ['code' => 10, 'message' => '(#10) This app does not have instagram_manage_messages']]]; }
+        $cv1 = array_merge(!empty($GLOBALS['MSG_NOUVEAU']) ? [$msg('mid.4', 'igsid1', 'julie.d', 'Et samedi ?', '+1 minute')] : [],
+            [$msg('mid.3', 'igsid1', 'julie.d', 'Vous êtes ouverts dimanche ?', '-1 hour'), $msg('mid.2', '17841', 'latelierby.halle', 'Bonjour Julie !', '-2 hours'), $msg('mid.1', 'igsid1', 'julie.d', 'Bonjour', '-3 hours')]);
+        return [200, ['data' => [
+            ['id' => 'cv1', 'updated_time' => date('c', strtotime('-1 minute')), 'participants' => ['data' => [['id' => '17841', 'username' => 'latelierby.halle'], ['id' => 'igsid1', 'username' => 'julie.d']]], 'messages' => ['data' => $cv1]],
+            ['id' => 'cv2', 'updated_time' => date('c', strtotime('-30 hours')), 'participants' => ['data' => [['id' => 'igsid2', 'username' => 'marc_b'], ['id' => '17841', 'username' => 'latelierby.halle']]],
+                'messages' => ['data' => [['id' => 'mid.9', 'created_time' => date('c', strtotime('-30 hours')), 'from' => ['id' => 'igsid2', 'username' => 'marc_b'], 'attachments' => ['data' => [['image_data' => ['url' => 'https://cdn.ig/photo.jpg']]]]]]]],
+            ['id' => 'cv3', 'updated_time' => date('c', strtotime('-40 days')), 'participants' => ['data' => []], 'messages' => ['data' => [$msg('mid.0', 'igsid3', 'x', 'Vieux', '-40 days')]]]]]];
+    }
+    if ($m === 'POST' && $path === '111/messages') { $mEnvois[] = $p; return [200, ['recipient_id' => 'igsid1', 'message_id' => 'mid.envoi' . count($mEnvois)]]; }
+    return $metaAvantM($m, $url, $p);
+};
+$syM = socMessagesSync();
+check('relecture : conversations des 30 derniers jours (pas la vieille), messages gardés, pièces jointes', $syM['conversations'] === 2 && $syM['lus'] === 4 && !$syM['erreurs']
+    && Db::row("SELECT pieces FROM social_message WHERE id = 'mid.9'")['pieces'] !== null && Db::row("SELECT COUNT(*) n FROM social_message WHERE conversation_id = 'cv3'")['n'] == 0, json_encode($syM));
+[, $bxM] = socRoute('GET', '/messages');
+$cvM = array_column($bxM['conversations'], null, 'id');
+check('boîte de la marque : à répondre, client, fenêtre de 24 h ouverte (cv1) ou fermée (cv2)', count($bxM['conversations']) === 2 && $cvM['cv1']['client'] === 'julie.d' && $cvM['cv1']['aRepondre'] === true
+    && $cvM['cv1']['fenetre'] === true && $cvM['cv2']['fenetre'] === false && $bxM['totaux']['afaire'] === 2 && $cvM['cv2']['dernierTexte'] === 'Photo ou vidéo'
+    && is_bool($bxM['permissions']['instagram']) && $bxM['permissions']['messenger'] === false, json_encode([$bxM['conversations'], $bxM['totaux'], $bxM['permissions']]));
+$_GET = ['id' => 'cv1']; [, $dM] = socRoute('GET', '/messages/conversation'); $_GET = [];
+check('conversation : messages du plus ancien au plus récent, entrants et sortants', array_column($dM['messages'], 'id') === ['mid.1', 'mid.2', 'mid.3'] && $dM['messages'][1]['sens'] === 'out');
+$errM = static function (string $route, array $b): array { $GLOBALS['SOC_BODY'] = $b; try { $r = socRoute('POST', $route); return [$r[0], $r[1]]; } catch (HttpError $e) { return [$e->status, $e->getMessage()]; } finally { unset($GLOBALS['SOC_BODY']); } };
+[$cR, $rR] = $errM('/messages/repondre', ['id' => 'cv1', 'texte' => '  Oui, de 8 h à 13 h !  ']);
+$envoi = $mEnvois[0] ?? [];
+check('répondre : envoyé par la Page qui porte l’Instagram (son token), au client, puis traité', $cR === 200 && (json_decode((string) ($envoi['recipient'] ?? ''), true)['id'] ?? '') === 'igsid1'
+    && (json_decode((string) ($envoi['message'] ?? ''), true)['text'] ?? '') === 'Oui, de 8 h à 13 h !' && ($envoi['access_token'] ?? '') === 'PT111'
+    && $rR['conversation']['aRepondre'] === false && ($rR['messages'][count($rR['messages']) - 1]['sens'] ?? '') === 'out', json_encode([$cR, $rR['conversation'] ?? null, array_column($rR['messages'] ?? [], 'sens', 'id')]));
+[$cR2, $mR2] = $errM('/messages/repondre', ['id' => 'cv2', 'texte' => 'Désolé']);
+[$cR3] = $errM('/messages/repondre', ['id' => 'cv1', 'texte' => '   ']);
+check('plus de 24 h depuis le dernier message du client : refusé avant Meta, dit pourquoi ; réponse vide : 422', $cR2 === 422 && str_contains((string) $mR2, '24 h') && count($mEnvois) === 1 && $cR3 === 422, (string) $mR2);
+$GLOBALS['MSG_NOUVEAU'] = true; socMessagesSync(); unset($GLOBALS['MSG_NOUVEAU']);
+[, $bxM2] = socRoute('GET', '/messages');
+check('nouveau message du client après la réponse : la conversation se rouvre', array_column($bxM2['conversations'], 'aRepondre', 'id')['cv1'] === true);
+// Attribution à une boutique, et l'espace franchisé.
+[$cA, $rA] = $errM('/messages/attribuer', ['id' => 'cv2', 'shop' => '4', 'note' => 'Commande de Halle']);
+[$cA0] = $errM('/messages/attribuer', ['id' => 'cv2', 'shop' => 'inconnue']);
+[, $stM] = socRoute('GET', '/state');
+check('confier à une boutique : notée, avec un mot ; boutique inconnue : 422', $cA === 200 && $rA['conversation']['shop'] === '4' && $rA['conversation']['attribue'] === true && $rA['conversation']['note'] === 'Commande de Halle' && $cA0 === 422);
+sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
+[, $sfM] = $fr('GET', '/franchise/messages');
+check('franchisé : la conversation confiée à sa boutique, à répondre', array_column($sfM['conversations'], 'id') === ['cv2'] || in_array('cv2', array_column($sfM['conversations'], 'id'), true), json_encode(array_column($sfM['conversations'], 'id')));
+[$cF1] = $fr('GET', '/franchise/messages/conversation', [], ['id' => 'cv2']);
+[$cF2] = $fr('POST', '/franchise/messages/repondre', ['id' => 'cv2', 'texte' => 'Bonjour Marc']);
+[$cF3] = $fr('POST', '/franchise/messages/traiter', ['id' => 'cv2', 'traite' => true]);
+check('franchisé : lit sa conversation ; hors fenêtre de 24 h → 422 ; la marque traitée', $cF1 === 200 && $cF2 === 422 && $cF3 === 200);
+unset($_COOKIE[SF_COOKIE]);
+sfSessionOuvrir(['5'], 'Gérant Wavre', 'code');
+[$cW] = $fr('GET', '/franchise/messages/conversation', [], ['id' => 'cv2', 'shop' => '5']);
+[$cW2] = $fr('POST', '/franchise/messages/repondre', ['id' => 'cv1', 'texte' => 'x', 'shop' => '5']);
+check('une autre boutique : 404 sur une conversation qui n’est pas à elle', $cW === 404 && $cW2 === 404, json_encode([$cW, $cW2]));
+unset($_COOKIE[SF_COOKIE]);
+$errM('/messages/attribuer', ['id' => 'cv1', 'shop' => '4']);
+sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
+[$cF4, $rF4] = $fr('POST', '/franchise/messages/repondre', ['id' => 'cv1', 'texte' => 'Oui, samedi aussi !']);
+[, $etM] = $fr('GET', '/franchise/etat');
+check('franchisé : répond dans la fenêtre, depuis l’Instagram de la conversation, signé « Gérant · boutique »', $cF4 === 200 && count($mEnvois) === 2
+    && Db::row("SELECT repondu_par FROM social_conversation WHERE id = 'cv1'")['repondu_par'] === 'Gérant Halle · Halle' && isset($etM['alertes']['messages']['aRepondre']), json_encode([$cF4, $rF4['conversation'] ?? null]));
+$regM = sfRegles();
+sfReglesPut(array_merge($regM, ['repondreMessages' => false]));
+[$cF5] = $fr('POST', '/franchise/messages/repondre', ['id' => 'cv1', 'texte' => 'Re']);
+sfReglesPut(array_merge($regM, ['voirMessages' => false]));
+[, $sfM2] = $fr('GET', '/franchise/messages');
+[$cF6] = $fr('GET', '/franchise/messages/conversation', [], ['id' => 'cv1']);
+sfReglesPut($regM); unset($_COOKIE[SF_COOKIE]);
+check('règles : réponse coupée → 403 ; messages masqués → rien, 403', $cF5 === 403 && $sfM2['masque'] === true && $sfM2['conversations'] === [] && $cF6 === 403);
+$GLOBALS['MSG_REFUS'] = true; $syR = socMessagesSync(); unset($GLOBALS['MSG_REFUS']);
+check('permission refusée par Meta : l’erreur nomme la permission et le réglage Instagram', str_contains(implode(' ', $syR['erreurs']), 'instagram_manage_messages') && str_contains(implode(' ', $syR['erreurs']), 'Autoriser l’accès aux messages'), json_encode($syR['erreurs']));
+check('alertes : à répondre pour le réseau (non confiées) dans l’état', isset($stM['alertes']['messages']['aRepondre']));
+Meta::$transport = $metaAvantM;
+Db::exec("DELETE FROM social_message WHERE conversation_id IN ('cv1','cv2','cv3')"); Db::exec("DELETE FROM social_conversation WHERE id IN ('cv1','cv2','cv3')"); socSettingPut('messages_relus', null, false);
+
 echo "Idées de posts : promotions sans post, opérations, gammes, heures creuses (BO)\n";
 $auj = date('Y-m-d'); $j = static fn (int $n) => date('Y-m-d', strtotime($auj . ' ' . ($n >= 0 ? '+' : '') . $n . ' days'));
 socSettingPut('tfb_cache_promos', ['le' => time(), 'items' => [

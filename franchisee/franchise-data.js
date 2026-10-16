@@ -10,9 +10,9 @@
   const CFG = Object.assign({ api: '/social/api/v1/social', media: '/social/' }, window.SF_CONFIG || {});
   const Q = new URLSearchParams(location.search);
   // Les pages, sous leur adresse propre (sans « .dc.html ») quand le serveur la sert (`propres`, écrit par
-  // bin/franchisee-build.sh ; .htaccess) : /social_franchisee/calendrier, publier, operations, instagram, commentaires, avis-google.
+  // bin/franchisee-build.sh ; .htaccess) : /social_franchisee/calendrier, publier, operations, instagram, commentaires, messages, avis-google.
   const FICHIERS = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', camp: 'Campagnes.dc.html', ig: 'Instagram.dc.html', com: 'Commentaires.dc.html', google: 'Google.dc.html' };
-  const PROPRES = { cal: 'calendrier', pub: 'publier', camp: 'operations', ig: 'instagram', com: 'commentaires', google: 'avis-google' };
+  const PROPRES = { cal: 'calendrier', pub: 'publier', camp: 'operations', ig: 'instagram', com: 'commentaires', msg: 'messages', google: 'avis-google' };
   const PAGES = CFG.propres ? PROPRES : FICHIERS;
   PAGES.suivi = PAGES.cal;  // le suivi est un onglet du calendrier (?vue=suivi)
   // Une ancienne adresse (lien de l'ERP, favori) s'affiche sous son nom propre ; elle reste valable.
@@ -38,7 +38,7 @@
 
   // ---------- démonstration ----------
   const TEMPLATES = [{"id": "fp-produit", "order": 1, "name": "Produit du jour", "description": "Mettre un produit de votre vitrine en avant, à son prix.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "{produit}", "text": "{produit} : {prix} € chez L’Atelier By {ville}. Ouvert {horaires}.", "textNl": "{produit}: {prix} € bij L’Atelier By {ville}. Open {horaires}.", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "choix", "visual": {"style": "epure", "eyebrow": "Aujourd’hui en vitrine", "eyebrowNl": "Vandaag in de etalage"}}, {"id": "fp-remise", "order": 2, "name": "Promotion en %", "description": "Une remise sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{produit} -{remise} %", "text": "-{remise} % sur {produit} chez L’Atelier By {ville}, du {du} au {au}. Ouvert {horaires}.", "textNl": "-{remise} % op {produit} bij L’Atelier By {ville}, van {du} tot {au}. Open {horaires}.", "product": "choix", "promo": {"kind": "remise", "min": 10, "max": 30}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "ruby", "eyebrow": "Promotion", "eyebrowNl": "Promotie"}}, {"id": "fp-offre", "order": 3, "name": "Offre spéciale", "description": "4+1, 2+1… sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{offre} · {produit}", "text": "{offre} sur {produit} chez L’Atelier By {ville}, du {du} au {au} !", "textNl": "{offre} op {produit} bij L’Atelier By {ville}, van {du} tot {au}!", "product": "choix", "promo": {"kind": "offre", "offres": ["4+1", "2+1", "1 acheté = 1 offert"]}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "abricot", "eyebrow": "Offre spéciale", "eyebrowNl": "Speciale actie"}}, {"id": "fp-evenement", "order": 4, "name": "Événement en boutique", "description": "Une dégustation, une animation, un horaire spécial.", "active": true, "type": "Événement local", "fb": true, "ig": true, "validation": true, "title": "Événement à {ville}", "text": "Chez L’Atelier By {ville} : {libre}", "textNl": "Bij L’Atelier By {ville}: {libre}", "product": "aucun", "promo": {"kind": "aucune"}, "period": false, "free": 90, "photo": "upload", "visual": {"style": "noir", "eyebrow": "En boutique", "eyebrowNl": "In de winkel"}}, {"id": "fp-vitrine", "order": 5, "name": "Nouveau en vitrine", "description": "Votre photo d’un produit qui arrive.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "Nouveau : {produit}", "text": "Nouveau dans notre vitrine à {ville} : {produit}. À découvrir {horaires} !", "textNl": "Nieuw in onze etalage in {ville}: {produit}. Te ontdekken {horaires}!", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "upload", "visual": {"style": "plein", "eyebrow": "Nouveau", "eyebrowNl": "Nieuw"}}];
-  const RULES = {"actif": true, "validation": "modele", "quotaSemaine": 3, "delaiMinHeures": 24, "horizonJours": 30, "jours": [1, 2, 3, 4, 5, 6, 0], "heureMin": "07:00", "heureMax": "20:00", "fb": true, "ig": true, "remiseMax": 30, "promoDureeMax": 14, "voirReseau": true, "voirCampagnes": true, "voirResultats": true, "voirSuivi": true, "voirAnalyse": true, "voirPublicites": true, "voirBudgetPub": false, "voirCommentaires": true, "voirAvisGoogle": true, "repondreCommentaires": true, "rouges": "reseau", "delaiReponseHeures": 24, "voirClassement": true, "proposerBoost": true, "story": true, "recurrenceMax": 8, "persoVisuel": true, "message": "Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By."};
+  const RULES = {"actif": true, "validation": "modele", "quotaSemaine": 3, "delaiMinHeures": 24, "horizonJours": 30, "jours": [1, 2, 3, 4, 5, 6, 0], "heureMin": "07:00", "heureMax": "20:00", "fb": true, "ig": true, "remiseMax": 30, "promoDureeMax": 14, "voirReseau": true, "voirCampagnes": true, "voirResultats": true, "voirSuivi": true, "voirAnalyse": true, "voirPublicites": true, "voirBudgetPub": false, "voirCommentaires": true, "voirAvisGoogle": true, "repondreCommentaires": true, "rouges": "reseau", "delaiReponseHeures": 24, "voirClassement": true, "proposerBoost": true, "voirMessages": true, "repondreMessages": true, "story": true, "recurrenceMax": 8, "persoVisuel": true, "message": "Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By."};
   // Un modèle créé depuis un post du réseau (« Créer un post » → « Enregistrer comme modèle franchisé ») : visuel figé.
   TEMPLATES.push({ id: 'ft-automne', order: 6, name: 'Gamme automne (visuel du réseau)', description: 'Le post du réseau, prêt à publier sur votre Page.', active: true, type: 'Gamme saisonnière',
     fb: true, ig: false, validation: false, title: 'Gamme automne', text: 'La gamme automne est arrivée chez L’Atelier By {ville} ! Ouvert {horaires}.\n\n{libre}', textNl: 'Het herfstgamma is er bij L’Atelier By {ville}! Open {horaires}.\n\n{libre}',
@@ -439,6 +439,36 @@
       { id: 'kd1', modele: tp[0].id, nom: tp[0].name, date: t(-3), mois: t(-3).slice(0, 7), note: 'La fournée du week-end : votre plus belle vitrine.', fait: true, faitLe: t(-2), passe: true },
       { id: 'kd2', modele: (tp[1] || tp[0]).id, nom: (tp[1] || tp[0]).name, date: t(4), mois: t(4).slice(0, 7), note: 'Lancement de la gamme d’automne dans tout le réseau.', fait: false, faitLe: null, passe: false }] });
   }
+  /** Les messages privés Instagram que le réseau confie à la boutique (src/messages.php). */
+  let DEMO_MSG = null;
+  function msgDemo() {
+    if (DEMO_MSG) return DEMO_MSG;
+    const h = (n) => { const d = new Date(Date.now() - n * 3600000); return STATE.today + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+    DEMO_MSG = { conv: [{ id: 'dc2', canal: 'Instagram', client: 'marc_b', dernierTexte: 'Il manquait un pain dans ma commande de ce matin', dernierSens: 'in', dernierLe: h(5), ageH: 5, fenetre: true, fenetreFin: null,
+      aRepondre: true, traiteLe: null, shop: STATE.shop.id, shopNom: STATE.shop.name, attribue: true, attribuePar: 'Sarah Lambert', note: 'Commande retirée chez vous ce matin', reponduPar: '' }],
+      msgs: { dc2: [{ id: 'm3', sens: 'in', auteur: 'marc_b', texte: 'Bonjour, il manquait un pain dans ma commande de ce matin', le: h(5), pieces: [] }] } };
+    return DEMO_MSG;
+  }
+  function msgConvDemo(id) { const d = msgDemo(); return Promise.resolve({ conversation: d.conv.find(x => x.id === id), messages: (d.msgs[id] || []).slice() }); }
+  function messages() {
+    if (!DEMO) return api('GET', '/franchise/messages?shop=' + encodeURIComponent(STATE.shop.id));
+    if (STATE.rules.voirMessages === false) return Promise.resolve({ conversations: [], masque: true, aRepondre: 0 });
+    const d = msgDemo();
+    return Promise.resolve({ conversations: d.conv.slice(), masque: false, aRepondre: d.conv.filter(c => c.aRepondre).length, peutRepondre: STATE.rules.repondreMessages !== false, fenetreH: 24, relus: STATE.today + ' 10:00:00' });
+  }
+  function messageConversation(id) { return !DEMO ? api('GET', '/franchise/messages/conversation?shop=' + encodeURIComponent(STATE.shop.id) + '&id=' + encodeURIComponent(id)) : msgConvDemo(id); }
+  function messageRepondre(id, texte) {
+    if (!DEMO) return api('POST', '/franchise/messages/repondre', { shop: STATE.shop.id, id, texte });
+    const d = msgDemo(), c = d.conv.find(x => x.id === id);
+    (d.msgs[id] = d.msgs[id] || []).push({ id: 'm' + Date.now(), sens: 'out', auteur: 'latelierby.be', texte, le: STATE.today + ' ' + pad(new Date().getHours()) + ':' + pad(new Date().getMinutes()), pieces: [], par: 'Vous · ' + STATE.shop.name });
+    if (c) Object.assign(c, { aRepondre: false, dernierSens: 'out', dernierTexte: texte, traiteLe: STATE.today, reponduPar: 'Vous' });
+    return msgConvDemo(id);
+  }
+  function messageTraiter(id, traite) {
+    if (!DEMO) return api('POST', '/franchise/messages/traiter', { shop: STATE.shop.id, id, traite });
+    const c = msgDemo().conv.find(x => x.id === id); if (c) Object.assign(c, { aRepondre: !traite && c.dernierSens === 'in', traiteLe: traite ? STATE.today : null });
+    return msgConvDemo(id);
+  }
   /** Les demandes de boost de la boutique (src/boost.php) : proposer au réseau de sponsoriser une de ses publications. */
   let DEMO_BOOST = null;
   function boostDemo() {
@@ -542,7 +572,7 @@
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, publicites, commentaires, commentaireTraiter, commentaireRepondre, maSemaine, kit, boost, boostProposer, google, webshopUrl, photoLocale,
+  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, publicites, commentaires, commentaireTraiter, commentaireRepondre, maSemaine, kit, boost, boostProposer, messages, messageConversation, messageRepondre, messageTraiter, google, webshopUrl, photoLocale,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();

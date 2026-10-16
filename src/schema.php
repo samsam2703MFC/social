@@ -24,6 +24,7 @@ declare(strict_types=1);
  *                        `ig_media_id`, liens) ;
  *  - social_commentaire : les commentaires des Pages, de l'Instagram et des dark posts, et les avis Google, classés vert / orange / rouge ;
  *  - social_boost_demande : les publications que les boutiques proposent au réseau de booster (src/boost.php) ;
+ *  - social_conversation, social_message : les messages privés Instagram, leur attribution à une boutique (src/messages.php) ;
  *  - social_modele_franchise : les modèles de post ouverts aux franchisés (espace /social_franchisee) ;
  *  - social_resultat   : résultats Meta + ventes par campagne et boutique ;
  *  - social_rattachement : publication Meta (lue en direct) → opération du Marketing du BO (le lien seul) ;
@@ -132,6 +133,15 @@ function socInstall(): void
         . 'avis INT NOT NULL DEFAULT 0, PRIMARY KEY (jour, shop_id))' . $t);
     Db::exec('CREATE TABLE IF NOT EXISTS social_avis_scan (id BIGINT AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
         . 'source VARCHAR(10) NOT NULL, le DATETIME NOT NULL, KEY idx_shop (shop_id, le))' . $t);
+
+    // Les messages privés Instagram (src/messages.php) : une conversation par client et par compte, ses messages.
+    Db::exec('CREATE TABLE IF NOT EXISTS social_conversation (id VARCHAR(120) PRIMARY KEY, canal VARCHAR(4) NOT NULL, compte VARCHAR(80) NOT NULL, page_id VARCHAR(40) NOT NULL,'
+        . 'shop_id VARCHAR(16) NULL, client_id VARCHAR(80) NOT NULL DEFAULT \'\', client_nom VARCHAR(120) NULL, dernier_le DATETIME NULL, dernier_sens VARCHAR(4) NULL,'
+        . 'dernier_texte VARCHAR(500) NULL, dernier_in_le DATETIME NULL, traite_le DATETIME NULL, repondu_par VARCHAR(120) NULL, attribue_shop VARCHAR(16) NULL,'
+        . 'attribue_par VARCHAR(120) NULL, attribue_le DATETIME NULL, attribue_note VARCHAR(300) NULL, vu_le DATETIME NOT NULL, maj_le DATETIME NOT NULL,'
+        . 'KEY idx_dernier (dernier_le), KEY idx_attribue (attribue_shop, dernier_le))' . $t);
+    Db::exec('CREATE TABLE IF NOT EXISTS social_message (id VARCHAR(160) PRIMARY KEY, conversation_id VARCHAR(120) NOT NULL, sens VARCHAR(4) NOT NULL, auteur VARCHAR(120) NULL,'
+        . 'texte TEXT NULL, pieces TEXT NULL, cree_le DATETIME NOT NULL, par VARCHAR(120) NULL, KEY idx_conv (conversation_id, cree_le))' . $t);
 
     // Les demandes de boost des boutiques (src/boost.php) : une publication de leur Page ou de leur Instagram proposée au réseau.
     Db::exec('CREATE TABLE IF NOT EXISTS social_boost_demande (id INT AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL, compte VARCHAR(80) NOT NULL,'

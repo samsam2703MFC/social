@@ -118,7 +118,7 @@ class Component extends DCLogic {
     if (!st) return { ok: false, items: [], shops: [], bas: [], drawerOpen: 'false', topBadge: false };
     // « Mes réseaux » est un menu déroulant : calendrier, vues et abonnés, suivi de la boutique, créer un post.
     // `active` : la page (ou l'onglet) ouvert ; `onPick` (facultatif) : la page change d'onglet sans recharger.
-    const GROUPE = ['cal', 'analyse', 'suivi', 'com', 'google', 'pub'], VUES = ['cal', 'analyse', 'suivi'], sub = this.props.active || 'cal', pick = this.props.onPick;
+    const GROUPE = ['cal', 'analyse', 'suivi', 'com', 'msg', 'google', 'pub'], VUES = ['cal', 'analyse', 'suivi'], sub = this.props.active || 'cal', pick = this.props.onPick;
     const active = GROUPE.includes(sub) ? 'cal' : sub, r = st.rules, q = st.quota || { used: 0, max: r.quotaSemaine };
     const refused = st.posts.filter(p => p.own && p.status === 'Refusé').length, pending = st.posts.filter(p => p.own && p.status === 'À valider').length;
     // Ouvert sur les pages de « Mes réseaux », fermé ailleurs ; replié ou déplié à la main, il le reste (ce navigateur).
@@ -126,11 +126,12 @@ class Component extends DCLogic {
     const open = this.state.open != null ? this.state.open : memo != null ? memo : active === 'cal';
     const toggle = () => { try { localStorage.setItem('sf.nav.reseaux', open ? '0' : '1'); } catch (e) {} this.setState({ open: !open }); };
     // Ce qui attend la boutique : commentaires et avis Google à traiter par elle (pastilles).
-    const al = st.alertes || {}, nCom = ((al.com || {}).pourBoutique) || 0, nGg = ((al.google || {}).pourBoutique) || 0;
+    const al = st.alertes || {}, nCom = ((al.com || {}).pourBoutique) || 0, nGg = ((al.google || {}).pourBoutique) || 0, nMsg = r.voirMessages !== false ? ((al.messages || {}).aRepondre) || 0 : 0;
     const subs = [['cal', 'Calendrier', '▦', SF.href('cal')]]
       .concat(r.voirAnalyse !== false ? [['analyse', 'Vues et abonnés', '∿', SF.href('cal', 'vue=analyse')]] : [])
       .concat(r.voirSuivi !== false ? [['suivi', 'Suivi de ma boutique', '↗', SF.href('cal', 'vue=suivi')]] : [])
       .concat(r.voirCommentaires !== false ? [['com', 'Commentaires', '❝', SF.href('com'), nCom]] : [])
+      .concat(r.voirMessages !== false ? [['msg', 'Messages privés', '✉', SF.href('msg'), nMsg]] : [])
       .concat(r.voirAvisGoogle !== false ? [['google', 'Avis Google', '★', SF.href('google'), nGg]] : [])
       .concat([['pub', 'Créer un post', '+', SF.href('pub')]])
       .map(([k, label, ic, href, n]) => { const on = active === 'cal' && k === sub;
@@ -154,9 +155,9 @@ class Component extends DCLogic {
       isApercu: st.me.via === 'apercu', fermerApercu: () => SF.fermerApercu(), isDemo: SF.demo, resetDemo: () => SF.reset(),
       // Téléphone : le tiroir et la barre du bas (les écrans du quotidien ; le reste est dans le menu).
       drawerOpen: this.state.drawer ? 'true' : 'false', ouvrir: () => this.setState({ drawer: true }), fermer: () => this.setState({ drawer: false }),
-      topBadge: refused + pending + nCom + nGg > 0,
+      topBadge: refused + pending + nCom + nGg + nMsg > 0,
       bas: [['cal', 'Calendrier', '▦', SF.href('cal'), ['cal', 'analyse', 'suivi'], refused + pending]]
-        .concat(r.voirCommentaires !== false ? [['com', 'Commentaires', '❝', SF.href('com'), ['com'], nCom]] : [])
+        .concat(r.voirCommentaires !== false ? [['com', 'Commentaires', '❝', SF.href('com'), ['com', 'msg'], nCom + nMsg]] : [])
         .concat([['pub', 'Créer', '+', SF.href('pub'), ['pub'], 0]])
         .concat(r.voirCampagnes !== false || r.voirPublicites !== false ? [['camp', 'Publicités', '◎', SF.href('camp'), ['camp'], 0]] : [])
         .concat(r.voirAvisGoogle !== false ? [['google', 'Avis Google', '★', SF.href('google'), ['google'], nGg]] : [])

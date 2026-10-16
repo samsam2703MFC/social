@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="config.js"></script>
+  <script src="franchise-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    section{padding-top:0;padding-bottom:0;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button,textarea{font-family:var(--font-ui);}
+    /* Téléphone : la liste, puis la conversation ouverte (avec un retour). */
+    @media (max-width:760px){
+      .msg-list[data-sel="true"]{display:none !important;}
+      .msg-thread[data-sel="false"]{display:none !important;}
+      .msg-list,.msg-thread{max-width:none !important;flex:1 1 100% !important;}
+    }
+  </style>
+</helmet>
+<div class="sf-shell" style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="FNav" active="msg" hint-size="228px,100vh"></dc-import>
+  <main class="sf-main" style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+    <header style="display:flex;flex-direction:column;gap:4px;">
+      <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Messages privés Instagram confiés à L’Atelier By {{ shopName }} par le réseau</span>
+      <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">MESSAGES PRIVES</h1>
+    </header>
+    <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:12px 14px;font-size:13px;">{{ errText }}</div></sc-if>
+    <sc-if value="{{ masque }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Le réseau ne partage pas les messages privés dans l’espace boutique.</div></sc-if>
+    <sc-if value="{{ visible }}" hint-placeholder-val="{{ true }}">
+      <span style="font-size:12px;line-height:1.5;color:#666666;">Quand un client écrit au réseau sur Instagram à propos de votre boutique (une commande, un retrait, vos horaires…), le réseau vous confie la conversation : elle apparaît ici. {{ repondreNote }}</span>
+      <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+        <section class="msg-list" data-sel="{{ selFlag }}" style="flex:1 1 300px;min-width:0;max-width:420px;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;display:flex;flex-direction:column;">
+          <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="padding:22px 16px;text-align:center;font-size:13px;color:#666666;">Lecture des conversations…</div></sc-if>
+          <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="padding:22px 16px;text-align:center;font-size:13px;color:#666666;line-height:1.5;">Aucune conversation confiée à votre boutique ces 30 derniers jours.</div></sc-if>
+          <sc-for list="{{ convs }}" as="c" hint-placeholder-count="0">
+            <button onClick="{{ c.open }}" style="display:flex;gap:10px;align-items:flex-start;text-align:left;border:none;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ c.bg }};padding:12px 14px;cursor:pointer;width:100%;">
+              <span style="width:34px;height:34px;border-radius:50%;background:#F4EFE8;color:#8D1D2C;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex:0 0 auto;">{{ c.ini }}</span>
+              <span style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto;">
+                <span style="display:flex;justify-content:space-between;gap:8px;"><span style="font-size:13px;font-weight:{{ c.w }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.client }}</span><span style="font-size:11px;color:#666666;white-space:nowrap;">{{ c.quand }}</span></span>
+                <span style="font-size:12px;color:#444444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.apercu }}</span>
+                <sc-if value="{{ c.aRepondre }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;margin-top:2px;font-size:10px;font-weight:600;border-radius:999px;padding:1px 7px;background:{{ c.repBg }};color:{{ c.repFg }};">{{ c.repLabel }}</span></sc-if>
+              </span>
+            </button>
+          </sc-for>
+        </section>
+        <section class="msg-thread" data-sel="{{ selFlag }}" style="flex:2 1 380px;min-width:0;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);display:flex;flex-direction:column;min-height:380px;">
+          <sc-if value="{{ noSel }}" hint-placeholder-val="{{ true }}"><div style="margin:auto;padding:28px 20px;text-align:center;font-size:13px;color:#666666;line-height:1.5;max-width:360px;">Choisissez une conversation pour la lire et y répondre.</div></sc-if>
+          <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:12px 16px;border-bottom:0.5px solid rgba(34,34,34,0.08);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                <button class="sf-only-mob" onClick="{{ retour }}" style="display:none;border:none;background:#F4EFE8;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;">←</button>
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:500;">{{ sel.client }}</span><span style="font-size:11px;color:#666666;">{{ sel.sub }}</span></div>
+              </div>
+              <button onClick="{{ traiter }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;">{{ sel.traiterLabel }}</button>
+            </div>
+            <sc-if value="{{ sel.hasNote }}" hint-placeholder-val="{{ false }}"><div style="margin:10px 16px 0;background:#E3EBF8;color:#1F4E9A;border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.45;">{{ sel.noteText }}</div></sc-if>
+            <div style="flex:1 1 auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px;max-height:440px;overflow:auto;">
+              <sc-for list="{{ sel.msgs }}" as="m" hint-placeholder-count="0">
+                <div style="align-self:{{ m.side }};max-width:82%;display:flex;flex-direction:column;gap:3px;">
+                  <div style="background:{{ m.bg }};color:{{ m.fg }};border-radius:14px;padding:8px 12px;font-size:13px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;">{{ m.texte }}</div>
+                  <sc-for list="{{ m.pieces }}" as="pc" hint-placeholder-count="0"><a href="{{ pc.url }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;align-self:{{ m.side }};">{{ pc.label }}</a></sc-for>
+                  <span style="font-size:10px;color:#8A847C;align-self:{{ m.side }};">{{ m.meta }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="border-top:0.5px solid rgba(34,34,34,0.08);padding:12px 16px;display:flex;flex-direction:column;gap:8px;">
+              <sc-if value="{{ sel.fenetreFermee }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#F4EFE8;color:#555555;border-radius:8px;padding:8px 10px;">Plus de 24 h depuis le dernier message du client : Meta n’autorise plus la réponse d’ici. Prévenez le réseau, il répondra depuis l’application Instagram.</span></sc-if>
+              <sc-if value="{{ sel.peutEcrire }}" hint-placeholder-val="{{ false }}">
+                <textarea value="{{ sel.reponse }}" onChange="{{ setReponse }}" rows="3" placeholder="Votre réponse (envoyée depuis l’Instagram du réseau)" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:9px 11px;outline:none;resize:vertical;line-height:1.45;"></textarea>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                  <span style="font-size:11px;color:#666666;">{{ sel.fenetreNote }}</span>
+                  <button onClick="{{ envoyer }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ sel.envoyerOp }};">{{ sel.envoyerLabel }}</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ sel.lectureSeule }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;line-height:1.45;">Le réseau répond lui-même à ces messages : vous les voyez pour être au courant.</span></sc-if>
+              <sc-if value="{{ sel.hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#8D1D2C;">{{ sel.err }}</span></sc-if>
+            </div>
+          </sc-if>
+        </section>
+      </div>
+    </sc-if>
+  </main>
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:95;box-shadow:0 12px 30px rgba(35,34,32,0.3);max-width:88vw;">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { boite: null, err: '', selId: null, conv: null, reponse: '', envoi: false, cErr: '', toast: '' };
+  componentDidMount() {
+    const SF = window.SF; if (!SF || !SF.state() || !SF.messages) return;
+    const id = new URLSearchParams(location.search).get('c'); if (id) this.ouvrir(id);
+    this.charger();
+  }
+  componentWillUnmount() { clearTimeout(this._tt); }
+  toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 3600); }
+  async charger() {
+    try { const boite = await window.SF.messages(); this.setState({ boite }); } catch (e) { this.setState({ boite: { conversations: [] }, err: e.message || 'erreur' }); }
+  }
+  async ouvrir(id) {
+    this.setState({ selId: id, cErr: '', reponse: this.state.selId === id ? this.state.reponse : '' });
+    try { const conv = await window.SF.messageConversation(id); if (this.state.selId === id) this.setState({ conv }); } catch (e) { this.setState({ cErr: e.message || 'erreur' }); }
+  }
+  renderVals() {
+    const SF = window.SF, st = SF && SF.state(), s = this.state;
+    if (!st) return { convs: [], visible: false, masque: false, hasErr: true, errText: (SF && SF.error) || 'Chargement impossible.', noSel: true, selFlag: 'false' };
+    const B = s.boite, quand = (t) => !t ? '' : t.slice(0, 10) === st.today ? t.slice(11, 16) : SF.dShort(t.slice(0, 10));
+    const peut = !!(B && B.peutRepondre !== false);
+    const convs = ((B && B.conversations) || []).map(c => ({ ini: String(c.client || '?').replace(/^[^a-z0-9]+/i, '').slice(0, 1).toUpperCase() || '?', client: c.client, quand: quand(c.dernierLe),
+      apercu: (c.dernierSens === 'out' ? 'Réponse : ' : '') + (c.dernierTexte || ''), w: c.aRepondre ? 600 : 400, bg: c.id === s.selId ? '#F4EFE8' : '#FFFFFF',
+      aRepondre: !!c.aRepondre, repLabel: c.fenetre ? 'À répondre' : 'À répondre · plus de 24 h', repBg: c.fenetre ? '#F6DCDF' : '#F4EFE8', repFg: c.fenetre ? '#8D1D2C' : '#666666', open: () => this.ouvrir(c.id) }));
+    const cv = s.conv && s.conv.conversation && s.conv.conversation.id === s.selId ? s.conv : null;
+    let sel = {};
+    if (s.selId) {
+      const c = cv ? cv.conversation : ((B && B.conversations) || []).find(x => x.id === s.selId) || { client: '…' };
+      sel = { client: c.client, sub: 'Instagram du réseau' + (c.dernierLe ? ' · dernier message ' + quand(c.dernierLe) : '') + (c.reponduPar ? ' · répondu par ' + c.reponduPar : ''),
+        hasNote: !!c.attribue, noteText: 'Confiée par ' + (c.attribuePar || 'le réseau') + (c.note ? ' : « ' + c.note + ' »' : '') + '.', traiterLabel: c.aRepondre ? 'Marquer traitée' : 'Rouvrir',
+        msgs: (cv ? cv.messages : []).map(m => ({ side: m.sens === 'out' ? 'flex-end' : 'flex-start', bg: m.sens === 'out' ? '#8D1D2C' : '#F4EFE8', fg: m.sens === 'out' ? '#FFFFFF' : '#222222', texte: m.texte,
+          pieces: (m.pieces || []).map(p => ({ url: p.url, label: p.type === 'video' ? 'Vidéo ↗' : p.type === 'image' ? 'Photo ↗' : 'Pièce jointe ↗' })), meta: quand(m.le) + (m.sens === 'out' && m.par ? ' · ' + m.par : '') })),
+        peutEcrire: peut && !!c.fenetre, fenetreFermee: peut && !c.fenetre && !!cv, lectureSeule: !peut,
+        fenetreNote: c.fenetreFin ? 'Possible jusqu’au ' + SF.dShort(c.fenetreFin.slice(0, 10)) + ' à ' + c.fenetreFin.slice(11, 16) + '.' : 'Possible 24 h après son dernier message.',
+        reponse: s.reponse, envoyerLabel: s.envoi ? 'Envoi…' : 'Envoyer', envoyerOp: s.envoi || !s.reponse.trim() ? 0.55 : 1, hasErr: !!s.cErr, err: s.cErr };
+    }
+    const apres = (conv, msg) => { this.setState({ conv, envoi: false, cErr: '' }); if (msg) this.toast(msg); this.charger(); };
+    return {
+      shopName: st.shop.name, hasErr: !!s.err, errText: 'Les messages n’ont pas pu être lus : ' + s.err,
+      masque: !!(B && B.masque), visible: !(B && B.masque), loading: !B, empty: !!B && !convs.length, convs,
+      repondreNote: peut ? 'Vous y répondez ici : la réponse part de l’Instagram du réseau, signée de votre nom dans l’outil.' : 'Le réseau y répond lui-même.',
+      noSel: !s.selId, hasSel: !!s.selId, selFlag: s.selId ? 'true' : 'false', sel, retour: () => this.setState({ selId: null }),
+      setReponse: (e) => this.setState({ reponse: e.target.value }),
+      envoyer: async () => { if (s.envoi || !s.reponse.trim()) return; this.setState({ envoi: true, cErr: '' });
+        try { const conv = await SF.messageRepondre(s.selId, s.reponse.trim()); this.setState({ reponse: '' }); apres(conv, 'Réponse envoyée sur Instagram.'); }
+        catch (e) { this.setState({ envoi: false, cErr: e.message || 'erreur' }); } },
+      traiter: async () => { const c = cv ? cv.conversation : null; if (!c) return;
+        try { apres(await SF.messageTraiter(c.id, !!c.aRepondre), c.aRepondre ? 'Conversation marquée traitée.' : 'Conversation rouverte.'); } catch (e) { this.setState({ cErr: e.message || 'erreur' }); } },
+      hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

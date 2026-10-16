@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    section{padding-top:0;padding-bottom:0;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button,textarea{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="msg" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Instagram Direct · le réseau trie, répond, ou confie une conversation à une boutique</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">MESSAGES PRIVES</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:#666666;max-width:300px;text-align:right;line-height:1.35;">{{ relusNote }}</span>
+        <button onClick="{{ relire }}" style="height:34px;padding:0 14px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ relireOp }};" style-hover="background:#7A1826;">{{ relireLabel }}</button>
+      </div>
+    </header>
+
+    <sc-if value="{{ hasMsg }}" hint-placeholder-val="{{ false }}"><div style="background:{{ msgBg }};color:{{ msgFg }};border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.45;">{{ msg }}</div></sc-if>
+    <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:10px 14px;font-size:12px;line-height:1.5;color:#444444;">{{ permNote }}</div>
+
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.pick }}" style="border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ t.border }};background:{{ t.bg }};color:{{ t.fg }};">{{ t.label }}</button></sc-for>
+    </div>
+
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+      <!-- Conversations -->
+      <section style="flex:1 1 340px;min-width:0;max-width:460px;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;display:flex;flex-direction:column;">
+        <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="padding:24px 16px;text-align:center;font-size:13px;color:#666666;">Lecture des conversations…</div></sc-if>
+        <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="padding:24px 16px;text-align:center;font-size:13px;color:#666666;line-height:1.5;">{{ emptyText }}</div></sc-if>
+        <sc-for list="{{ convs }}" as="c" hint-placeholder-count="0">
+          <button onClick="{{ c.open }}" style="display:flex;gap:10px;align-items:flex-start;text-align:left;border:none;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ c.bg }};padding:11px 14px;cursor:pointer;width:100%;">
+            <span style="width:34px;height:34px;border-radius:50%;background:#F4EFE8;color:#8D1D2C;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex:0 0 auto;">{{ c.ini }}</span>
+            <span style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto;">
+              <span style="display:flex;justify-content:space-between;gap:8px;"><span style="font-size:13px;font-weight:{{ c.w }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.client }}</span><span style="font-size:11px;color:#666666;white-space:nowrap;">{{ c.quand }}</span></span>
+              <span style="font-size:12px;color:#444444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.apercu }}</span>
+              <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;">
+                <sc-if value="{{ c.aRepondre }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:600;border-radius:999px;padding:1px 7px;background:{{ c.repBg }};color:{{ c.repFg }};">{{ c.repLabel }}</span></sc-if>
+                <sc-if value="{{ c.hasShop }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:600;border-radius:999px;padding:1px 7px;background:#E3EBF8;color:#1F4E9A;">{{ c.shopLabel }}</span></sc-if>
+              </span>
+            </span>
+          </button>
+        </sc-for>
+      </section>
+
+      <!-- Conversation ouverte -->
+      <section style="flex:2 1 420px;min-width:0;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);display:flex;flex-direction:column;min-height:420px;">
+        <sc-if value="{{ noSel }}" hint-placeholder-val="{{ true }}"><div style="margin:auto;padding:32px 20px;text-align:center;font-size:13px;color:#666666;line-height:1.5;max-width:380px;">Choisissez une conversation : vous y répondez depuis l’Instagram du réseau, ou vous la confiez à la boutique concernée (commande, retrait, horaires…).</div></sc-if>
+        <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:12px 16px;border-bottom:0.5px solid rgba(34,34,34,0.08);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:500;">{{ sel.client }}</span><span style="font-size:11px;color:#666666;">{{ sel.sub }}</span></div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <select value="{{ sel.shop }}" onChange="{{ attribuer }}" title="Confier la conversation à une boutique : elle la voit dans son espace et peut y répondre" style="font-size:12px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:7px 9px;"><option value="">Gérée par le réseau</option><sc-for list="{{ shopOpts }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">Confiée à {{ o.nom }}</option></sc-for></select>
+              <button onClick="{{ traiter }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:500;cursor:pointer;">{{ sel.traiterLabel }}</button>
+            </div>
+          </div>
+          <sc-if value="{{ sel.hasNote }}" hint-placeholder-val="{{ false }}"><div style="margin:10px 16px 0;background:#E3EBF8;color:#1F4E9A;border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.45;">{{ sel.noteText }}</div></sc-if>
+          <div style="flex:1 1 auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px;max-height:460px;overflow:auto;">
+            <sc-if value="{{ sel.loading }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Lecture des messages…</span></sc-if>
+            <sc-for list="{{ sel.msgs }}" as="m" hint-placeholder-count="0">
+              <div style="align-self:{{ m.side }};max-width:78%;display:flex;flex-direction:column;gap:3px;">
+                <div style="background:{{ m.bg }};color:{{ m.fg }};border-radius:14px;padding:8px 12px;font-size:13px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;">{{ m.texte }}</div>
+                <sc-for list="{{ m.pieces }}" as="pc" hint-placeholder-count="0"><a href="{{ pc.url }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;align-self:{{ m.side }};">{{ pc.label }}</a></sc-for>
+                <span style="font-size:10px;color:#8A847C;align-self:{{ m.side }};">{{ m.meta }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="border-top:0.5px solid rgba(34,34,34,0.08);padding:12px 16px;display:flex;flex-direction:column;gap:8px;">
+            <sc-if value="{{ sel.fenetreFermee }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#F4EFE8;color:#555555;border-radius:8px;padding:8px 10px;">Plus de 24 h depuis le dernier message du client : Meta n’autorise plus la réponse depuis l’outil. Répondez depuis l’application Instagram.</span></sc-if>
+            <sc-if value="{{ sel.fenetreOuverte }}" hint-placeholder-val="{{ false }}">
+              <textarea value="{{ sel.reponse }}" onChange="{{ setReponse }}" rows="3" placeholder="Votre réponse (envoyée depuis l’Instagram du réseau)" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:9px 11px;outline:none;resize:vertical;line-height:1.45;"></textarea>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:11px;color:#666666;">{{ sel.fenetreNote }}</span>
+                <button onClick="{{ envoyer }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ sel.envoyerOp }};">{{ sel.envoyerLabel }}</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sel.hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#8D1D2C;">{{ sel.err }}</span></sc-if>
+          </div>
+        </sc-if>
+      </section>
+    </div>
+  </main>
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;box-shadow:0 12px 30px rgba(35,34,32,0.3);">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { filtre: 'afaire', boite: null, loading: true, relit: false, selId: null, conv: null, convLoading: false, reponse: '', envoi: false, err: '', toast: '' };
+  componentDidMount() {
+    const SA = window.SA; if (!SA || !SA.messages) return;
+    const id = SA.param && SA.param('c'); if (id) this.ouvrir(id);
+    this.charger('afaire');
+  }
+  componentWillUnmount() { clearTimeout(this._tt); }
+  toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 3600); }
+  async charger(filtre) {
+    const SA = window.SA;
+    this.setState({ filtre, loading: true });
+    try { const boite = await SA.messages({ filtre }); this.setState({ boite, loading: false }); }
+    catch (e) { this.setState({ loading: false, boite: { conversations: [], totaux: {}, erreur: e.message } }); }
+  }
+  async relire() {
+    const SA = window.SA; if (this.state.relit) return;
+    this.setState({ relit: true });
+    try {
+      const r = await SA.messagesRelire({ filtre: this.state.filtre }), sy = r.synchro || {};
+      this.setState({ boite: r, relit: false });
+      this.toast((sy.erreurs || []).length ? 'Relu, avec des erreurs : ' + sy.erreurs.join(' · ') : (sy.conversations || 0) + ' conversation(s) et ' + (sy.lus || 0) + ' message(s) relus chez Meta.');
+      if (this.state.selId) this.ouvrir(this.state.selId);
+    } catch (e) { this.setState({ relit: false }); this.toast('Relecture impossible : ' + e.message); }
+  }
+  async ouvrir(id) {
+    const SA = window.SA;
+    this.setState({ selId: id, convLoading: true, err: '', reponse: this.state.selId === id ? this.state.reponse : '' });
+    try { const conv = await SA.messageConversation(id); if (this.state.selId === id) this.setState({ conv, convLoading: false }); }
+    catch (e) { this.setState({ convLoading: false, err: e.message }); }
+  }
+  apres(conv, msg) {
+    this.setState({ conv, envoi: false, err: '' });
+    if (msg) this.toast(msg);
+    this.charger(this.state.filtre);
+  }
+  renderVals() {
+    const SA = window.SA, s = this.state;
+    if (!SA) return { convs: [], tabs: [], noSel: true };
+    const B = s.boite || { conversations: [], totaux: {} }, T = B.totaux || {}, P = B.permissions || { instagram: true, messenger: false };
+    const quand = (t) => !t ? '' : t.slice(0, 10) === SA.TODAY ? t.slice(11, 16) : SA.dShort(t.slice(0, 10));
+    const convs = (B.conversations || []).map(c => ({ ini: String(c.client || '?').replace(/^[^a-z0-9]+/i, '').slice(0, 1).toUpperCase() || '?', client: c.client, quand: quand(c.dernierLe),
+      apercu: (c.dernierSens === 'out' ? 'Vous : ' : '') + (c.dernierTexte || ''), w: c.aRepondre ? 600 : 400, bg: c.id === s.selId ? '#F4EFE8' : '#FFFFFF',
+      aRepondre: !!c.aRepondre, repLabel: c.fenetre ? 'À répondre' : 'À répondre · plus de 24 h', repBg: c.fenetre ? '#F6DCDF' : '#F4EFE8', repFg: c.fenetre ? '#8D1D2C' : '#666666',
+      hasShop: !!c.shop, shopLabel: (c.attribue ? 'Confiée à ' : 'Instagram de ') + (c.shopNom || c.shop), open: () => this.ouvrir(c.id) }));
+    const tabs = [['afaire', 'À répondre', T.afaire], ['boutiques', 'Confiées aux boutiques', T.boutiques], ['tout', 'Toutes (30 jours)', T.tout]].map(([id, label, n]) => ({ label: label + ' (' + (n || 0) + ')',
+      bg: s.filtre === id ? '#8D1D2C' : '#FFFFFF', fg: s.filtre === id ? '#FFFFFF' : '#222222', border: s.filtre === id ? '#8D1D2C' : 'rgba(34,34,34,0.18)', pick: () => this.charger(id) }));
+    const R = B.relus || null;
+    let sel = {};
+    const cv = s.conv && s.conv.conversation && s.conv.conversation.id === s.selId ? s.conv : null;
+    if (s.selId) {
+      const c = cv ? cv.conversation : (B.conversations || []).find(x => x.id === s.selId) || { client: '…' };
+      const msgs = cv ? cv.messages : [];
+      sel = { client: c.client, sub: 'Instagram' + (c.dernierLe ? ' · dernier message ' + quand(c.dernierLe) : '') + (c.reponduPar ? ' · répondu par ' + c.reponduPar : ''),
+        shop: c.attribue ? (c.shop || '') : '', hasNote: !!c.attribue || !!(c.shop && !c.attribue),
+        noteText: c.attribue ? 'Confiée à ' + (c.shopNom || c.shop) + (c.attribuePar ? ' par ' + c.attribuePar : '') + (c.note ? ' : « ' + c.note + ' »' : '') + '. La boutique la voit dans son espace et peut y répondre.' : 'Sur l’Instagram de ' + (c.shopNom || c.shop) + ' : la boutique la voit aussi.',
+        traiterLabel: c.aRepondre ? 'Marquer traitée' : 'Rouvrir', loading: s.convLoading && !cv,
+        msgs: msgs.map(m => ({ side: m.sens === 'out' ? 'flex-end' : 'flex-start', bg: m.sens === 'out' ? '#8D1D2C' : '#F4EFE8', fg: m.sens === 'out' ? '#FFFFFF' : '#222222', texte: m.texte,
+          pieces: (m.pieces || []).map(p => ({ url: p.url, label: p.type === 'video' ? 'Vidéo ↗' : p.type === 'image' ? 'Photo ↗' : 'Pièce jointe ↗' })), meta: quand(m.le) + (m.sens === 'out' && m.par ? ' · ' + m.par : '') })),
+        fenetreOuverte: !!c.fenetre, fenetreFermee: !c.fenetre && !!cv, fenetreNote: c.fenetreFin ? 'Réponse possible jusqu’au ' + SA.dShort(c.fenetreFin.slice(0, 10)) + ' à ' + c.fenetreFin.slice(11, 16) + ' (24 h après son dernier message).' : 'Réponse possible 24 h après son dernier message.',
+        reponse: s.reponse, envoyerLabel: s.envoi ? 'Envoi…' : 'Envoyer', envoyerOp: s.envoi || !s.reponse.trim() ? 0.55 : 1, hasErr: !!s.err, err: s.err };
+    }
+    return {
+      relire: () => this.relire(), relireLabel: s.relit ? 'Lecture chez Meta…' : 'Relire chez Meta', relireOp: s.relit ? 0.6 : 1,
+      relusNote: R && R.le ? 'Relu le ' + SA.dShort(R.le.slice(0, 10)) + ' à ' + R.le.slice(11, 16) + ' · automatique toutes les heures' : 'Jamais relu : cliquez pour lire les messages privés.',
+      hasMsg: !!B.erreur || !!(R && (R.erreurs || []).length), msg: B.erreur ? 'Lecture impossible : ' + B.erreur : R ? 'Dernière relecture : ' + (R.erreurs || []).join(' · ') : '', msgBg: '#F6DCDF', msgFg: '#8D1D2C',
+      permNote: (P.instagram ? 'Messages Instagram : lus et envoyés depuis l’outil (permission instagram_manage_messages). Le compte Instagram doit autoriser l’accès aux messages (Instagram → Paramètres → Messages → Outils connectés).' : 'Messages Instagram : la permission instagram_manage_messages manque au System User.')
+        + (P.messenger ? '' : ' Messages Facebook (Messenger) : pas encore — il faut la permission pages_messaging.') + ' Meta n’autorise une réponse que dans les 24 h qui suivent le dernier message du client.',
+      tabs, convs, loading: s.loading && !s.boite, empty: !s.loading && !convs.length,
+      emptyText: s.filtre === 'afaire' ? 'Aucun message en attente de réponse. 👌' : s.filtre === 'boutiques' ? 'Aucune conversation confiée à une boutique.' : 'Aucun message privé ces 30 derniers jours.',
+      noSel: !s.selId, hasSel: !!s.selId, sel, shopOpts: (B.boutiques || SA.SHOPS.map(x => ({ id: x.id, nom: x.name }))),
+      setReponse: (e) => this.setState({ reponse: e.target.value }),
+      envoyer: async () => { if (s.envoi || !s.reponse.trim()) return; this.setState({ envoi: true, err: '' });
+        try { const conv = await SA.messageRepondre(s.selId, s.reponse.trim()); this.setState({ reponse: '' }); this.apres(conv, 'Réponse envoyée sur Instagram.'); }
+        catch (e) { this.setState({ envoi: false, err: e.message }); } },
+      traiter: async () => { const c = cv ? cv.conversation : null; if (!c) return;
+        try { this.apres(await SA.messageTraiter(c.id, !!c.aRepondre), c.aRepondre ? 'Conversation marquée traitée.' : 'Conversation rouverte.'); } catch (e) { this.setState({ err: e.message }); } },
+      attribuer: async (e) => { const v = e.target.value; let note = '';
+        if (v) { note = window.prompt('Un mot pour la boutique (facultatif) :', '') || ''; }
+        try { this.apres(await SA.messageAttribuer(s.selId, v, note), v ? 'Conversation confiée à la boutique : elle la voit dans son espace.' : 'Conversation reprise par le réseau.'); } catch (err) { this.setState({ err: err.message }); } },
+      hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>
