@@ -128,6 +128,8 @@ function socAdCreate(array $ad): array
     $isLeads = ($w['objective'] ?? '') === 'OUTCOME_LEADS';
     $budgetKey = ($w['budgetType'] ?? 'daily') === 'daily' ? 'daily_budget' : 'lifetime_budget';
     $nCamp = $reseau ? 1 : count($cibles);
+    $cbo = ($w['budgetLevel'] ?? 'adset') === 'campaign';
+    $enchere = (string) (($w['bid'] ?? '') ?: 'LOWEST_COST_WITHOUT_CAP');
     $erreurs = []; $crees = 0;
     $interets = !empty($w['interests']) ? socInterets((array) $w['interests']) : [];
     $variantes = socVariantes($w);
@@ -143,10 +145,11 @@ function socAdCreate(array $ad): array
         try {
             if ($act === '') { throw new MetaError($reseau ? 'compte publicitaire réseau non renseigné (Paramètres → API Meta)' : 'ad_account_id non renseigné', 100); }
             $camp = ['name' => (string) $w['name'] . ($reseau ? '' : ' · ' . $nomU), 'objective' => (string) $w['objective'], 'status' => (string) ($w['status'] ?? 'PAUSED'),
-                'special_ad_categories' => array_values((array) ($w['special'] ?? [])), 'buying_type' => 'AUCTION',
-                'bid_strategy' => (string) ($w['bid'] ?? 'LOWEST_COST_WITHOUT_CAP')];
+                'special_ad_categories' => array_values((array) ($w['special'] ?? [])), 'buying_type' => 'AUCTION'];
             if (!empty($w['spendCap'])) { $camp['spend_cap'] = socCents(((float) $w['spendCap']) / $nCamp); }
-            if (($w['budgetLevel'] ?? 'adset') === 'campaign') { $camp[$budgetKey] = socCents($w['amount']); }
+            // La stratégie d'enchère suit le budget : sur la campagne en CBO ; en ABO, Meta la refuse sur une
+            // campagne sans budget (« Ajoutez un budget pour modifier la stratégie d'enchère ») : sur chaque ad set.
+            if ($cbo) { $camp[$budgetKey] = socCents($w['amount']); $camp['bid_strategy'] = $enchere; }
             else { $camp['is_adset_budget_sharing_enabled'] = false; }
             $c = Meta::call('POST', $act . '/campaigns', $camp);
             $campaignId = (string) ($c['id'] ?? '');
@@ -178,6 +181,7 @@ function socAdCreate(array $ad): array
                         'dsa_beneficiary' => (string) ($w['dsaB'] ?? ''), 'dsa_payor' => (string) ($w['dsaP'] ?? ''), 'targeting' => $targeting];
                     if (!empty($w['dest']) && $w['dest'] !== '') { $as['destination_type'] = (string) $w['dest']; }
                     if ($parJeu > 0) { $as[$budgetKey] = socCents($parJeu); }
+                    if (!$cbo) { $as['bid_strategy'] = $enchere; }
                     if (in_array((string) ($w['bid'] ?? ''), SOC_ENCHERES_MONTANT, true) && !empty($w['bidAmount'])) { $as['bid_amount'] = socCents($w['bidAmount']); }
                     if ($isLeads || ($w['objective'] ?? '') === 'OUTCOME_ENGAGEMENT') { $as['promoted_object'] = ['page_id' => $shop['ids']['page_id']]; }
                     elseif (($w['objective'] ?? '') === 'OUTCOME_SALES') { $as['promoted_object'] = ['pixel_id' => $shop['ids']['pixel_id'], 'custom_event_type' => 'PURCHASE']; }
@@ -345,7 +349,7 @@ function socCreative(string $act, array $w, array $shop, string $L, array $v, ar
     $texte = socFill($msg, $shop, null, $L);
     $media = socCreaMedia($post);
     $spec = ['page_id' => $pid];
-    if ($shop['ids']['instagram_user_id'] !== '') { $spec['instagram_user_id'] = $shop['ids']['instagram_user_id']; }
+    if (($ig = socIgPub($shop)) !== '') { $spec['instagram_user_id'] = $ig; }
 
     if ($media['video'] !== null) {
         $vid = socAdVideo($act, $media['video']);
@@ -377,6 +381,17 @@ function socCreative(string $act, array $w, array $shop, string $L, array $v, ar
     }
     $r = Meta::call('POST', $act . '/adcreatives', array_filter(['name' => $nom($titre), 'object_story_spec' => $spec, 'url_tags' => (string) ($w['urlTags'] ?? '')]));
     return (string) ($r['id'] ?? '');
+}
+
+/**
+ * L'identité Instagram d'une pub : le compte de la boutique ; sans compte à elle, quand Instagram est unique
+ * au réseau, celui du réseau (comme pour les publications, src/publish.php). Vide : Meta prend la Page.
+ */
+function socIgPub(array $shop): string
+{
+    $ig = (string) ($shop['ids']['instagram_user_id'] ?? '');
+    if ($ig === '' && socIgUnique()) { $ig = (string) (socBrand()['ids']['instagram_user_id'] ?? ''); }
+    return $ig;
 }
 
 function socMetaObjectAdd(array $o): void

@@ -542,6 +542,9 @@ $a1 = socItem('ads', 'a1');
 check('pub créée chez Meta → En revue', $a1['status'] === 'En revue', (string) ($a1['reason'] ?? ''));
 check('un jeu par compte boutique (2 campagnes)', count($appelsVers('#^act_\d+/campaigns$#')) === 2);
 check('Halle bilingue : 2 ad sets (NL, FR) avec locales', count(array_filter($appelsVers('#^act_1001/adsets$#'), static fn ($a) => str_contains($a[2]['targeting'], '"locales"'))) === 2);
+check('ABO : stratégie d’enchère sur chaque ad set, pas sur la campagne (Meta la refuse sans budget de campagne)',
+    !array_filter($appelsVers('#^act_\d+/campaigns$#'), static fn ($a) => isset($a[2]['bid_strategy']))
+    && count(array_filter($appelsVers('#^act_\d+/adsets$#'), static fn ($a) => ($a[2]['bid_strategy'] ?? '') === 'LOWEST_COST_WITHOUT_CAP')) === count($appelsVers('#^act_\d+/adsets$#')));
 check('coût le plus bas : pas de bid_amount', !array_filter($appelsVers('#^act_\d+/adsets$#'), static fn ($a) => isset($a[2]['bid_amount'])));
 check('montants en centimes (10 € → 1000 par jour)', str_contains(json_encode($appelsVers('#^act_1002/adsets$#')[0][2] ?? []), '"daily_budget":1000'));
 check('rayon en km sur la position de la boutique', str_contains($appelsVers('#^act_1002/adsets$#')[0][2]['targeting'] ?? '', '"radius":10'));
@@ -1171,6 +1174,8 @@ echo "Instagram unique pour tout le réseau\n";
 $marqueIds = socBrand()['ids'];
 socShopPut('marque', ['ids' => array_merge($marqueIds, ['instagram_user_id' => '17841'])]);
 socSettingPut('instagram_unique', true, false);
+check('pub : boutique sans Instagram, Instagram unique au réseau → le compte du réseau', socIgPub(['ids' => ['instagram_user_id' => '']]) === '17841'
+    && socIgPub(['ids' => ['instagram_user_id' => '555']]) === '555');
 $restreinte = [];
 $pu = ['id' => 'pu1', 'date' => date('Y-m-d', strtotime('+1 day')), 'time' => '09:00', 'type' => 'Produit', 'title' => 'Réseau', 'img' => 'uploads/x.png', 'media' => [['src' => 'uploads/x.png', 'kind' => 'img']],
     'shops' => ['4', '5'], 'ch' => ['4' => ['fb' => true, 'ig' => true], '5' => ['fb' => true, 'ig' => true]], 'fb' => true, 'ig' => true, 'status' => 'Programmé', 'text' => 'Bon appétit à {ville} !', 'spread' => 0];

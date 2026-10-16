@@ -608,14 +608,14 @@ class Component extends DCLogic {
       const encheresMontant = ['LOWEST_COST_WITH_BID_CAP', 'COST_CAP', 'LOWEST_COST_WITH_MIN_ROAS'];
       // Comme le serveur : le montant se partage entre les ad sets du compte (une boutique bilingue en a deux).
       const nJeux = (ids_) => Math.max(1, ids_.reduce((x, id) => x + Math.max(1, SA.langsOf(id).length), 0)), parJeux = nJeux(w.account === 'reseau' ? w.shops : [sid0]);
-      const campBody = Object.assign({ name: w.name, objective: w.objective, status: w.status, special_ad_categories: w.special, buying_type: 'AUCTION', bid_strategy: w.bid, spend_cap: SA.cents(w.spendCap) },
-        w.budgetLevel === 'campaign' ? { [budgetKey]: SA.cents(w.amount) } : { is_adset_budget_sharing_enabled: false });
+      const campBody = Object.assign({ name: w.name, objective: w.objective, status: w.status, special_ad_categories: w.special, buying_type: 'AUCTION', spend_cap: SA.cents(w.spendCap) },
+        w.budgetLevel === 'campaign' ? { [budgetKey]: SA.cents(w.amount), bid_strategy: w.bid } : { is_adset_budget_sharing_enabled: false });
       if (!(w.spendCap > 0)) delete campBody.spend_cap;
       const targeting = { geo_locations: { custom_locations: [geoOf(sid0)] }, age_min: w.ageMin, age_max: w.ageMax, publisher_platforms: w.platforms,
         flexible_spec: w.interests.length ? [{ interests: w.interests.map((n, i) => ({ id: '6003' + (107902 + i * 37), name: n })) }] : undefined, targeting_automation: { advantage_audience: w.advantage ? 1 : 0 } };
       if (w.gender !== 'all') targeting.genders = [w.gender === 'men' ? 1 : 2];
       const adsetBody = Object.assign({ name: w.name + ' · ' + SA.byId(SA.SHOPS, sid0).name, campaign_id: '{campaign_id}', status: w.status, billing_event: 'IMPRESSIONS', optimization_goal: w.goal },
-        obj.dest[0] ? { destination_type: w.dest } : {}, w.budgetLevel === 'adset' ? { [budgetKey]: SA.cents(w.amount / parJeux) } : {},
+        obj.dest[0] ? { destination_type: w.dest } : {}, w.budgetLevel === 'adset' ? { [budgetKey]: SA.cents(w.amount / parJeux), bid_strategy: w.bid } : {},
         { start_time: w.start + 'T07:00:00+0200', end_time: w.end + 'T22:00:00+0200' }, encheresMontant.includes(w.bid) ? { bid_amount: SA.cents(w.bidAmount) } : {},
         promoted !== '—' ? { promoted_object: isLeads || w.objective === 'OUTCOME_ENGAGEMENT' ? { page_id: ids(sid0).page_id } : { pixel_id: ids(sid0).pixel_id, custom_event_type: 'PURCHASE' } } : {},
         { dsa_beneficiary: w.dsaB, dsa_payor: w.dsaP, targeting });
@@ -625,7 +625,7 @@ class Component extends DCLogic {
           multi_share_optimized: !fmt.locked, multi_share_end_card: !fmt.locked, call_to_action: cta } }
         : { link_data: { link: w.link, message: w.message, name: w.headline, description: w.description, image_hash: '{image_hash}', call_to_action: cta } };
       const creaBody = w.crea === 'existing' ? { name: 'Créa · ' + (post ? post.title : ''), object_story_id: post && post.dark ? '{dark post déjà diffusé}' : ids(sid0).page_id + '_{post_id}', url_tags: w.urlTags }
-        : { name: 'Créa · ' + (w.headline || (post ? post.title : '')), object_story_spec: Object.assign({ page_id: ids(sid0).page_id, instagram_user_id: ids(sid0).instagram_user_id }, creaSpec), url_tags: w.urlTags };
+        : { name: 'Créa · ' + (w.headline || (post ? post.title : '')), object_story_spec: Object.assign({ page_id: ids(sid0).page_id, instagram_user_id: ids(sid0).instagram_user_id || (SA.reseau && SA.reseau().instagram ? ids('marque').instagram_user_id : undefined) }, creaSpec), url_tags: w.urlTags };
       const adBody = Object.assign({ name: w.adName, adset_id: '{adset_id}', creative: { creative_id: '{creative_id}' }, status: w.adStatus }, w.pixel ? { tracking_specs: [{ 'action.type': ['offsite_conversion'], fb_pixel: [ids(sid0).pixel_id] }], conversion_domain: 'latelierby.be' } : {});
       const base = M.base + (meta.version || M.version) + '/';
       const J = (o) => JSON.stringify(o, null, 2);
