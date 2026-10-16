@@ -91,3 +91,4 @@ Relivraison : Publier, promotions et bundles du produit — 2026-10-15T18:42:22Z
 Relivraison : offre visible sur le visuel des modèles « offre » — 2026-10-15T18:47:55Z
 Relivraison : espace boutique, adresses sans .dc.html — 2026-10-15T19:33:12Z
 Relivraison : adresses propres, barre finale — 2026-10-15T19:34:50Z
+Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:24:23Z
