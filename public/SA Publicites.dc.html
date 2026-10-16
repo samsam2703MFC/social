@@ -341,6 +341,7 @@
               <label style="flex:2 1 260px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Lien de destination <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">link *</span><input type="url" value="{{ w.link }}" onChange="{{ setLink }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
               <label style="flex:1 1 180px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Bouton <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">call_to_action.type</span><select value="{{ w.cta }}" onChange="{{ setCta }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><sc-for list="{{ ctaOptions }}" as="c" hint-placeholder-count="0"><option value="{{ c.id }}">{{ c.label }}</option></sc-for></select></label>
             </div>
+            <sc-if value="{{ hasCtaHint }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#FCE7C8;color:#6b3d0a;border-radius:8px;padding:8px 10px;">{{ ctaHint }}</span></sc-if>
             <sc-if value="{{ isLeads }}" hint-placeholder-val="{{ false }}">
               <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Formulaire de leads <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">call_to_action.value.lead_gen_form_id *</span><select value="{{ w.leadForm }}" onChange="{{ setLeadForm }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><option value="">Choisir un formulaire actif…</option><sc-for list="{{ leadOptions }}" as="l" hint-placeholder-count="0"><option value="{{ l.id }}">{{ l.name }}</option></sc-for></select></label>
               <a href="{{ leadsHref }}" style="font-size:12px;font-weight:500;">Gérer les formulaires de leads →</a>
@@ -452,7 +453,7 @@ class Component extends DCLogic {
     const shops = account === 'boutique' ? propres : p ? SA.SHOPS.map(s => s.id).filter(id => (p.shops || []).includes(id)) : [];
     this.setState({ wizOpen: true, step: 1, err: '', replaceId: null, w: { name: (camp ? camp.name : 'Campagne') + ' · trafic', campaign: c || '', account, objective: 'OUTCOME_TRAFFIC', special: [], budgetLevel: 'adset', bid: 'LOWEST_COST_WITHOUT_CAP', bidAmount: 0.6, spendCap: 400, status: 'PAUSED',
       goal: 'LINK_CLICKS', dest: 'WEBSITE', budgetType: 'daily', amount: 10, start: SA.addDays(SA.TODAY, 1), end: SA.addDays(SA.TODAY, 15), shops, radius, ageMin: 25, ageMax: 60, gender: 'all', interests: ['Boulangerie', 'Brunch'], platforms: ['facebook', 'instagram'], advantage: false,
-      dsaB: (meta.dsa || SA.META.dsa).beneficiary, dsaP: (meta.dsa || SA.META.dsa).payor, crea: 'existing', post: null, message: '', headline: '', messageNl: '', headlineNl: '', description: '', link: 'https://www.latelierby.be', cta: 'GET_DIRECTIONS',
+      dsaB: (meta.dsa || SA.META.dsa).beneficiary, dsaP: (meta.dsa || SA.META.dsa).payor, crea: 'existing', post: null, message: '', headline: '', messageNl: '', headlineNl: '', description: '', link: 'https://www.latelierby.be', cta: 'ORDER_NOW',
       urlTags: 'utm_source=facebook&utm_medium=paid&utm_campaign=' + (c || 'hors-campagne'), leadForm: '', adName: '', adStatus: 'PAUSED', pixel: true, variants: [] } });
     // Devise et minimums du compte, relus chez Meta au plus toutes les 12 h (le serveur les garde).
     if (SA.live && SA.comptesMeta) SA.comptesMeta().then(() => this.setState({ comptesLus: Date.now() })).catch(() => {});
@@ -466,7 +467,9 @@ class Component extends DCLogic {
   // Une pub que Meta n'a pas créée : l'assistant rouvert avec ses réglages ; à l'envoi, la nouvelle remplace l'ancienne.
   reprendre(a) {
     this.openWiz(a.spec.campaign || '');
-    this.setState(s => ({ replaceId: a.id, w: Object.assign({}, s.w, a.spec, { adName: a.spec.adName || a.name }) }));
+    // « Itinéraire » était le bouton par défaut du trafic : avec un lien vers un site, « Commander ».
+    const cta = a.spec.cta === 'GET_DIRECTIONS' && a.spec.dest === 'WEBSITE' ? { cta: 'ORDER_NOW' } : {};
+    this.setState(s => ({ replaceId: a.id, w: Object.assign({}, s.w, a.spec, { adName: a.spec.adName || a.name }, cta) }));
   }
   async importMeta() {
     const SA = window.SA;
@@ -619,14 +622,14 @@ class Component extends DCLogic {
         { start_time: w.start + 'T07:00:00+0200', end_time: w.end + 'T22:00:00+0200' }, encheresMontant.includes(w.bid) ? { bid_amount: SA.cents(w.bidAmount) } : {},
         promoted !== '—' ? { promoted_object: isLeads || w.objective === 'OUTCOME_ENGAGEMENT' ? { page_id: ids(sid0).page_id } : { pixel_id: ids(sid0).pixel_id, custom_event_type: 'PURCHASE' } } : {},
         { dsa_beneficiary: w.dsaB, dsa_payor: w.dsaP, targeting });
-      const cta = { type: w.cta, value: isLeads ? { lead_gen_form_id: w.leadForm || '{lead_gen_form_id}' } : { link: w.link } };
+      const cta = { type: w.cta, value: isLeads ? { lead_gen_form_id: w.leadForm || '{lead_gen_form_id}' } : w.cta === 'GET_DIRECTIONS' ? { link: 'fbgeo://' + M.geo[sid0][0] + ', ' + M.geo[sid0][1] + ', "' + ((SA.byId(SA.SHOPS, sid0) || {}).address || '') + '"' } : { link: w.link } };
       const creaSpec = fmt.kind === 'video' ? { video_data: { video_id: '{video_id}', image_url: '{vignette}', message: w.message, title: w.headline, link_description: w.description, call_to_action: cta } }
         : fmt.kind === 'carousel' ? { link_data: { link: w.link, message: w.message, child_attachments: Array.from({ length: fmt.n }, (_, i) => ({ link: w.link, image_hash: '{image_hash_' + (i + 1) + '}', name: w.headline, call_to_action: cta })),
           multi_share_optimized: !fmt.locked, multi_share_end_card: !fmt.locked, call_to_action: cta } }
         : { link_data: { link: w.link, message: w.message, name: w.headline, description: w.description, image_hash: '{image_hash}', call_to_action: cta } };
       const creaBody = w.crea === 'existing' ? { name: 'Créa · ' + (post ? post.title : ''), object_story_id: post && post.dark ? '{dark post déjà diffusé}' : ids(sid0).page_id + '_{post_id}', url_tags: w.urlTags }
         : { name: 'Créa · ' + (w.headline || (post ? post.title : '')), object_story_spec: Object.assign({ page_id: ids(sid0).page_id, instagram_user_id: ids(sid0).instagram_user_id || (SA.reseau && SA.reseau().instagram ? ids('marque').instagram_user_id : undefined) }, creaSpec), url_tags: w.urlTags };
-      const adBody = Object.assign({ name: w.adName, adset_id: '{adset_id}', creative: { creative_id: '{creative_id}' }, status: w.adStatus }, w.pixel ? { tracking_specs: [{ 'action.type': ['offsite_conversion'], fb_pixel: [ids(sid0).pixel_id] }], conversion_domain: 'latelierby.be' } : {});
+      const adBody = Object.assign({ name: w.adName, adset_id: '{adset_id}', creative: { creative_id: '{creative_id}' }, status: w.adStatus }, w.pixel ? { tracking_specs: [{ 'action.type': ['offsite_conversion'], fb_pixel: [ids(sid0).pixel_id] }], conversion_domain: (((w.link || '').match(/^https?:\/\/([^/?#]+)/i) || [])[1] || '').toLowerCase().split('.').slice(-2).join('.') } : {});
       const base = M.base + (meta.version || M.version) + '/';
       const J = (o) => JSON.stringify(o, null, 2);
       wiz = Object.assign({
@@ -634,7 +637,7 @@ class Component extends DCLogic {
         steps: [['Campagne', 'campaigns'], ['Ad set', 'adsets'], ['Créa', 'adcreatives'], ['Pub', 'ads'], ['Récapitulatif', 'POST ×4']].map(([label, tech], i) => ({ n: i + 1, label, tech, bar: i + 1 <= s.step ? '#8D1D2C' : '#EAE4DC', fg: i + 1 === s.step ? '#8D1D2C' : i + 1 < s.step ? '#222222' : '#8A847C', go: () => { if (i + 1 < s.step) this.setState({ step: i + 1, err: '' }); } })),
         setName: (e) => W({ name: e.target.value }), campOptions: camps.filter(c => c.status !== 'terminée').map(c => ({ id: c.id, name: c.name })), setCampaign: (e) => W({ campaign: e.target.value, urlTags: w.urlTags.replace(/utm_campaign=[^&]*/, 'utm_campaign=' + (e.target.value || 'hors-campagne')) }),
         objectives: M.objectives.map(o => ({ id: o.id, label: o.label, desc: o.desc, icon: o.icon, ring: w.objective === o.id ? '#8D1D2C' : 'rgba(34,34,34,0.12)', bg: w.objective === o.id ? '#FBF3F4' : '#FFFFFF',
-          pick: () => W({ objective: o.id, goal: o.goals[0], dest: o.dest[0], cta: o.id === 'OUTCOME_LEADS' ? 'SIGN_UP' : o.id === 'OUTCOME_SALES' ? 'ORDER_NOW' : o.id === 'OUTCOME_ENGAGEMENT' ? 'MESSAGE_PAGE' : 'GET_DIRECTIONS' }) })),
+          pick: () => W({ objective: o.id, goal: o.goals[0], dest: o.dest[0], cta: o.id === 'OUTCOME_LEADS' ? 'SIGN_UP' : o.id === 'OUTCOME_SALES' ? 'ORDER_NOW' : o.id === 'OUTCOME_ENGAGEMENT' ? 'MESSAGE_PAGE' : o.id === 'OUTCOME_TRAFFIC' ? 'ORDER_NOW' : 'GET_DIRECTIONS' }) })),
         specialCats: M.specialCats.map(([id, label]) => Object.assign(chip(w.special.includes(id)), { name: label + ' · ' + id, toggle: () => { const on = w.special.includes(id), sp = on ? w.special.filter(x => x !== id) : w.special.concat(id); const r = Object.assign({}, w.radius); if (sp.length) Object.keys(r).forEach(k => { r[k] = Math.max(15, r[k]); }); W({ special: sp, radius: r, ageMin: sp.length ? 18 : w.ageMin, ageMax: sp.length ? 65 : w.ageMax, gender: sp.length ? 'all' : w.gender }); } })),
         hasSpecial: special,
         accShop: () => propres.length && W({ account: 'boutique', shops: w.shops.filter(id => propres.some(sh => sh.id === id)) }), accNet: () => W({ account: 'reseau' }),
@@ -686,6 +689,7 @@ class Component extends DCLogic {
         setMessageNl: (e) => W({ messageNl: e.target.value }), setHeadlineNl: (e) => W({ headlineNl: e.target.value }),
         setMessage: (e) => W({ message: e.target.value }), setHeadline: (e) => W({ headline: e.target.value }), setDescription: (e) => W({ description: e.target.value }), setLink: (e) => W({ link: e.target.value }),
         ctaOptions: M.ctas.map(id => ({ id, label: M.ctaLabels[id] + ' · ' + id })), setCta: (e) => W({ cta: e.target.value }),
+        hasCtaHint: w.cta === 'GET_DIRECTIONS', ctaHint: '« Itinéraire » ouvre le plan vers chaque boutique (sa position), pas le lien de destination.' + (w.dest === 'WEBSITE' ? ' Pour mener au webshop, choisissez « Commander » ou « Acheter ».' : ''),
         isLeads, leadOptions: leadForms.map(f => ({ id: f.id, name: f.name + ' · v' + f.version })), setLeadForm: (e) => W({ leadForm: e.target.value }), leadsHref: SA.href('leads'), setUrlTags: (e) => W({ urlTags: e.target.value }),
         setAdName: (e) => W({ adName: e.target.value }), adPaused: () => W({ adStatus: 'PAUSED' }), adActive: () => W({ adStatus: 'ACTIVE' }), togglePixel: () => W({ pixel: !w.pixel }), pixelId: ids(sid0).pixel_id,
         createNote: w.account === 'boutique' ? 'Franchise Buddy crée ' + w.shops.length + ' jeux campagne / ad set / créa / pub, un par compte publicitaire de boutique, avec le rayon de chaque boutique.' : 'Franchise Buddy crée une campagne sur le compte réseau ' + reseauAcc + ', avec un ad set par boutique (' + w.shops.length + ') : sa zone, sa Page.',

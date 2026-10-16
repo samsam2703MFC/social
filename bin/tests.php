@@ -620,6 +620,14 @@ check('vidéo envoyée une fois au compte (advideos), images une fois chacune (a
 check('identité Instagram de la boutique sur chaque créa', count(array_filter($specs, static fn ($x) => ($x['instagram_user_id'] ?? '') === '17841')) === 4);
 $objs = Db::rows("SELECT * FROM social_meta_objet WHERE kind = 'ad' AND local_id = 'a3' AND ad_id IS NOT NULL ORDER BY id");
 check('dark posts relus : id Facebook, id Instagram, liens', count($objs) === 4 && !array_filter($objs, static fn ($o) => !$o['story_id'] || !$o['ig_media_id'] || !str_starts_with((string) $o['lien'], 'https://www.facebook.com/111_') || !str_starts_with((string) $o['lien_ig'], 'https://www.instagram.com/p/')));
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a12', 'name' => 'Itinéraire', 'shops' => ['5'], 'scope' => 'boutique', 'budgetType' => 'quotidien', 'budget' => 10, 'cap' => 0, 'spent' => 0,
+    'start' => $spec['start'], 'end' => $spec['end'], 'status' => 'En revue', 'radius' => 8, 'post' => 'd1', 'spec' => array_merge($spec3, ['shops' => ['5'], 'variants' => [], 'cta' => 'GET_DIRECTIONS'])]]]]]);
+$cta12 = json_decode((string) ($appelsVers('#^act_\d+/adcreatives$#')[0][2]['object_story_spec'] ?? '{}'), true);
+$lien12 = (string) ($cta12['link_data']['child_attachments'][0]['call_to_action']['value']['link'] ?? $cta12['link_data']['call_to_action']['value']['link'] ?? '');
+check('domaine de conversion : celui du lien (webshop.atelierby.be → atelierby.be)', socDomaineConversion('https://webshop.atelierby.be/?shop=4') === 'atelierby.be' && socDomaineConversion('https://www.latelierby.be') === 'latelierby.be' && socDomaineConversion('') === '');
+check('bouton « Itinéraire » : position de la boutique (fbgeo://), pas une adresse web', str_starts_with($lien12, 'fbgeo://') && socItem('ads', 'a12')['status'] !== 'Refusée', $lien12);
+socStateSave(['changes' => ['ads' => ['delete' => ['a12']]]]);
 check('variante, langue et post du module notés', array_map(static fn ($o) => [(int) $o['variante'], $o['langue'], $o['post_id'], (int) $o['dark']], $objs)
     === [[0, 'nl', 'd1', 1], [1, 'nl', 'd2', 1], [0, 'fr', 'd1', 1], [1, 'fr', 'd2', 1]]);
 $appels = [];

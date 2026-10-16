@@ -64,6 +64,13 @@ function socInterets(array $noms): array
     return $out;
 }
 
+/** Le domaine de conversion d'une pub : celui du lien de destination (webshop.atelierby.be → atelierby.be). */
+function socDomaineConversion(string $url): string
+{
+    $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+    return $host === '' ? '' : implode('.', array_slice(explode('.', $host), -2));
+}
+
 /** Les centres d'intérêt que Meta a abandonnés : id → nom. */
 function socInteretsAbandonnes(): array { return (array) (socSetting('meta_interets_abandonnes') ?? []); }
 
@@ -236,7 +243,7 @@ function socAdCreate(array $ad): array
                             'adset_id' => $obj['adset_id'], 'creative' => ['creative_id' => $o['creative_id']], 'status' => (string) ($w['adStatus'] ?? 'ACTIVE')];
                         if (!empty($w['pixel']) && $shop['ids']['pixel_id'] !== '') {
                             $pub['tracking_specs'] = [['action.type' => ['offsite_conversion'], 'fb_pixel' => [$shop['ids']['pixel_id']]]];
-                            $pub['conversion_domain'] = 'latelierby.be';
+                            if (($dom = socDomaineConversion((string) ($w['link'] ?? ''))) !== '') { $pub['conversion_domain'] = $dom; }
                         }
                         $r = Meta::call('POST', $act . '/ads', $pub);
                         $o['ad_id'] = (string) ($r['id'] ?? '');
@@ -379,6 +386,11 @@ function socCreative(string $act, array $w, array $shop, string $L, array $v, ar
         $fid = $form[$shop['id']] ?? '';
         if ($fid === '') { throw new MetaError('le formulaire de leads n’est pas publié sur la Page de ' . $shop['name'], 100); }
         $cta['value'] = ['lead_gen_form_id' => $fid];
+    } elseif ($cta['type'] === 'GET_DIRECTIONS') {
+        // « Itinéraire » : Meta veut la position de la boutique (fbgeo://lat, lng, "adresse"), pas une adresse web.
+        $geo = socGeo($shop);
+        if ($geo === null) { throw new MetaError('bouton « Itinéraire » : position de la boutique inconnue, renseignez son adresse', 100); }
+        $cta['value'] = ['link' => 'fbgeo://' . $geo[0] . ', ' . $geo[1] . ', "' . str_replace('"', "'", trim((string) ($shop['address'] ?? '')) ?: (string) $shop['name']) . '"'];
     } else {
         $cta['value'] = ['link' => $url];
     }
