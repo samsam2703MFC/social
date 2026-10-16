@@ -52,6 +52,13 @@
       <sc-if value="{{ impErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.4;color:#8D1D2C;">{{ impErrText }}</span></sc-if>
     </div>
 
+    <sc-for list="{{ aRelancer }}" as="x" hint-placeholder-count="0">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#F6DCDF;border-radius:10px;padding:10px 14px;">
+        <span style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:2px;"><span style="font-size:13px;font-weight:500;color:#8D1D2C;">« {{ x.name }} » n’a pas été créée chez Meta</span><span style="font-size:12px;line-height:1.4;color:#6b1420;">{{ x.reason }}</span></span>
+        <button onClick="{{ x.relancer }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;" style-hover="background:#7A1826;">Corriger et relancer</button>
+      </div>
+    </sc-for>
+
     <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
       <!-- Tableau -->
       <section style="flex:1 1 640px;min-width:0;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
@@ -475,7 +482,7 @@ class Component extends DCLogic {
   upd(id, patch, logMsg) { const SA = window.SA; SA.save({ ads: SA.state().ads.map(a => a.id === id ? Object.assign({}, a, patch) : a) }); if (logMsg) SA.log('Sarah Lambert (Franchiseur)', 'Publicité', logMsg); }
   renderVals() {
     const SA = window.SA, s = this.state;
-    if (!SA) return { rows: [], kpis: [], d: {} };
+    if (!SA) return { rows: [], aRelancer: [], kpis: [], d: {} };
     const st = SA.state(), ads = st.ads, camps = st.campaigns;
     const postOf = (id) => st.posts.find(p => p.id === id);
     // Une campagne Meta sans date de fin court « en continu » : son total courant s'arrête à aujourd'hui.
@@ -492,6 +499,8 @@ class Component extends DCLogic {
     const act = s.act, isAct = (a) => a.status === 'Active';
     const bySrc = (a) => src === 'all' || (src === 'meta') === (a.origin === 'meta'), byAct = (a) => act === 'all' || (act === 'active') === isAct(a);
     const sorted = ads.filter(a => bySrc(a) && byAct(a)).sort((a, b) => ((order[a.status] ?? 9) - (order[b.status] ?? 9)) || b.start.localeCompare(a.start));
+    // Les pubs que Meta a refusé de créer : un bandeau au-dessus de la liste, quel que soit le filtre, pour les relancer.
+    const aRelancer = ads.filter(nonCreee).map(a => ({ name: a.name, reason: String(a.reason || '').replace(/^Non créée chez Meta — /, ''), relancer: () => { this.setState({ selId: a.id }); this.reprendre(a); } }));
     const rows = sorted.map(a => {
       const sc = SA.AD_STATUS[a.status] || SA.AD_STATUS['Active'], tot = Math.min(totalOf(a), a.cap || Infinity), p = postOf(a.post);
       const ratio = tot ? a.spent / tot : 0;
@@ -500,6 +509,7 @@ class Component extends DCLogic {
         budget: !a.budget ? (isMeta ? 'Budget dans les pubs' : '—') : a.budgetType === 'quotidien' ? money(a, a.budget) + ' / jour' : money(a, a.budget) + ' total', scope: isMeta ? (a.accountName || a.account || 'Compte Meta') : a.scope === 'reseau' ? 'Mutualisé réseau' : 'Par boutique',
         spentLabel: money(a, a.spent) + (tot ? ' / ' + money(a, tot) + ' · reste ' + money(a, Math.max(0, tot - a.spent)) : ' dépensés'), spentPct: Math.min(100, ratio * 100) + '%', barColor: ratio >= 0.9 && a.status === 'Active' ? '#D97B29' : a.status === 'Budget épuisé' ? '#8D1D2C' : '#8D1D2C',
         status: a.status, stBg: sc.bg, stFg: sc.fg, hasReason: (!!a.reason && a.status === 'Refusée') || (isMeta && !!a.note && ['Active', 'En revue'].includes(a.status)), reason: a.status === 'Refusée' ? (a.reason || '') : String(a.note || '').split(' : ')[0], period: period(a),
+        // Refusée avant toute création chez Meta : relancée depuis la ligne même (l'assistant rouvert avec ses réglages).
         bg: a.id === s.selId ? '#F4EFE8' : '#FFFFFF', pick: () => this.setState({ selId: a.id }) };
     });
     const active = ads.filter(a => a.status === 'Active');
@@ -526,7 +536,7 @@ class Component extends DCLogic {
       const isMeta = a.origin === 'meta', ins = a.insights || {}, imp = SA.metaImport && SA.metaImport();
       d = { name: a.name, objective: a.objective, sub: [a.objective, a.radius ? 'rayon ' + a.radius + ' km' : '', isMeta ? period(a) : ''].filter(Boolean).join(' · '),
         status: a.status, stBg: sc.bg, stFg: sc.fg, spent: money(a, a.spent), left: tot ? money(a, Math.max(0, tot - a.spent)) : '—', cap: a.cap ? money(a, a.cap) : '—',
-        canFix: a.status === 'Refusée' && !isMeta, fixLabel: nonCreee(a) ? 'Reprendre dans l\u2019assistant' : 'Corriger et resoumettre', topUpLabel: '+ 100 ' + SA.devSym(devOf(a)) + (isMeta ? ' de plafond' : ' de budget'), isMeta,
+        canFix: a.status === 'Refusée' && !isMeta, fixLabel: nonCreee(a) ? 'Corriger et relancer' : 'Corriger et resoumettre', topUpLabel: '+ 100 ' + SA.devSym(devOf(a)) + (isMeta ? ' de plafond' : ' de budget'), isMeta,
         lienMeta: a.lienMeta || '#', hasNote: isMeta && !!(a.note || a.gone), note: a.note || '',
         metaFacts: isMeta ? [(a.accountName ? a.accountName + ' · ' : '') + (a.account || ''), a.devise && a.devise !== 'EUR' ? 'montants en ' + a.devise : '', (a.nAds || 0) + ' pub(s) dans ' + (a.nAdsets || 0) + ' ensemble(s)',
           a.metaObjective || '', 'relue ' + (a.syncedAt ? 'le ' + SA.dShort(a.syncedAt.slice(0, 10)) + ' à ' + a.syncedAt.slice(11, 16) : '—')].filter(Boolean).join(' · ') : '',
@@ -701,7 +711,7 @@ class Component extends DCLogic {
     }
     return Object.assign({
       openWiz: () => this.openWiz(''), closeWiz: () => this.setState({ wizOpen: false }), wizOpen: s.wizOpen && !!w,
-      kpis, head: ['Publicité', 'Opération · boutiques', 'Budget', 'Dépensé / restant', 'Statut Meta', 'Période'], rows,
+      kpis, head: ['Publicité', 'Opération · boutiques', 'Budget', 'Dépensé / restant', 'Statut Meta', 'Période'], rows, aRelancer,
       hasSel: !!a, noSel: !a, d,
       pause: () => this.upd(a.id, { status: 'En pause' }, '« ' + a.name + ' » mise en pause'),
       resume: () => this.upd(a.id, { status: 'Active' }, '« ' + a.name + ' » reprise'),
