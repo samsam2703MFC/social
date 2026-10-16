@@ -469,9 +469,10 @@ function socAdHook(?array $avant, array $ad): array
     // Campagne récupérée chez Meta (src/metacampagnes.php) : pilotée au niveau de la campagne.
     if (($avant['origin'] ?? '') === 'meta') { return socCampagneMetaHook($avant, $ad); }
     // Les champs qui viennent de Meta restent ceux du serveur.
-    foreach (['spent', 'reason', 'spec', 'stats'] as $k) { if (array_key_exists($k, $avant)) { $ad[$k] = $avant[$k]; } }
+    // Le budget ne change que sur demande explicite (`budgetDemande`, appliquée chez Meta plus bas).
+    foreach (['spent', 'reason', 'spec', 'stats', 'budget'] as $k) { if (array_key_exists($k, $avant)) { $ad[$k] = $avant[$k]; } }
     $objs = array_filter(socMetaObjects('ad', (string) $ad['id']), static fn ($o) => $o['ad_id']);
-    if (!$objs) { return $ad; }
+    if (!$objs) { unset($ad['budgetDemande']); return $ad; }
     $s = (string) ($ad['status'] ?? ''); $sAvant = (string) ($avant['status'] ?? '');
     $erreurs = [];
     if ($s !== $sAvant && isset(SOC_AD_STATUT[$s])) {
@@ -485,13 +486,38 @@ function socAdHook(?array $avant, array $ad): array
             } catch (MetaError $e) { $erreurs[] = $e->getMessage(); }
         }
         foreach (array_keys($camps) as $cid) {
-            try { Meta::call('POST', $cid, ['status' => $cible]); } catch (MetaError $e) { $erreurs[] = $e->getMessage(); }
+            try { Meta::call('POST', (string) $cid, ['status' => $cible]); } catch (MetaError $e) { $erreurs[] = $e->getMessage(); }  // clé de tableau : redevenue entier
         }
     }
     if ((float) ($ad['cap'] ?? 0) !== (float) ($avant['cap'] ?? 0) && (float) ($ad['cap'] ?? 0) > 0) {
         $camps = array_values(array_unique(array_column($objs, 'campaign_id')));
         foreach ($camps as $cid) {
             try { Meta::call('POST', (string) $cid, ['spend_cap' => socCents(((float) $ad['cap']) / max(1, count($camps)))]); } catch (MetaError $e) { $erreurs[] = $e->getMessage(); }
+        }
+    }
+    // Budget changé depuis la fiche (demande explicite : un budget périmé envoyé avec une pause ne doit rien changer).
+    $demande = (float) ($ad['budgetDemande'] ?? 0);
+    unset($ad['budgetDemande']);
+    if ($demande > 0 && abs($demande - (float) ($avant['budget'] ?? 0)) > 0.004) {
+        $w = (array) ($ad['spec'] ?? []);
+        $champ = ($ad['budgetType'] ?? '') === 'total' ? 'lifetime_budget' : 'daily_budget';
+        $parCamp = [];
+        foreach ($objs as $o) { if ($o['adset_id']) { $parCamp[(string) $o['campaign_id']][(string) $o['adset_id']] = true; } }
+        $avantErr = count($erreurs);
+        // Le budget de la pub couvre toutes ses campagnes (une par boutique, ou une seule réseau) : part égale par campagne,
+        // puis, en ABO, part égale par ad set (une boutique bilingue en a deux).
+        foreach ($parCamp as $cid => $sets) {
+            $parCampagne = $demande / max(1, count($parCamp));
+            try {
+                // Les ids Meta, clés de tableau, redeviennent des entiers : (string).
+                if (($w['budgetLevel'] ?? 'adset') === 'campaign') { Meta::call('POST', (string) $cid, [$champ => socCents($parCampagne)]); }
+                else { foreach (array_keys($sets) as $asid) { Meta::call('POST', (string) $asid, [$champ => socCents($parCampagne / count($sets))]); } }
+            } catch (MetaError $e) { $erreurs[] = $e->getMessage(); }
+        }
+        if (count($erreurs) === $avantErr && $parCamp) {
+            socLog(socUser(), 'Publicité', '« ' . ($ad['name'] ?? '') . ' » : budget ' . ($avant['budget'] ?? '—') . ' → ' . $demande);
+            $ad['budget'] = $demande;
+            if ($w) { $w['amount'] = ($ad['scope'] ?? '') === 'reseau' ? $demande : $demande / max(1, count($parCamp)); $ad['spec'] = $w; }
         }
     }
     if (($ad['leadForm'] ?? null) !== ($avant['leadForm'] ?? null) && !empty($ad['leadForm']) && !empty($ad['spec'])) {
@@ -513,6 +539,8 @@ function socAdHook(?array $avant, array $ad): array
     if ($erreurs) {
         $ad['reason'] = 'Meta : ' . implode(' · ', $erreurs);
         socLog('Système', 'Échec', '« ' . ($ad['name'] ?? '') . ' » : ' . $ad['reason']);
+    } elseif (str_starts_with((string) ($ad['reason'] ?? ''), 'Meta : ')) {
+        $ad['reason'] = null;  // un ancien échec de pilotage, réglé depuis
     }
     return $ad;
 }

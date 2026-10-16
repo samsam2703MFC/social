@@ -200,6 +200,12 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
     if ($m === 'POST' && preg_match('#^act_\d+/adcreatives$#', $path) && ($p['name'] ?? '') === 'Créa · App en dev') {
         return [400, ['error' => ['code' => 100, 'error_subcode' => 1885183, 'message' => 'Invalid parameter', 'error_user_msg' => 'La publication du contenu publicitaire de la publicité a été créé par une application en cours de développement. Elle doit être publique pour créer cette publicité.']]];
     }
+    if ($m === 'GET' && preg_match('#^7\d{3}$#', $path) && str_contains((string) ($p['fields'] ?? ''), 'daily_budget')) {
+        foreach ($GLOBALS['META_EXISTANT']['campaigns'] ?? [] as $c) { if ($c['id'] === $path) { return [200, $c]; } }
+    }
+    if ($m === 'GET' && preg_match('#^(7\d{3})/adsets$#', $path, $mm)) {
+        return [200, ['data' => array_values(array_filter($GLOBALS['META_EXISTANT']['adsets'] ?? [], static fn ($x) => $x['campaign_id'] === $mm[1]))]];
+    }
     if ($m === 'GET' && $path === 'search') { return [200, ['data' => ($p['type'] ?? '') === 'adlocale' ? [['key' => 9, 'name' => 'French (All)'], ['key' => 14, 'name' => 'Dutch']] : [['id' => '6003107902', 'name' => $p['q']]]]]; }
     // Campagnes déjà présentes chez Meta (récupération) : seul act_2001 en a.
     if ($m === 'GET' && $path === 'act_2001/insights' && ($p['level'] ?? '') === 'ad') { return [200, ['data' => $GLOBALS['META_DEPENSES'] ?? []]]; }
@@ -566,6 +572,22 @@ $appels = [];
 $a1['status'] = 'En pause';
 socStateSave(['changes' => ['ads' => ['upsert' => [$a1]]]]);
 check('pause → status=PAUSED sur chaque pub', count(array_filter($appels, static fn ($a) => ($a[2]['status'] ?? '') === 'PAUSED')) === 3);
+$a1 = socItem('ads', 'a1'); $appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($a1, ['budget' => 55])]]]]);
+check('budget périmé envoyé avec la pub : rien ne change chez Meta', !array_filter($appels, static fn ($a) => isset($a[2]['daily_budget'])) && socItem('ads', 'a1')['budget'] == 20);
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [array_merge(socItem('ads', 'a1'), ['budgetDemande' => 30])]]]]);
+$budgets = array_map(static fn ($a) => $a[2]['daily_budget'], array_values(array_filter($appels, static fn ($a) => isset($a[2]['daily_budget']))));
+sort($budgets);
+check('budget demandé : réparti par campagne (une par boutique) puis par ad set (Halle bilingue : 2)', $budgets === [750, 750, 1500] && socItem('ads', 'a1')['budget'] == 30
+    && !isset(socItem('ads', 'a1')['budgetDemande']) && (socItem('ads', 'a1')['spec']['amount'] ?? null) == 15, json_encode($budgets));
+$camps1 = array_values(array_unique(array_column(Db::rows("SELECT campaign_id FROM social_meta_objet WHERE kind = 'ad' AND local_id = 'a1' AND ad_id IS NOT NULL"), 'campaign_id')));
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [array_merge(socItem('ads', 'a1'), ['status' => 'Active'])]]]]);
+check('reprise : pubs, ad sets et campagnes remis en ACTIVE chez Meta', count(array_filter($appels, static fn ($a) => in_array($a[1], $camps1, true) && ($a[2]['status'] ?? '') === 'ACTIVE')) === count($camps1)
+    && count($camps1) === 2, json_encode(array_map(static fn ($a) => [$a[1], $a[2]['status'] ?? null], $appels)));
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [array_merge(socItem('ads', 'a1'), ['status' => 'En pause'])]]]]);
 socAdsSync();
 check('synchro : statut Meta ACTIVE, dépense relue', socItem('ads', 'a1')['status'] === 'Active' && (float) socItem('ads', 'a1')['spent'] === 121.5);
 check('dépense en colonne', Db::row("SELECT depense FROM social_publicite WHERE id = 'a1'")['depense'] === '121.50');
@@ -962,6 +984,19 @@ check('pause depuis l’écran : appliquée à la campagne Meta', $m1['status'] 
 check('champs Meta gardés (nom, budget), rattachement à une campagne du module accepté', $m1['name'] === 'Promo hiver Halle' && $m1['budget'] == 15 && $m1['campaign'] === 'bo-1');
 socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($m1, ['cap' => 400])]]]]);
 check('plafond relevé : spend_cap de la campagne Meta', in_array(['POST', '7001', ['spend_cap' => 40000, 'access_token' => 'TOK-NOUVEAU']], $appels, true));
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [array_merge(socItem('ads', 'meta-7001'), ['budgetDemande' => 25])]]]]);
+check('budget demandé (campagne Meta avec budget) : daily_budget de la campagne', in_array(['POST', '7001', ['daily_budget' => 2500, 'access_token' => 'TOK-NOUVEAU']], $appels, true)
+    && socItem('ads', 'meta-7001')['budget'] == 25, json_encode($appels));
+$sauve = $GLOBALS['META_EXISTANT'];
+unset($GLOBALS['META_EXISTANT']['campaigns'][0]['daily_budget']);
+$GLOBALS['META_EXISTANT']['adsets'][0]['daily_budget'] = '1000';
+$GLOBALS['META_EXISTANT']['adsets'][] = ['id' => '7104', 'campaign_id' => '7001', 'name' => 'Halle 5 km', 'effective_status' => 'ACTIVE', 'daily_budget' => '500'];
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [array_merge(socItem('ads', 'meta-7001'), ['budgetDemande' => 30])]]]]);
+check('budget demandé (budget dans les ensembles) : réparti au prorata', in_array(['POST', '7101', ['daily_budget' => 2000, 'access_token' => 'TOK-NOUVEAU']], $appels, true)
+    && in_array(['POST', '7104', ['daily_budget' => 1000, 'access_token' => 'TOK-NOUVEAU']], $appels, true) && socItem('ads', 'meta-7001')['budget'] == 30, json_encode($appels));
+$GLOBALS['META_EXISTANT'] = $sauve;
 array_pop($GLOBALS['META_EXISTANT']['campaigns']); array_pop($GLOBALS['META_EXISTANT']['campaigns']); array_pop($GLOBALS['META_EXISTANT']['campaigns']);
 $r = socCampagnesMetaImporter(false);
 $m1 = socItem('ads', 'meta-7001'); $m2 = socItem('ads', 'meta-7002');

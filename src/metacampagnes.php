@@ -358,6 +358,8 @@ function socCampagneMetaObjets(string $localId, string $act, string $cid, array 
  */
 function socCampagneMetaHook(array $avant, array $ad): array
 {
+    $demande = (float) ($ad['budgetDemande'] ?? 0);
+    unset($ad['budgetDemande']);
     foreach (['origin', 'metaId', 'account', 'accountName', 'devise', 'name', 'objective', 'metaObjective', 'shops', 'scope', 'budgetType', 'budget',
         'spent', 'start', 'end', 'reason', 'note', 'gone', 'radius', 'nAds', 'nAdsets', 'thumb', 'pages', 'insights', 'lienMeta', 'syncedAt', 'importedAt', 'stats'] as $k) {
         if (array_key_exists($k, $avant)) { $ad[$k] = $avant[$k]; } else { unset($ad[$k]); }
@@ -374,6 +376,23 @@ function socCampagneMetaHook(array $avant, array $ad): array
     if ($cap > 0 && $cap !== (float) ($avant['cap'] ?? 0)) {
         try { Meta::call('POST', $cid, ['spend_cap' => socCents($cap)]); }
         catch (MetaError $e) { $erreurs[] = $e->getMessage(); $ad['cap'] = $avant['cap'] ?? null; }
+    }
+    // Budget demandé depuis la fiche : celui de la campagne (CBO), sinon réparti sur ses ensembles au prorata de leur budget.
+    if ($demande > 0 && abs($demande - (float) ($avant['budget'] ?? 0)) > 0.004) {
+        $champ = ($avant['budgetType'] ?? '') === 'total' ? 'lifetime_budget' : 'daily_budget';
+        try {
+            $c = Meta::call('GET', $cid, ['fields' => 'daily_budget,lifetime_budget']);
+            if (is_numeric($c[$champ] ?? null) && (float) $c[$champ] > 0) { Meta::call('POST', $cid, [$champ => socCents($demande)]); }
+            else {
+                $sets = array_values(array_filter(socGraphTout($cid . '/adsets', ['fields' => 'id,daily_budget,lifetime_budget,effective_status', 'limit' => 100]),
+                    static fn ($x) => ($x['effective_status'] ?? '') !== 'ARCHIVED' && is_numeric($x[$champ] ?? null) && (float) $x[$champ] > 0));
+                $total = array_sum(array_map(static fn ($x) => (float) $x[$champ], $sets));
+                if (!$sets || $total <= 0) { throw new MetaError('budget introuvable sur la campagne et ses ensembles', 100); }
+                foreach ($sets as $x) { Meta::call('POST', (string) $x['id'], [$champ => (int) round(((float) $x[$champ]) * socCents($demande) / $total)]); }
+            }
+            $ad['budget'] = $demande;
+            socLog(socUser(), 'Publicité', '« ' . ($ad['name'] ?? '') . ' » (campagne Meta ' . $cid . ') : budget ' . ($avant['budget'] ?? '—') . ' → ' . $demande);
+        } catch (MetaError $e) { $erreurs[] = $e->getMessage(); }
     }
     if ($erreurs) {
         $ad['reason'] = 'Meta : ' . implode(' · ', $erreurs);

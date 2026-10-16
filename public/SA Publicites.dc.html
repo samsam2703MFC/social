@@ -62,25 +62,25 @@
     <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
       <!-- Tableau -->
       <section style="flex:1 1 640px;min-width:0;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
-        <div style="display:grid;grid-template-columns:minmax(200px,2fr) minmax(130px,1.2fr) 120px 150px minmax(160px,1.3fr) 130px;min-width:900px;">
-          <sc-for list="{{ head }}" as="h" hint-placeholder-count="6"><span style="padding:10px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">{{ h }}</span></sc-for>
+        <div style="display:grid;grid-template-columns:minmax(190px,2fr) 150px 120px minmax(140px,1.2fr) minmax(120px,1.1fr);min-width:760px;">
+          <sc-for list="{{ head }}" as="h" hint-placeholder-count="5"><span style="padding:10px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">{{ h }}</span></sc-for>
           <sc-for list="{{ rows }}" as="r" hint-placeholder-count="0">
             <div onClick="{{ r.pick }}" style="display:contents;cursor:pointer;">
               <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;align-items:center;gap:10px;min-width:0;">
                 <img src="{{ r.img }}" alt="" style="width:32px;height:32px;object-fit:contain;border-radius:6px;background:#F4EFE8;flex:0 0 auto;">
                 <span style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</span><span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#666666;"><sc-if value="{{ r.isMeta }}" hint-placeholder-val="{{ false }}"><span title="Créée hors du module, récupérée chez Meta" style="font-size:10px;font-weight:600;border-radius:999px;padding:1px 6px;background:#E3EBF8;color:#1F4E9A;">Meta</span></sc-if>{{ r.objective }}</span></span>
               </span>
-              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:12px;color:#444444;display:flex;flex-direction:column;justify-content:center;gap:2px;"><span>{{ r.campName }}</span><span style="font-size:11px;color:#666666;">{{ r.shops }}</span></span>
-              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:12px;display:flex;flex-direction:column;justify-content:center;gap:2px;"><span>{{ r.budget }}</span><span style="font-size:11px;color:#666666;">{{ r.scope }}</span></span>
+              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;justify-content:center;gap:3px;">
+                <sc-if value="{{ r.hasStatusSel }}" hint-placeholder-val="{{ false }}"><select value="{{ r.status }}" onChange="{{ r.setStatus }}" title="Mettre en pause, reprendre ou arrêter chez Meta" style="align-self:flex-start;max-width:100%;font-size:11px;font-weight:500;border-radius:999px;padding:3px 6px;border:0.5px solid rgba(34,34,34,0.18);background:{{ r.stBg }};color:{{ r.stFg }};cursor:pointer;font-family:inherit;"><sc-for list="{{ r.statusOpts }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></sc-if>
+                <sc-if value="{{ r.noStatusSel }}" hint-placeholder-val="{{ true }}"><span style="align-self:flex-start;font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ r.stBg }};color:{{ r.stFg }};">{{ r.status }}</span></sc-if>
+                <sc-if value="{{ r.hasReason }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.35;color:#8D1D2C;">{{ r.reason }}</span></sc-if>
+              </span>
+              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:12px;display:flex;flex-direction:column;justify-content:center;gap:2px;"><span>{{ r.budget }}</span><span style="font-size:11px;color:#666666;">{{ r.scope }}</span><sc-if value="{{ r.budEditable }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:500;color:#8D1D2C;">Modifier ›</span></sc-if></span>
               <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;justify-content:center;gap:4px;">
                 <span style="font-size:11px;color:#444444;">{{ r.spentLabel }}</span>
                 <span style="height:5px;border-radius:999px;background:#EAE4DC;overflow:hidden;"><span style="display:block;height:100%;width:{{ r.spentPct }};background:{{ r.barColor }};"></span></span>
               </span>
-              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;justify-content:center;gap:3px;">
-                <span style="align-self:flex-start;font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ r.stBg }};color:{{ r.stFg }};">{{ r.status }}</span>
-                <sc-if value="{{ r.hasReason }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.35;color:#8D1D2C;">{{ r.reason }}</span></sc-if>
-              </span>
-              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:11px;color:#666666;display:flex;align-items:center;">{{ r.period }}</span>
+              <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:12px;color:#444444;display:flex;flex-direction:column;justify-content:center;gap:2px;"><span>{{ r.campName }}</span><span style="font-size:11px;color:#666666;">{{ r.shops }}</span><span style="font-size:11px;color:#8A847C;">{{ r.period }}</span></span>
             </div>
           </sc-for>
           <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}"><div style="grid-column:1 / -1;padding:28px 16px;text-align:center;font-size:13px;color:#666666;">{{ noRowsText }}</div></sc-if>
@@ -98,6 +98,21 @@
               </div>
               <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ d.stBg }};color:{{ d.stFg }};white-space:nowrap;">{{ d.status }}</span>
             </div>
+            <sc-if value="{{ d.budEditable }}" hint-placeholder-val="{{ false }}">
+              <div style="border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+                <span style="font-size:13px;font-weight:500;">{{ d.budTitle }}</span>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  <input type="number" min="0" step="0.5" value="{{ d.budVal }}" onChange="{{ d.setBudEd }}" style="width:92px;font-size:14px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 9px;outline:none;">
+                  <span style="font-size:12px;color:#666666;">{{ d.budUnit }}</span>
+                  <sc-for list="{{ d.budSteps }}" as="b" hint-placeholder-count="0"><button onClick="{{ b.pick }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:500;cursor:pointer;">{{ b.label }}</button></sc-for>
+                </div>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#444444;">Plafond de dépense <input type="number" min="0" value="{{ d.capVal }}" onChange="{{ d.setCapEd }}" style="width:92px;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;outline:none;"><span style="color:#666666;">{{ d.budSym }}</span></label>
+                <span style="font-size:11px;line-height:1.45;color:#666666;">{{ d.budHint }}</span>
+                <sc-if value="{{ d.hasBudErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#8D1D2C;">{{ d.budErr }}</span></sc-if>
+                <button onClick="{{ d.saveBud }}" disabled="{{ d.budSaveDis }}" style="align-self:flex-start;border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ d.budSaveOp }};">{{ d.budSaveLabel }}</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ d.hasMetaErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#F6DCDF;color:#8D1D2C;border-radius:8px;padding:8px 10px;">{{ d.metaErr }}</span></sc-if>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <div style="background:#F4EFE8;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:2px;"><span style="font-size:11px;color:#666666;">Dépensé</span><span style="font-size:18px;font-weight:300;">{{ d.spent }}</span></div>
               <div style="background:#F4EFE8;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:2px;"><span style="font-size:11px;color:#666666;">Restant</span><span style="font-size:18px;font-weight:300;">{{ d.left }}</span></div>
@@ -125,7 +140,7 @@
                 <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">
                   <sc-for list="{{ d.metrics }}" as="mt" hint-placeholder-count="6"><div style="background:#F4EFE8;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:1px;min-width:0;"><span style="font-size:10px;color:#666666;">{{ mt.k }}</span><span style="font-size:14px;font-weight:500;">{{ mt.v }}</span></div></sc-for>
                 </div>
-                <span style="font-size:11px;color:#666666;line-height:1.45;">Pause, reprise, arrêt et plafond s’appliquent à la campagne chez Meta. Le reste (ciblage, créas, budget) se règle dans le Gestionnaire de publicités ; relu toutes les heures.</span>
+                <span style="font-size:11px;color:#666666;line-height:1.45;">Pause, reprise, arrêt, budget et plafond s’appliquent à la campagne chez Meta. Le reste (ciblage, créas) se règle dans le Gestionnaire de publicités ; relu toutes les heures.</span>
               </div>
             </sc-if>
             <sc-if value="{{ d.hasStats }}" hint-placeholder-val="{{ false }}">
@@ -503,6 +518,20 @@ class Component extends DCLogic {
     const bySrc = (a) => src === 'all' || (src === 'meta') === (a.origin === 'meta'), byAct = (a) => act === 'all' || (act === 'active') === isAct(a);
     const sorted = ads.filter(a => bySrc(a) && byAct(a)).sort((a, b) => ((order[a.status] ?? 9) - (order[b.status] ?? 9)) || b.start.localeCompare(a.start));
     // Les pubs que Meta a refusé de créer : un bandeau au-dessus de la liste, quel que soit le filtre, pour les relancer.
+    // Le statut se change depuis la liste : pause, reprise, arrêt (appliqués chez Meta).
+    const STATUTS = { 'Active': [['Active', 'Active'], ['En pause', 'Mettre en pause'], ['Arrêtée', 'Arrêter']],
+      'En pause': [['En pause', 'En pause'], ['Active', 'Reprendre'], ['Arrêtée', 'Arrêter']],
+      'En revue': [['En revue', 'En revue'], ['En pause', 'Mettre en pause'], ['Arrêtée', 'Arrêter']],
+      'Budget épuisé': [['Budget épuisé', 'Budget épuisé'], ['En pause', 'Mettre en pause'], ['Arrêtée', 'Arrêter']] };
+    const pilotable = (a) => !!STATUTS[a.status] && !a.gone && !nonCreee(a);
+    const changerStatut = (a, v) => {
+      if (v === a.status) return;
+      if (v === 'Arrêtée' && !window.confirm('Arrêter « ' + a.name + ' » ? Chez Meta, la campagne est archivée et ne pourra pas être relancée.')) { this.setState({ tick: Date.now() }); return; }
+      this.upd(a.id, { status: v }, '« ' + a.name + ' » : ' + a.status + ' → ' + v);
+      this.toast(v === 'En pause' ? 'Mise en pause chez Meta.' : v === 'Active' ? 'Reprise chez Meta.' : 'Arrêtée chez Meta.');
+    };
+    // Le budget se change depuis la fiche (pas pour une pub non créée, arrêtée, terminée ou sans budget propre).
+    const budEditable = (a) => !a.gone && !nonCreee(a) && a.budget > 0 && !['Refusée', 'Arrêtée', 'Terminée'].includes(a.status);
     const aRelancer = ads.filter(nonCreee).map(a => ({ name: a.name, reason: String(a.reason || '').replace(/^Non créée chez Meta — /, ''), relancer: () => { this.setState({ selId: a.id }); this.reprendre(a); } }));
     const rows = sorted.map(a => {
       const sc = SA.AD_STATUS[a.status] || SA.AD_STATUS['Active'], tot = Math.min(totalOf(a), a.cap || Infinity), p = postOf(a.post);
@@ -513,6 +542,7 @@ class Component extends DCLogic {
         spentLabel: money(a, a.spent) + (tot ? ' / ' + money(a, tot) + ' · reste ' + money(a, Math.max(0, tot - a.spent)) : ' dépensés'), spentPct: Math.min(100, ratio * 100) + '%', barColor: ratio >= 0.9 && a.status === 'Active' ? '#D97B29' : a.status === 'Budget épuisé' ? '#8D1D2C' : '#8D1D2C',
         status: a.status, stBg: sc.bg, stFg: sc.fg, hasReason: (!!a.reason && a.status === 'Refusée') || (!!a.note && (!isMeta || ['Active', 'En revue'].includes(a.status))), reason: a.status === 'Refusée' ? (a.reason || '') : isMeta ? String(a.note || '').split(' : ')[0] : String(a.note || ''), period: period(a),
         // Refusée avant toute création chez Meta : relancée depuis la ligne même (l'assistant rouvert avec ses réglages).
+        hasStatusSel: pilotable(a), noStatusSel: !pilotable(a), statusOpts: (STATUTS[a.status] || []).map(([v, l]) => ({ v, l })), setStatus: (e) => changerStatut(a, e.target.value), budEditable: budEditable(a),
         bg: a.id === s.selId ? '#F4EFE8' : '#FFFFFF', pick: () => this.setState({ selId: a.id }) };
     });
     const active = ads.filter(a => a.status === 'Active');
@@ -537,7 +567,30 @@ class Component extends DCLogic {
       for (let i = 0; i < n; i++) { const v = a.spent / n * (0.7 + 0.6 * Math.abs(Math.sin(i * 1.7 + a.id.length))); acc += v; bars.push(v); }
       const max = Math.max(...bars, 1), dailyCap = a.budgetType === 'quotidien' ? a.budget : tot / Math.max(1, SA.daysBetween(a.start, endOf(a)) + 1);
       const isMeta = a.origin === 'meta', ins = a.insights || {}, imp = SA.metaImport && SA.metaImport();
-      d = { name: a.name, objective: a.objective, sub: [a.objective, a.radius ? 'rayon ' + a.radius + ' km' : '', isMeta ? period(a) : ''].filter(Boolean).join(' · '),
+      const acct = a.account || (a.scope === 'reseau' ? SA.META.networkAccount : ((SA.META.ids || {})[(a.shops || [])[0]] || {}).ad_account_id);
+      const cptA = (SA.META.comptes || {})[acct] || {}, sp = a.spec || {}, quot = a.budgetType === 'quotidien';
+      const ed = s.bud && s.bud.id === a.id ? s.bud : { id: a.id, budget: a.budget, cap: a.cap || '' };
+      const nSets = isMeta ? Math.max(1, a.nAdsets || 1) : Math.max(1, (sp.shops || a.shops || []).reduce((x, id) => x + Math.max(1, SA.langsOf(id).length), 0));
+      const B = +ed.budget || 0, C = +ed.cap || 0, minTot = quot && cptA.minDaily ? cptA.minDaily * nSets : 0;
+      const change = Math.abs(B - (a.budget || 0)) > 0.004 || (C > 0 && C !== (a.cap || 0));
+      const budErr = B <= 0 ? 'Indiquez un montant.' : minTot && B < minTot - 0.004 ? 'Meta exige au moins ' + money(a, cptA.minDaily, 2) + ' par jour et par ensemble : mettez au moins ' + money(a, Math.ceil(minTot * 100) / 100, 2) + ' par jour (' + nSets + ' ensemble' + (nSets > 1 ? 's' : '') + ').'
+        : C > 0 && cptA.minCap && C < cptA.minCap ? 'Meta exige un plafond d\u2019au moins ' + money(a, cptA.minCap) + ' sur ce compte.' : '';
+      const edit = (patch) => this.setState({ bud: Object.assign({}, ed, patch) });
+      d = { budEditable: budEditable(a), budTitle: (quot ? 'Budget quotidien' : 'Budget total') + (isMeta ? ' de la campagne' : ''), budVal: ed.budget, budUnit: SA.devSym(devOf(a)) + (quot ? ' / jour' : ' au total'),
+        budSym: SA.devSym(devOf(a)), capVal: ed.cap, budSteps: [['−20 %', 0.8], ['+20 %', 1.2], ['+50 %', 1.5]].map(([label, f]) => ({ label, pick: () => edit({ budget: Math.round(B * f * 100) / 100 }) })),
+        budHint: (isMeta ? 'Appliqué chez Meta au budget de la campagne, ou ' + (nSets > 1 ? 'à ses ' + nSets + ' ensembles au prorata de leur budget actuel.' : 'à son ensemble.') : 'Réparti à parts égales entre ' + nSets + ' ensemble' + (nSets > 1 ? 's' : '') + ' (boutiques et langues).')
+          + (quot && cptA.minDaily ? ' Minimum Meta : ' + money(a, cptA.minDaily, 2) + ' par jour et par ensemble.' : '') + ' Plafond vide : inchangé.',
+        hasBudErr: change && !!budErr, budErr, budSaveDis: !change || !!budErr, budSaveOp: !change || budErr ? 0.45 : 1, budSaveLabel: SA.live ? 'Appliquer chez Meta' : 'Appliquer',
+        setBudEd: (e) => edit({ budget: e.target.value }), setCapEd: (e) => edit({ cap: e.target.value }),
+        saveBud: () => {
+          if (!change || budErr) return;
+          const patch = Math.abs(B - (a.budget || 0)) > 0.004 ? (SA.live ? { budgetDemande: B } : { budget: B }) : {};
+          if (C > 0 && C !== (a.cap || 0)) patch.cap = C;
+          this.upd(a.id, patch, '« ' + a.name + ' » : budget ' + money(a, a.budget) + ' → ' + money(a, B) + (patch.cap ? ', plafond ' + money(a, C) : ''));
+          this.setState({ bud: null }); this.toast(SA.live ? 'Budget envoyé à Meta.' : 'Budget modifié.');
+        },
+        hasMetaErr: /^Meta : /.test(a.reason || '') && a.status !== 'Refusée', metaErr: a.reason || '' };
+      Object.assign(d, { name: a.name, objective: a.objective, sub: [a.objective, a.radius ? 'rayon ' + a.radius + ' km' : '', isMeta ? period(a) : ''].filter(Boolean).join(' · '),
         status: a.status, stBg: sc.bg, stFg: sc.fg, spent: money(a, a.spent), left: tot ? money(a, Math.max(0, tot - a.spent)) : '—', cap: a.cap ? money(a, a.cap) : '—',
         canFix: a.status === 'Refusée' && !isMeta, fixLabel: nonCreee(a) ? 'Corriger et relancer' : 'Corriger et resoumettre', topUpLabel: '+ 100 ' + SA.devSym(devOf(a)) + (isMeta ? ' de plafond' : ' de budget'), isMeta,
         lienMeta: a.lienMeta || '#', hasNote: isMeta && !!(a.note || a.gone), note: a.note || '',
@@ -549,9 +602,9 @@ class Component extends DCLogic {
           .filter(Boolean).map(([k, v]) => ({ k, v })) : [],
         campaign: a.campaign || '', campOptions: camps.map(c => ({ id: c.id, name: c.name + (c.status === 'terminée' ? ' (terminée)' : '') })),
         bars: a.spent ? bars.map((v, i) => ({ h: Math.round(v / max * 100) + '%', c: v > dailyCap * 1.15 ? '#D97B29' : '#8D1D2C', tip: 'J' + (i + 1) + ' · ' + money(a, v * (a.spent / acc)) })) : [],
-        capAlert: a.status === 'Active' && a.spent / tot >= 0.85, capText: 'Alerte dépassement : ' + SA.pct(a.spent / tot) + ' du plafond consommé. La diffusion s\u2019arrêtera automatiquement à ' + money(a, a.cap) + '.',
+        capAlert: a.status === 'Active' && a.spent / tot >= 0.85, capText: 'Alerte dépassement : ' + SA.pct(a.spent / tot) + (a.cap ? ' du plafond consommé. La diffusion s\u2019arrêtera automatiquement à ' + money(a, a.cap) + '.' : ' du budget prévu consommé.'),
         exhausted: a.status === 'Budget épuisé', refused: a.status === 'Refusée', reason: a.reason || '',
-        canPause: a.status === 'Active', canResume: a.status === 'En pause', canTopUp: a.status === 'Budget épuisé', canStop: ['Active', 'En pause', 'Budget épuisé', 'En revue'].includes(a.status) };
+        canPause: a.status === 'Active', canResume: a.status === 'En pause', canTopUp: a.status === 'Budget épuisé', canStop: ['Active', 'En pause', 'Budget épuisé', 'En revue'].includes(a.status) });
       const stats = Array.isArray(a.stats) ? a.stats : [], best = stats.reduce((b, x) => x.ctr != null && x.impressions >= 300 && (!b || x.ctr > b.ctr) ? x : b, null);
       const dark = (SA.DARK || []).filter(x => x.ad === a.id), multi = new Set(dark.map(x => x.lang)).size > 1 || dark.some(x => x.lang === 'nl'), com = s.com && s.com.ad === a.id ? s.com : null;
       const nCom = dark.reduce((x, y) => x + (y.comments || 0), 0);
@@ -715,12 +768,12 @@ class Component extends DCLogic {
     }
     return Object.assign({
       openWiz: () => this.openWiz(''), closeWiz: () => this.setState({ wizOpen: false }), wizOpen: s.wizOpen && !!w,
-      kpis, head: ['Publicité', 'Opération · boutiques', 'Budget', 'Dépensé / restant', 'Statut Meta', 'Période'], rows, aRelancer,
+      kpis, head: ['Publicité', 'Statut Meta', 'Budget', 'Dépensé / restant', 'Opération · boutiques'], rows, aRelancer,
       hasSel: !!a, noSel: !a, d,
       pause: () => this.upd(a.id, { status: 'En pause' }, '« ' + a.name + ' » mise en pause'),
       resume: () => this.upd(a.id, { status: 'Active' }, '« ' + a.name + ' » reprise'),
       stop: () => this.upd(a.id, { status: 'Arrêtée' }, '« ' + a.name + ' » arrêtée'),
-      topUp: () => a.origin === 'meta' ? this.upd(a.id, { cap: (a.cap || a.spent) + 100, status: 'Active' }, '« ' + a.name + ' » : plafond relevé de 100') : this.upd(a.id, { budget: a.budget + 100, cap: (a.cap || a.budget) + 100, status: 'Active' }, '« ' + a.name + ' » : +100 € de budget'),
+      topUp: () => a.origin === 'meta' ? this.upd(a.id, { cap: (a.cap || a.spent) + 100, status: 'Active' }, '« ' + a.name + ' » : plafond relevé de 100') : this.upd(a.id, Object.assign(SA.live ? { budgetDemande: a.budget + 100 } : { budget: a.budget + 100 }, { cap: (a.cap || a.budget) + 100, status: 'Active' }), '« ' + a.name + ' » : +100 ' + SA.devSym(devOf(a)) + ' de budget'),
       attach: (e) => { if (!a) return; const v = e.target.value || null;
         SA.rattacher('ad', a.id, v).then(() => this.toast(v ? 'Rattachée à « ' + ((SA.byId(camps, v) || {}).name || v) + ' » : sa dépense et ses résultats Meta comptent dans le Retour sur opération.' : 'Détachée de l’opération.'))
           .catch(err => this.toast('Rattachement impossible : ' + err.message)); },
