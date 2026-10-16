@@ -318,10 +318,10 @@ function sfOperations(string $shop): array
         $ads = [];
         foreach (socItems('ads') as $a) {
             if (($a['campaign'] ?? null) !== $o['id']) { continue; }
-            $aShops = ($a['scope'] ?? '') === 'reseau' || empty($a['shops']) ? $tous : $vise($a['shops']);
+            $aShops = empty($a['shops']) ? $tous : $vise($a['shops']);  // les boutiques visées, pas le compte qui paie
             if (!in_array($shop, $aShops, true)) { continue; }
             $ads[] = ['name' => (string) ($a['name'] ?? ''), 'status' => (string) ($a['status'] ?? ''), 'objective' => (string) ($a['objective'] ?? ''),
-                'start' => $a['start'] ?? null, 'end' => $a['end'] ?? null, 'reseau' => ($a['scope'] ?? '') === 'reseau', 'meta' => ($a['origin'] ?? '') === 'meta'];
+                'start' => $a['start'] ?? null, 'end' => $a['end'] ?? null, 'reseau' => count($aShops) !== 1, 'meta' => ($a['origin'] ?? '') === 'meta'];
         }
         $split = (float) ($o['split'][$shop] ?? 0);
         $out[] = ['id' => $o['id'], 'name' => $o['name'], 'type' => $o['typeLabel'] ?: $o['type'], 'status' => $o['status'], 'boStatus' => $o['boStatus'],
