@@ -37,6 +37,8 @@ function sfReglesDefaut(): array
         'voirAnalyse' => true,
         // Les publicités Meta qui touchent la boutique (réseau et boutique seule) ; leur budget et leur dépense, à part.
         'voirPublicites' => true, 'voirBudgetPub' => false,
+        // Les commentaires de la Page de la boutique (et de ses publicités), classés vert / orange / rouge.
+        'voirCommentaires' => true,
         // Le franchisé peut publier en story (story seule, ou post + story) ; et répéter un post (au plus N fois, 0 = non).
         'story' => true, 'recurrenceMax' => 8,
         // Le franchisé peut choisir le format du visuel (carré, portrait) et la couleur de chaque texte (palette de la marque).
@@ -72,6 +74,7 @@ function sfReglesPut(array $in): array
         'voirReseau' => (bool) ($in['voirReseau'] ?? true), 'voirCampagnes' => (bool) ($in['voirCampagnes'] ?? true), 'voirResultats' => (bool) ($in['voirResultats'] ?? true), 'voirSuivi' => (bool) ($in['voirSuivi'] ?? true),
         'voirAnalyse' => (bool) ($in['voirAnalyse'] ?? true), 'persoVisuel' => (bool) ($in['persoVisuel'] ?? true),
         'voirPublicites' => (bool) ($in['voirPublicites'] ?? true), 'voirBudgetPub' => (bool) ($in['voirBudgetPub'] ?? false),
+        'voirCommentaires' => (bool) ($in['voirCommentaires'] ?? true),
         'story' => (bool) ($in['story'] ?? true), 'recurrenceMax' => max(0, min(26, (int) ($in['recurrenceMax'] ?? $d['recurrenceMax']))),
         'accesLibre' => in_array((string) ($in['accesLibre'] ?? ''), array_column(socReseau(), 'id'), true) ? (string) $in['accesLibre'] : '',
         'message' => mb_substr(trim((string) ($in['message'] ?? $d['message'])), 0, 600),
@@ -383,6 +386,28 @@ function sfPublicites(string $shop): array
         usort($out[$k], static fn ($x, $y) => ($ordre[$x['phase']] <=> $ordre[$y['phase']]) ?: strcmp((string) $y['start'], (string) $x['start']));
     }
     return $out;
+}
+
+/**
+ * Les commentaires de la boutique : ceux de sa Page Facebook et de ses publicités (pas ceux de l'Instagram du
+ * réseau), classés vert / orange / rouge (src/commentaires.php), relus toutes les heures. Le franchisé les marque
+ * traités ; il ne lance pas de relecture (Meta et Claude restent pilotés par le réseau).
+ */
+function sfCommentaires(string $shop, array $q): array
+{
+    if (!sfRegles()['voirCommentaires']) { return ['hidden' => true, 'commentaires' => [], 'totaux' => null]; }
+    $l = socCommentairesListe(['jours' => $q['jours'] ?? 14, 'couleur' => $q['couleur'] ?? '', 'nonTraites' => $q['nonTraites'] ?? '', 'shop' => $shop]);
+    $relu = is_array($l['relu']) ? ['le' => $l['relu']['le'] ?? null] : null;  // pas les erreurs des autres Pages
+    return ['hidden' => false, 'jours' => $l['jours'], 'commentaires' => $l['commentaires'], 'totaux' => $l['totaux'], 'relu' => $relu, 'ia' => ['configure' => (bool) ($l['ia']['configure'] ?? false)]];
+}
+
+/** Le franchisé marque traité (ou rouvre) un commentaire de sa boutique, et seulement de la sienne. */
+function sfCommentaireTraiter(string $shop, string $id, bool $traite): array
+{
+    if (!sfRegles()['voirCommentaires']) { throw new HttpError(403, 'commentaires non partagés par le réseau'); }
+    $r = Db::row('SELECT shop_id FROM social_commentaire WHERE id = ?', [$id]);
+    if (!$r || (string) $r['shop_id'] !== $shop) { throw new HttpError(404, 'commentaire inconnu'); }
+    return socCommentaireTraiter($id, $traite);
 }
 
 /** Une publication Meta rattachée (Page de la boutique ou Instagram du réseau), relue chez Meta ; le lien seul si Meta refuse. */
@@ -1010,6 +1035,8 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/franchise/calendrier/stats') { return [200, sfCalStats($shop, (string) ($_GET['id'] ?? ''), (string) ($_GET['compte'] ?? ''))]; }
     if ($method === 'GET' && $path === '/franchise/operations') { return [200, sfOperations($shop)]; }
     if ($method === 'GET' && $path === '/franchise/publicites') { return [200, sfPublicites($shop)]; }
+    if ($method === 'GET' && $path === '/franchise/commentaires') { return [200, sfCommentaires($shop, $_GET)]; }
+    if ($method === 'POST' && $path === '/franchise/commentaires/traiter') { $b = body(); return [200, sfCommentaireTraiter($shop, (string) ($b['id'] ?? ''), !empty($b['traite']))]; }
     if ($method === 'GET' && $path === '/franchise/catalogue/offres') { return [200, sfOffres($shop, (string) ($_GET['produit'] ?? ''))]; }
     // La photo d'un produit du webshop (R2, sans CORS) servie par le module : le visuel qui la dessine s'exporte.
     if ($method === 'GET' && $path === '/franchise/media/webshop') { return [200, socMediaWebshop((string) ($_GET['u'] ?? ''))]; }

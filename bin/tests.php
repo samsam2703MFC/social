@@ -1647,6 +1647,26 @@ check('traité : sort des « non traités », compté comme fermé, avec qui et 
     && $com()['111_c1_3']['traite_le'] !== null);
 try { $GLOBALS['SOC_BODY'] = ['id' => 'inconnu', 'traite' => true]; socRoute('POST', '/commentaires/traiter'); $code404 = 200; } catch (HttpError $e) { $code404 = $e->status; } finally { unset($GLOBALS['SOC_BODY']); }
 check('commentaire inconnu : 404', $code404 === 404);
+// Espace franchisé : les commentaires de sa Page seulement (pas l'Instagram du réseau, ni les autres boutiques).
+Db::exec("INSERT INTO social_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur) VALUES ('wavre_c1', 'fb', '222_1', '5', 'X', 'Autre boutique', ?, 0, ?, 'rouge')",
+    [date('Y-m-d H:i:s', strtotime('-1 hour')), date('Y-m-d H:i:s')]);
+Db::exec("UPDATE social_commentaire SET shop_id = 'marque' WHERE id = 'igc_1'");  // l'Instagram du réseau
+sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
+[$code, $b] = $fr('GET', '/franchise/commentaires');
+$idsF = array_column($b['commentaires'] ?? [], 'id');
+check('franchisé : les commentaires de sa Page, classés ; ni l’Instagram du réseau ni une autre boutique ; pas les erreurs des autres Pages',
+    $code === 200 && in_array('111_c1_3', $idsF, true) && !in_array('igc_1', $idsF, true) && !in_array('wavre_c1', $idsF, true) && !isset($b['relu']['erreurs'])
+    && $b['totaux']['rouge'] === 1, json_encode([$idsF, $b['totaux'] ?? null]));
+[$c1] = $fr('POST', '/franchise/commentaires/traiter', ['id' => '111_c1_2', 'traite' => true]);
+[$c2] = $fr('POST', '/franchise/commentaires/traiter', ['id' => 'wavre_c1', 'traite' => true]);
+check('franchisé : marque traité un commentaire de sa boutique ; pas celui d’une autre (404)', $c1 === 200 && $c2 === 404 && $com()['111_c1_2']['traite_le'] !== null);
+[$c3] = $fr('GET', '/franchise/commentaires', [], ['shop' => '5']);
+check('franchisé : la boutique d’un autre est refusée', $c3 === 403);
+$regCom = sfRegles(); sfReglesPut(array_merge($regCom, ['voirCommentaires' => false]));
+[, $b] = $fr('GET', '/franchise/commentaires');
+check('franchisé : masqués si le réseau ne les partage pas', $b['hidden'] === true && !$b['commentaires']);
+sfReglesPut($regCom); unset($_COOKIE[SF_COOKIE]);
+Db::exec("DELETE FROM social_commentaire WHERE id = 'wavre_c1'");
 Db::exec('DELETE FROM social_commentaire WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
 
 echo "Idées de posts : promotions sans post, opérations, gammes, heures creuses (BO)\n";

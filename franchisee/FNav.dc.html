@@ -95,7 +95,7 @@ class Component extends DCLogic {
     if (!st) return { ok: false, items: [], shops: [] };
     // « Mes réseaux » est un menu déroulant : calendrier, vues et abonnés, suivi de la boutique, créer un post.
     // `active` : la page (ou l'onglet) ouvert ; `onPick` (facultatif) : la page change d'onglet sans recharger.
-    const GROUPE = ['cal', 'analyse', 'suivi', 'pub'], sub = this.props.active || 'cal', pick = this.props.onPick;
+    const GROUPE = ['cal', 'analyse', 'suivi', 'com', 'pub'], VUES = ['cal', 'analyse', 'suivi'], sub = this.props.active || 'cal', pick = this.props.onPick;
     const active = GROUPE.includes(sub) ? 'cal' : sub, r = st.rules, q = st.quota || { used: 0, max: r.quotaSemaine };
     const refused = st.posts.filter(p => p.own && p.status === 'Refusé').length, pending = st.posts.filter(p => p.own && p.status === 'À valider').length;
     // Ouvert sur les pages de « Mes réseaux », fermé ailleurs ; replié ou déplié à la main, il le reste (ce navigateur).
@@ -105,10 +105,11 @@ class Component extends DCLogic {
     const subs = [['cal', 'Calendrier', '▦', SF.href('cal')]]
       .concat(r.voirAnalyse !== false ? [['analyse', 'Vues et abonnés', '∿', SF.href('cal', 'vue=analyse')]] : [])
       .concat(r.voirSuivi !== false ? [['suivi', 'Suivi de ma boutique', '↗', SF.href('cal', 'vue=suivi')]] : [])
+      .concat(r.voirCommentaires !== false ? [['com', 'Commentaires', '❝', SF.href('com')]] : [])
       .concat([['pub', 'Créer un post', '+', SF.href('pub')]])
       .map(([k, label, ic, href]) => { const on = active === 'cal' && k === sub;
         return { label, ic, href, fg: on ? '#8D1D2C' : '#333333', w: on ? 600 : 400, bg: on ? '#F4EFE8' : 'transparent', icFg: on ? '#8D1D2C' : '#8A847C',
-          click: (e) => { if (typeof pick === 'function' && k !== 'pub' && sub !== 'pub') { e.preventDefault(); pick(k); } } }; });
+          click: (e) => { if (typeof pick === 'function' && VUES.includes(k) && VUES.includes(sub)) { e.preventDefault(); pick(k); } } }; });
     // « Mes promotions » est retiré : les posts à valider ou refusés se signalent sur « Mes réseaux ».
     const defs = [['cal', 'Mes réseaux', refused || pending, refused ? '#8D1D2C' : '#D97B29']].concat(r.voirCampagnes !== false || r.voirPublicites !== false ? [['camp', 'Publicités et opérations', 0, '#8D1D2C']] : []).concat(st.grilleInstagram || st.instagramUnique ? [['ig', st.instagramUnique ? 'Grille Instagram du réseau' : 'Grille Instagram', 0, '#8D1D2C']] : []);
     const jours = [1, 2, 3, 4, 5, 6, 0].filter(j => (r.jours || []).includes(j)).map(j => SF.DAYS[j]);

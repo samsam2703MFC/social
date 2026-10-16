@@ -21,7 +21,7 @@
   </sc-for>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:900,&quot;height&quot;:48},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cal&quot;,&quot;analyse&quot;,&quot;suivi&quot;,&quot;pub&quot;],&quot;default&quot;:&quot;cal&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:900,&quot;height&quot;:48},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cal&quot;,&quot;analyse&quot;,&quot;suivi&quot;,&quot;com&quot;,&quot;pub&quot;],&quot;default&quot;:&quot;cal&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
 // Les onglets de « Mes réseaux » : le calendrier, l'analyse des vues et des abonnés, le suivi de la boutique et
 // la création d'un post, regroupés sous une seule entrée du menu. `onPick` (facultatif) : la page change d'onglet sans recharger.
 class Component extends DCLogic {
@@ -32,10 +32,11 @@ class Component extends DCLogic {
     const defs = [['cal', 'Calendrier', '▦', SF.href('cal')]]
       .concat(st.rules.voirAnalyse !== false ? [['analyse', 'Vues et abonnés', '∿', SF.href('cal', 'vue=analyse')]] : [])
       .concat(st.rules.voirSuivi !== false ? [['suivi', 'Suivi de ma boutique', '↗', SF.href('cal', 'vue=suivi')]] : [])
+      .concat(st.rules.voirCommentaires !== false ? [['com', 'Commentaires', '❝', SF.href('com')]] : [])
       .concat([['pub', 'Créer un post', '+', SF.href('pub')]]);
     return { tabs: defs.map(([k, label, ic, href]) => { const on = k === active;
       return { label, ic, href, fg: on ? '#8D1D2C' : '#444444', w: on ? 600 : 500, line: on ? '#8D1D2C' : 'transparent', icBg: on ? '#8D1D2C' : '#EAE4DC', icFg: on ? '#FFFFFF' : '#666666',
-        click: (e) => { if (typeof pick === 'function' && k !== 'pub' && active !== 'pub') { e.preventDefault(); pick(k); } } }; }) };
+        click: (e) => { const VUES = ['cal', 'analyse', 'suivi']; if (typeof pick === 'function' && VUES.includes(k) && VUES.includes(active)) { e.preventDefault(); pick(k); } } }; }) };
   }
 }
 </script>

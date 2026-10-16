@@ -172,7 +172,8 @@ function socCommentaireRegles(string $msg): array
 
 /**
  * Le tableau : les commentaires des `jours` derniers jours, du plus récent au plus ancien, avec leur classement,
- * filtrés par couleur, compte (`fb:…`, `ig:…`), « non traités » ; plus les totaux et l'état de la dernière relecture.
+ * filtrés par couleur, compte (`fb:…`, `ig:…`), « non traités », boutique (`shop`, pour l'espace franchisé) ;
+ * plus les totaux et l'état de la dernière relecture.
  */
 function socCommentairesListe(array $q): array
 {
@@ -181,6 +182,8 @@ function socCommentairesListe(array $q): array
     if (in_array($q['couleur'] ?? '', SOC_COM_COULEURS, true)) { $where[] = 'c.couleur = ?'; $args[] = (string) $q['couleur']; }
     if (!empty($q['compte']) && preg_match('/^(fb|ig):(\w+)$/', (string) $q['compte'], $mm)) { $where[] = 'c.canal = ? AND c.compte = ?'; $args[] = $mm[1]; $args[] = $mm[2]; }
     if (!empty($q['nonTraites'])) { $where[] = 'c.traite_le IS NULL'; }
+    $parShop = isset($q['shop']) && $q['shop'] !== '' ? (string) $q['shop'] : null;
+    if ($parShop !== null) { $where[] = 'c.shop_id = ?'; $args[] = $parShop; }
     $rows = Db::rows('SELECT * FROM social_commentaire c WHERE ' . implode(' AND ', $where) . ' ORDER BY c.cree_le DESC LIMIT 500', $args);
     $shops = []; foreach (socShops() as $s) { $shops[(string) $s['id']] = (string) $s['name']; }
     $pubs = []; foreach (socItems('ads') as $a) { $pubs[(string) $a['id']] = (string) ($a['name'] ?? ''); }
@@ -195,7 +198,8 @@ function socCommentairesListe(array $q): array
             'traiteLe' => $r['traite_le'] !== null ? substr((string) $r['traite_le'], 0, 16) : null, 'traitePar' => (string) ($r['traite_par'] ?? '')];
     }, $rows);
     // Les totaux de la période, tous filtres de couleur et de suivi confondus.
-    $tot = Db::rows('SELECT couleur, traite_le IS NULL AS ouvert, COUNT(*) n FROM social_commentaire WHERE cree_le >= ? GROUP BY couleur, ouvert', [$args[0]]);
+    $tot = Db::rows('SELECT couleur, traite_le IS NULL AS ouvert, COUNT(*) n FROM social_commentaire WHERE cree_le >= ?' . ($parShop !== null ? ' AND shop_id = ?' : '')
+        . ' GROUP BY couleur, ouvert', $parShop !== null ? [$args[0], $parShop] : [$args[0]]);
     $totaux = ['rouge' => 0, 'orange' => 0, 'vert' => 0, 'aClasser' => 0, 'rougeOuverts' => 0, 'orangeOuverts' => 0, 'total' => 0];
     foreach ($tot as $t) {
         $k = in_array($t['couleur'], SOC_COM_COULEURS, true) ? $t['couleur'] : 'aClasser';
@@ -203,7 +207,8 @@ function socCommentairesListe(array $q): array
         if ((int) $t['ouvert'] && in_array($k, ['rouge', 'orange'], true)) { $totaux[$k . 'Ouverts'] += (int) $t['n']; }
     }
     $comptes = array_map(static fn ($r) => ['key' => $r['canal'] . ':' . $r['compte'], 'name' => (string) $r['compte_nom']],
-        Db::rows('SELECT DISTINCT canal, compte, compte_nom FROM social_commentaire WHERE compte IS NOT NULL AND compte_nom IS NOT NULL ORDER BY compte_nom'));
+        Db::rows('SELECT DISTINCT canal, compte, compte_nom FROM social_commentaire WHERE compte IS NOT NULL AND compte_nom IS NOT NULL' . ($parShop !== null ? ' AND shop_id = ?' : '')
+            . ' ORDER BY compte_nom', $parShop !== null ? [$parShop] : []));
     return ['jours' => $jours, 'commentaires' => $liste, 'totaux' => $totaux, 'comptes' => $comptes, 'relu' => socSetting('commentaires_relus'),
         'ia' => socIaStatut()];
 }

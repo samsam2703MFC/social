@@ -2,17 +2,18 @@
 DirectoryIndex index.html
 
 # Les pages sous une adresse propre, sans « .dc.html » : /social_franchisee/calendrier, publier,
-# operations, instagram (le paramètre ?shop= suit). Les anciennes adresses en .dc.html restent valables
+# operations, instagram, commentaires (le paramètre ?shop= suit). Les anciennes adresses en .dc.html restent valables
 # (liens de l'ERP, favoris) ; la page les affiche alors sous leur nom propre.
 <IfModule mod_rewrite.c>
   RewriteEngine On
   # « publier/ » → « publier » (l'adresse demandée, sans la barre finale : jamais le chemin du disque).
-  RewriteCond %{REQUEST_URI} ^(.*/(calendrier|publier|operations|instagram))/$
+  RewriteCond %{REQUEST_URI} ^(.*/(calendrier|publier|operations|instagram|commentaires))/$
   RewriteRule ^ %1 [R=302,L]
   RewriteRule ^calendrier$ Calendrier.dc.html [L]
   RewriteRule ^publier$ Publier.dc.html [L]
   RewriteRule ^operations$ Campagnes.dc.html [L]
   RewriteRule ^instagram$ Instagram.dc.html [L]
+  RewriteRule ^commentaires$ Commentaires.dc.html [L]
 </IfModule>
 <IfModule mod_headers.c>
   <FilesMatch "\.(html|js|css)$">
