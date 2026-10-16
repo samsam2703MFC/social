@@ -35,6 +35,7 @@ require_once __DIR__ . '/detourage.php';
 require_once __DIR__ . '/commentaires.php';
 require_once __DIR__ . '/google.php';
 require_once __DIR__ . '/bilan.php';
+require_once __DIR__ . '/kit.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -128,6 +129,9 @@ function socRoute(string $method, string $path): array
     // Les avis Google : la Réputation digitale du BO (ses tables, lues) et les avis classés (src/google.php).
     if ($method === 'GET' && $path === '/google') { return [200, socGoogleEcran($_GET)]; }
     // Le bilan de la semaine, boutique par boutique (src/bilan.php).
+    // Le kit du mois de l'espace franchisé (src/kit.php).
+    if ($method === 'GET' && $path === '/kit') { return [200, socKitVue()]; }
+    if ($method === 'POST' && $path === '/kit') { return [200, socKitPut((array) (body()['items'] ?? []))]; }
     if ($method === 'GET' && $path === '/bilan') { return [200, socBilan(!empty($_GET['forcer']))]; }
     if ($method === 'POST' && $path === '/google/reglages') { return [200, ['reglages' => socGoogleReglagesPut(body())]]; }
     if ($method === 'POST' && $path === '/google/relire') {

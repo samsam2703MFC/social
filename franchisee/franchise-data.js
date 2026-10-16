@@ -429,6 +429,16 @@
         magasins: [{ id: STATE.shop.id, nom: STATE.shop.name, note: 4.4, avis: 50, ecart: -0.2, avis5Requis: 25, repartition: rep, raccorde: true, url: '', synchro: STATE.today + ' 07:00',
           lienAvis: 'https://search.google.com/local/writereview?placeid=demo', lienCourt: location.origin + '/social/api/v1/social/avis/' + STATE.shop.id, gagnes7: 2, gagnes30: 6, scans7: 3, scans30: 11 }] } });
   }
+  /** Le kit du mois : les posts demandés par le réseau ce mois-ci et le suivant (src/kit.php). */
+  function kit() {
+    if (!DEMO) return api('GET', '/franchise/kit?shop=' + encodeURIComponent(STATE.shop.id));
+    const t = (n) => addDays(STATE.today, n);
+    const tp = (STATE.templates || []).filter(x => x.active !== false);
+    if (!tp.length) return Promise.resolve({ items: [] });
+    return Promise.resolve({ items: [
+      { id: 'kd1', modele: tp[0].id, nom: tp[0].name, date: t(-3), mois: t(-3).slice(0, 7), note: 'La fournée du week-end : votre plus belle vitrine.', fait: true, faitLe: t(-2), passe: true },
+      { id: 'kd2', modele: (tp[1] || tp[0]).id, nom: (tp[1] || tp[0]).name, date: t(4), mois: t(4).slice(0, 7), note: 'Lancement de la gamme d’automne dans tout le réseau.', fait: false, faitLe: null, passe: false }] });
+  }
   /** « Ma semaine » : la ligne de la boutique dans le bilan du réseau, la moyenne des autres et son rang (src/bilan.php). */
   function maSemaine() {
     if (!DEMO) return api('GET', '/franchise/semaine?shop=' + encodeURIComponent(STATE.shop.id));
@@ -511,7 +521,7 @@
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, publicites, commentaires, commentaireTraiter, commentaireRepondre, maSemaine, google, webshopUrl, photoLocale,
+  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, publicites, commentaires, commentaireTraiter, commentaireRepondre, maSemaine, kit, google, webshopUrl, photoLocale,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();

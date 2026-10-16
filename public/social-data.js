@@ -824,6 +824,25 @@
     if (LIVE) return api('POST', '/google/synchroniser', { jours });
     return Promise.resolve(Object.assign(demoGoogle(jours), { bo: { magasins: 3, nouveaux: 0, erreurs: [], aucuneFiche: false }, sync: { lus: 4 }, analyse: { classes: 0, ia: true, erreur: null } }));
   }
+  /** Le kit du mois de l'espace franchisé (src/kit.php) : les posts demandés aux boutiques, et qui les a programmés. */
+  let DEMO_KIT = null;
+  function kitVueDemo() {
+    const tpls = (state().ftemplates || []);
+    const it = (DEMO_KIT || []).map((k, i) => Object.assign({}, k, { nom: (tpls.find(t => t.id === k.modele) || {}).name || k.modele, mois: k.date.slice(0, 7),
+      boutiques: SHOPS.map((sh, j) => ({ id: sh.id, nom: sh.name, fait: (i + j) % 3 === 0, date: null })) }));
+    it.forEach(k => { k.faits = k.boutiques.filter(b => b.fait).length; });
+    return { items: it, tous: it, boutiques: SHOPS.length, modeles: tpls.map(t => ({ id: t.id, nom: t.name, actif: t.active !== false })) };
+  }
+  function kit() {
+    if (LIVE) return api('GET', '/kit');
+    if (!DEMO_KIT) { const t = (state().ftemplates || []); DEMO_KIT = t.length ? [{ id: 'kd1', modele: t[0].id, date: addDays(TODAY, 3), note: 'La fournée du week-end : votre plus belle vitrine.' }] : []; }
+    return Promise.resolve(kitVueDemo());
+  }
+  function kitSave(items) {
+    if (LIVE) return api('POST', '/kit', { items });
+    DEMO_KIT = items.map((k, i) => Object.assign({ id: k.id || 'kd' + Date.now() + i }, k));
+    return Promise.resolve(kitVueDemo());
+  }
   /** Le bilan de la semaine, boutique par boutique (src/bilan.php). En démonstration : quatre boutiques d'exemple. */
   function bilan(forcer) {
     if (LIVE) return api('GET', '/bilan' + (forcer ? '?forcer=1' : ''));
@@ -900,7 +919,7 @@
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
     api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT,
-    commentaires, commentairesRelire, commentaireTraiter, commentaireRepondre, bilan, google, googleRelire, googleSynchroniser, googleReglages,
+    commentaires, commentairesRelire, commentaireTraiter, commentaireRepondre, bilan, kit, kitSave, google, googleRelire, googleSynchroniser, googleReglages,
     comptesMeta: () => LIVE ? api('GET', '/meta/comptes').then(r => { META.comptes = (r && r.comptes) || META.comptes; return META.comptes; }) : Promise.resolve(META.comptes), calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, charte, relire, ia: () => (LIVE && LIVE.ia) || { configure: false, modele: '' }, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.

@@ -1932,6 +1932,28 @@ check('franchisé : classement masqué si le réseau ne le partage pas', !isset(
 sfReglesPut($regB); unset($_COOKIE[SF_COOKIE]);
 Db::exec("DELETE FROM social_content WHERE id IN ('bil1','bil2','bil3','bil4','bil5')"); Db::exec("DELETE FROM social_commentaire WHERE id IN ('bc1','bc2','bc3')"); socSettingPut('bilan_cache', null, false);
 
+echo "Kit du mois : les posts que le réseau demande à chaque boutique ce mois-ci\n";
+$modK = sfModeles(true)[0]['id'];
+$jK = date('Y-m-d', strtotime('+20 days'));
+$err = static function (string $route, array $b): array { $GLOBALS['SOC_BODY'] = $b; try { $r = socRoute('POST', $route); return [$r[0], $r[1]]; } catch (HttpError $e) { return [$e->status, $e->getMessage()]; } finally { unset($GLOBALS['SOC_BODY']); } };
+[$cK0, $mK0] = $err('/kit', ['items' => [['modele' => 'inconnu', 'date' => $jK]]]);
+[$cK, $vK] = $err('/kit', ['items' => [['modele' => $modK, 'date' => $jK, 'note' => 'Lancement de la gamme d’automne']]]);
+check('kit : un modèle inconnu est refusé ; enregistré avec son nom, son mois, sa note', $cK0 === 422 && str_contains((string) $mK0, 'modèle inconnu') && $cK === 200
+    && count($vK['items']) === 1 && $vK['items'][0]['mois'] === substr($jK, 0, 7) && $vK['items'][0]['faits'] === 0 && $vK['boutiques'] >= 2, json_encode($vK['items'] ?? $mK0));
+$idK = $vK['items'][0]['id'];
+sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
+[, $kF] = $fr('GET', '/franchise/kit');
+check('franchisé : « À publier ce mois-ci », à faire', count($kF['items']) === (substr($jK, 0, 7) <= date('Y-m', strtotime('first day of next month')) ? 1 : 0) && ($kF['items'][0]['fait'] ?? null) === false);
+socItemPut('posts', ['id' => 'kitp1', 'origin' => 'franchise', 'template' => $modK, 'date' => date('Y-m-d', strtotime($jK . ' +2 days')), 'time' => '09:00', 'status' => 'Programmé', 'shops' => ['4'], 'title' => 'K']);
+[, $kF] = $fr('GET', '/franchise/kit');
+[, $vK2] = socRoute('GET', '/kit');
+$bK = array_column($vK2['items'][0]['boutiques'], null, 'id');
+check('programmé à ±7 jours de la date conseillée : fait, pour cette boutique seulement ; la marque voit qui l’a fait', ($kF['items'][0]['fait'] ?? null) === true && $bK['4']['fait'] === true
+    && $bK['5']['fait'] === false && $vK2['items'][0]['faits'] === 1);
+[$cK2] = $err('/kit', ['items' => [['id' => $idK, 'modele' => $modK, 'date' => $jK]]]);
+check('kit modifié : même élément (même id)', $cK2 === 200 && socKit()[0]['id'] === $idK);
+unset($_COOKIE[SF_COOKIE]); Db::exec("DELETE FROM social_content WHERE id = 'kitp1'"); socSettingPut('kit_mois', null, false);
+
 echo "Idées de posts : promotions sans post, opérations, gammes, heures creuses (BO)\n";
 $auj = date('Y-m-d'); $j = static fn (int $n) => date('Y-m-d', strtotime($auj . ' ' . ($n >= 0 ? '+' : '') . $n . ' days'));
 socSettingPut('tfb_cache_promos', ['le' => time(), 'items' => [

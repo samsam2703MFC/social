@@ -161,6 +161,32 @@
       </div>
     </section>
 
+    <!-- ============ KIT DU MOIS ============ -->
+    <section id="kit" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:16px;font-weight:500;">Kit du mois</span>
+          <span style="font-size:12px;color:#666666;line-height:1.45;">Les posts que chaque boutique publie ce mois-ci : un modèle, une date conseillée, un mot. La boutique les retrouve en tête de « Créer un post », préremplis ; vous voyez qui les a programmés.</span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onClick="{{ kitAjouter }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">+ Ajouter un post</button>
+          <button onClick="{{ kitEnregistrer }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">{{ kitLabel }}</button>
+        </div>
+      </div>
+      <sc-if value="{{ kitVide }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;color:#666666;background:#FBF8F4;border-radius:8px;padding:10px 12px;">Aucun post dans le kit : « Ajouter un post » pour donner le rythme du mois aux boutiques.</span></sc-if>
+      <sc-for list="{{ kitRows }}" as="k" hint-placeholder-count="0">
+        <div style="display:grid;grid-template-columns:150px minmax(180px,1fr) minmax(200px,1.4fr) minmax(170px,1fr) 32px;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;background:#FBF8F4;">
+          <input type="date" value="{{ k.date }}" onChange="{{ k.setDate }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;background:#FFFFFF;">
+          <select value="{{ k.modele }}" onChange="{{ k.setModele }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;background:#FFFFFF;">
+            <sc-for list="{{ kitModeles }}" as="m" hint-placeholder-count="0"><option value="{{ m.id }}">{{ m.nom }}</option></sc-for>
+          </select>
+          <input value="{{ k.note }}" onChange="{{ k.setNote }}" placeholder="Pourquoi ce post (ex. lancement de la gamme d’automne)" maxlength="200" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;background:#FFFFFF;">
+          <span style="font-size:12px;line-height:1.4;color:{{ k.faitFg }};" title="{{ k.faitTip }}">{{ k.fait }}</span>
+          <button onClick="{{ k.retirer }}" title="Retirer" style="width:28px;height:28px;border-radius:50%;border:none;background:#FFFFFF;color:#8D1D2C;font-size:14px;cursor:pointer;">✕</button>
+        </div>
+      </sc-for>
+    </section>
+
     <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
       <!-- ============ RÈGLES ============ -->
       <section style="flex:1 1 420px;min-width:300px;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
@@ -223,13 +249,21 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { sel: null, ed: null, rules: null, asShop: '', pvLang: 'fr', toast: '', tick: 0, err: '' };
+  state = { sel: null, ed: null, rules: null, asShop: '', pvLang: 'fr', toast: '', tick: 0, err: '', kit: null, kitVue: null, kitBusy: false };
   componentDidMount() {
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
     const SA = window.SA; if (!SA) return;
     const first = (SA.state().ftemplates || [])[0];
     this.setState({ rules: Object.assign({}, (SA.state().franchise || {}).rules || {}), asShop: (SA.SHOPS[0] || {}).id || '' });
     if (first) this.pick(first);
+    if (SA.kit) SA.kit().then(v => this.setState({ kitVue: v, kit: (v.tous || []).map(k => ({ id: k.id, modele: k.modele, date: k.date, note: k.note || '' })) })).catch(() => this.setState({ kit: [] }));
+  }
+  kitPatch(i, patch) { this.setState({ kit: this.state.kit.map((k, j) => j === i ? Object.assign({}, k, patch) : k) }); }
+  kitEnregistrer() {
+    const SA = window.SA; if (this.state.kitBusy) return;
+    this.setState({ kitBusy: true });
+    SA.kitSave(this.state.kit || []).then(v => { this.setState({ kitBusy: false, kitVue: v, kit: (v.tous || []).map(k => ({ id: k.id, modele: k.modele, date: k.date, note: k.note || '' })) }); this.toast('Kit enregistré : les boutiques le voient dans « Créer un post ».'); })
+      .catch(e => { this.setState({ kitBusy: false }); this.toast('Kit non enregistré : ' + (e.message || 'erreur')); });
   }
   componentWillUnmount() { clearTimeout(this._tt); window.removeEventListener('sa-change', this._h); }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 4500); }
@@ -350,6 +384,22 @@ class Component extends DCLogic {
       kpis, tpls: list, hasEd: !!e, newTpl: () => this.setState({ sel: null, err: '', ed: { id: 'ft' + Date.now(), order: tpls.length + 1, name: 'Nouveau modèle', description: '', active: false, type: 'Produit', fb: true, ig: true, validation: true,
         title: '{produit}', text: '{produit} chez L’Atelier By {ville}.', textNl: '{produit} bij L’Atelier By {ville}.', product: 'choix', promo: { kind: 'aucune' }, period: false, free: 0, photo: 'choix', visual: { style: 'epure', eyebrow: '', eyebrowNl: '' } } }),
       r, toggleRule: { actif: () => RS('actif', r.actif === false) },
+      ...(() => {
+        const kv = s.kitVue || {}, parId = {}; (kv.items || []).forEach(k => { parId[k.id] = k; });
+        const mods = (kv.modeles || (SA.state().ftemplates || []).map(t => ({ id: t.id, nom: t.name, actif: t.active !== false }))).map(m => ({ id: m.id, nom: m.nom + (m.actif ? '' : ' (fermé)') }));
+        const rows = (s.kit || []).map((k, i) => {
+          const v = parId[k.id], faits = v ? v.boutiques.filter(b => b.fait) : [];
+          return { date: k.date, modele: k.modele, note: k.note,
+            setDate: (e) => this.kitPatch(i, { date: e.target.value }), setModele: (e) => this.kitPatch(i, { modele: e.target.value }), setNote: (e) => this.kitPatch(i, { note: e.target.value }),
+            retirer: () => this.setState({ kit: s.kit.filter((_, j) => j !== i) }),
+            fait: v ? faits.length + ' / ' + v.boutiques.length + ' boutiques l’ont programmé' : 'nouveau — enregistrez',
+            faitTip: v ? 'Fait : ' + (faits.map(b => b.nom).join(', ') || 'aucune') + ' · À faire : ' + (v.boutiques.filter(b => !b.fait).map(b => b.nom).join(', ') || 'aucune') : '',
+            faitFg: v && faits.length === v.boutiques.length ? '#0F6B4A' : '#444444' };
+        });
+        return { kitRows: rows, kitVide: !!s.kit && !rows.length, kitModeles: mods, kitLabel: s.kitBusy ? 'Enregistrement…' : 'Enregistrer le kit',
+          kitAjouter: () => this.setState({ kit: (s.kit || []).concat({ id: '', modele: (mods[0] || {}).id || '', date: SA.addDays(SA.TODAY, 7), note: '' }) }),
+          kitEnregistrer: () => this.kitEnregistrer() };
+      })(),
       valModes: [['toujours', 'Toujours'], ['modele', 'Selon le modèle'], ['jamais', 'Jamais']].map(([k, label]) => { const [bg, fg] = seg(r.validation === k); return { label, bg, fg, pick: () => RS('validation', k) }; }),
       // Qui traite les commentaires et avis rouges de la Page d'une boutique (plainte, hygiène, santé…).
       rougeModes: [['reseau', 'Le réseau'], ['franchise', 'La boutique']].map(([k, label]) => { const [bg, fg] = seg((r.rouges || 'reseau') === k); return { label, bg, fg, pick: () => RS('rouges', k) }; }),

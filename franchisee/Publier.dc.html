@@ -41,6 +41,23 @@
 
     <!-- Étape 1 : le modèle -->
     <sc-if value="{{ noTpl }}" hint-placeholder-val="{{ true }}">
+      <!-- Le kit du mois : les posts que le réseau demande ce mois-ci (src/kit.php), préparés au clic. -->
+      <sc-if value="{{ hasKit }}" hint-placeholder-val="{{ false }}">
+      <section style="background:#FFFFFF;border-radius:12px;border:1px solid rgba(141,29,44,0.45);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8D1D2C;">À publier ce mois-ci · demandé par le réseau</span>
+          <span style="font-size:12px;color:#666666;">{{ kitResume }}</span>
+        </div>
+        <sc-for list="{{ kit }}" as="k" hint-placeholder-count="2">
+          <div class="sf-wrap" style="display:flex;gap:12px;align-items:center;padding:8px 10px;border-radius:10px;background:#FBF8F4;">
+            <span style="flex:0 0 auto;width:48px;text-align:center;display:flex;flex-direction:column;line-height:1.1;"><span style="font-size:18px;font-weight:600;color:#232220;">{{ k.jour }}</span><span style="font-size:10px;text-transform:uppercase;color:#666666;">{{ k.mois }}</span></span>
+            <span style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;"><span style="font-size:14px;font-weight:500;">{{ k.nom }}</span><sc-if value="{{ k.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;line-height:1.4;">{{ k.note }}</span></sc-if></span>
+            <span style="flex:0 0 auto;font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;background:{{ k.stBg }};color:{{ k.stFg }};white-space:nowrap;">{{ k.statut }}</span>
+            <sc-if value="{{ k.aFaire }}" hint-placeholder-val="{{ true }}"><a href="{{ k.href }}" style="flex:0 0 auto;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;background:#8D1D2C;color:#FFFFFF;text-decoration:none;white-space:nowrap;">Préparer</a></sc-if>
+          </div>
+        </sc-for>
+      </section>
+      </sc-if>
       <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ filters }}" as="f" hint-placeholder-count="2"><button onClick="{{ f.pick }}" style="border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};">{{ f.label }}</button></sc-for></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;">
         <sc-for list="{{ tpls }}" as="t" hint-placeholder-count="5">
@@ -150,6 +167,7 @@
               </div>
               <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                 <sc-if value="{{ hasThumb }}" hint-placeholder-val="{{ false }}"><img src="{{ thumb }}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px;background:#F5EFE4;"></sc-if>
+                <sc-if value="{{ canUpload }}" hint-placeholder-val="{{ false }}"><label class="sf-only-mob" style="display:none;height:44px;padding:0 14px;border-radius:8px;border:none;background:#232220;color:#FFFFFF;cursor:pointer;font-size:13px;font-weight:500;align-items:center;gap:6px;">📷 Prendre une photo<input type="file" accept="image/*" capture="environment" onChange="{{ onPhoto }}" style="display:none;"></label></sc-if>
                 <sc-if value="{{ canUpload }}" hint-placeholder-val="{{ false }}"><label style="height:44px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:13px;font-weight:500;display:flex;align-items:center;">{{ photoBtn }}<input type="file" accept="image/*" onChange="{{ onPhoto }}" style="display:none;"></label></sc-if>
                 <span style="font-size:11px;color:{{ photoNoteFg }};line-height:1.45;flex:1 1 180px;">{{ photoNote }}</span>
               </div>
@@ -606,7 +624,7 @@
           </section>
 
           <sc-if value="{{ hasErrors }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;"><sc-for list="{{ errors }}" as="er" hint-placeholder-count="0"><span style="font-size:12px;color:#8D1D2C;">{{ er }}</span></sc-for></div></sc-if>
-          <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap;">
+          <div class="sf-cta" style="display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap;">
             <span style="font-size:12px;color:#666666;">{{ submitNote }}</span>
             <button onClick="{{ submit }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:11px 18px;font-size:14px;font-weight:500;cursor:pointer;">{{ submitLabel }}</button>
           </div>
@@ -727,7 +745,10 @@ class Component extends DCLogic {
     return { tpl: t.id, product: null, apiOffre: null, format: 'post', rec: 'une', discount: p.kind === 'remise' ? Math.min(p.max, r.remiseMax, Math.max(p.min, 20)) : 0, offer: p.kind === 'offre' ? (p.offres || [])[0] || '' : '',
       promoPrice: '', free: '', photo: null, pmode: null, ...this.visuelVide(), link: t.link ? 'modele' : 'aucun', fb: !!(t.fb && r.fb && st.shop.fb === 'connected'), ig: !!(t.ig && r.ig && st.shop.igs === 'connected'), errors: [] };
   }
-  componentDidMount() { this.lireJour(); this.lirePhoto(); }
+  componentDidMount() {
+    this.lireJour(); this.lirePhoto();
+    if (window.SF && window.SF.kit) window.SF.kit().then(r => this.setState({ kitItems: (r && r.items) || [] })).catch(() => {});
+  }
   /* --- L'éditeur de visuel : les réglages de « Créer un post » (franchiseur), sur le visuel du modèle ---------------- */
   visuelVide() { return { vo: {}, vt: { fr: {}, nl: {} }, xphotos: [], adj: {}, txtSel: null }; }
   STYLES1 = ['epure', 'abricot', 'ruby', 'noir', 'plein', 'pleinbandeau', 'pleinencart', 'pleinhaut', 'pleinfilet', 'duo'];
@@ -1029,7 +1050,17 @@ class Component extends DCLogic {
     const t = s.tpl ? st.templates.find(x => x.id === s.tpl) : null;
     const isPromo = (x) => ((x.promo || {}).kind || 'aucune') !== 'aucune';
     const valOf = (x) => r.validation === 'toujours' || (r.validation === 'modele' && x.validation);
-    const common = { ok: true, hasError: false, quotaFull, quotaMax: q.max, hasTpl: !!t, noTpl: !t };
+    // Le kit du mois (« À publier ce mois-ci ») : en tête du choix du modèle.
+    const kitVals = (() => {
+        const items = this.state.kitItems || [], M = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+        const aFaire = items.filter(k => !k.fait).length;
+        return { hasKit: items.length > 0, kitResume: aFaire ? aFaire + ' à préparer sur ' + items.length : 'Tout est programmé : merci !',
+          kit: items.map(k => ({ nom: k.nom, note: k.note || '', hasNote: !!k.note, jour: String(+k.date.slice(8, 10)), mois: M[+k.date.slice(5, 7) - 1],
+            statut: k.fait ? 'Programmé le ' + SF.dShort(k.faitLe) : k.passe ? 'En retard' : 'À faire', aFaire: !k.fait,
+            stBg: k.fait ? '#E2F0E8' : k.passe ? '#F6DCDF' : '#FCE7C8', stFg: k.fait ? '#0F6B4A' : k.passe ? '#8D1D2C' : '#7A4100',
+            href: SF.href('pub', 'template=' + encodeURIComponent(k.modele) + (k.passe ? '' : '&date=' + k.date)) })) };
+      })();
+    const common = Object.assign({ ok: true, hasError: false, quotaFull, quotaMax: q.max, hasTpl: !!t, noTpl: !t }, kitVals);
     if (!t) {
       const list = st.templates.filter(x => s.filter === 'all' || isPromo(x));
       return Object.assign(common, {

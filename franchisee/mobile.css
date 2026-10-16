@@ -78,6 +78,10 @@
   .sf-sheet { position: fixed !important; left: 8px; right: 8px; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); max-height: 70vh; overflow-y: auto !important; z-index: 65; box-shadow: 0 -8px 30px rgba(35, 34, 32, 0.28); }
   .sf-sheet-img { padding-bottom: 46% !important; }
   .sf-sheet button[title="Fermer"] { width: 36px !important; height: 36px !important; font-size: 18px !important; }
+  /* Créer un post : le bouton « Programmer » reste au bas de l'écran pendant qu'on remplit le formulaire. */
+  .sf-cta { position: sticky; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); z-index: 40; background: #FFFFFF; border-radius: 12px; padding: 10px 12px;
+    box-shadow: 0 -4px 18px rgba(35, 34, 32, 0.14); justify-content: space-between !important; }
+  .sf-cta button { flex: 1 1 auto; }
 }
 
 /* Petits téléphones : les libellés de la barre du bas tiennent sur une ligne. */

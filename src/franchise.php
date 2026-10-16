@@ -1088,6 +1088,7 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/franchise/operations') { return [200, sfOperations($shop)]; }
     if ($method === 'GET' && $path === '/franchise/publicites') { return [200, sfPublicites($shop)]; }
     if ($method === 'GET' && $path === '/franchise/commentaires') { return [200, sfCommentaires($shop, $_GET)]; }
+    if ($method === 'GET' && $path === '/franchise/kit') { return [200, sfKit($shop)]; }
     if ($method === 'GET' && $path === '/franchise/semaine') { return [200, sfMaSemaine($shop)]; }
     if ($method === 'GET' && $path === '/franchise/google') { return [200, sfGoogle($shop, $_GET)]; }
     if ($method === 'POST' && $path === '/franchise/commentaires/repondre') { $b = body(); return [200, sfCommentaireRepondre($shop, (string) ($b['id'] ?? ''), (string) ($b['message'] ?? ''), $session)]; }
