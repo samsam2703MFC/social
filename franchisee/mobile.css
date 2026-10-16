@@ -89,3 +89,9 @@
   .sf-bottom { padding-left: 0 !important; padding-right: 0 !important; }
   .sf-bottom a > span:nth-child(2) { font-size: 9px !important; letter-spacing: -0.2px !important; }
 }
+
+/* Intégré dans le module Marketing (?embed=1) : le menu de l'espace s'efface, celui du Marketing le remplace.
+   Une boutique de plus : un petit sélecteur flottant (FNav, .sf-embedbar). */
+html[data-sf-embed="1"] .sf-top, html[data-sf-embed="1"] .sf-side, html[data-sf-embed="1"] .sf-bottom, html[data-sf-embed="1"] .sf-scrim { display: none !important; }
+html[data-sf-embed="1"] .sf-main { padding-bottom: 20px !important; }
+html[data-sf-embed="1"] .sf-embedbar { display: flex !important; }

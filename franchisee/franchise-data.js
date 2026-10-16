@@ -11,7 +11,7 @@
   const Q = new URLSearchParams(location.search);
   // Les pages, sous leur adresse propre (sans « .dc.html ») quand le serveur la sert (`propres`, écrit par
   // bin/franchisee-build.sh ; .htaccess) : /social_franchisee/calendrier, publier, operations, instagram, commentaires, messages, avis-google.
-  const FICHIERS = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', camp: 'Campagnes.dc.html', ig: 'Instagram.dc.html', com: 'Commentaires.dc.html', google: 'Google.dc.html' };
+  const FICHIERS = { cal: 'Calendrier.dc.html', pub: 'Publier.dc.html', camp: 'Campagnes.dc.html', ig: 'Instagram.dc.html', com: 'Commentaires.dc.html', msg: 'Messages.dc.html', google: 'Google.dc.html' };
   const PROPRES = { cal: 'calendrier', pub: 'publier', camp: 'operations', ig: 'instagram', com: 'commentaires', msg: 'messages', google: 'avis-google' };
   const PAGES = CFG.propres ? PROPRES : FICHIERS;
   PAGES.suivi = PAGES.cal;  // le suivi est un onglet du calendrier (?vue=suivi)
@@ -19,6 +19,16 @@
   if (CFG.propres) {
     try { const f = decodeURIComponent(location.pathname.split('/').pop()), k = Object.keys(FICHIERS).find(x => FICHIERS[x] === f);
       if (k) history.replaceState(history.state, '', location.pathname.replace(/[^/]*$/, PROPRES[k]) + location.search + location.hash); } catch (e) {}
+  }
+  // Intégré dans le module Marketing (`?embed=1`, version franchisé) : le menu de l'espace s'efface (mobile.css), chaque
+  // lien garde le paramètre pour rester dans le cadre, et le Marketing apprend quelle page s'affiche (clé « f:… »).
+  const EMBED = Q.get('embed') === '1';
+  if (EMBED) {
+    try { document.documentElement.setAttribute('data-sf-embed', '1'); } catch (e) {}
+    if (window.parent !== window) {
+      try { const f = decodeURIComponent(location.pathname.split('/').pop()), k = Object.keys(PROPRES).find(x => PROPRES[x] === f) || Object.keys(FICHIERS).find(x => FICHIERS[x] === f);
+        if (k) window.parent.postMessage({ type: 'social:page', page: 'f:' + k }, location.origin); } catch (e) {}
+    }
   }
   const HORS_SESSION = 'Ouvrez votre espace boutique depuis l’ERP : vous y êtes déjà connecté.';
   let DEMO = Q.has('demo');
@@ -105,7 +115,7 @@
   // se partage et se garde en favori telle quelle.
   function href(k, q) {
     const sid = STATE && STATE.shop ? String(STATE.shop.id) : SHOP, own = /(^|&)shop=/.test(q || '');
-    const extra = [DEMO ? 'demo=1' : '', sid && !own ? 'shop=' + encodeURIComponent(sid) : '', q || ''].filter(Boolean).join('&');
+    const extra = [DEMO ? 'demo=1' : '', EMBED ? 'embed=1' : '', sid && !own ? 'shop=' + encodeURIComponent(sid) : '', q || ''].filter(Boolean).join('&');
     return encodeURI(PAGES[k]) + (extra ? '?' + extra : '');
   }
 
@@ -572,7 +582,7 @@
   function switchShop(id) { try { localStorage.setItem('sf.shop', id); } catch (e) {} const u = new URL(location.href); u.searchParams.set('shop', id); location.href = u.toString(); }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, publicites, commentaires, commentaireTraiter, commentaireRepondre, maSemaine, kit, boost, boostProposer, messages, messageConversation, messageRepondre, messageTraiter, google, webshopUrl, photoLocale,
+  window.SF = { live: !DEMO, demo: DEMO, embed: EMBED, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, switchShop, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, publicites, commentaires, commentaireTraiter, commentaireRepondre, maSemaine, kit, boost, boostProposer, messages, messageConversation, messageRepondre, messageTraiter, google, webshopUrl, photoLocale,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();
