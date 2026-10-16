@@ -33,6 +33,7 @@ require_once __DIR__ . '/redaction.php';
 require_once __DIR__ . '/recommandations.php';
 require_once __DIR__ . '/detourage.php';
 require_once __DIR__ . '/commentaires.php';
+require_once __DIR__ . '/google.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -117,6 +118,17 @@ function socRoute(string $method, string $path): array
         return [200, ['sync' => $sync + ['dark' => $dark['lus'] ?? 0], 'analyse' => socCommentairesAnalyser()] + socCommentairesListe(['jours' => $b['jours'] ?? 14])];
     }
     if ($method === 'POST' && $path === '/commentaires/traiter') { $b = body(); return [200, socCommentaireTraiter((string) ($b['id'] ?? ''), !empty($b['traite']))]; }
+    // Les avis Google : la Réputation digitale du BO (ses tables, lues) et les avis classés (src/google.php).
+    if ($method === 'GET' && $path === '/google') { return [200, socGoogleEcran($_GET)]; }
+    if ($method === 'POST' && $path === '/google/relire') {
+        $b = body();
+        return [200, ['sync' => socGoogleAvisSync(), 'analyse' => socCommentairesAnalyser()] + socGoogleEcran(['jours' => $b['jours'] ?? 365])];
+    }
+    if ($method === 'POST' && $path === '/google/synchroniser') {
+        $b = body();
+        $bo = socGoogleSynchroniser();
+        return [200, ['bo' => $bo, 'sync' => socGoogleAvisSync(), 'analyse' => socCommentairesAnalyser()] + socGoogleEcran(['jours' => $b['jours'] ?? 365])];
+    }
     if ($method === 'GET' && $path === '/meta/comptes') { return [200, ['comptes' => socComptesMinimums(!empty($_GET['forcer']))]]; }
     if ($method === 'GET' && $path === '/meta/campagnes') { return [200, ['import' => socSetting('meta_campagnes_import'), 'comptes' => array_values(socComptesPub())]]; }
     if ($method === 'POST' && $path === '/meta/campagnes/rafraichir') {

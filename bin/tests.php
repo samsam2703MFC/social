@@ -1669,6 +1669,103 @@ sfReglesPut($regCom); unset($_COOKIE[SF_COOKIE]);
 Db::exec("DELETE FROM social_commentaire WHERE id = 'wavre_c1'");
 Db::exec('DELETE FROM social_commentaire WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
 
+echo "Avis Google : la Réputation digitale du BO (tables lues), avis classés vert / orange / rouge, espace franchisé\n";
+[$code, $b] = socRoute('GET', '/google');
+check('sans les tables de réputation du BO : indisponible, dit pourquoi, pas d’erreur', $code === 200 && ($b['reputation']['indispo'] ?? false) === true
+    && str_contains((string) $b['reputation']['raison'], 'ceo_shop_reputation') && $b['avis'] === []);
+// Les tables du BO, telles que son installeur les crée (src/installer.php du BO).
+$pdo->exec("CREATE TABLE ceo_shop_reputation (shop_id VARCHAR(8) PRIMARY KEY, place_id VARCHAR(120) NULL, profile_url VARCHAR(400) NULL, rating_avg DECIMAL(3,2) NULL, rating_count INT NOT NULL DEFAULT 0, synced_at DATETIME NULL)");
+$pdo->exec("CREATE TABLE ceo_shop_review (id BIGINT AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(8) NOT NULL, source VARCHAR(20) NOT NULL DEFAULT 'google', external_id VARCHAR(160) NULL, author VARCHAR(120) NULL, rating TINYINT NOT NULL, comment TEXT NULL, reviewed_at DATETIME NOT NULL, replied_at DATETIME NULL, UNIQUE KEY uq_review_source (source, external_id))");
+Db::hasTable('ceo_shop_reputation', true); Db::hasTable('ceo_shop_review', true);
+// Halle : magasin « hal » du BO (caisse 4) ; Wavre : raccordée sur l'identifiant de caisse (5), comme le BO le fait aujourd'hui.
+$pdo->exec("INSERT INTO ceo_shop_reputation VALUES ('hal', 'P-HAL', 'https://maps.google.com/?cid=1', 4.40, 50, '2026-10-11 19:49:00'), ('5', 'P-WAV', 'https://maps.google.com/?cid=2', 4.70, 72, '2026-10-10 08:00:00')");
+$pdo->exec("INSERT INTO ceo_shop_review (shop_id, external_id, author, rating, comment, reviewed_at) VALUES
+    ('hal', 'g1', 'Paul R.', 1, 'Un cheveu dans la tarte, inadmissible.', '2026-09-20 10:00:00'),
+    ('hal', 'g2', 'Anne B.', 5, 'Délicieux, accueil parfait !', '2026-09-08 09:00:00'),
+    ('hal', 'g3', 'Luc D.', 3, 'Bon mais un peu cher.', '2026-06-17 12:00:00'),
+    ('5', 'g4', 'Eva', 4, NULL, '2026-05-25 16:00:00')");
+$pdo->exec("INSERT INTO ceo_app_setting VALUES ('reputationCible', '4.6')");
+// Un ancien magasin du BO dont l'identifiant est celui d'une autre caisse : la fiche reste à la caisse 5.
+$pdo->exec("INSERT INTO ceo_shop VALUES ('5', 'X5', 'Ancien 5', 'X', 'Z', 'Fermé', 4)");
+[$code, $b] = socRoute('GET', '/google');
+$rp = $b['reputation']; $mg = array_column($rp['magasins'] ?? [], null, 'id');
+check('réputation : moyenne réseau pondérée par les avis, cible du BO, avis 5★ requis (calculs du BO), magasin du BO rapporté à sa caisse',
+    $code === 200 && $rp['cible'] === 4.6 && $rp['reseau']['moyenne'] === 4.58 && $rp['reseau']['avis'] === 122 && $rp['reseau']['avis5Requis'] === 7 && $rp['reseau']['sousCible'] === 1
+    && $mg['4']['note'] === 4.4 && $mg['4']['avis5Requis'] === 25 && $mg['4']['url'] === 'https://maps.google.com/?cid=1' && $mg['5']['avis5Requis'] === 0 && $mg['5']['ecart'] === 0.1
+    && $rp['connecteur']['raccordes'] === 2 && $rp['connecteur']['derniereSynchro'] === '2026-10-11 19:49', json_encode($rp));
+check('répartition : sur les avis LUS (4), pas sur les avis de la fiche (122)', $rp['reseau']['repartition']['lus'] === 4 && $mg['4']['repartition']['lus'] === 3
+    && array_column($rp['reseau']['repartition']['niveaux'], 'n', 'note') === [5 => 1, 4 => 1, 3 => 1, 2 => 0, 1 => 1]);
+Db::exec("INSERT INTO ceo_app_setting VALUES ('google', ?)", [json_encode(['cle' => 'AIzaTESTCLE', 'langue' => 'fr'])]);
+[, $bk] = socRoute('GET', '/google');
+check('clé Google du BO : jamais rendue, seulement son existence', ($rp['connecteur']['configure'] ?? null) === false && $bk['reputation']['connecteur']['configure'] === true
+    && !str_contains(json_encode($bk), 'AIzaTESTCLE'));
+$pdo->exec("DELETE FROM ceo_app_setting WHERE `key` = 'google'");
+$s = socGoogleAvisSync();
+$gg = array_column(Db::rows("SELECT * FROM social_commentaire WHERE canal = 'gg'"), null, 'id');
+$idG = static fn (string $ext) => 'gg_' . Db::row('SELECT id FROM ceo_shop_review WHERE external_id = ?', [$ext])['id'];
+check('avis recopiés pour les classer : boutique du module, note, fiche en contexte, lien de la fiche', $s['lus'] === 4 && count($gg) === 4 && $gg[$idG('g1')]['shop_id'] === '4'
+    && (int) $gg[$idG('g1')]['note'] === 1 && str_contains((string) $gg[$idG('g1')]['objet_texte'], 'Fiche Google de L’Atelier By Halle (note de la fiche : 4,4 sur 50 avis)')
+    && $gg[$idG('g4')]['shop_id'] === '5' && $gg[$idG('g1')]['lien'] === 'https://maps.google.com/?cid=1', json_encode([$s, array_column($gg, 'shop_id', 'id')]));
+socCommentairesAnalyser();
+$gg = array_column(Db::rows("SELECT * FROM social_commentaire WHERE canal = 'gg'"), null, 'id');
+check('sans clé Claude : la note d’abord (1★ rouge, 3★ orange, 4-5★ vert), même pour un avis ancien ou sans texte',
+    $gg[$idG('g1')]['couleur'] === 'rouge' && $gg[$idG('g3')]['couleur'] === 'orange' && $gg[$idG('g2')]['couleur'] === 'vert' && $gg[$idG('g4')]['couleur'] === 'vert', json_encode(array_column($gg, 'couleur', 'id')));
+check('règles : un bon avis avec une réserve est orange, pas rouge', socCommentaireRegles('Très bon mais vendeuse impolie', 4)['couleur'] === 'orange' && socCommentaireRegles('Super ? oui !', 5)['couleur'] === 'vert');
+Db::exec("UPDATE social_commentaire SET couleur = NULL WHERE canal = 'gg'");
+socSettingPut('anthropic_api_key', 'sk-test-cle', true); $iaAppels = []; $iaMode = 'ok';
+socCommentairesAnalyser();
+$req = (array_values(array_filter($iaAppels, static fn ($x) => str_ends_with($x[1], '/v1/messages')))[0][3] ?? []);
+$in = json_decode((string) ($req['messages'][0]['content'] ?? ''), true);
+$it = array_column((array) ($in['commentaires'] ?? []), null, 'id');
+check('avec Claude : l’avis Google part avec ses étoiles et sa fiche, sans le nom de l’auteur ; consigne propre aux avis Google',
+    ($it[$idG('g1')]['reseau'] ?? '') === 'Avis Google' && ($it[$idG('g1')]['etoiles'] ?? 0) === 1 && str_contains((string) ($it[$idG('g1')]['publication'] ?? ''), 'Fiche Google')
+    && !str_contains((string) $req['messages'][0]['content'], 'Paul R.') && str_contains((string) $req['system'], '1 ou 2 étoiles est rouge'), json_encode($it));
+$iaMode = 'ok'; socSettingPut('anthropic_api_key', null, true);
+[$code, $b] = socRoute('GET', '/google');
+[, $bc] = socRoute('GET', '/commentaires');
+check('écran Google : les avis de l’année, totaux à part ; ils n’entrent pas dans les commentaires Facebook / Instagram',
+    $code === 200 && count($b['avis']) === 4 && $b['totaux']['total'] === 4 && $b['totaux']['rouge'] === 1 && $b['avis'][0]['note'] !== null
+    && !array_filter($bc['commentaires'], static fn ($c) => $c['canal'] === 'gg') && $b['jours'] === 365, json_encode($b['totaux']));
+$GLOBALS['SOC_BODY'] = ['id' => $idG('g1'), 'traite' => true]; socRoute('POST', '/commentaires/traiter'); unset($GLOBALS['SOC_BODY']);
+[, $b] = socRoute('GET', '/google');
+check('avis traité : compté comme fermé', $b['totaux']['rougeOuverts'] === 0);
+// Synchroniser chez Google : le geste du BO (sa clé, ses tables), relayé avec la session du cockpit.
+$cockpit = [];
+BoCockpit::$transport = static function (string $m, string $url, array $body) use (&$cockpit): array {
+    $cockpit[] = [$m, $url];
+    Db::exec("INSERT INTO ceo_shop_review (shop_id, external_id, author, rating, comment, reviewed_at) VALUES ('5', 'g5', 'Tom', 2, 'Pain rassis.', '2026-10-12 08:00:00')");
+    return [200, json_encode(['ok' => true, 'magasins' => 2, 'nouveaux' => 1, 'erreurs' => [], 'aucuneFiche' => false])];
+};
+$GLOBALS['SOC_BODY'] = []; [$code, $b] = socRoute('POST', '/google/synchroniser'); unset($GLOBALS['SOC_BODY']);
+check('synchroniser : le BO relit Google (POST /reputation/sync du cockpit), le nouvel avis est recopié et classé', $code === 200 && ($cockpit[0][0] ?? '') === 'POST'
+    && str_ends_with((string) ($cockpit[0][1] ?? ''), '/api/cockpit/reputation/sync') && $b['bo']['nouveaux'] === 1 && $b['totaux']['total'] === 5 && $b['totaux']['rouge'] === 2, json_encode([$cockpit, $b['bo'] ?? null]));
+BoCockpit::$transport = static fn (string $m, string $url, array $body): array => [422, json_encode(['error' => 'Clé Google absente — renseignez-la dans Paramètres.'])];
+try { $GLOBALS['SOC_BODY'] = []; socRoute('POST', '/google/synchroniser'); $codeS = 200; $msgS = ''; } catch (HttpError $e) { $codeS = $e->status; $msgS = $e->getMessage(); } finally { unset($GLOBALS['SOC_BODY']); }
+check('synchroniser sans clé Google au BO : 422 avec le message du BO', $codeS === 422 && str_contains($msgS, 'Clé Google absente'));
+BoCockpit::$transport = static fn (string $m, string $url, array $body): array => [401, '{}'];
+try { $GLOBALS['SOC_BODY'] = []; socRoute('POST', '/google/synchroniser'); $codeS = 200; } catch (HttpError $e) { $codeS = $e->status; $msgS = $e->getMessage(); } finally { unset($GLOBALS['SOC_BODY']); }
+check('cockpit qui demande une connexion : 422 (pas 401, qui déconnecterait l’écran du module)', $codeS === 422 && str_contains($msgS, 'reconnectez-vous'));
+BoCockpit::$transport = null;
+// Espace franchisé : sa fiche et ses avis seulement.
+sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
+[$code, $b] = $fr('GET', '/franchise/google');
+$idsG = array_column($b['avis'] ?? [], 'id');
+check('franchisé : sa note, sa cible, ses avis 5★ à obtenir, la moyenne du réseau ; ses avis seulement ; ni la clé ni l’état du connecteur',
+    $code === 200 && count($b['reputation']['magasins']) === 1 && $b['reputation']['magasins'][0]['avis5Requis'] === 25 && $b['reputation']['reseau']['moyenne'] === 4.58
+    && in_array($idG('g1'), $idsG, true) && !in_array($idG('g4'), $idsG, true) && !isset($b['reputation']['connecteur']['configure']) && !isset($b['reputation']['reseau']['sousCible']),
+    json_encode([$idsG, $b['reputation']['reseau'] ?? null]));
+[$c1] = $fr('POST', '/franchise/commentaires/traiter', ['id' => $idG('g3'), 'traite' => true]);
+[$c2] = $fr('POST', '/franchise/commentaires/traiter', ['id' => $idG('g4'), 'traite' => true]);
+check('franchisé : marque traité un avis de sa boutique ; pas celui d’une autre (404)', $c1 === 200 && $c2 === 404);
+$regG = sfRegles(); sfReglesPut(array_merge($regG, ['voirAvisGoogle' => false]));
+[, $b] = $fr('GET', '/franchise/google');
+[$c3] = $fr('POST', '/franchise/commentaires/traiter', ['id' => $idG('g3'), 'traite' => false]);
+check('franchisé : avis Google masqués si le réseau ne les partage pas (lecture et suivi)', $b['hidden'] === true && !$b['avis'] && $c3 === 403);
+sfReglesPut($regG); unset($_COOKIE[SF_COOKIE]);
+Db::exec("DELETE FROM social_commentaire WHERE canal = 'gg'");
+$pdo->exec("DELETE FROM ceo_shop WHERE id = '5'"); $pdo->exec('DROP TABLE ceo_shop_reputation'); $pdo->exec('DROP TABLE ceo_shop_review'); $pdo->exec("DELETE FROM ceo_app_setting WHERE `key` = 'reputationCible'");
+Db::hasTable('ceo_shop_reputation', true); Db::hasTable('ceo_shop_review', true);
+
 echo "Idées de posts : promotions sans post, opérations, gammes, heures creuses (BO)\n";
 $auj = date('Y-m-d'); $j = static fn (int $n) => date('Y-m-d', strtotime($auj . ' ' . ($n >= 0 ? '+' : '') . $n . ' days'));
 socSettingPut('tfb_cache_promos', ['le' => time(), 'items' => [

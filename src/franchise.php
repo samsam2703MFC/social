@@ -39,6 +39,8 @@ function sfReglesDefaut(): array
         'voirPublicites' => true, 'voirBudgetPub' => false,
         // Les commentaires de la Page de la boutique (et de ses publicités), classés vert / orange / rouge.
         'voirCommentaires' => true,
+        // Les avis Google de la boutique (note, cible, avis 5★ à obtenir, avis classés vert / orange / rouge).
+        'voirAvisGoogle' => true,
         // Le franchisé peut publier en story (story seule, ou post + story) ; et répéter un post (au plus N fois, 0 = non).
         'story' => true, 'recurrenceMax' => 8,
         // Le franchisé peut choisir le format du visuel (carré, portrait) et la couleur de chaque texte (palette de la marque).
@@ -75,6 +77,7 @@ function sfReglesPut(array $in): array
         'voirAnalyse' => (bool) ($in['voirAnalyse'] ?? true), 'persoVisuel' => (bool) ($in['persoVisuel'] ?? true),
         'voirPublicites' => (bool) ($in['voirPublicites'] ?? true), 'voirBudgetPub' => (bool) ($in['voirBudgetPub'] ?? false),
         'voirCommentaires' => (bool) ($in['voirCommentaires'] ?? true),
+        'voirAvisGoogle' => (bool) ($in['voirAvisGoogle'] ?? true),
         'story' => (bool) ($in['story'] ?? true), 'recurrenceMax' => max(0, min(26, (int) ($in['recurrenceMax'] ?? $d['recurrenceMax']))),
         'accesLibre' => in_array((string) ($in['accesLibre'] ?? ''), array_column(socReseau(), 'id'), true) ? (string) $in['accesLibre'] : '',
         'message' => mb_substr(trim((string) ($in['message'] ?? $d['message'])), 0, 600),
@@ -401,11 +404,29 @@ function sfCommentaires(string $shop, array $q): array
     return ['hidden' => false, 'jours' => $l['jours'], 'commentaires' => $l['commentaires'], 'totaux' => $l['totaux'], 'relu' => $relu, 'ia' => ['configure' => (bool) ($l['ia']['configure'] ?? false)]];
 }
 
-/** Le franchisé marque traité (ou rouvre) un commentaire de sa boutique, et seulement de la sienne. */
+/**
+ * Les avis Google de la boutique : sa note, l'écart à la cible du réseau, les avis 5★ à obtenir, la répartition
+ * des avis lus, la moyenne du réseau pour se situer ; et ses avis classés vert / orange / rouge (src/google.php).
+ * La synchronisation chez Google reste au réseau.
+ */
+function sfGoogle(string $shop, array $q): array
+{
+    if (!sfRegles()['voirAvisGoogle']) { return ['hidden' => true, 'avis' => [], 'totaux' => null]; }
+    $e = socGoogleEcran(['jours' => $q['jours'] ?? 365, 'couleur' => $q['couleur'] ?? '', 'nonTraites' => $q['nonTraites'] ?? ''], $shop);
+    $r = $e['reputation'];
+    if (!empty($r['indispo'])) { $r = ['indispo' => true, 'cible' => $r['cible']]; }  // pas le détail technique
+    else { unset($r['connecteur']['configure']); $r['reseau'] = ['moyenne' => $r['reseau']['moyenne'], 'avis' => $r['reseau']['avis'], 'notes' => $r['reseau']['notes']]; }
+    $relu = is_array($e['relu']) ? ['le' => $e['relu']['le'] ?? null] : null;
+    return ['hidden' => false, 'reputation' => $r, 'jours' => $e['jours'], 'avis' => $e['avis'], 'totaux' => $e['totaux'], 'relu' => $relu,
+        'ia' => ['configure' => (bool) ($e['ia']['configure'] ?? false)]];
+}
+
+/** Le franchisé marque traité (ou rouvre) un commentaire ou un avis Google de sa boutique, et seulement de la sienne. */
 function sfCommentaireTraiter(string $shop, string $id, bool $traite): array
 {
-    if (!sfRegles()['voirCommentaires']) { throw new HttpError(403, 'commentaires non partagés par le réseau'); }
-    $r = Db::row('SELECT shop_id FROM social_commentaire WHERE id = ?', [$id]);
+    $r = Db::row('SELECT shop_id, canal FROM social_commentaire WHERE id = ?', [$id]);
+    $regle = $r && $r['canal'] === 'gg' ? 'voirAvisGoogle' : 'voirCommentaires';
+    if (!sfRegles()[$regle]) { throw new HttpError(403, $regle === 'voirAvisGoogle' ? 'avis Google non partagés par le réseau' : 'commentaires non partagés par le réseau'); }
     if (!$r || (string) $r['shop_id'] !== $shop) { throw new HttpError(404, 'commentaire inconnu'); }
     return socCommentaireTraiter($id, $traite);
 }
@@ -1036,6 +1057,7 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/franchise/operations') { return [200, sfOperations($shop)]; }
     if ($method === 'GET' && $path === '/franchise/publicites') { return [200, sfPublicites($shop)]; }
     if ($method === 'GET' && $path === '/franchise/commentaires') { return [200, sfCommentaires($shop, $_GET)]; }
+    if ($method === 'GET' && $path === '/franchise/google') { return [200, sfGoogle($shop, $_GET)]; }
     if ($method === 'POST' && $path === '/franchise/commentaires/traiter') { $b = body(); return [200, sfCommentaireTraiter($shop, (string) ($b['id'] ?? ''), !empty($b['traite']))]; }
     if ($method === 'GET' && $path === '/franchise/catalogue/offres') { return [200, sfOffres($shop, (string) ($_GET['produit'] ?? ''))]; }
     // La photo d'un produit du webshop (R2, sans CORS) servie par le module : le visuel qui la dessine s'exporte.

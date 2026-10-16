@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Le cron du module (posé par bin/deploy.sh dans /etc/cron.d/social) :
  *
  *   * * * * *   php bin/cron.php queue      la file de publication (posts échus)
- *   7 * * * *   php bin/cron.php sync       pubs (statut, dépense, dark posts), leads, résultats, grille Instagram, commentaires des dark posts
+ *   7 * * * *   php bin/cron.php sync       pubs (statut, dépense, dark posts), leads, résultats, grille Instagram, commentaires des dark posts et des Pages, avis Google (tables du BO)
  *   40 6 * * *  php bin/cron.php conn       contrôle des connexions Meta
  *   37 * * * *  php bin/cron.php ids        identifiants Meta par boutique relus dans le portefeuille (selon la fréquence choisie)
  *   20 5 * * *  php bin/cron.php audit      audit des routes de l'API TFBuddy
@@ -22,7 +22,7 @@ try {
     socInstall();
     $r = match ($tache) {
         'queue' => ['publies' => count(socRunQueue())],
-        'sync'  => ['campagnes' => Meta::configured() ? socCampagnesMetaImporter(false)['total'] : 0, 'ads' => socAdsSync(), 'leads' => socLeadsSync(), 'results' => socResultsSync(), 'instagram' => socIgMediaSync(), 'commentaires' => socDarkCommentsSync(), 'pages' => socCommentairesSync()['lus'], 'classes' => socCommentairesAnalyser()['classes']],
+        'sync'  => ['campagnes' => Meta::configured() ? socCampagnesMetaImporter(false)['total'] : 0, 'ads' => socAdsSync(), 'leads' => socLeadsSync(), 'results' => socResultsSync(), 'instagram' => socIgMediaSync(), 'commentaires' => socDarkCommentsSync(), 'pages' => socCommentairesSync()['lus'], 'google' => socGoogleAvisSync()['lus'], 'classes' => socCommentairesAnalyser()['classes']],
         'conn'  => ['boutiques' => count(socTestConnexions())],
         'ids'   => socIdsAuto(),
         'audit' => socAuditRun(),

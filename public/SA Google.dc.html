@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
+    section{padding-top:0;padding-bottom:0;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button,textarea{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="google" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Ce que Google dit de chaque boutique · la Réputation digitale du BO, avis lus dans leur contexte</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">AVIS GOOGLE</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="display:inline-flex;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:3px;gap:2px;">
+          <sc-for list="{{ periods }}" as="pp" hint-placeholder-count="4"><button onClick="{{ pp.pick }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:13px;font-weight:500;cursor:pointer;background:{{ pp.bg }};color:{{ pp.fg }};">{{ pp.label }}</button></sc-for>
+        </div>
+        <button onClick="{{ relire }}" style="height:34px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;color:#222222;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ busyOp }};">{{ relireLabel }}</button>
+        <button onClick="{{ synchroniser }}" style="height:34px;padding:0 14px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ busyOp }};" style-hover="background:#7A1826;">{{ syncLabel }}</button>
+      </div>
+    </header>
+
+    <sc-if value="{{ hasMsg }}" hint-placeholder-val="{{ false }}"><div style="background:{{ msgBg }};color:{{ msgFg }};border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.45;">{{ msg }}</div></sc-if>
+    <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Lecture des avis…</div></sc-if>
+    <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:13px;">{{ err }}</div></sc-if>
+    <sc-if value="{{ indispo }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:16px 18px;font-size:13px;line-height:1.5;color:#666666;">{{ indispoTxt }}</div></sc-if>
+
+    <!-- La réputation du réseau : les trois blocs de l'écran Réputation digitale du BO. -->
+    <sc-if value="{{ showRep }}" hint-placeholder-val="{{ true }}">
+    <section style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.10);padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:22px;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:5px;min-width:0;">
+        <span style="font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:#666666;">Moyenne réseau</span>
+        <div style="display:flex;align-items:flex-end;gap:10px;">
+          <span style="font-family:var(--font-display);font-size:38px;line-height:1;color:{{ moyCol }};">{{ moyenne }}</span>
+          <span style="display:inline-flex;gap:1px;padding-bottom:3px;"><sc-for list="{{ etoilesReseau }}" as="e" hint-placeholder-count="5"><span style="font-size:17px;line-height:1;color:{{ e.c }};">★</span></sc-for></span>
+        </div>
+        <span style="font-size:12px;color:#666666;">{{ avisTxt }}</span>
+        <div style="display:flex;flex-direction:column;gap:3px;margin-top:8px;">
+          <sc-for list="{{ barres }}" as="b" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:7px;">
+              <span style="width:26px;text-align:right;font-size:11px;color:#666666;">{{ b.note }}<span style="color:{{ b.col }};">★</span></span>
+              <span style="flex:1 1 auto;min-width:0;height:7px;border-radius:999px;background:#F1ECE5;overflow:hidden;"><span style="display:block;height:7px;border-radius:999px;background:{{ b.col }};width:{{ b.w }};"></span></span>
+              <span style="width:30px;text-align:right;font-size:11px;">{{ b.n }}</span>
+              <span style="width:34px;text-align:right;font-size:10.5px;color:#8A847C;">{{ b.pct }}</span>
+            </div>
+          </sc-for>
+          <span style="font-size:10.5px;line-height:1.4;color:#8A847C;margin-top:4px;">{{ echantillon }}</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px;border-left:0.5px solid rgba(34,34,34,0.10);padding-left:22px;">
+        <span style="font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:#666666;">Cible {{ cible }}</span>
+        <span style="font-size:13px;font-weight:500;">{{ sousCibleTxt }}</span>
+        <span style="font-size:12.5px;line-height:1.45;color:{{ effortCol }};font-weight:{{ effortW }};">{{ effort }}</span>
+        <span style="font-size:11px;line-height:1.45;color:#8A847C;">La cible se règle dans les Paramètres du BO ; les mêmes chiffres que l’écran Réputation digitale.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;border-left:0.5px solid rgba(34,34,34,0.10);padding-left:22px;">
+        <span style="font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:#666666;">Connecteur Google (BO)</span>
+        <span style="font-size:12px;line-height:1.5;color:{{ coCol }};font-weight:{{ coW }};">{{ coTxt }}</span>
+        <span style="font-size:11px;line-height:1.45;color:#8A847C;">{{ coAide }}</span>
+      </div>
+    </section>
+    </sc-if>
+
+    <sc-if value="{{ showAvis }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+        <button onClick="{{ k.pick }}" style="text-align:left;background:#FFFFFF;border:{{ k.border }};border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;">
+          <span style="display:flex;align-items:center;gap:7px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;"><span style="width:9px;height:9px;border-radius:50%;background:{{ k.dot }};"></span>{{ k.label }}</span>
+          <span style="font-size:24px;font-weight:300;color:{{ k.fg }};">{{ k.value }}</span>
+          <span style="font-size:12px;color:#666666;">{{ k.sub }}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <sc-for list="{{ filtres }}" as="f" hint-placeholder-count="4"><button onClick="{{ f.pick }}" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};"><span style="width:7px;height:7px;border-radius:50%;background:{{ f.dot }};"></span>{{ f.label }}</button></sc-for>
+      <select value="{{ shop }}" onChange="{{ setShop }}" style="font-size:12px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:999px;padding:6px 10px;">
+        <option value="">Toutes les boutiques</option>
+        <sc-for list="{{ shops }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.nom }}</option></sc-for>
+      </select>
+      <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ nonTraites }}" onChange="{{ toggleNonTraites }}" style="accent-color:#8D1D2C;margin:0;">Non traités seulement</label>
+      <span style="font-size:11px;color:#666666;margin-left:auto;">{{ etat }}</span>
+    </div>
+
+    <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
+      <div style="display:grid;grid-template-columns:150px minmax(280px,2.2fr) minmax(240px,1.6fr) 130px;min-width:900px;">
+        <sc-for list="{{ head }}" as="h" hint-placeholder-count="4"><span style="padding:10px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">{{ h }}</span></sc-for>
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="0">
+          <div style="display:contents;">
+            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:5px;">
+              <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;background:{{ r.cBg }};color:{{ r.cFg }};"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.cDot }};"></span>{{ r.couleur }}</span>
+              <span style="font-size:12px;font-weight:500;color:#222222;">{{ r.sujet }}</span>
+              <span style="font-size:10px;color:#8A847C;">{{ r.source }}</span>
+            </span>
+            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:4px;min-width:0;">
+              <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="display:inline-flex;gap:1px;"><sc-for list="{{ r.etoiles }}" as="e" hint-placeholder-count="5"><span style="font-size:12px;line-height:1;color:{{ e.c }};">★</span></sc-for></span>
+                <span style="font-size:11px;color:#666666;">{{ r.meta }}</span>
+              </span>
+              <span style="font-size:13px;line-height:1.45;color:{{ r.msgCol }};white-space:pre-wrap;word-break:break-word;">{{ r.message }}</span>
+              <sc-if value="{{ r.hasPlus }}" hint-placeholder-val="{{ false }}"><button onClick="{{ r.plus }}" style="align-self:flex-start;border:none;background:none;padding:0;font-size:11.5px;font-weight:500;color:#8D1D2C;cursor:pointer;">{{ r.plusTxt }}</button></sc-if>
+              <sc-if value="{{ r.hasResume }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.4;color:#666666;font-style:italic;">{{ r.resume }}</span></sc-if>
+            </span>
+            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;min-width:0;">
+              <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.4;color:#222222;font-weight:500;">{{ r.action }}</span></sc-if>
+              <sc-if value="{{ r.hasReponse }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:12px;line-height:1.45;color:#444444;background:#F7F3EE;border-radius:8px;padding:7px 9px;">{{ r.reponse }}</span>
+                <button onClick="{{ r.copier }}" style="align-self:flex-start;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:500;cursor:pointer;">Copier la réponse</button>
+              </sc-if>
+            </span>
+            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;">
+              <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ r.traite }}" onChange="{{ r.toggle }}" style="accent-color:#0F6B4A;margin:0;">Traité</label>
+              <span style="font-size:10px;color:#8A847C;">{{ r.traiteInfo }}</span>
+              <sc-if value="{{ r.hasLien }}" hint-placeholder-val="{{ false }}"><a href="{{ r.lien }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;">Fiche Google ↗</a></sc-if>
+            </span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}"><div style="grid-column:1 / -1;padding:28px 16px;text-align:center;font-size:13px;line-height:1.5;color:#666666;">{{ noRowsText }}</div></sc-if>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- Par boutique : les cartes de la Réputation digitale, la plus loin de la cible d'abord. -->
+    <sc-if value="{{ showRep }}" hint-placeholder-val="{{ true }}">
+    <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;margin-top:6px;">Par boutique · la plus loin de la cible d’abord</span>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;align-items:stretch;">
+      <sc-for list="{{ cartes }}" as="m" hint-placeholder-count="3">
+        <div style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.10);padding:15px 17px;display:flex;flex-direction:column;gap:9px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px;">
+              <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:14px;font-weight:500;">{{ m.nom }}</span><span style="font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;background:{{ m.badgeBg }};color:{{ m.badgeFg }};">{{ m.badge }}</span></span>
+              <span style="font-size:11.5px;color:#666666;">{{ m.sous }}<sc-if value="{{ m.hasUrl }}" hint-placeholder-val="{{ false }}"> · <a href="{{ m.url }}" target="_blank" rel="noopener" style="text-decoration:none;">fiche Google ↗</a></sc-if></span>
+            </div>
+            <div style="flex:0 0 auto;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+              <span style="font-family:var(--font-display);font-size:21px;line-height:1;color:{{ m.noteCol }};">{{ m.note }}</span>
+              <span style="display:inline-flex;gap:1px;"><sc-for list="{{ m.etoiles }}" as="e" hint-placeholder-count="5"><span style="font-size:14px;line-height:1;color:{{ e.c }};">★</span></sc-for></span>
+            </div>
+          </div>
+          <span style="font-size:12px;font-weight:500;border-radius:8px;padding:7px 10px;background:{{ m.effortBg }};color:{{ m.effortFg }};">{{ m.effort }}</span>
+          <sc-if value="{{ m.hasBarres }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <sc-for list="{{ m.barres }}" as="b" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:7px;">
+                <span style="width:26px;text-align:right;font-size:11px;color:#666666;">{{ b.note }}<span style="color:{{ b.col }};">★</span></span>
+                <span style="flex:1 1 auto;min-width:0;height:7px;border-radius:999px;background:#F1ECE5;overflow:hidden;"><span style="display:block;height:7px;border-radius:999px;background:{{ b.col }};width:{{ b.w }};"></span></span>
+                <span style="width:30px;text-align:right;font-size:11px;">{{ b.n }}</span>
+                <span style="width:34px;text-align:right;font-size:10.5px;color:#8A847C;">{{ b.pct }}</span>
+              </div>
+            </sc-for>
+            <span style="font-size:10.5px;line-height:1.4;color:#8A847C;margin-top:3px;">{{ m.echantillon }}</span>
+          </div>
+          </sc-if>
+          <sc-if value="{{ m.hasAvis }}" hint-placeholder-val="{{ false }}"><button onClick="{{ m.voir }}" style="align-self:flex-start;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:500;cursor:pointer;color:#8D1D2C;">{{ m.voirTxt }}</button></sc-if>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+// Les avis Google des boutiques : la Réputation digitale du BO (note, cible, avis 5★ à obtenir, répartition des avis
+// lus) et les avis eux-mêmes, classés vert / orange / rouge comme les commentaires (src/google.php). Le module lit les
+// tables du BO ; « Synchroniser chez Google » demande au BO de relire les fiches (appel facturé par Google).
+class Component extends DCLogic {
+  state = { jours: 365, couleur: '', shop: '', nonTraites: false, data: null, loading: true, err: '', busy: '', msg: '', msgKind: 'ok' };
+  componentDidMount() {
+    const SA = window.SA, j = SA && +SA.param('jours'), c = SA && SA.param('couleur'), sh = SA && SA.param('shop');
+    if (['rouge', 'orange', 'vert'].includes(c)) this.setState({ couleur: c, nonTraites: c !== 'vert' });
+    if (sh) this.setState({ shop: sh });
+    this.load([30, 90, 365, 3650].includes(j) ? j : 365);
+  }
+  load(jours) {
+    const SA = window.SA; if (!SA) return;
+    const k = this._k = (this._k || 0) + 1; this.setState({ jours, loading: true, err: '' });
+    Promise.resolve().then(() => SA.google(jours)).then(r => { if (k === this._k) this.setState({ data: r, loading: false }); })
+      .catch(e => { if (k === this._k) this.setState({ loading: false, err: e.message || 'erreur' }); });
+  }
+  geste(quoi) {
+    const SA = window.SA; if (!SA || this.state.busy) return;
+    this.setState({ busy: quoi, msg: '' });
+    const p = quoi === 'sync' ? SA.googleSynchroniser(this.state.jours) : SA.googleRelire(this.state.jours);
+    p.then(r => {
+      const a = r.analyse || {}, b = r.bo, sy = r.sync || {};
+      const cl = (a.classes || 0) + ' avis classé' + ((a.classes || 0) > 1 ? 's' : '') + (a.classes ? (a.ia && !a.erreur ? ' par Claude' : ' par les règles simples') : '');
+      const txt = (b ? b.magasins + ' fiche' + (b.magasins > 1 ? 's' : '') + ' relue' + (b.magasins > 1 ? 's' : '') + ' chez Google, ' + b.nouveaux + ' nouvel' + (b.nouveaux > 1 ? 's' : '') + ' avis'
+          + (b.erreurs && b.erreurs.length ? ' — en échec : ' + b.erreurs.join(' · ') : '') + (b.aucuneFiche ? ' — aucune fiche raccordée : raccordez-les dans le BO (Réputation digitale).' : '') + ' · '
+        : (sy.lus || 0) + ' avis relus dans le BO · ') + cl
+        + (a.erreur ? ' — Claude n’a pas répondu (' + a.erreur + ') : classés par les règles.' : '.');
+      this.setState({ data: r, busy: '', msg: txt, msgKind: a.erreur || (b && b.erreurs && b.erreurs.length) ? 'warn' : 'ok' });
+    }).catch(e => this.setState({ busy: '', msg: (quoi === 'sync' ? 'Synchronisation impossible : ' : 'Relecture impossible : ') + (e.message || 'erreur'), msgKind: 'err' }));
+  }
+  traiter(c) {
+    const SA = window.SA;
+    SA.commentaireTraiter(c.id, !c.traite).then(() => {
+      const d = this.state.data; if (!d) return;
+      const now = new Date(), le = SA.TODAY + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      const avis = d.avis.map(x => x.id === c.id ? Object.assign({}, x, { traite: !c.traite, traiteLe: !c.traite ? le : null, traitePar: !c.traite ? 'vous' : '' }) : x);
+      const totaux = Object.assign({}, d.totaux); if (['rouge', 'orange'].includes(c.couleur)) totaux[c.couleur + 'Ouverts'] += c.traite ? 1 : -1;
+      this.setState({ data: Object.assign({}, d, { avis, totaux }) });
+    }).catch(e => this.setState({ msg: 'Non enregistré : ' + (e.message || 'erreur'), msgKind: 'err' }));
+  }
+  copier(c) {
+    const ok = () => this.setState({ msg: 'Réponse copiée : collez-la sous l’avis, depuis la fiche Google de la boutique (Google Business Profile).', msgKind: 'ok' });
+    try { navigator.clipboard.writeText(c.reponse).then(ok, () => this.setState({ msg: 'Copie impossible : sélectionnez le texte à la main.', msgKind: 'warn' })); }
+    catch (e) { this.setState({ msg: 'Copie impossible : sélectionnez le texte à la main.', msgKind: 'warn' }); }
+  }
+  renderVals() {
+    const SA = window.SA, s = this.state, d = s.data, rp = (d && d.reputation) || null;
+    const fN = (v) => v == null ? '—' : Number(v).toFixed(2).replace('.', ',');
+    const fI = (v) => Number(v || 0).toLocaleString('fr-BE');
+    const OR = '#C9A227', VIDE = '#DDD7CD', COUL = { 5: '#C9A227', 4: '#2d7a3e', 3: '#D97706', 2: '#C0182B', 1: '#8D1D2C' };
+    const etoiles = (note) => { const p = note == null ? 0 : Math.round(note); return [1, 2, 3, 4, 5].map(i => ({ c: i <= p ? OR : VIDE })); };
+    const jauges = (rep, avisGoogle) => {
+      const lus = (rep && rep.lus) || 0;
+      return { lus, barres: ((rep && rep.niveaux) || []).map(l => ({ note: String(l.note), n: fI(l.n), col: COUL[l.note], pct: lus ? Math.round(l.n / lus * 100) + ' %' : '',
+        w: (l.n === 0 ? 0 : Math.max(2, l.n / lus * 100)) + '%' })),
+        echantillon: !lus ? 'Aucun avis rapatrié pour l’instant.' : fI(lus) + ' avis lus sur ' + fI(avisGoogle) + ' — Google ne publie pas la répartition complète d’une fiche.' };
+    };
+    const ok = !!rp && !rp.indispo, cible = ok ? rp.cible : 4.5, res = (ok && rp.reseau) || {};
+    const jR = jauges(res.repartition, res.avis);
+    const co = (ok && rp.connecteur) || {};
+    const effort = res.avis5Requis == null ? (res.moyenne == null ? 'Aucune note connue.' : 'Cible inatteignable par ajout d’avis.')
+      : res.avis5Requis > 0 ? fI(res.avis5Requis) + ' avis 5★ pour ramener le réseau à ' + fN(cible)
+        : (res.sousCible || 0) > 0 ? 'Réseau à la cible en moyenne pondérée — l’effort porte sur les ' + res.sousCible + ' boutiques en dessous.' : 'Aucun avis à obtenir : toutes les boutiques sont à la cible.';
+    // Les plus loin de la cible d'abord ; sans note à la fin (fiche à raccorder dans le BO).
+    const mags = ((ok && rp.magasins) || []).slice().sort((a, b) => (a.note == null) - (b.note == null) || (a.note == null ? a.nom.localeCompare(b.nom) : a.note - b.note));
+    const avisTous = (d && d.avis) || [];
+    const cartes = mags.map(m => {
+      const sans = m.note == null || !m.avis, atteint = !sans && m.note >= cible, jm = jauges(m.repartition, m.avis);
+      const nAvis = avisTous.filter(a => a.shopId === m.id).length;
+      return { nom: m.nom, note: sans ? '—' : fN(m.note), noteCol: sans ? '#8A847C' : atteint ? '#2d7a3e' : '#8D1D2C', etoiles: etoiles(m.note),
+        badge: sans ? 'Sans note' : atteint ? 'À la cible' : (m.ecart > 0 ? '+' : '') + fN(m.ecart), badgeBg: sans ? '#EAE4DC' : atteint ? 'rgba(45,122,62,.12)' : 'rgba(141,29,44,.10)', badgeFg: sans ? '#666666' : atteint ? '#2d7a3e' : '#8D1D2C',
+        sous: sans ? (m.raccorde ? 'Fiche raccordée, pas encore de note' : 'Fiche Google non raccordée (BO → Réputation digitale)') : fI(m.avis) + ' avis' + (m.synchro && SA ? ' · maj ' + SA.dShort(m.synchro.slice(0, 10)) : ''),
+        hasUrl: !!m.url, url: m.url || '#',
+        effort: m.avis5Requis == null ? (sans ? 'Raccordez la fiche dans le BO pour suivre la note.' : 'Cible inatteignable par ajout d’avis.') : m.avis5Requis === 0 ? 'À la cible — rien à rattraper.' : m.avis5Requis + ' avis 5★ pour atteindre ' + fN(cible),
+        effortBg: sans ? '#F4EFE8' : atteint ? 'rgba(45,122,62,.08)' : 'rgba(141,29,44,.05)', effortFg: sans ? '#666666' : atteint ? '#2d7a3e' : '#8D1D2C',
+        hasBarres: jm.lus > 0, barres: jm.barres, echantillon: jm.echantillon,
+        hasAvis: nAvis > 0, voirTxt: 'Voir ses ' + nAvis + ' avis', voir: () => { this.setState({ shop: m.id }); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} } };
+    });
+
+    const C = { rouge: ['#F6DCDF', '#8D1D2C', '#C0392B', 'Rouge'], orange: ['#FCE7C8', '#8A4B00', '#E08A1E', 'Orange'], vert: ['#E2F0E8', '#0F6B4A', '#2E9E6A', 'Vert'], '': ['#EAE4DC', '#555555', '#A39E97', 'À classer'] };
+    const t = (d && d.totaux) || { rouge: 0, orange: 0, vert: 0, aClasser: 0, rougeOuverts: 0, orangeOuverts: 0, total: 0 };
+    const pick = (couleur) => () => this.setState({ couleur: s.couleur === couleur ? '' : couleur, nonTraites: s.couleur === couleur ? s.nonTraites : couleur !== 'vert' && couleur !== '' });
+    const kpis = [['rouge', 'À traiter vite', t.rougeOuverts, t.rouge + ' rouge' + (t.rouge > 1 ? 's' : '') + ' sur la période'],
+      ['orange', 'À répondre', t.orangeOuverts, t.orange + ' orange' + (t.orange > 1 ? 's' : '') + ' sur la période'],
+      ['vert', 'Positifs', t.vert, 'un merci sous l’avis suffit'],
+      ['', 'Avis lus', t.total, t.aClasser ? t.aClasser + ' à classer (relire)' : 'tous classés']]
+      .map(([k, label, value, sub]) => ({ label, value: fI(value), sub, dot: C[k][2], fg: k === 'rouge' && value ? '#8D1D2C' : '#222222',
+        border: s.couleur === k && k ? '1.5px solid ' + C[k][2] : '0.5px solid rgba(34,34,34,0.10)', pick: pick(k) }));
+    const filtres = [['', 'Tous'], ['rouge', 'Rouge'], ['orange', 'Orange'], ['vert', 'Vert']].map(([k, label]) => {
+      const on = s.couleur === k;
+      return { label, dot: C[k][2], bg: on ? '#232220' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#232220' : 'rgba(34,34,34,0.18)', pick: () => this.setState({ couleur: k }) };
+    });
+    const liste = avisTous.filter(c => (!s.couleur || c.couleur === s.couleur) && (!s.shop || c.shopId === s.shop) && (!s.nonTraites || !c.traite));
+    const ordre = { rouge: 0, orange: 1, '': 2, vert: 3 };
+    liste.sort((a, b) => ((a.traite ? 1 : 0) - (b.traite ? 1 : 0)) || (ordre[a.couleur || ''] - ordre[b.couleur || '']) || String(b.le).localeCompare(String(a.le)));
+    const dl = (x) => SA && x ? SA.dShort(x.slice(0, 10)) + (x.slice(0, 4) !== SA.TODAY.slice(0, 4) ? '/' + x.slice(2, 4) : '') : '';
+    const rows = liste.map(c => {
+      const [cBg, cFg, cDot, cLab] = C[c.couleur || ''];
+      return { couleur: cLab, cBg, cFg, cDot, sujet: c.sujet || '—', source: c.analyse === 'ia' ? 'analyse Claude' : c.analyse === 'regles' ? 'règles simples' : 'pas encore classé',
+        etoiles: etoiles(c.note), meta: [c.auteur || 'Client Google', dl(c.le), c.boutique].filter(Boolean).join(' · '),
+        message: !c.message ? 'Note sans commentaire.' : c.message.length > 280 && !(s.ouverts || {})[c.id] ? c.message.slice(0, 260).replace(/\s+\S*$/, '') + ' …' : c.message,
+        hasPlus: (c.message || '').length > 280, plusTxt: (s.ouverts || {})[c.id] ? 'Réduire' : 'Lire tout', plus: () => this.setState({ ouverts: Object.assign({}, s.ouverts, { [c.id]: !(s.ouverts || {})[c.id] }) }), msgCol: c.message ? '#222222' : '#8A847C', hasResume: !!c.resume, resume: c.resume || '',
+        hasAction: !!c.action, action: c.action || '', hasReponse: !!c.reponse, reponse: c.reponse || '',
+        copier: () => this.copier(c), traite: !!c.traite, toggle: () => this.traiter(c), traiteInfo: c.traite ? 'le ' + (SA && c.traiteLe ? SA.dShort(c.traiteLe.slice(0, 10)) + ' ' + c.traiteLe.slice(11, 16) : '') + (c.traitePar ? ' · ' + c.traitePar : '') : '',
+        hasLien: !!c.lien, lien: c.lien || '#', bg: c.traite ? '#FBFAF8' : '#FFFFFF' };
+    });
+    const relu = d && d.relu, ia = (d && d.ia) || {};
+    const busy = s.busy;
+    return {
+      periods: [[30, '30 j'], [90, '90 j'], [365, '1 an'], [3650, 'Tout']].map(([j, label]) => ({ label, bg: s.jours === j ? '#232220' : 'transparent', fg: s.jours === j ? '#FFFFFF' : '#444444', pick: () => this.load(j) })),
+      relire: () => this.geste('relire'), relireLabel: busy === 'relire' ? 'Relecture…' : 'Relire et classer', synchroniser: () => this.geste('sync'),
+      syncLabel: busy === 'sync' ? 'Synchronisation…' : 'Synchroniser chez Google', busyOp: busy ? 0.6 : 1,
+      hasMsg: !!s.msg, msg: s.msg, msgBg: s.msgKind === 'err' ? '#F6DCDF' : s.msgKind === 'warn' ? '#FCE7C8' : '#E2F0E8', msgFg: s.msgKind === 'err' ? '#8D1D2C' : s.msgKind === 'warn' ? '#6b3d0a' : '#0F6B4A',
+      loading: s.loading && !d, hasErr: !!s.err, err: s.err,
+      indispo: !!rp && !!rp.indispo, indispoTxt: rp && rp.indispo ? (rp.raison || 'Réputation indisponible.') + ' Les avis Google viennent de l’écran Réputation digitale du BO.' : '',
+      showRep: ok, moyenne: fN(res.moyenne), moyCol: res.moyenne == null ? '#8A847C' : res.moyenne >= cible ? '#2d7a3e' : '#8D1D2C', etoilesReseau: etoiles(res.moyenne),
+      avisTxt: fI(res.avis) + ' avis Google · ' + fI(res.notes) + ' boutique' + (res.notes > 1 ? 's' : '') + ' notée' + (res.notes > 1 ? 's' : '') + (res.magasins > res.notes ? ' sur ' + fI(res.magasins) : ''),
+      barres: jR.barres, echantillon: jR.echantillon, cible: fN(cible),
+      sousCibleTxt: (res.sousCible || 0) === 0 ? 'Toutes les boutiques notées sont à la cible.' : res.sousCible + ' boutique' + (res.sousCible > 1 ? 's' : '') + ' sous ' + fN(cible),
+      effort, effortCol: (res.avis5Requis || 0) > 0 ? '#8D1D2C' : '#666666', effortW: (res.avis5Requis || 0) > 0 ? 500 : 400,
+      coTxt: co.configure ? (co.raccordes || 0) + ' fiche' + (co.raccordes > 1 ? 's' : '') + ' raccordée' + (co.raccordes > 1 ? 's' : '') + ' · '
+        + (co.derniereSynchro && SA ? 'dernière synchronisation le ' + SA.dShort(co.derniereSynchro.slice(0, 10)) + ' à ' + co.derniereSynchro.slice(11, 16) : 'jamais synchronisé') : 'Aucune clé Google dans le BO',
+      coCol: co.configure ? '#444444' : '#8D1D2C', coW: co.configure ? 400 : 500,
+      coAide: co.configure ? 'Google ne rend que 5 avis par fiche et par lecture : le BO les accumule à chaque synchronisation (appel facturé par Google). La clé et le raccordement des fiches se règlent dans le BO.'
+        : 'Renseignez la clé Google Places dans les Paramètres du BO, puis raccordez chaque fiche dans Réputation digitale.',
+      showAvis: !!d, kpis, filtres, shop: s.shop, shops: mags.map(m => ({ id: m.id, nom: m.nom })), setShop: (e) => this.setState({ shop: e.target.value }),
+      nonTraites: s.nonTraites, toggleNonTraites: () => this.setState({ nonTraites: !s.nonTraites }),
+      etat: (relu && relu.le && SA ? 'Relu dans le BO le ' + SA.dShort(relu.le.slice(0, 10)) + ' ' + relu.le.slice(11, 16) + ' · ' : '') + (ia.configure ? 'analyse par Claude' : 'analyse par règles simples (clé Claude : Paramètres → Rédaction IA)') + ' · relu toutes les heures',
+      head: ['Analyse', 'Avis', 'Action conseillée · réponse', 'Suivi'], rows, cartes,
+      noRows: !!d && !rows.length, noRowsText: t.total ? 'Aucun avis pour ce filtre.' : 'Aucun avis sur la période. Les avis viennent des fiches Google raccordées dans le BO : « Synchroniser chez Google » les relit.',
+    };
+  }
+}
+</script>
+</body>
+</html>

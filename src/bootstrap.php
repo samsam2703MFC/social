@@ -149,9 +149,11 @@ final class Db
     }
 
     /** La table existe-t-elle ? (les tables du BO et du panel peuvent manquer en recette) */
-    public static function hasTable(string $t): bool
+    /** La table existe-t-elle ? Réponse gardée pour la requête ; `$relire` la redemande (recette). */
+    public static function hasTable(string $t, bool $relire = false): bool
     {
         static $memo = [];
+        if ($relire) { unset($memo[$t]); }
         if (!isset($memo[$t])) {
             // information_schema plutôt que SHOW TABLES : ce dernier refuse les requêtes préparées natives.
             try { $memo[$t] = self::row('SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?', [$t]) !== null; }

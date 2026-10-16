@@ -33,6 +33,7 @@ class Component extends DCLogic {
       .concat(st.rules.voirAnalyse !== false ? [['analyse', 'Vues et abonnés', '∿', SF.href('cal', 'vue=analyse')]] : [])
       .concat(st.rules.voirSuivi !== false ? [['suivi', 'Suivi de ma boutique', '↗', SF.href('cal', 'vue=suivi')]] : [])
       .concat(st.rules.voirCommentaires !== false ? [['com', 'Commentaires', '❝', SF.href('com')]] : [])
+      .concat(st.rules.voirAvisGoogle !== false ? [['google', 'Avis Google', '★', SF.href('google')]] : [])
       .concat([['pub', 'Créer un post', '+', SF.href('pub')]]);
     return { tabs: defs.map(([k, label, ic, href]) => { const on = k === active;
       return { label, ic, href, fg: on ? '#8D1D2C' : '#444444', w: on ? 600 : 500, line: on ? '#8D1D2C' : 'transparent', icBg: on ? '#8D1D2C' : '#EAE4DC', icFg: on ? '#FFFFFF' : '#666666',
