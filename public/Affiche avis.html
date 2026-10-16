@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Affiche avis Google · L'Atelier By</title>
+<link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+<script src="vendor/qrcode.js"></script>
+<!--
+  L'affiche « Laissez-nous un avis » d'une boutique : à imprimer (A5, ou A6 pour un chevalet de comptoir) et à poser
+  près de la caisse. Le QR code mène au lien court du module, qui compte le scan puis ouvre la fenêtre d'avis de la
+  fiche Google. Paramètres : u (le lien), nom (la boutique), langues (fr, nl ou fr,nl), format (a5 | a6).
+-->
+<style>
+  :root { --bordeaux: #8D1D2C; --encre: #232220; --creme: #F4EFE8; }
+  html, body { margin: 0; background: #EAE4DC; color: var(--encre); font-family: var(--font-ui, system-ui, sans-serif); }
+  .barre { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; padding: 14px; }
+  .barre button, .barre select { font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px; border: 0.5px solid rgba(34,34,34,0.2); background: #fff; cursor: pointer; }
+  .barre button.principal { background: var(--bordeaux); color: #fff; border: none; }
+  .feuille { background: var(--creme); margin: 0 auto 24px; box-shadow: 0 6px 24px rgba(35,34,32,0.15); box-sizing: border-box;
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; }
+  .a5 { width: 148mm; height: 210mm; padding: 16mm 14mm; }
+  .a6 { width: 105mm; height: 148mm; padding: 10mm 9mm; }
+  .logo { height: 11mm; width: auto; }
+  .a6 .logo { height: 8mm; }
+  h1 { font-family: var(--font-display, serif); font-weight: 400; margin: 0; line-height: 1.05; font-size: 15mm; text-transform: uppercase; }
+  .a6 h1 { font-size: 10mm; }
+  .sous { font-size: 5mm; line-height: 1.35; margin: 3mm 0 0; }
+  .a6 .sous { font-size: 3.6mm; }
+  .bis { font-size: 3.6mm; color: #5a5650; margin-top: 2mm; }
+  .a6 .bis { font-size: 2.8mm; }
+  .qr { background: #fff; padding: 4mm; border-radius: 4mm; border: 1.2mm solid var(--bordeaux); line-height: 0; }
+  .qr img { width: 62mm; height: 62mm; image-rendering: pixelated; }
+  .a6 .qr img { width: 46mm; height: 46mm; }
+  .etoiles { color: #C9A227; font-size: 9mm; letter-spacing: 2mm; }
+  .a6 .etoiles { font-size: 6mm; }
+  .boutique { font-family: var(--font-display, serif); font-size: 8mm; text-transform: uppercase; }
+  .a6 .boutique { font-size: 6mm; }
+  .pied { font-size: 3.2mm; color: #5a5650; }
+  .erreur { max-width: 520px; margin: 40px auto; background: #F6DCDF; color: var(--bordeaux); padding: 16px; border-radius: 10px; }
+  @media print {
+    html, body { background: #fff; }
+    .barre { display: none; }
+    .feuille { box-shadow: none; margin: 0; }
+    @page { size: auto; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="barre">
+  <select id="format" aria-label="Format">
+    <option value="a5">A5 — affiche</option>
+    <option value="a6">A6 — chevalet de comptoir</option>
+  </select>
+  <button class="principal" onclick="window.print()">Imprimer</button>
+</div>
+<div id="page"></div>
+<script>
+(function () {
+  var Q = new URLSearchParams(location.search);
+  var u = Q.get('u') || '', nom = Q.get('nom') || '', langues = (Q.get('langues') || 'fr').split(',');
+  var page = document.getElementById('page'), sel = document.getElementById('format');
+  sel.value = Q.get('format') === 'a6' ? 'a6' : 'a5';
+  // Seulement le lien court du module ou la fenêtre d'avis de Google : la page ne fabrique pas de QR vers n'importe où.
+  var ok = /^https?:\/\/[^/]+(\/[\w.-]+)*\/api\/v1\/social\/avis\/[\w-]{1,16}(\?s=\w+)?$/.test(u) || /^https:\/\/search\.google\.com\/local\/writereview\?placeid=[\w-]+$/.test(u);
+  function esc(t) { return String(t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function dessiner() {
+    if (!ok) { page.innerHTML = '<div class="erreur">Lien d’avis manquant ou non reconnu : ouvrez l’affiche depuis l’écran « Avis Google ».</div>'; return; }
+    var qr = qrcode(0, 'M'); qr.addData(u + (u.indexOf('/avis/') > 0 && u.indexOf('?') < 0 ? '?s=affiche' : '')); qr.make();
+    var nl = langues.indexOf('nl') >= 0, fr = langues.indexOf('fr') >= 0 || !nl;
+    var titre = fr ? 'Vous avez aimé ?' : 'Lekker geweest?';
+    var sous = fr ? 'Laissez-nous un avis sur Google : 30 secondes, et ça nous aide beaucoup.' : 'Laat een review achter op Google: 30 seconden, en het helpt ons enorm.';
+    var bis = fr && nl ? 'Lekker geweest? Laat een review achter op Google.' : '';
+    page.innerHTML = '<div class="feuille ' + sel.value + '">'
+      + '<img class="logo" src="img/logo.png" alt="L\'Atelier By">'
+      + '<div><h1>' + esc(titre) + '</h1><p class="sous">' + esc(sous) + '</p>' + (bis ? '<p class="bis">' + esc(bis) + '</p>' : '') + '</div>'
+      + '<div class="etoiles">★★★★★</div>'
+      + '<div class="qr"><img alt="QR code vers notre fiche Google" src="' + qr.createDataURL(10, 0) + '"></div>'
+      + '<div><div class="boutique">' + esc(nom ? 'L’Atelier By ' + nom : 'L’Atelier By') + '</div>'
+      + '<div class="pied">' + esc(fr ? 'Scannez avec l’appareil photo de votre téléphone' : 'Scan met de camera van je telefoon') + (fr && nl ? ' · Scan met de camera van je telefoon' : '') + '</div></div>'
+      + '</div>';
+  }
+  sel.addEventListener('change', dessiner);
+  dessiner();
+})();
+</script>
+</body>
+</html>

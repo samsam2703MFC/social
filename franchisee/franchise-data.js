@@ -422,7 +422,8 @@
     const rep = { lus: 3, niveaux: [5, 4, 3, 2, 1].map(n => ({ note: n, n: [5, 3, 1].includes(n) ? 1 : 0 })) };
     return Promise.resolve({ hidden: STATE.rules.voirAvisGoogle === false, jours, avis: liste, totaux, relu: { le: STATE.today + ' 08:00' }, ia: { configure: true },
       reputation: { cible: 4.6, connecteur: { raccordes: 3, derniereSynchro: STATE.today + ' 07:00' }, reseau: { moyenne: 4.21, avis: 876, notes: 3 },
-        magasins: [{ id: STATE.shop.id, nom: STATE.shop.name, note: 4.4, avis: 50, ecart: -0.2, avis5Requis: 25, repartition: rep, raccorde: true, url: '', synchro: STATE.today + ' 07:00' }] } });
+        magasins: [{ id: STATE.shop.id, nom: STATE.shop.name, note: 4.4, avis: 50, ecart: -0.2, avis5Requis: 25, repartition: rep, raccorde: true, url: '', synchro: STATE.today + ' 07:00',
+          lienAvis: 'https://search.google.com/local/writereview?placeid=demo', lienCourt: location.origin + '/social/api/v1/social/avis/' + STATE.shop.id, gagnes7: 2, gagnes30: 6, scans7: 3, scans30: 11 }] } });
   }
   function commentaireTraiter(id, traite) {
     if (!DEMO) return api('POST', '/franchise/commentaires/traiter', { shop: STATE.shop.id, id, traite });

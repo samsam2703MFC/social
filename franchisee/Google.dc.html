@@ -12,6 +12,7 @@
   <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
   <script src="config.js"></script>
   <script src="franchise-data.js"></script>
+  <script src="vendor/qrcode.js"></script>
   <style>
     html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
     /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
@@ -77,6 +78,27 @@
         <div style="display:flex;align-items:flex-end;gap:8px;"><span style="font-family:var(--font-display);font-size:26px;line-height:1;color:#232220;">{{ moyenne }}</span><span style="display:inline-flex;gap:1px;padding-bottom:2px;"><sc-for list="{{ etoilesReseau }}" as="e" hint-placeholder-count="5"><span style="font-size:13px;line-height:1;color:{{ e.c }};">★</span></sc-for></span></div>
         <span style="font-size:12px;color:#666666;">{{ reseauTxt }}</span>
         <span style="font-size:11px;line-height:1.45;color:#8A847C;">{{ synchroTxt }}</span>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- Faire venir des avis : le QR code de la boutique, son lien, ses affiches ; les avis gagnés. -->
+    <sc-if value="{{ hasQr }}" hint-placeholder-val="{{ true }}">
+    <section class="sf-stack" style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.10);padding:18px 20px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+      <img src="{{ qrImg }}" alt="QR code vers votre fiche Google" style="width:150px;height:150px;flex:0 0 auto;image-rendering:pixelated;border:5px solid #FFFFFF;outline:2px solid #8D1D2C;border-radius:6px;align-self:center;">
+      <div style="flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:8px;">
+        <span style="font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:#666666;">Faire venir des avis</span>
+        <span style="font-size:15px;font-weight:500;line-height:1.35;">{{ objectifTxt }}</span>
+        <span style="font-size:12.5px;line-height:1.5;color:#444444;">Le client scanne le QR code avec son téléphone : la fenêtre « Donner un avis » de votre fiche s’ouvre. Demandez-le aux clients contents, au moment où ils vous remercient.</span>
+        <span style="font-size:12px;font-weight:500;color:{{ gagnesCol }};">{{ gagnesTxt }}</span>
+        <div style="display:flex;gap:6px;">
+          <input readonly value="{{ lienCourt }}" style="flex:1 1 auto;min-width:0;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 9px;background:#FBF8F4;">
+          <button onClick="{{ copierLien }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:500;cursor:pointer;">Copier</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <a href="{{ afficheA5 }}" target="_blank" rel="noopener" style="border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;background:#8D1D2C;color:#FFFFFF;text-decoration:none;">Imprimer l’affiche A5</a>
+          <a href="{{ afficheA6 }}" target="_blank" rel="noopener" style="border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;border:0.5px solid rgba(34,34,34,0.18);color:#222222;text-decoration:none;">Chevalet de comptoir A6</a>
+        </div>
       </div>
     </section>
     </sc-if>
@@ -166,6 +188,9 @@ class Component extends DCLogic {
       this.setState({ data: Object.assign({}, d, { avis, totaux }) });
     }).catch(e => this.setState({ msg: 'Non enregistré : ' + (e.message || 'erreur'), msgKind: 'err' }));
   }
+  copierLien(t) {
+    try { navigator.clipboard.writeText(t).then(() => this.setState({ msg: 'Lien copié : à mettre sur le ticket, dans un message ou un e-mail à vos clients.', msgKind: 'ok' })); } catch (e) {}
+  }
   copier(c) {
     const ok = () => this.setState({ msg: 'Réponse copiée : collez-la sous l’avis, depuis votre fiche Google (Google Business Profile).', msgKind: 'ok' });
     try { navigator.clipboard.writeText(c.reponse).then(ok, () => this.setState({ msg: 'Copie impossible : sélectionnez le texte à la main.', msgKind: 'warn' })); }
@@ -230,6 +255,16 @@ class Component extends DCLogic {
       effortBg: sans ? '#F4EFE8' : atteint ? 'rgba(45,122,62,.08)' : 'rgba(141,29,44,.05)', effortFg: sans ? '#666666' : atteint ? '#2d7a3e' : '#8D1D2C',
       moyenne: fN(res.moyenne), etoilesReseau: etoiles(res.moyenne), reseauTxt: 'Moyenne du réseau · ' + fI(res.avis) + ' avis sur ' + fI(res.notes) + ' boutique' + (res.notes > 1 ? 's' : ''),
       synchroTxt: co.derniereSynchro ? 'Notes relues chez Google le ' + SF.dShort(co.derniereSynchro.slice(0, 10)) + ' à ' + co.derniereSynchro.slice(11, 16) + ' par le réseau.' : '',
+      ...(() => {
+        if (!ok || !m || !m.lienCourt) return { hasQr: false };
+        let img = '';
+        try { const q = window.qrcode(0, 'M'); q.addData(m.lienCourt + '?s=qr'); q.make(); img = q.createDataURL(6, 2); } catch (e) {}
+        const aff = (f) => 'Affiche avis.html?u=' + encodeURIComponent(m.lienCourt) + '&nom=' + encodeURIComponent(st.shop.name) + '&langues=' + encodeURIComponent((st.shop.langs || ['fr']).join(',')) + '&format=' + f;
+        return { hasQr: true, qrImg: img, lienCourt: m.lienCourt + '?s=lien', copierLien: () => this.copierLien(m.lienCourt + '?s=lien'), afficheA5: aff('a5'), afficheA6: aff('a6'),
+          objectifTxt: m.avis5Requis ? 'Objectif : ' + m.avis5Requis + ' avis 5★ pour atteindre ' + fN(cible) : 'Votre note est à la cible : gardez le rythme des avis.',
+          gagnesTxt: m.gagnes7 == null ? 'Avis gagnés : suivi à partir d’aujourd’hui.' : 'Avis gagnés : ' + (m.gagnes7 > 0 ? '+' : '') + m.gagnes7 + ' en 7 jours · ' + (m.gagnes30 > 0 ? '+' : '') + m.gagnes30 + ' en 30 jours · QR scanné ' + (m.scans30 || 0) + ' fois en 30 jours',
+          gagnesCol: (m.gagnes7 || 0) > 0 ? '#2d7a3e' : '#666666' };
+      })(),
       showAvis: !!d && !masque, kpis, filtres,
       nonTraites: s.nonTraites, toggleNonTraites: () => this.setState({ nonTraites: !s.nonTraites }),
       etat: (relu && relu.le ? 'Relu le ' + SF.dShort(relu.le.slice(0, 10)) + ' ' + relu.le.slice(11, 16) + ' · ' : '') + 'relu par le réseau toutes les heures' + (ia.configure ? ' · classé par Claude' : ' · classé par des règles simples'),

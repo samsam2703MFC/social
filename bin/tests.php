@@ -1791,6 +1791,49 @@ $regG = sfRegles(); sfReglesPut(array_merge($regG, ['voirAvisGoogle' => false]))
 [$c3] = $fr('POST', '/franchise/commentaires/traiter', ['id' => $idG('g3'), 'traite' => false]);
 check('franchisé : avis Google masqués si le réseau ne les partage pas (lecture et suivi)', $b['hidden'] === true && !$b['avis'] && $c3 === 403);
 sfReglesPut($regG); unset($_COOKIE[SF_COOKIE]);
+// Faire venir des avis : historique de la note, avis gagnés, lien court traçable, synchronisation automatique.
+Db::exec('DELETE FROM social_google_suivi'); Db::exec('DELETE FROM social_avis_scan');
+Db::exec('INSERT INTO social_google_suivi (jour, shop_id, note, avis) VALUES (?,?,?,?), (?,?,?,?)', [date('Y-m-d', strtotime('-8 days')), '4', 4.38, 45, date('Y-m-d', strtotime('-40 days')), '4', 4.30, 40]);
+[, $b] = socRoute('GET', '/google');
+$mgS = array_column($b['reputation']['magasins'], null, 'id');
+check('suivi : la note du jour est gardée ; avis gagnés sur 7 et 30 jours d’après l’historique ; total réseau', (int) Db::row("SELECT avis FROM social_google_suivi WHERE shop_id = '4' AND jour = ?", [date('Y-m-d')])['avis'] === 50
+    && $mgS['4']['gagnes7'] === 5 && $mgS['4']['gagnes30'] === 10 && $mgS['5']['gagnes7'] === 0 && $b['reputation']['reseau']['gagnes7'] === 5, json_encode([$mgS['4']['gagnes7'] ?? null, $mgS['4']['gagnes30'] ?? null]));
+check('lien d’avis : la fenêtre « Donner un avis » de la fiche, et le lien court du module', $mgS['4']['lienAvis'] === 'https://search.google.com/local/writereview?placeid=P-HAL'
+    && str_ends_with((string) $mgS['4']['lienCourt'], '/api/v1/social/avis/4'));
+$GLOBALS['SOCIAL_HOTE']['auth'] = static fn () => false;
+$_GET = ['s' => 'qr']; [$codeR, $redir] = socRoute('GET', '/avis/4'); $_GET = [];
+try { socRoute('GET', '/google'); $codeG = 200; } catch (HttpError $e) { $codeG = $e->status; } catch (Throwable $e) { $codeG = -1; }
+[$codeGauth] = (static function () { try { return socRoute('GET', '/google'); } catch (HttpError $e) { return [$e->status]; } })();
+unset($GLOBALS['SOCIAL_HOTE']['auth']);
+try { socRoute('GET', '/avis/999'); $code404 = 200; } catch (HttpError $e) { $code404 = $e->status; }
+check('lien court : public (sans session), compte le scan puis renvoie vers la fiche ; boutique sans fiche : 404 ; le reste du module reste fermé', $codeR === 302 && $redir instanceof SocRedirection
+    && $redir->url === 'https://search.google.com/local/writereview?placeid=P-HAL' && (int) Db::row("SELECT COUNT(*) n FROM social_avis_scan WHERE shop_id = '4' AND source = 'qr'")['n'] === 1
+    && $code404 === 404 && $codeGauth === 401, json_encode([$codeR, $code404, $codeGauth]));
+[, $b] = socRoute('GET', '/google');
+check('scans comptés par boutique et pour le réseau', array_column($b['reputation']['magasins'], null, 'id')['4']['scans7'] === 1 && $b['reputation']['reseau']['scans7'] === 1);
+check('synchronisation automatique : activée par défaut, chaque jour à 6 h', $b['reglages']['actif'] === true && $b['reglages']['heure'] === 6);
+$GLOBALS['SOC_BODY'] = ['actif' => true, 'heure' => 0]; socRoute('POST', '/google/reglages'); unset($GLOBALS['SOC_BODY']);
+$autoAppels = [];
+BoCockpit::$transport = static function (string $m, string $url, array $body) use (&$autoAppels): array { $autoAppels[] = $m . ' ' . $url; return [200, json_encode(['ok' => true, 'magasins' => 2, 'nouveaux' => 0, 'erreurs' => []])]; };
+socSettingPut('google_synchro_auto_dernier', null, false);
+$a1 = socGoogleSynchroAuto(); $a2 = socGoogleSynchroAuto();
+check('synchronisation automatique : une fois par jour (le BO relit Google), pas deux', ($a1['ok'] ?? false) === true && $a2 === null && count($autoAppels) === 1
+    && str_ends_with($autoAppels[0], '/api/cockpit/reputation/sync'), json_encode([$a1, $autoAppels]));
+socSettingPut('google_synchro_auto_dernier', null, false);
+Db::exec("UPDATE ceo_shop_reputation SET synced_at = NOW() WHERE shop_id = 'hal'");
+$a3 = socGoogleSynchroAuto();
+check('… et rien si le BO a déjà synchronisé aujourd’hui (un clic dans le BO)', $a3 === null && count($autoAppels) === 1 && (socSetting('google_synchro_auto_dernier')['message'] ?? '') === 'déjà synchronisé aujourd’hui');
+socSettingPut('google_synchro_auto_dernier', null, false);
+$GLOBALS['SOC_BODY'] = ['actif' => false, 'heure' => 0]; socRoute('POST', '/google/reglages'); unset($GLOBALS['SOC_BODY']);
+check('synchronisation automatique coupée : aucun appel', socGoogleSynchroAuto() === null && count($autoAppels) === 1);
+BoCockpit::$transport = null; socSettingPut('google_synchro_auto', null, false); socSettingPut('google_synchro_auto_dernier', null, false);
+sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
+[, $b] = $fr('GET', '/franchise/google');
+$mF = $b['reputation']['magasins'][0] ?? [];
+check('franchisé : son lien court et son lien d’avis, ses avis gagnés et ses scans ; pas les réglages du réseau', str_ends_with((string) ($mF['lienCourt'] ?? ''), '/avis/4') && $mF['gagnes7'] === 5 && $mF['scans7'] === 1
+    && !isset($b['reglages']), json_encode($mF));
+unset($_COOKIE[SF_COOKIE]);
+Db::exec('DELETE FROM social_google_suivi'); Db::exec('DELETE FROM social_avis_scan');
 Db::exec("DELETE FROM social_commentaire WHERE canal = 'gg'");
 $pdo->exec("DELETE FROM ceo_shop WHERE id = '5'"); $pdo->exec('DROP TABLE ceo_shop_reputation'); $pdo->exec('DROP TABLE ceo_shop_review'); $pdo->exec("DELETE FROM ceo_app_setting WHERE `key` = 'reputationCible'");
 Db::hasTable('ceo_shop_reputation', true); Db::hasTable('ceo_shop_review', true);

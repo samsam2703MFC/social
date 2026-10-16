@@ -16,6 +16,10 @@ declare(strict_types=1);
  *    l'histogramme d'une fiche : le nombre lu voyage avec la répartition).
  *  - Chaque avis entre dans `social_commentaire` (canal `gg`) et y est classé vert / orange / rouge comme un
  *    commentaire (src/commentaires.php), la note en étoiles et la fiche servant de contexte.
+ *  - Faire venir des avis : un lien court par boutique (`/avis/{boutique}`, public) qui compte les scans du QR code
+ *    et de l'affiche puis ouvre la fenêtre d'avis de la fiche ; l'historique quotidien de la note
+ *    (`social_google_suivi`) dit combien d'avis chaque boutique a gagnés.
+ *  - La synchronisation chez Google se fait aussi toute seule, une fois par jour (réglable, activée par défaut).
  */
 
 const SOC_GG_CIBLE = 4.5;
@@ -83,7 +87,8 @@ function socGoogleBo(): array
         $derniere = null;
         foreach (Db::rows('SELECT * FROM ceo_shop_reputation') as $r) {
             $fiches[$vers((string) $r['shop_id'])] = ['note' => $r['rating_avg'] !== null ? (float) $r['rating_avg'] : null, 'avis' => (int) $r['rating_count'],
-                'raccorde' => (string) ($r['place_id'] ?? '') !== '', 'url' => ($r['profile_url'] ?? null) ?: null, 'synchro' => $r['synced_at'] !== null ? substr((string) $r['synced_at'], 0, 16) : null];
+                'raccorde' => (string) ($r['place_id'] ?? '') !== '', 'placeId' => (string) ($r['place_id'] ?? ''), 'url' => ($r['profile_url'] ?? null) ?: null,
+                'synchro' => $r['synced_at'] !== null ? substr((string) $r['synced_at'], 0, 16) : null];
             if ($r['synced_at'] !== null && ($derniere === null || $r['synced_at'] > $derniere)) { $derniere = (string) $r['synced_at']; }
         }
         foreach (Db::rows('SELECT shop_id, rating, COUNT(*) n FROM ceo_shop_review GROUP BY shop_id, rating') as $r) {
@@ -107,7 +112,8 @@ function socGoogleBo(): array
         if (!is_array($m) || !isset($m['id'])) { continue; }
         $sid = $vers((string) $m['id']);
         $fiches[$sid] = ['note' => isset($m['note']) && is_numeric($m['note']) ? (float) $m['note'] : null, 'avis' => (int) ($m['avis'] ?? 0),
-            'raccorde' => (string) ($m['placeId'] ?? '') !== '', 'url' => ($m['url'] ?? null) ?: null, 'synchro' => isset($m['synchro']) ? substr((string) $m['synchro'], 0, 16) : null];
+            'raccorde' => (string) ($m['placeId'] ?? '') !== '', 'placeId' => (string) ($m['placeId'] ?? ''), 'url' => ($m['url'] ?? null) ?: null,
+            'synchro' => isset($m['synchro']) ? substr((string) $m['synchro'], 0, 16) : null];
         foreach ((array) ($m['repartition']['niveaux'] ?? []) as $l) { if ((int) ($l['n'] ?? 0) > 0) { $par[$sid][(int) $l['note']] = (int) $l['n']; } }
         foreach ((array) ($m['derniers'] ?? []) as $a) {
             if (!is_array($a) || !preg_match('/^\d{4}-\d{2}-\d{2}/', (string) ($a['le'] ?? ''))) { continue; }
@@ -134,7 +140,9 @@ function socGoogleReputation(?string $shop = null, ?array $bo = null): array
 {
     $bo ??= socGoogleBo();
     if (!empty($bo['indispo'])) { return $bo; }
+    socGoogleSuiviNoter($bo);
     $cible = (float) $bo['cible'];
+    $g7 = socGoogleGagnes(7); $g30 = socGoogleGagnes(30); $sc7 = socGoogleScans(7); $sc30 = socGoogleScans(30);
     $magasins = []; $sommeNotes = 0.0; $sommeAvis = 0; $parReseau = [];
     foreach (socReseau() as $s) {
         $id = (string) $s['id'];
@@ -143,17 +151,23 @@ function socGoogleReputation(?string $shop = null, ?array $bo = null): array
         $n = $a ? (int) $a['avis'] : 0;
         if ($note !== null && $n > 0) { $sommeNotes += $note * $n; $sommeAvis += $n; }
         foreach ($bo['par'][$id] ?? [] as $k => $v) { $parReseau[$k] = ($parReseau[$k] ?? 0) + $v; }
-        $magasins[] = ['id' => $id, 'nom' => (string) $s['name'], 'note' => $note, 'avis' => $n,
+        $magasins[] = ['id' => $id, 'nom' => (string) $s['name'], 'langs' => array_values((array) ($s['langs'] ?? ['fr'])), 'note' => $note, 'avis' => $n,
             'ecart' => $note !== null ? round($note - $cible, 2) : null, 'avis5Requis' => socGoogleAvis5($note, $n, $cible),
             'repartition' => socGoogleRepartition($bo['par'][$id] ?? []), 'raccorde' => (bool) ($a['raccorde'] ?? false),
-            'url' => $a['url'] ?? null, 'synchro' => $a['synchro'] ?? null];
+            'url' => $a['url'] ?? null, 'synchro' => $a['synchro'] ?? null,
+            // Faire venir des avis : le lien d'avis Google de la fiche, et le lien court du module qui compte les scans.
+            'lienAvis' => socGoogleLienAvis((string) ($a['placeId'] ?? '')), 'lienCourt' => ($a['placeId'] ?? '') !== '' ? socGoogleLienCourt($id) : null,
+            'gagnes7' => $g7['shops'][$id] ?? null, 'gagnes30' => $g30['shops'][$id] ?? null, 'scans7' => $sc7[$id] ?? 0, 'scans30' => $sc30[$id] ?? 0];
     }
     $moyenne = $sommeAvis > 0 ? round($sommeNotes / $sommeAvis, 2) : null;
     $notes = array_values(array_filter(array_column($magasins, 'note'), static fn ($v) => $v !== null));
     return [
         'cible' => $cible, 'source' => $bo['source'],
         'connecteur' => ['configure' => (bool) $bo['configure'], 'raccordes' => count(array_filter($bo['fiches'], static fn ($f) => $f['raccorde'])), 'derniereSynchro' => $bo['derniere']],
+        'suiviDepuis' => $g30['depuis'],
         'reseau' => ['moyenne' => $moyenne, 'avis' => $sommeAvis, 'magasins' => count($magasins), 'notes' => count($notes),
+            'gagnes7' => array_sum(array_filter(array_column($magasins, 'gagnes7'), 'is_int')), 'gagnes30' => array_sum(array_filter(array_column($magasins, 'gagnes30'), 'is_int')),
+            'scans7' => array_sum($sc7), 'scans30' => array_sum($sc30),
             'sousCible' => count(array_filter($notes, static fn ($v) => $v < $cible)), 'avis5Requis' => socGoogleAvis5($moyenne, $sommeAvis, $cible),
             'repartition' => socGoogleRepartition($parReseau)],
         'magasins' => $shop === null ? $magasins : array_values(array_filter($magasins, static fn ($m) => $m['id'] === $shop)),
@@ -189,6 +203,118 @@ function socGoogleAvisSync(): array
     }
     socSettingPut('google_avis_relus', ['le' => $now, 'lus' => $lus, 'source' => $bo['source']], false);
     return ['lus' => $lus, 'indispo' => false, 'source' => $bo['source']];
+}
+
+/**
+ * L'historique de la note : une ligne par boutique et par jour (`social_google_suivi`), écrite à chaque lecture de la
+ * réputation (la dernière du jour fait foi). C'est lui qui dit combien d'avis une boutique a gagnés : Google ne publie
+ * que le total du moment.
+ */
+function socGoogleSuiviNoter(array $bo): void
+{
+    $jour = date('Y-m-d');
+    foreach ($bo['fiches'] ?? [] as $sid => $f) {
+        if ($f['note'] === null && (int) $f['avis'] === 0) { continue; }
+        Db::exec('INSERT INTO social_google_suivi (jour, shop_id, note, avis) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE note = VALUES(note), avis = VALUES(avis)',
+            [$jour, mb_substr((string) $sid, 0, 16), $f['note'], (int) $f['avis']]);
+    }
+}
+
+/**
+ * Les avis gagnés sur `$jours` : le total d'aujourd'hui moins celui du jour le plus proche avant la période (ou du premier
+ * jour suivi, `depuis`, tant que l'historique est plus court). Rend ['shops' => [boutique => n], 'depuis' => ?date].
+ */
+function socGoogleGagnes(int $jours): array
+{
+    $depuis = Db::row('SELECT MIN(jour) j FROM social_google_suivi')['j'] ?? null;
+    if ($depuis === null) { return ['shops' => [], 'depuis' => null]; }
+    $debut = date('Y-m-d', strtotime('-' . $jours . ' days'));
+    $out = [];
+    foreach (Db::rows('SELECT s.shop_id, s.avis FROM social_google_suivi s JOIN (SELECT shop_id, MAX(jour) j FROM social_google_suivi GROUP BY shop_id) d'
+        . ' ON d.shop_id = s.shop_id AND d.j = s.jour') as $r) {
+        $avant = Db::row('SELECT avis FROM social_google_suivi WHERE shop_id = ? AND jour <= ? ORDER BY jour DESC LIMIT 1', [$r['shop_id'], $debut])
+            ?? Db::row('SELECT avis FROM social_google_suivi WHERE shop_id = ? ORDER BY jour ASC LIMIT 1', [$r['shop_id']]);
+        $out[(string) $r['shop_id']] = max(0, (int) $r['avis'] - (int) ($avant['avis'] ?? $r['avis']));
+    }
+    return ['shops' => $out, 'depuis' => (string) $depuis > $debut ? (string) $depuis : null];
+}
+
+/** Les scans du lien d'avis (QR, affiche, lien partagé) sur `$jours`, par boutique. */
+function socGoogleScans(int $jours): array
+{
+    $out = [];
+    foreach (Db::rows('SELECT shop_id, COUNT(*) n FROM social_avis_scan WHERE le >= ? GROUP BY shop_id', [date('Y-m-d H:i:s', strtotime('-' . $jours . ' days'))]) as $r) {
+        $out[(string) $r['shop_id']] = (int) $r['n'];
+    }
+    return $out;
+}
+
+/** Le lien qui ouvre directement la fenêtre « Donner un avis » de la fiche Google. */
+function socGoogleLienAvis(string $placeId): ?string
+{
+    return preg_match('/^[\w-]{3,200}$/', $placeId) ? 'https://search.google.com/local/writereview?placeid=' . rawurlencode($placeId) : null;
+}
+
+/** Le lien court du module (`/avis/{boutique}`) : il compte le scan, puis renvoie vers la fiche Google. */
+function socGoogleLienCourt(string $shop): string
+{
+    $base = rtrim((string) (socSetting('url_publique') ?? ''), '/');
+    if ($base === '' && isset($_SERVER['HTTP_HOST'])) { $base = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . '/social'; }
+    return $base . '/api/v1/social/avis/' . rawurlencode($shop);
+}
+
+/**
+ * GET /avis/{boutique}?s=qr|affiche|lien|ticket — public (un client qui scanne n'a pas de session) : note le scan,
+ * puis renvoie vers la fenêtre d'avis de la fiche. Rien d'autre n'est lu ni écrit.
+ */
+function socGoogleAvisRedirige(string $shop, string $source): SocRedirection
+{
+    $bo = socGoogleBo();
+    $f = $bo['fiches'][$shop] ?? null;
+    $lien = $f ? socGoogleLienAvis((string) ($f['placeId'] ?? '')) : null;
+    if ($lien === null) { throw new HttpError(404, 'Pas de fiche Google pour cette boutique.'); }
+    Db::exec('INSERT INTO social_avis_scan (shop_id, source, le) VALUES (?,?,?)',
+        [mb_substr($shop, 0, 16), in_array($source, ['qr', 'affiche', 'lien', 'ticket', 'webshop'], true) ? $source : 'lien', date('Y-m-d H:i:s')]);
+    return new SocRedirection($lien);
+}
+
+/** La synchronisation automatique chez Google (une fois par jour, à partir de `heure`) : activée par défaut. */
+function socGoogleReglages(): array
+{
+    $r = socSetting('google_synchro_auto');
+    $r = is_array($r) ? $r : [];
+    return ['actif' => (bool) ($r['actif'] ?? true), 'heure' => max(0, min(23, (int) ($r['heure'] ?? 6))), 'dernier' => socSetting('google_synchro_auto_dernier')];
+}
+
+function socGoogleReglagesPut(array $b): array
+{
+    socSettingPut('google_synchro_auto', ['actif' => !empty($b['actif']), 'heure' => max(0, min(23, (int) ($b['heure'] ?? 6)))], false);
+    socLog(socUser(), 'Avis Google', 'Synchronisation automatique ' . (!empty($b['actif']) ? 'activée, chaque jour à ' . (int) ($b['heure'] ?? 6) . ' h' : 'désactivée'));
+    return socGoogleReglages();
+}
+
+/**
+ * Le cron horaire : une synchronisation chez Google par jour, à partir de l'heure choisie, sauf si le BO a déjà
+ * synchronisé aujourd'hui (un clic dans le BO ou ici). Rend null quand il n'y a rien à faire.
+ */
+function socGoogleSynchroAuto(): ?array
+{
+    $r = socGoogleReglages();
+    $jour = date('Y-m-d');
+    if (!$r['actif'] || (int) date('G') < $r['heure'] || (is_array($r['dernier']) && ($r['dernier']['jour'] ?? '') === $jour)) { return null; }
+    $bo = socGoogleBo();
+    if (empty($bo['indispo']) && substr((string) ($bo['derniere'] ?? ''), 0, 10) === $jour) {
+        socSettingPut('google_synchro_auto_dernier', ['jour' => $jour, 'le' => date('Y-m-d H:i'), 'ok' => true, 'message' => 'déjà synchronisé aujourd’hui'], false);
+        return null;
+    }
+    try {
+        $s = socGoogleSynchroniser('Synchronisation automatique');
+        $res = ['jour' => $jour, 'le' => date('Y-m-d H:i'), 'ok' => true, 'message' => $s['magasins'] . ' fiche(s), ' . $s['nouveaux'] . ' nouvel(s) avis' . ($s['erreurs'] ? ' — ' . implode(' · ', $s['erreurs']) : '')];
+    } catch (HttpError $e) {
+        $res = ['jour' => $jour, 'le' => date('Y-m-d H:i'), 'ok' => false, 'message' => $e->getMessage()];
+    }
+    socSettingPut('google_synchro_auto_dernier', $res, false);
+    return $res;
 }
 
 /**
@@ -238,14 +364,14 @@ final class BoCockpit
 }
 
 /** « Synchroniser chez Google » : le BO relit les fiches, puis le module recopie et classe les nouveaux avis. */
-function socGoogleSynchroniser(): array
+function socGoogleSynchroniser(?string $qui = null): array
 {
     [$code, $j] = BoCockpit::requete('POST', '/reputation/sync');
     if ($code === 401) { throw new HttpError(422, 'Le cockpit du BO demande une connexion : reconnectez-vous au BO, puis réessayez.'); }
     if ($code < 200 || $code >= 300 || !empty($j['error'])) {
         throw new HttpError($code === 422 ? 422 : 502, 'Synchronisation Google : ' . ((string) ($j['error'] ?? '') ?: 'HTTP ' . $code));
     }
-    socLog(socUser(), 'Avis Google', 'Synchronisation des fiches Google (BO) : ' . (int) ($j['magasins'] ?? 0) . ' fiche(s), ' . (int) ($j['nouveaux'] ?? 0) . ' nouvel(s) avis');
+    socLog($qui ?? socUser(), 'Avis Google', 'Synchronisation des fiches Google (BO) : ' . (int) ($j['magasins'] ?? 0) . ' fiche(s), ' . (int) ($j['nouveaux'] ?? 0) . ' nouvel(s) avis');
     return ['magasins' => (int) ($j['magasins'] ?? 0), 'nouveaux' => (int) ($j['nouveaux'] ?? 0), 'erreurs' => array_values(array_map('strval', (array) ($j['erreurs'] ?? []))),
         'aucuneFiche' => !empty($j['aucuneFiche'])];
 }
@@ -256,5 +382,5 @@ function socGoogleEcran(array $q, ?string $shop = null): array
     $l = socCommentairesListe(['source' => 'google', 'jours' => $q['jours'] ?? 365, 'couleur' => $q['couleur'] ?? '', 'nonTraites' => $q['nonTraites'] ?? '',
         'shop' => $shop ?? ($q['shop'] ?? '')]);
     return ['reputation' => socGoogleReputation($shop), 'jours' => $l['jours'], 'avis' => $l['commentaires'], 'totaux' => $l['totaux'],
-        'relu' => socSetting('google_avis_relus'), 'ia' => $l['ia']];
+        'relu' => socSetting('google_avis_relus'), 'ia' => $l['ia'], 'reglages' => socGoogleReglages()];
 }

@@ -292,3 +292,9 @@ final class SocFichier
 {
     public function __construct(public string $type, public string $octets) {}
 }
+
+/** Une réponse qui renvoie ailleurs (302) : le lien d'avis Google d'une boutique. */
+final class SocRedirection
+{
+    public function __construct(public string $url) {}
+}

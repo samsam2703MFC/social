@@ -13,7 +13,7 @@ MEDIA="${3:-/social/}"
 PROPRES="${4:-1}"
 mkdir -p "$DEST"
 rsync -a --delete --exclude 'config.js' \
-  --include '/support.js' --include '/graphes.js' --include '/ds-catalogue.js' --include '/franchise-visuel.js' --include '/Posts Facebook.dc.html' \
+  --include '/support.js' --include '/Affiche avis.html' --include '/graphes.js' --include '/ds-catalogue.js' --include '/franchise-visuel.js' --include '/Posts Facebook.dc.html' \
   --include '/vendor/***' --include '/_ds/***' --include '/fonts/***' --include '/img/***' --exclude '*' \
   "$SRC/public/" "$DEST/.shared/"
 rsync -a "$DEST/.shared/" "$DEST/"

@@ -124,6 +124,12 @@ function socInstall(): void
         . 'type VARCHAR(20) NULL, media_url VARCHAR(1000) NULL, vignette_url VARCHAR(1000) NULL, permalink VARCHAR(300) NULL,'
         . 'publie_le DATETIME NOT NULL, legende TEXT NULL, maj_le DATETIME NOT NULL, KEY idx_shop (shop_id, publie_le))' . $t);
 
+    // Les avis Google (src/google.php) : la note et le total d'avis de chaque fiche, jour par jour ; les scans du lien d'avis.
+    Db::exec('CREATE TABLE IF NOT EXISTS social_google_suivi (jour DATE NOT NULL, shop_id VARCHAR(16) NOT NULL, note DECIMAL(3,2) NULL,'
+        . 'avis INT NOT NULL DEFAULT 0, PRIMARY KEY (jour, shop_id))' . $t);
+    Db::exec('CREATE TABLE IF NOT EXISTS social_avis_scan (id BIGINT AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
+        . 'source VARCHAR(10) NOT NULL, le DATETIME NOT NULL, KEY idx_shop (shop_id, le))' . $t);
+
     // Le lien seul entre une publication lue chez Meta (mfb-…, mig-…) et une opération du Marketing du BO.
     Db::exec('CREATE TABLE IF NOT EXISTS social_rattachement (objet VARCHAR(80) PRIMARY KEY, operation_id VARCHAR(64) NOT NULL,'
         . 'par VARCHAR(120) NULL, le DATETIME NOT NULL, KEY idx_operation (operation_id))' . $t);

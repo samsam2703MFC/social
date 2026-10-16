@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
   <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
   <script src="social-data.js"></script>
+  <script src="vendor/qrcode.js"></script>
   <style>
     html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
     /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
@@ -52,6 +53,7 @@
           <span style="display:inline-flex;gap:1px;padding-bottom:3px;"><sc-for list="{{ etoilesReseau }}" as="e" hint-placeholder-count="5"><span style="font-size:17px;line-height:1;color:{{ e.c }};">★</span></sc-for></span>
         </div>
         <span style="font-size:12px;color:#666666;">{{ avisTxt }}</span>
+        <span style="font-size:12px;font-weight:500;color:{{ gagnesCol }};">{{ gagnesTxt }}</span>
         <div style="display:flex;flex-direction:column;gap:3px;margin-top:8px;">
           <sc-for list="{{ barres }}" as="b" hint-placeholder-count="5">
             <div style="display:flex;align-items:center;gap:7px;">
@@ -74,6 +76,13 @@
         <span style="font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:#666666;">Connecteur Google (BO)</span>
         <span style="font-size:12px;line-height:1.5;color:{{ coCol }};font-weight:{{ coW }};">{{ coTxt }}</span>
         <span style="font-size:11px;line-height:1.45;color:#8A847C;">{{ coAide }}</span>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:#222222;margin-top:4px;flex-wrap:wrap;">
+          <input type="checkbox" checked="{{ autoActif }}" onChange="{{ toggleAuto }}" style="accent-color:#8D1D2C;margin:0;">Synchroniser chaque jour à
+          <select value="{{ autoHeure }}" onChange="{{ setAutoHeure }}" style="font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:2px 4px;background:#FFFFFF;">
+            <sc-for list="{{ heures }}" as="h" hint-placeholder-count="0"><option value="{{ h.v }}">{{ h.l }}</option></sc-for>
+          </select>
+        </label>
+        <span style="font-size:11px;line-height:1.45;color:{{ autoCol }};">{{ autoTxt }}</span>
       </div>
     </section>
     </sc-if>
@@ -167,12 +176,36 @@
             <span style="font-size:10.5px;line-height:1.4;color:#8A847C;margin-top:3px;">{{ m.echantillon }}</span>
           </div>
           </sc-if>
+          <span style="font-size:12px;color:#444444;">{{ m.gagnes }}</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <sc-if value="{{ m.hasLien }}" hint-placeholder-val="{{ false }}"><button onClick="{{ m.demander }}" style="align-self:flex-start;border:none;background:#8D1D2C;color:#FFFFFF;border-radius:999px;padding:6px 13px;font-size:11.5px;font-weight:500;cursor:pointer;">Faire venir des avis (QR)</button></sc-if>
           <sc-if value="{{ m.hasAvis }}" hint-placeholder-val="{{ false }}"><button onClick="{{ m.voir }}" style="align-self:flex-start;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:500;cursor:pointer;color:#8D1D2C;">{{ m.voirTxt }}</button></sc-if>
         </div>
       </sc-for>
     </div>
     </sc-if>
   </main>
+  <!-- Faire venir des avis : le QR code de la boutique, son lien et ses affiches. -->
+  <sc-if value="{{ qrOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ qrFermer }}" style="position:fixed;inset:0;background:rgba(35,34,32,0.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;">
+      <div onClick="{{ stop }}" style="background:#FFFFFF;border-radius:14px;max-width:420px;width:100%;padding:20px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;box-shadow:0 16px 40px rgba(35,34,32,0.3);">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Faire venir des avis · L’Atelier By {{ qr.nom }}</span>
+        <img src="{{ qr.img }}" alt="QR code vers la fiche Google" style="width:220px;height:220px;image-rendering:pixelated;border:6px solid #FFFFFF;outline:2px solid #8D1D2C;border-radius:6px;">
+        <span style="font-size:12.5px;line-height:1.5;color:#444444;">Le client scanne avec l’appareil photo de son téléphone : la fenêtre « Donner un avis » de la fiche Google s’ouvre. Chaque scan est compté ({{ qr.scans }}).</span>
+        <div style="display:flex;gap:6px;width:100%;">
+          <input readonly value="{{ qr.lien }}" style="flex:1 1 auto;min-width:0;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:7px 9px;background:#FBF8F4;">
+          <button onClick="{{ qr.copier }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:500;cursor:pointer;">Copier</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+          <a href="{{ qr.afficheA5 }}" target="_blank" rel="noopener" style="border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;background:#8D1D2C;color:#FFFFFF;text-decoration:none;">Affiche A5</a>
+          <a href="{{ qr.afficheA6 }}" target="_blank" rel="noopener" style="border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;border:0.5px solid rgba(34,34,34,0.18);color:#222222;text-decoration:none;">Chevalet de comptoir A6</a>
+          <a href="{{ qr.lienAvis }}" target="_blank" rel="noopener" style="border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;border:0.5px solid rgba(34,34,34,0.18);color:#222222;text-decoration:none;">Voir la fenêtre d’avis ↗</a>
+        </div>
+        <span style="font-size:11px;line-height:1.45;color:#8A847C;">Idées : l’affiche près de la caisse, le chevalet sur le comptoir, le lien sur le ticket et dans l’e-mail de commande du webshop. Seuls les clients contents à qui on le demande donnent un avis : demandez-le au moment où ils vous remercient.</span>
+        <button onClick="{{ qrFermer }}" style="border:none;background:transparent;color:#666666;font-size:12px;cursor:pointer;text-decoration:underline;">Fermer</button>
+      </div>
+    </div>
+  </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
@@ -180,7 +213,7 @@
 // lus) et les avis eux-mêmes, classés vert / orange / rouge comme les commentaires (src/google.php). Le module lit les
 // tables du BO ; « Synchroniser chez Google » demande au BO de relire les fiches (appel facturé par Google).
 class Component extends DCLogic {
-  state = { jours: 365, couleur: '', shop: '', nonTraites: false, data: null, loading: true, err: '', busy: '', msg: '', msgKind: 'ok' };
+  state = { jours: 365, couleur: '', shop: '', nonTraites: false, data: null, loading: true, err: '', busy: '', msg: '', msgKind: 'ok', qrShop: '' };
   componentDidMount() {
     const SA = window.SA, j = SA && +SA.param('jours'), c = SA && SA.param('couleur'), sh = SA && SA.param('shop');
     if (['rouge', 'orange', 'vert'].includes(c)) this.setState({ couleur: c, nonTraites: c !== 'vert' });
@@ -217,6 +250,14 @@ class Component extends DCLogic {
       this.setState({ data: Object.assign({}, d, { avis, totaux }) });
     }).catch(e => this.setState({ msg: 'Non enregistré : ' + (e.message || 'erreur'), msgKind: 'err' }));
   }
+  reglages(r) {
+    const SA = window.SA; if (!SA) return;
+    SA.googleReglages(r).then(x => { const d = this.state.data; if (d) this.setState({ data: Object.assign({}, d, { reglages: x.reglages }) }); })
+      .catch(e => this.setState({ msg: 'Réglage non enregistré : ' + (e.message || 'erreur'), msgKind: 'err' }));
+  }
+  copierLien(t) {
+    try { navigator.clipboard.writeText(t).then(() => this.setState({ msg: 'Lien copié : à coller sur le ticket, dans un e-mail ou un message.', msgKind: 'ok' })); } catch (e) {}
+  }
   copier(c) {
     const ok = () => this.setState({ msg: 'Réponse copiée : collez-la sous l’avis, depuis la fiche Google de la boutique (Google Business Profile).', msgKind: 'ok' });
     try { navigator.clipboard.writeText(c.reponse).then(ok, () => this.setState({ msg: 'Copie impossible : sélectionnez le texte à la main.', msgKind: 'warn' })); }
@@ -243,6 +284,8 @@ class Component extends DCLogic {
     // Les plus loin de la cible d'abord ; sans note à la fin (fiche à raccorder dans le BO).
     const mags = ((ok && rp.magasins) || []).slice().sort((a, b) => (a.note == null) - (b.note == null) || (a.note == null ? a.nom.localeCompare(b.nom) : a.note - b.note));
     const avisTous = (d && d.avis) || [];
+    const gagnes = (m) => m.gagnes7 == null ? 'Avis gagnés : suivi à partir d’aujourd’hui' : 'Avis gagnés : ' + (m.gagnes7 > 0 ? '+' : '') + m.gagnes7 + ' en 7 j · ' + (m.gagnes30 > 0 ? '+' : '') + m.gagnes30 + ' en 30 j'
+      + (rp && rp.suiviDepuis && SA ? ' (suivi depuis le ' + SA.dShort(rp.suiviDepuis) + ')' : '') + ' · ' + (m.scans30 || 0) + ' scan' + ((m.scans30 || 0) > 1 ? 's' : '') + ' du QR en 30 j';
     const cartes = mags.map(m => {
       const sans = m.note == null || !m.avis, atteint = !sans && m.note >= cible, jm = jauges(m.repartition, m.avis);
       const nAvis = avisTous.filter(a => a.shopId === m.id).length;
@@ -253,6 +296,7 @@ class Component extends DCLogic {
         effort: m.avis5Requis == null ? (sans ? 'Raccordez la fiche dans le BO pour suivre la note.' : 'Cible inatteignable par ajout d’avis.') : m.avis5Requis === 0 ? 'À la cible — rien à rattraper.' : m.avis5Requis + ' avis 5★ pour atteindre ' + fN(cible),
         effortBg: sans ? '#F4EFE8' : atteint ? 'rgba(45,122,62,.08)' : 'rgba(141,29,44,.05)', effortFg: sans ? '#666666' : atteint ? '#2d7a3e' : '#8D1D2C',
         hasBarres: jm.lus > 0, barres: jm.barres, echantillon: jm.echantillon,
+        gagnes: sans ? '' : gagnes(m), hasLien: !!m.lienCourt, demander: () => this.setState({ qrShop: m.id }),
         hasAvis: nAvis > 0, voirTxt: 'Voir ses ' + nAvis + ' avis', voir: () => { this.setState({ shop: m.id }); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} } };
     });
 
@@ -285,6 +329,15 @@ class Component extends DCLogic {
     });
     const relu = d && d.relu, ia = (d && d.ia) || {};
     const busy = s.busy;
+    const rg = (d && d.reglages) || { actif: true, heure: 6, dernier: null }, dern = rg.dernier;
+    const mq = mags.find(m => m.id === s.qrShop);
+    let qr = null;
+    if (mq && mq.lienCourt) {
+      let img = '';
+      try { const q = window.qrcode(0, 'M'); q.addData(mq.lienCourt + '?s=qr'); q.make(); img = q.createDataURL(6, 2); } catch (e) {}
+      const aff = (f) => 'Affiche avis.html?u=' + encodeURIComponent(mq.lienCourt) + '&nom=' + encodeURIComponent(mq.nom) + '&langues=' + encodeURIComponent((mq.langs || ['fr']).join(',')) + '&format=' + f;
+      qr = { nom: mq.nom, img, lien: mq.lienCourt + '?s=lien', lienAvis: mq.lienAvis || '#', scans: (mq.scans30 || 0) + ' en 30 jours', copier: () => this.copierLien(mq.lienCourt + '?s=lien'), afficheA5: aff('a5'), afficheA6: aff('a6') };
+    }
     return {
       periods: [[30, '30 j'], [90, '90 j'], [365, '1 an'], [3650, 'Tout']].map(([j, label]) => ({ label, bg: s.jours === j ? '#232220' : 'transparent', fg: s.jours === j ? '#FFFFFF' : '#444444', pick: () => this.load(j) })),
       relire: () => this.geste('relire'), relireLabel: busy === 'relire' ? 'Relecture…' : 'Relire et classer', synchroniser: () => this.geste('sync'),
@@ -302,6 +355,14 @@ class Component extends DCLogic {
       coCol: co.configure ? '#444444' : '#8D1D2C', coW: co.configure ? 400 : 500,
       coAide: co.configure ? 'Google ne rend que 5 avis par fiche et par lecture : le BO les accumule à chaque synchronisation (appel facturé par Google). La clé et le raccordement des fiches se règlent dans le BO.'
         : 'Renseignez la clé Google Places dans les Paramètres du BO, puis raccordez chaque fiche dans Réputation digitale.',
+      gagnesTxt: res.gagnes7 == null ? '' : 'Avis gagnés : ' + (res.gagnes7 > 0 ? '+' : '') + fI(res.gagnes7) + ' en 7 j · ' + (res.gagnes30 > 0 ? '+' : '') + fI(res.gagnes30) + ' en 30 j · ' + fI(res.scans30) + ' scans du QR',
+      gagnesCol: (res.gagnes7 || 0) > 0 ? '#2d7a3e' : '#666666',
+      autoActif: !!rg.actif, toggleAuto: () => this.reglages({ actif: !rg.actif, heure: rg.heure }), autoHeure: String(rg.heure),
+      setAutoHeure: (e) => this.reglages({ actif: rg.actif, heure: +e.target.value }), heures: Array.from({ length: 24 }, (_, h) => ({ v: String(h), l: h + ' h' })),
+      autoTxt: !rg.actif ? 'Synchronisation automatique coupée : seulement au clic.' : dern ? 'Dernière synchronisation automatique le ' + (SA ? SA.dShort(String(dern.le).slice(0, 10)) : '') + ' à ' + String(dern.le).slice(11, 16) + ' : ' + dern.message
+        : 'Une lecture par fiche et par jour (facturée par Google), à partir de ' + rg.heure + ' h.',
+      autoCol: dern && dern.ok === false ? '#8D1D2C' : '#8A847C',
+      qrOpen: !!qr, qr: qr || {}, qrFermer: () => this.setState({ qrShop: '' }), stop: (e) => e.stopPropagation(),
       showAvis: !!d, kpis, filtres, shop: s.shop, shops: mags.map(m => ({ id: m.id, nom: m.nom })), setShop: (e) => this.setState({ shop: e.target.value }),
       nonTraites: s.nonTraites, toggleNonTraites: () => this.setState({ nonTraites: !s.nonTraites }),
       etat: (relu && relu.le && SA ? 'Relu dans le BO le ' + SA.dShort(relu.le.slice(0, 10)) + ' ' + relu.le.slice(11, 16) + ' · ' : '') + (ia.configure ? 'analyse par Claude' : 'analyse par règles simples (clé Claude : Paramètres → Rédaction IA)') + ' · relu toutes les heures',

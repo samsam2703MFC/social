@@ -798,10 +798,11 @@
     const totaux = { rouge: 0, orange: 0, vert: 0, aClasser: 0, rougeOuverts: 0, orangeOuverts: 0, total: liste.length };
     liste.forEach(c => { totaux[c.couleur]++; if (!c.traite && c.couleur !== 'vert') totaux[c.couleur + 'Ouverts']++; });
     const rep = (par) => ({ lus: Object.values(par).reduce((a, b) => a + b, 0), niveaux: [5, 4, 3, 2, 1].map(n => ({ note: n, n: par[n] || 0 })) });
-    const mag = (id, nom, note, avis, par, avis5) => ({ id, nom, note, avis, ecart: Math.round((note - 4.6) * 100) / 100, avis5Requis: avis5, repartition: rep(par), raccorde: true, url: '', synchro: TODAY + ' 07:00' });
-    return { jours, avis: liste, totaux, relu: { le: TODAY + ' 08:00', lus: 4 }, ia: { configure: true, modele: 'démonstration' }, demo: true,
+    const mag = (id, nom, note, avis, par, avis5) => ({ id, nom, langs: id === '4' ? ['nl', 'fr'] : ['fr'], note, avis, ecart: Math.round((note - 4.6) * 100) / 100, avis5Requis: avis5, repartition: rep(par), raccorde: true, url: '', synchro: TODAY + ' 07:00',
+      lienAvis: 'https://search.google.com/local/writereview?placeid=demo' + id, lienCourt: location.origin + '/social/api/v1/social/avis/' + id, gagnes7: id === '4' ? 2 : 0, gagnes30: id === '4' ? 6 : 1, scans7: 3, scans30: 11 });
+    return { jours, avis: liste, totaux, relu: { le: TODAY + ' 08:00', lus: 4 }, ia: { configure: true, modele: 'démonstration' }, demo: true, reglages: { actif: true, heure: 6, dernier: { le: TODAY + ' 06:07', ok: true, message: '3 fiche(s), 0 nouvel(s) avis' } },
       reputation: { cible: 4.6, connecteur: { configure: true, raccordes: 3, derniereSynchro: TODAY + ' 07:00' },
-        reseau: { moyenne: 4.21, avis: 876, magasins: 3, notes: 3, sousCible: 2, avis5Requis: 856, repartition: rep({ 5: 2, 3: 1, 1: 1 }) },
+        reseau: { moyenne: 4.21, avis: 876, magasins: 3, notes: 3, sousCible: 2, avis5Requis: 856, repartition: rep({ 5: 2, 3: 1, 1: 1 }), gagnes7: 2, gagnes30: 8, scans7: 9, scans30: 33 }, suiviDepuis: null,
         magasins: [mag('4', 'Halle', 4.4, 50, { 5: 1, 1: 1 }, 25), mag('2', 'Corbais', 4.1, 754, { 3: 1 }, 943), mag('5', 'Sombreffe', 4.7, 72, { 5: 1 }, 0)] } };
   }
   function google(jours) {
@@ -815,6 +816,10 @@
   function googleSynchroniser(jours) {
     if (LIVE) return api('POST', '/google/synchroniser', { jours });
     return Promise.resolve(Object.assign(demoGoogle(jours), { bo: { magasins: 3, nouveaux: 0, erreurs: [], aucuneFiche: false }, sync: { lus: 4 }, analyse: { classes: 0, ia: true, erreur: null } }));
+  }
+  function googleReglages(r) {
+    if (LIVE) return api('POST', '/google/reglages', r);
+    return Promise.resolve({ reglages: Object.assign({ dernier: null }, r) });
   }
   function suivi(jours) {
     if (LIVE) return api('GET', '/suivi/abonnes?jours=' + jours);
@@ -877,7 +882,7 @@
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
     api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT,
-    commentaires, commentairesRelire, commentaireTraiter, google, googleRelire, googleSynchroniser,
+    commentaires, commentairesRelire, commentaireTraiter, google, googleRelire, googleSynchroniser, googleReglages,
     comptesMeta: () => LIVE ? api('GET', '/meta/comptes').then(r => { META.comptes = (r && r.comptes) || META.comptes; return META.comptes; }) : Promise.resolve(META.comptes), calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, charte, relire, ia: () => (LIVE && LIVE.ia) || { configure: false, modele: '' }, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.

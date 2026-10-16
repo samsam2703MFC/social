@@ -48,6 +48,11 @@ function socRoute(string $method, string $path): array
         return [200, ['ok' => $db, 'module' => 'social', 'version' => SOCIAL_VERSION, 'db' => $db, 'dbError' => $err,
             'bo' => ['config' => isset(boConfig()['_source']), 'auth' => authEnabled()], 'meta' => $db ? Meta::statut() : null]];
     }
+    // Le lien d'avis Google d'une boutique (QR code, affiche) : public, il compte le scan et renvoie vers la fiche.
+    if ($method === 'GET' && preg_match('#^/avis/([\w-]{1,16})$#', $path, $m)) {
+        socInstall();
+        return [302, socGoogleAvisRedirige($m[1], (string) ($_GET['s'] ?? 'lien'))];
+    }
     if ($path === '/webhook') {
         socInstall();
         if ($method === 'GET') { return [200, socWebhookVerif()]; }
@@ -120,6 +125,7 @@ function socRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/commentaires/traiter') { $b = body(); return [200, socCommentaireTraiter((string) ($b['id'] ?? ''), !empty($b['traite']))]; }
     // Les avis Google : la Réputation digitale du BO (ses tables, lues) et les avis classés (src/google.php).
     if ($method === 'GET' && $path === '/google') { return [200, socGoogleEcran($_GET)]; }
+    if ($method === 'POST' && $path === '/google/reglages') { return [200, ['reglages' => socGoogleReglagesPut(body())]]; }
     if ($method === 'POST' && $path === '/google/relire') {
         $b = body();
         return [200, ['sync' => socGoogleAvisSync(), 'analyse' => socCommentairesAnalyser()] + socGoogleEcran(['jours' => $b['jours'] ?? 365])];
@@ -278,6 +284,11 @@ function socHandle(string $method, string $path): void
         [$code, $body] = [500, ['error' => 'erreur interne : ' . $e->getMessage()]];
     }
     http_response_code($code);
+    if ($body instanceof SocRedirection) {
+        header('Location: ' . $body->url);
+        header('Cache-Control: no-store');
+        return;
+    }
     if ($body instanceof SocFichier) {
         // Une image du catalogue : même origine que l'écran, gardée un jour par le navigateur.
         header('Content-Type: ' . $body->type);
