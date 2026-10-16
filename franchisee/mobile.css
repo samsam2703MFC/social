@@ -1,0 +1,81 @@
+/*
+ * Espace franchisé sur téléphone (≤ 760 px). Les écrans sont dessinés pour l'ordinateur, en styles posés sur
+ * chaque élément : ici, seulement ce qui change sur un petit écran (d'où les !important), accroché à des classes
+ * « sf-… » posées dans les pages. Au-delà de 760 px, rien ne change.
+ *
+ *  - la coque : le menu latéral devient une barre du haut (boutique, bouton Menu) et un tiroir ; une barre du bas
+ *    mène aux écrans du quotidien (calendrier, commentaires, créer un post, publicités, avis Google) ;
+ *  - le contenu : une colonne, marges réduites, titres plus petits, onglets qui défilent ;
+ *  - les tableaux (commentaires, avis) deviennent des cartes : une ligne = une carte.
+ */
+
+@media (max-width: 760px) {
+  /* Rien ne doit dépasser ; « clip » ne crée pas de zone de défilement (la page défile normalement). */
+  .sf-main { overflow-x: clip; }
+  body { -webkit-text-size-adjust: 100%; }
+
+  /* Coque : la navigation passe au-dessus du contenu. */
+  .sf-shell { flex-direction: column !important; }
+  .sf-main { padding: 12px 12px calc(84px + env(safe-area-inset-bottom, 0px)) !important; gap: 12px !important; width: 100% !important; box-sizing: border-box !important; }
+  .sc-host[data-sc-name="FNav"] { position: sticky; top: 0; z-index: 90; }
+  .sf-top { display: flex !important; }
+  .sf-bottom { display: flex !important; }
+  .sf-side {
+    position: fixed !important; top: 0 !important; left: 0 !important; z-index: 80;
+    width: min(86vw, 320px) !important; height: 100% !important; height: 100dvh !important;
+    overflow-y: auto; transform: translateX(-105%); transition: transform 0.2s ease;
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
+  .sf-side[data-open="true"] { transform: none; box-shadow: 8px 0 30px rgba(35, 34, 32, 0.25); }
+  .sf-scrim[data-open="true"] { display: block !important; }
+  .sf-only-mob { display: inline-flex !important; }
+
+  /* Contenu : titres, en-têtes et lignes d'outils. */
+  .sf-main h1 { font-size: 24px !important; }
+  .sf-main header { gap: 10px !important; }
+  .sf-main header > div { min-width: 0; }
+  .sf-main header > div > span:first-child { font-size: 10px !important; letter-spacing: 0.06em !important; }
+  .sf-main section { min-width: 0; }
+
+  /* Onglets de « Mes réseaux » : une seule ligne qui défile. */
+  .sf-tabs { overflow-x: auto; flex-wrap: nowrap !important; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin: 0 -12px; padding: 0 12px; }
+  .sf-tabs::-webkit-scrollbar { display: none; }
+  .sf-tabs a { padding: 9px 11px 8px !important; font-size: 13px !important; }
+
+  /* Tableaux → cartes. */
+  .sf-table { grid-template-columns: minmax(0, 1fr) !important; min-width: 0 !important; }
+  .sf-table-wrap { overflow: visible !important; background: transparent !important; border: none !important; }
+  .sf-th { display: none !important; }
+  .sf-table .sf-td { border-bottom: none !important; padding: 6px 14px !important; }
+  .sf-table .sf-td1 { margin-top: 10px; border-radius: 10px 10px 0 0; padding-top: 14px !important; flex-direction: row !important; align-items: center !important; flex-wrap: wrap; }
+  .sf-table .sf-tdz { border-radius: 0 0 10px 10px; padding-bottom: 14px !important; flex-direction: row !important; align-items: center !important; flex-wrap: wrap; gap: 12px !important; }
+
+  /* Grilles à colonnes fixes : une colonne. */
+  .sf-1col { grid-template-columns: minmax(0, 1fr) !important; }
+  .sf-2col { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .sf-stack { flex-direction: column !important; align-items: stretch !important; }
+  .sf-full { width: 100% !important; max-width: 100% !important; min-width: 0 !important; box-sizing: border-box !important; }
+  .sf-hide-mob { display: none !important; }
+  .sf-noborder-mob { border-left: none !important; padding-left: 0 !important; }
+  /* Une ligne vignette + texte + étiquette + lien : l'étiquette et le lien passent sous le texte. */
+  .sf-wrap { flex-wrap: wrap !important; row-gap: 4px !important; }
+  .sf-wrap > span:nth-child(2) { flex: 1 1 calc(100% - 52px) !important; }
+  .sf-wrap > span:nth-child(3) { margin-left: 50px; }
+
+  /* Calendrier · mois : des cases compactes, la vignette seule ; le détail s'ouvre en bas de l'écran. */
+  .sf-dow { padding: 6px 0 !important; font-size: 9.5px !important; letter-spacing: 0.02em !important; text-align: center; }
+  .sf-mcell { min-height: 62px !important; padding: 3px 2px !important; gap: 3px !important; align-items: center; }
+  .sf-mitem { padding: 1px !important; border-left-width: 2px !important; justify-content: center; width: 100%; box-sizing: border-box; }
+  .sf-mitem img { width: 100% !important; max-width: 30px; height: 26px !important; }
+  /* Calendrier · semaine : un jour par ligne. */
+  .sf-autoh { min-height: 0 !important; }
+  .sf-weekitems { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  /* Calendrier · liste : date, vignette, titre, statut. */
+  .sf-list { grid-template-columns: 62px 36px minmax(0, 1fr) auto !important; min-width: 0 !important; }
+  .sf-list > div > span:first-child { font-size: 11px !important; padding: 8px 6px !important; }
+  /* Le détail d'une publication : une feuille posée au-dessus de la barre du bas. */
+  .sf-full { flex: 1 1 100% !important; }
+  .sf-sheet { position: fixed !important; left: 8px; right: 8px; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); max-height: 70vh; overflow-y: auto !important; z-index: 65; box-shadow: 0 -8px 30px rgba(35, 34, 32, 0.28); }
+  .sf-sheet-img { padding-bottom: 46% !important; }
+  .sf-sheet button[title="Fermer"] { width: 36px !important; height: 36px !important; font-size: 18px !important; }
+}

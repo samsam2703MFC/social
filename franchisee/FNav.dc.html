@@ -12,11 +12,24 @@
   <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
   <script src="config.js"></script>
   <script src="franchise-data.js"></script>
+  <link rel="stylesheet" href="mobile.css">
 </helmet>
-<nav style="width:228px;height:100vh;position:sticky;top:0;box-sizing:border-box;background:#FFFFFF;border-right:0.5px solid rgba(34,34,34,0.10);display:flex;flex-direction:column;font-family:var(--font-ui);color:#222222;">
-  <div style="padding:20px 20px 16px;display:flex;flex-direction:column;gap:6px;border-bottom:0.5px solid rgba(34,34,34,0.10);">
+<div style="display:contents;">
+<!-- Téléphone (mobile.css, ≤ 760 px) : la barre du haut, le menu en tiroir, la barre du bas. Masqués sur ordinateur. -->
+<header class="sf-top" style="display:none;align-items:center;gap:10px;height:52px;padding:0 10px 0 6px;box-sizing:border-box;background:#FFFFFF;border-bottom:0.5px solid rgba(34,34,34,0.10);font-family:var(--font-ui);color:#222222;">
+  <button onClick="{{ ouvrir }}" aria-label="Ouvrir le menu" style="width:40px;height:40px;border:none;background:transparent;border-radius:8px;font-size:20px;line-height:1;color:#232220;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;">☰<sc-if value="{{ topBadge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:6px;right:5px;width:8px;height:8px;border-radius:50%;background:#8D1D2C;"></span></sc-if></button>
+  <img src="img/logo.png" alt="L'Atelier By" style="height:15px;width:auto;">
+  <span style="margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;min-width:0;">
+    <span style="font-family:var(--font-display);font-size:19px;line-height:1;color:#232220;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw;">{{ shopName }}</span>
+    <span style="font-size:10.5px;color:{{ quotaColor }};font-weight:500;">{{ quotaLabel }} cette semaine</span>
+  </span>
+</header>
+<div class="sf-scrim" data-open="{{ drawerOpen }}" onClick="{{ fermer }}" style="display:none;position:fixed;inset:0;background:rgba(35,34,32,0.35);z-index:70;"></div>
+<nav class="sf-side" data-open="{{ drawerOpen }}" style="width:228px;height:100vh;position:sticky;top:0;box-sizing:border-box;background:#FFFFFF;border-right:0.5px solid rgba(34,34,34,0.10);display:flex;flex-direction:column;font-family:var(--font-ui);color:#222222;">
+  <div style="position:relative;padding:20px 20px 16px;display:flex;flex-direction:column;gap:6px;border-bottom:0.5px solid rgba(34,34,34,0.10);">
     <img src="img/logo.png" alt="L'Atelier By" style="height:20px;width:auto;align-self:flex-start;">
     <span style="font-size:11px;color:#666666;letter-spacing:0.08em;text-transform:uppercase;">Espace boutique</span>
+    <button class="sf-only-mob" onClick="{{ fermer }}" aria-label="Fermer le menu" style="display:none;position:absolute;top:12px;right:12px;width:36px;height:36px;border:none;border-radius:50%;background:#F4EFE8;color:#232220;font-size:16px;align-items:center;justify-content:center;cursor:pointer;">✕</button>
   </div>
   <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
   <div style="padding:14px 20px 10px;display:flex;flex-direction:column;gap:6px;border-bottom:0.5px solid rgba(34,34,34,0.10);">
@@ -84,15 +97,25 @@
   </div>
   </sc-if>
 </nav>
+<nav class="sf-bottom" aria-label="Navigation" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;background:#FFFFFF;border-top:0.5px solid rgba(34,34,34,0.12);padding:6px 4px calc(6px + env(safe-area-inset-bottom, 0px));justify-content:space-around;align-items:flex-end;font-family:var(--font-ui);box-shadow:0 -4px 16px rgba(35,34,32,0.06);">
+  <sc-for list="{{ bas }}" as="b" hint-placeholder-count="5">
+    <a href="{{ b.href }}" aria-current="{{ b.current }}" style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:2px 2px;text-decoration:none;color:{{ b.fg }};font-size:10.5px;font-weight:{{ b.w }};position:relative;">
+      <span style="width:{{ b.size }};height:{{ b.size }};margin-top:{{ b.lift }};border-radius:{{ b.radius }};background:{{ b.icBg }};color:{{ b.icFg }};font-size:{{ b.icSize }};display:flex;align-items:center;justify-content:center;box-shadow:{{ b.shadow }};">{{ b.ic }}</span>
+      <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-size:10px;letter-spacing:-0.1px;">{{ b.label }}</span>
+      <sc-if value="{{ b.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:0;left:calc(50% + 6px);min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#8D1D2C;color:#FFFFFF;font-size:9.5px;font-weight:600;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">{{ b.badge }}</span></sc-if>
+    </a>
+  </sc-for>
+</nav>
+</div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:228,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cal&quot;,&quot;analyse&quot;,&quot;suivi&quot;,&quot;pub&quot;,&quot;camp&quot;,&quot;ig&quot;],&quot;default&quot;:&quot;cal&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
-  state = { open: null };
+  state = { open: null, drawer: false };
   componentDidMount() { this._h = () => this.forceUpdate(); window.addEventListener('sf-change', this._h); }
   componentWillUnmount() { window.removeEventListener('sf-change', this._h); }
   renderVals() {
     const SF = window.SF, st = SF && SF.state();
-    if (!st) return { ok: false, items: [], shops: [] };
+    if (!st) return { ok: false, items: [], shops: [], bas: [], drawerOpen: 'false', topBadge: false };
     // « Mes réseaux » est un menu déroulant : calendrier, vues et abonnés, suivi de la boutique, créer un post.
     // `active` : la page (ou l'onglet) ouvert ; `onPick` (facultatif) : la page change d'onglet sans recharger.
     const GROUPE = ['cal', 'analyse', 'suivi', 'com', 'google', 'pub'], VUES = ['cal', 'analyse', 'suivi'], sub = this.props.active || 'cal', pick = this.props.onPick;
@@ -110,7 +133,7 @@ class Component extends DCLogic {
       .concat([['pub', 'Créer un post', '+', SF.href('pub')]])
       .map(([k, label, ic, href]) => { const on = active === 'cal' && k === sub;
         return { label, ic, href, fg: on ? '#8D1D2C' : '#333333', w: on ? 600 : 400, bg: on ? '#F4EFE8' : 'transparent', icFg: on ? '#8D1D2C' : '#8A847C',
-          click: (e) => { if (typeof pick === 'function' && VUES.includes(k) && VUES.includes(sub)) { e.preventDefault(); pick(k); } } }; });
+          click: (e) => { this.setState({ drawer: false }); if (typeof pick === 'function' && VUES.includes(k) && VUES.includes(sub)) { e.preventDefault(); pick(k); } } }; });
     // « Mes promotions » est retiré : les posts à valider ou refusés se signalent sur « Mes réseaux ».
     const defs = [['cal', 'Mes réseaux', refused || pending, refused ? '#8D1D2C' : '#D97B29']].concat(r.voirCampagnes !== false || r.voirPublicites !== false ? [['camp', 'Publicités et opérations', 0, '#8D1D2C']] : []).concat(st.grilleInstagram || st.instagramUnique ? [['ig', st.instagramUnique ? 'Grille Instagram du réseau' : 'Grille Instagram', 0, '#8D1D2C']] : []);
     const jours = [1, 2, 3, 4, 5, 6, 0].filter(j => (r.jours || []).includes(j)).map(j => SF.DAYS[j]);
@@ -127,6 +150,18 @@ class Component extends DCLogic {
       userName: name, userIni: name.split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase(),
       userVia: st.me.via === 'hote' ? 'Connecté par l’ERP' : st.me.via === 'apercu' ? 'Aperçu du franchiseur' : st.me.via === 'libre' ? 'Accès ouvert (en attendant l’ERP)' : 'Démonstration',
       isApercu: st.me.via === 'apercu', fermerApercu: () => SF.fermerApercu(), isDemo: SF.demo, resetDemo: () => SF.reset(),
+      // Téléphone : le tiroir et la barre du bas (les écrans du quotidien ; le reste est dans le menu).
+      drawerOpen: this.state.drawer ? 'true' : 'false', ouvrir: () => this.setState({ drawer: true }), fermer: () => this.setState({ drawer: false }),
+      topBadge: refused + pending > 0,
+      bas: [['cal', 'Calendrier', '▦', SF.href('cal'), ['cal', 'analyse', 'suivi'], refused + pending]]
+        .concat(r.voirCommentaires !== false ? [['com', 'Commentaires', '❝', SF.href('com'), ['com'], 0]] : [])
+        .concat([['pub', 'Créer', '+', SF.href('pub'), ['pub'], 0]])
+        .concat(r.voirCampagnes !== false || r.voirPublicites !== false ? [['camp', 'Publicités', '◎', SF.href('camp'), ['camp'], 0]] : [])
+        .concat(r.voirAvisGoogle !== false ? [['google', 'Avis Google', '★', SF.href('google'), ['google'], 0]] : [])
+        .map(([k, label, ic, href, pages, badge]) => { const on = pages.includes(sub), creer = k === 'pub';
+          return { label, ic, href, current: on ? 'page' : 'false', fg: on ? '#8D1D2C' : '#555555', w: on ? 600 : 500, badge, hasBadge: badge > 0,
+            size: creer ? '44px' : '26px', lift: creer ? '-18px' : '0', radius: creer ? '50%' : '8px', icSize: creer ? '24px' : '14px',
+            icBg: creer ? '#8D1D2C' : on ? '#F4EFE8' : 'transparent', icFg: creer ? '#FFFFFF' : on ? '#8D1D2C' : '#666666', shadow: creer ? '0 4px 12px rgba(141,29,44,0.35)' : 'none' }; }),
     };
   }
 }

@@ -20,9 +20,9 @@
     select,input,button,textarea{font-family:var(--font-ui);}
   </style>
 </helmet>
-<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+<div class="sf-shell" style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
   <dc-import name="FNav" active="google" hint-size="228px,100vh"></dc-import>
-  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+  <main class="sf-main" style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
 
     <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
       <div style="display:flex;flex-direction:column;gap:4px;">
@@ -67,12 +67,12 @@
         </div>
         </sc-if>
       </div>
-      <div style="display:flex;flex-direction:column;gap:7px;border-left:0.5px solid rgba(34,34,34,0.10);padding-left:22px;">
+      <div class="sf-noborder-mob" style="display:flex;flex-direction:column;gap:7px;border-left:0.5px solid rgba(34,34,34,0.10);padding-left:22px;">
         <span style="font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:#666666;">Cible du réseau {{ cible }}</span>
         <span style="font-size:13px;font-weight:500;border-radius:8px;padding:8px 10px;background:{{ effortBg }};color:{{ effortFg }};">{{ effort }}</span>
         <span style="font-size:11.5px;line-height:1.5;color:#666666;">Chaque avis 5★ rapproche la note de la cible : proposez aux clients contents de laisser un avis sur votre fiche Google.</span>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;border-left:0.5px solid rgba(34,34,34,0.10);padding-left:22px;">
+      <div class="sf-noborder-mob" style="display:flex;flex-direction:column;gap:6px;border-left:0.5px solid rgba(34,34,34,0.10);padding-left:22px;">
         <span style="font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:#666666;">Le réseau</span>
         <div style="display:flex;align-items:flex-end;gap:8px;"><span style="font-family:var(--font-display);font-size:26px;line-height:1;color:#232220;">{{ moyenne }}</span><span style="display:inline-flex;gap:1px;padding-bottom:2px;"><sc-for list="{{ etoilesReseau }}" as="e" hint-placeholder-count="5"><span style="font-size:13px;line-height:1;color:{{ e.c }};">★</span></sc-for></span></div>
         <span style="font-size:12px;color:#666666;">{{ reseauTxt }}</span>
@@ -98,17 +98,17 @@
       <span style="font-size:11px;color:#666666;margin-left:auto;">{{ etat }}</span>
     </div>
 
-    <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
-      <div style="display:grid;grid-template-columns:150px minmax(280px,2.2fr) minmax(240px,1.6fr) 130px;min-width:900px;">
-        <sc-for list="{{ head }}" as="h" hint-placeholder-count="4"><span style="padding:10px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">{{ h }}</span></sc-for>
+    <section class="sf-table-wrap" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
+      <div class="sf-table" style="display:grid;grid-template-columns:150px minmax(280px,2.2fr) minmax(240px,1.6fr) 130px;min-width:900px;">
+        <sc-for list="{{ head }}" as="h" hint-placeholder-count="4"><span class="sf-th" style="padding:10px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">{{ h }}</span></sc-for>
         <sc-for list="{{ rows }}" as="r" hint-placeholder-count="0">
           <div style="display:contents;">
-            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:5px;">
+            <span class="sf-td sf-td1" style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:5px;">
               <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;background:{{ r.cBg }};color:{{ r.cFg }};"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.cDot }};"></span>{{ r.couleur }}</span>
               <span style="font-size:12px;font-weight:500;color:#222222;">{{ r.sujet }}</span>
               <span style="font-size:10px;color:#8A847C;">{{ r.source }}</span>
             </span>
-            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:4px;min-width:0;">
+            <span class="sf-td" style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:4px;min-width:0;">
               <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <span style="display:inline-flex;gap:1px;"><sc-for list="{{ r.etoiles }}" as="e" hint-placeholder-count="5"><span style="font-size:12px;line-height:1;color:{{ e.c }};">★</span></sc-for></span>
                 <span style="font-size:11px;color:#666666;">{{ r.meta }}</span>
@@ -117,14 +117,14 @@
               <sc-if value="{{ r.hasPlus }}" hint-placeholder-val="{{ false }}"><button onClick="{{ r.plus }}" style="align-self:flex-start;border:none;background:none;padding:0;font-size:11.5px;font-weight:500;color:#8D1D2C;cursor:pointer;">{{ r.plusTxt }}</button></sc-if>
               <sc-if value="{{ r.hasResume }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.4;color:#666666;font-style:italic;">{{ r.resume }}</span></sc-if>
             </span>
-            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;min-width:0;">
+            <span class="sf-td" style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;min-width:0;">
               <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.4;color:#222222;font-weight:500;">{{ r.action }}</span></sc-if>
               <sc-if value="{{ r.hasReponse }}" hint-placeholder-val="{{ false }}">
                 <span style="font-size:12px;line-height:1.45;color:#444444;background:#F7F3EE;border-radius:8px;padding:7px 9px;">{{ r.reponse }}</span>
                 <button onClick="{{ r.copier }}" style="align-self:flex-start;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:500;cursor:pointer;">Copier la réponse</button>
               </sc-if>
             </span>
-            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;">
+            <span class="sf-td sf-tdz" style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;">
               <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ r.traite }}" onChange="{{ r.toggle }}" style="accent-color:#0F6B4A;margin:0;">Traité</label>
               <span style="font-size:10px;color:#8A847C;">{{ r.traiteInfo }}</span>
               <sc-if value="{{ r.hasLien }}" hint-placeholder-val="{{ false }}"><a href="{{ r.lien }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;">Fiche Google ↗</a></sc-if>

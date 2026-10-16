@@ -20,9 +20,9 @@
     a{color:#8D1D2C;} a:hover{color:#232220;} button,select{font-family:var(--font-ui);}
   </style>
 </helmet>
-<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+<div class="sf-shell" style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
   <dc-import name="FNav" active="{{ onglet }}" on-pick="{{ onOnglet }}" hint-size="228px,100vh"></dc-import>
-  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+  <main class="sf-main" style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
     <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:14px;">{{ error }}</div></sc-if>
     <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
     <!-- Mes réseaux : calendrier, suivi de la boutique, création d'un post -->
@@ -93,18 +93,18 @@
         <!-- MOIS -->
         <sc-if value="{{ showMonth }}" hint-placeholder-val="{{ true }}">
           <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;">
-            <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));background:#F4EFE8;"><sc-for list="{{ dows }}" as="d" hint-placeholder-count="7"><span style="padding:8px 10px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ d }}</span></sc-for></div>
+            <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));background:#F4EFE8;"><sc-for list="{{ dows }}" as="d" hint-placeholder-count="7"><span class="sf-dow" style="padding:8px 10px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ d }}</span></sc-for></div>
             <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));">
               <sc-for list="{{ cells }}" as="c" hint-placeholder-count="35">
-                <div style="min-height:110px;border-top:0.5px solid rgba(34,34,34,0.08);border-left:0.5px solid rgba(34,34,34,0.06);padding:6px;display:flex;flex-direction:column;gap:4px;background:{{ c.bg }};box-sizing:border-box;min-width:0;">
+                <div class="sf-mcell" style="min-height:110px;border-top:0.5px solid rgba(34,34,34,0.08);border-left:0.5px solid rgba(34,34,34,0.06);padding:6px;display:flex;flex-direction:column;gap:4px;background:{{ c.bg }};box-sizing:border-box;min-width:0;">
                   <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
                     <span style="font-size:12px;font-weight:{{ c.w }};width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{{ c.numBg }};color:{{ c.fg }};">{{ c.day }}</span>
-                    <sc-if value="{{ c.canAdd }}" hint-placeholder-val="{{ false }}"><a href="{{ c.addHref }}" title="Créer un post ce jour-là" style="width:20px;height:20px;border-radius:6px;border:0.5px solid rgba(141,29,44,0.35);color:#8D1D2C;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;text-decoration:none;">+</a></sc-if>
+                    <sc-if value="{{ c.canAdd }}" hint-placeholder-val="{{ false }}"><a class="sf-hide-mob" href="{{ c.addHref }}" title="Créer un post ce jour-là" style="width:20px;height:20px;border-radius:6px;border:0.5px solid rgba(141,29,44,0.35);color:#8D1D2C;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;text-decoration:none;">+</a></sc-if>
                   </div>
                   <sc-for list="{{ c.items }}" as="p" hint-placeholder-count="0">
-                    <button onClick="{{ p.open }}" title="{{ p.tip }}" style="text-align:left;border:0.5px solid {{ p.border }};border-left:3px solid {{ p.bar }};border-radius:5px;padding:3px 5px;background:{{ p.bg }};cursor:pointer;display:flex;gap:5px;align-items:center;min-width:0;opacity:{{ p.op }};">
+                    <button class="sf-mitem" onClick="{{ p.open }}" title="{{ p.tip }}" style="text-align:left;border:0.5px solid {{ p.border }};border-left:3px solid {{ p.bar }};border-radius:5px;padding:3px 5px;background:{{ p.bg }};cursor:pointer;display:flex;gap:5px;align-items:center;min-width:0;opacity:{{ p.op }};">
                       <img src="{{ p.img }}" alt="" style="width:22px;height:22px;border-radius:3px;object-fit:cover;background:#F5EFE4;flex:0 0 auto;">
-                      <span style="display:flex;flex-direction:column;gap:1px;min-width:0;">
+                      <span class="sf-hide-mob" style="display:flex;flex-direction:column;gap:1px;min-width:0;">
                         <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:#666666;white-space:nowrap;overflow:hidden;"><span style="width:6px;height:6px;border-radius:50%;background:{{ p.dot }};flex:0 0 auto;"></span>{{ p.time }} · {{ p.whoShort }}</span>
                         <span style="font-size:11px;font-weight:500;color:#222222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.title }}</span>
                       </span>
@@ -118,9 +118,9 @@
 
         <!-- SEMAINE -->
         <sc-if value="{{ showWeek }}" hint-placeholder-val="{{ false }}">
-          <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;">
+          <div class="sf-1col" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;">
             <sc-for list="{{ weekCols }}" as="c" hint-placeholder-count="7">
-              <div style="background:{{ c.bg }};border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:8px;min-height:380px;display:flex;flex-direction:column;gap:8px;min-width:0;">
+              <div class="sf-autoh" style="background:{{ c.bg }};border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:8px;min-height:380px;display:flex;flex-direction:column;gap:8px;min-width:0;">
                 <div style="display:flex;flex-direction:column;gap:2px;padding:2px 2px 6px;border-bottom:0.5px solid rgba(34,34,34,0.08);">
                   <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ c.dow }}</span>
                   <span style="display:flex;align-items:center;justify-content:space-between;gap:4px;"><span style="font-size:20px;font-weight:300;color:{{ c.fg }};">{{ c.day }}</span><sc-if value="{{ c.canAdd }}" hint-placeholder-val="{{ false }}"><a href="{{ c.addHref }}" title="Créer un post ce jour-là" style="width:22px;height:22px;border-radius:6px;border:0.5px solid rgba(141,29,44,0.35);color:#8D1D2C;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;text-decoration:none;">+</a></sc-if></span>
@@ -143,17 +143,17 @@
         <!-- LISTE -->
         <sc-if value="{{ showList }}" hint-placeholder-val="{{ false }}">
           <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
-            <div style="display:grid;grid-template-columns:92px 50px 40px minmax(180px,2fr) minmax(130px,1fr) 110px 100px 110px;min-width:860px;">
-              <sc-for list="{{ listHead }}" as="h" hint-placeholder-count="8"><span style="padding:10px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">{{ h }}</span></sc-for>
+            <div class="sf-list" style="display:grid;grid-template-columns:92px 50px 40px minmax(180px,2fr) minmax(130px,1fr) 110px 100px 110px;min-width:860px;">
+              <sc-for list="{{ listHead }}" as="h" hint-placeholder-count="8"><span class="sf-th" style="padding:10px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">{{ h }}</span></sc-for>
               <sc-for list="{{ listRows }}" as="p" hint-placeholder-count="0">
                 <div onClick="{{ p.open }}" style="display:contents;cursor:pointer;">
                   <span style="padding:8px 10px;font-size:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ p.rowBg }};">{{ p.dateLabel }}</span>
-                  <span style="padding:8px 10px;font-size:12px;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ p.rowBg }};">{{ p.time }}</span>
+                  <span class="sf-hide-mob" style="padding:8px 10px;font-size:12px;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ p.rowBg }};">{{ p.time }}</span>
                   <span style="padding:5px 6px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ p.rowBg }};"><img src="{{ p.img }}" alt="" style="width:28px;height:28px;object-fit:cover;border-radius:4px;background:#F5EFE4;display:block;"></span>
                   <span style="padding:8px 10px;font-size:13px;font-weight:500;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ p.rowBg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.title }}</span>
-                  <span style="padding:8px 10px;font-size:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ p.rowBg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:{{ p.dot }};margin-right:5px;"></span>{{ p.who }}</span>
-                  <span style="padding:8px 10px;font-size:12px;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ p.rowBg }};">{{ p.kind }}</span>
-                  <span style="padding:8px 10px;font-size:12px;color:#444444;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ p.rowBg }};">{{ p.react }}</span>
+                  <span class="sf-hide-mob" style="padding:8px 10px;font-size:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ p.rowBg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:{{ p.dot }};margin-right:5px;"></span>{{ p.who }}</span>
+                  <span class="sf-hide-mob" style="padding:8px 10px;font-size:12px;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ p.rowBg }};">{{ p.kind }}</span>
+                  <span class="sf-hide-mob" style="padding:8px 10px;font-size:12px;color:#444444;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ p.rowBg }};">{{ p.react }}</span>
                   <span style="padding:7px 10px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ p.rowBg }};"><span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ p.stBg }};color:{{ p.stFg }};white-space:nowrap;">{{ p.status }}</span></span>
                 </div>
               </sc-for>
@@ -165,10 +165,10 @@
       </section>
 
       <!-- Panneau latéral -->
-      <aside style="flex:0 1 340px;min-width:280px;display:flex;flex-direction:column;gap:12px;">
+      <aside class="sf-full" style="flex:0 1 340px;min-width:280px;display:flex;flex-direction:column;gap:12px;">
         <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
-          <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;display:flex;flex-direction:column;">
-            <div style="position:relative;height:0;padding-bottom:75%;background:#F5EFE4;">
+          <div class="sf-sheet" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;display:flex;flex-direction:column;">
+            <div class="sf-sheet-img" style="position:relative;height:0;padding-bottom:75%;background:#F5EFE4;">
               <sc-if value="{{ sel.hasImg }}" hint-placeholder-val="{{ true }}"><img src="{{ sel.img }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:{{ sel.fit }};"></sc-if>
               <button onClick="{{ closeSel }}" title="Fermer" style="position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;border:none;background:#FFFFFF;cursor:pointer;font-size:14px;">×</button>
             </div>
