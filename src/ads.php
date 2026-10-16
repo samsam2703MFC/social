@@ -272,6 +272,10 @@ function socAdCreate(array $ad): array
         // Comme l'écran : en pause seulement si campagne ET pub sont créées en pause.
         $ad['status'] = ($w['status'] ?? '') === 'PAUSED' && ($w['adStatus'] ?? '') === 'PAUSED' ? 'En pause' : 'En revue';
         $ad['reason'] = $erreurs ? 'Créée partiellement — ' . implode(' · ', $erreurs) : null;
+        if (!empty($w['boost']['demande'])) { socBoostBoostee((int) $w['boost']['demande'], (string) ($w['boost']['metaId'] ?? ''), (string) $ad['id']); }
+    }
+    if (!empty($w['boost']['metaId'])) {
+        $ad['boost'] = array_intersect_key((array) $w['boost'], array_flip(['metaId', 'compte', 'canal', 'shop', 'titre', 'img', 'permalink', 'demande']));
     }
     socLog(socUser(), 'Publicité', '« ' . ($ad['name'] ?? '') . ' » envoyée à Meta : ' . $crees . ' pub(s) créée(s)' . ($erreurs ? ', ' . count($erreurs) . ' échec(s)' : '') . ($ad['note'] ? ' · ' . $ad['note'] : ''));
     return $ad;
@@ -363,6 +367,12 @@ function socCreative(string $act, array $w, array $shop, string $L, array $v, ar
     $post = !empty($v['post']) ? socItem('posts', (string) $v['post']) : null;
     $nom = static fn (string $t) => 'Créa · ' . ($t !== '' ? $t : (string) ($post['title'] ?? ''));
     if (($w['crea'] ?? 'existing') === 'existing') {
+        // Une publication de la Page ou de l'Instagram (meilleur post de la semaine, demande d'une boutique) : sponsorisée telle quelle.
+        if (!$post && !empty($w['boost']['metaId'])) {
+            $r = Meta::call('POST', $act . '/adcreatives', array_filter(['name' => 'Créa · boost · ' . mb_substr((string) ($w['boost']['titre'] ?? ''), 0, 80)] + socBoostCrea((array) $w['boost'], $shop)
+                + ['url_tags' => (string) ($w['urlTags'] ?? '')]));
+            return (string) ($r['id'] ?? '');
+        }
         $story = '';
         if ($post && !empty($post['dark'])) {
             $story = socDarkStory((string) $post['id'], (string) $shop['id'], $L);
@@ -471,6 +481,10 @@ function socAdHook(?array $avant, array $ad): array
     // Les champs qui viennent de Meta restent ceux du serveur.
     // Le budget ne change que sur demande explicite (`budgetDemande`, appliquée chez Meta plus bas).
     foreach (['spent', 'reason', 'spec', 'stats', 'budget'] as $k) { if (array_key_exists($k, $avant)) { $ad[$k] = $avant[$k]; } }
+    // Ce que seul le serveur écrit (post boosté, pause par la règle) : jamais pris de l'écran.
+    foreach (['boost', 'autoPause', 'autoPauseLevee'] as $k) { if (array_key_exists($k, $avant)) { $ad[$k] = $avant[$k]; } else { unset($ad[$k]); } }
+    // Reprise à la main d'une pub mise en pause par la règle : la règle ne la repausera plus.
+    if (!empty($avant['autoPause']) && ($avant['status'] ?? '') === 'En pause' && ($ad['status'] ?? '') === 'Active') { $ad['autoPauseLevee'] = true; }
     $objs = array_filter(socMetaObjects('ad', (string) $ad['id']), static fn ($o) => $o['ad_id']);
     if (!$objs) { unset($ad['budgetDemande']); return $ad; }
     $s = (string) ($ad['status'] ?? ''); $sAvant = (string) ($avant['status'] ?? '');
@@ -618,7 +632,7 @@ function socAbVerdict(array $stats): ?array
 function socAdsSync(): int
 {
     if (!Meta::configured()) { return 0; }
-    $n = 0;
+    $n = 0; $regles = null;
     foreach (socItems('ads') as $ad) {
         if (($ad['origin'] ?? '') === 'meta') { continue; }  // relues campagne par campagne (socCampagnesMetaImporter)
         $objs = array_filter(socMetaObjects('ad', (string) $ad['id']), static fn ($o) => $o['ad_id']);
@@ -665,6 +679,11 @@ function socAdsSync(): int
         $cap = (float) ($ad['cap'] ?? 0);
         if ($cap > 0 && $spent >= $cap * 0.99 && $s !== 'Arrêtée') { $s = 'Budget épuisé'; }
         if (($ad['end'] ?? '9999') < date('Y-m-d') && in_array($s, ['Active', 'Budget épuisé', 'En pause'], true)) { $s = 'Terminée'; }
+        // Règle de pause de la marque (src/boost.php) : coût par clic au-dessus du seuil, une fois la dépense minimale atteinte.
+        if ($s === 'Active' && ($v = socPubPauseVerdict($ad, $spent, (int) array_sum(array_column($parVariante, 'clicks')), $regles ??= socPubRegles())) !== null && socPubPauser($objs)) {
+            $s = 'En pause'; $ad['autoPause'] = $v;
+            socLog('Système', 'Publicité', '« ' . ($ad['name'] ?? '') . ' » : ' . $v['texte']);
+        }
         $avant = (string) ($ad['status'] ?? '');
         $ad['spent'] = round($spent, 2);
         if ($s !== '') { $ad['status'] = $s; }

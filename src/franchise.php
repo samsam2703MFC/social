@@ -46,6 +46,8 @@ function sfReglesDefaut(): array
         'repondreCommentaires' => true, 'rouges' => 'reseau', 'delaiReponseHeures' => 24,
         // « Ma semaine » : la boutique voit son rang dans le réseau (régularité, réactivité, avis gagnés).
         'voirClassement' => true,
+        // La boutique peut proposer au réseau de booster une publication de sa Page ou de son Instagram (la marque décide).
+        'proposerBoost' => true,
         // Le franchisé peut publier en story (story seule, ou post + story) ; et répéter un post (au plus N fois, 0 = non).
         'story' => true, 'recurrenceMax' => 8,
         // Le franchisé peut choisir le format du visuel (carré, portrait) et la couleur de chaque texte (palette de la marque).
@@ -85,6 +87,7 @@ function sfReglesPut(array $in): array
         'voirAvisGoogle' => (bool) ($in['voirAvisGoogle'] ?? true),
         'repondreCommentaires' => (bool) ($in['repondreCommentaires'] ?? true),
         'voirClassement' => (bool) ($in['voirClassement'] ?? true),
+        'proposerBoost' => (bool) ($in['proposerBoost'] ?? true),
         'rouges' => in_array($in['rouges'] ?? '', ['reseau', 'franchise'], true) ? (string) $in['rouges'] : 'reseau',
         'delaiReponseHeures' => max(1, min(168, (int) ($in['delaiReponseHeures'] ?? 24))),
         'story' => (bool) ($in['story'] ?? true), 'recurrenceMax' => max(0, min(26, (int) ($in['recurrenceMax'] ?? $d['recurrenceMax']))),
@@ -1090,6 +1093,8 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/franchise/commentaires') { return [200, sfCommentaires($shop, $_GET)]; }
     if ($method === 'GET' && $path === '/franchise/kit') { return [200, sfKit($shop)]; }
     if ($method === 'GET' && $path === '/franchise/semaine') { return [200, sfMaSemaine($shop)]; }
+    if ($method === 'GET' && $path === '/franchise/boost') { return [200, sfBoostListe($shop)]; }
+    if ($method === 'POST' && $path === '/franchise/boost') { $b = body(); return [200, sfBoostDemander($shop, (string) ($b['id'] ?? ''), (string) ($b['compte'] ?? ''), (string) ($b['message'] ?? ''), $session)]; }
     if ($method === 'GET' && $path === '/franchise/google') { return [200, sfGoogle($shop, $_GET)]; }
     if ($method === 'POST' && $path === '/franchise/commentaires/repondre') { $b = body(); return [200, sfCommentaireRepondre($shop, (string) ($b['id'] ?? ''), (string) ($b['message'] ?? ''), $session)]; }
     if ($method === 'POST' && $path === '/franchise/commentaires/traiter') { $b = body(); return [200, sfCommentaireTraiter($shop, (string) ($b['id'] ?? ''), !empty($b['traite']))]; }

@@ -227,6 +227,18 @@
                 <sc-if value="{{ sel.canCancel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ cancel }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">{{ sel.cancelLabel }}</button></sc-if>
                 <sc-if value="{{ sel.canRedo }}" hint-placeholder-val="{{ false }}"><a href="{{ sel.redoHref }}" style="border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;background:#8D1D2C;color:#FFFFFF;text-decoration:none;">Refaire avec ce modèle</a></sc-if>
               </div>
+              <sc-if value="{{ sel.hasBoostState }}" hint-placeholder-val="{{ false }}"><div style="background:{{ sel.boostBg }};color:{{ sel.boostFg }};border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5;">{{ sel.boostState }}</div></sc-if>
+              <sc-if value="{{ sel.canBoost }}" hint-placeholder-val="{{ false }}">
+                <div style="border-top:0.5px solid rgba(34,34,34,0.08);padding-top:10px;display:flex;flex-direction:column;gap:8px;">
+                  <sc-if value="{{ sel.boostClosed }}" hint-placeholder-val="{{ true }}"><button onClick="{{ boostOpen }}" style="align-self:flex-start;border:0.5px solid rgba(141,29,44,0.45);background:#FFFFFF;color:#8D1D2C;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Proposer au réseau de booster ce post</button></sc-if>
+                  <sc-if value="{{ sel.boostOpened }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:12px;color:#444444;line-height:1.45;">{{ sel.boostHint }}</span>
+                    <textarea value="{{ sel.boostMsg }}" onChange="{{ setBoostMsg }}" rows="2" placeholder="Pourquoi le booster ? (facultatif)" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;outline:none;resize:vertical;line-height:1.45;font-family:inherit;"></textarea>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;"><button onClick="{{ proposeBoost }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">{{ sel.boostSendLabel }}</button><button onClick="{{ boostCancel }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Annuler</button></div>
+                    <sc-if value="{{ sel.hasBoostErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8D1D2C;line-height:1.45;">{{ sel.boostErr }}</span></sc-if>
+                  </sc-if>
+                </div>
+              </sc-if>
               <sc-if value="{{ sel.isMeta }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;line-height:1.45;">{{ sel.metaNote }}</span></sc-if>
             </div>
           </div>
@@ -417,7 +429,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { view: 'month', cursor: null, selId: null, toast: '', tick: 0, hide: [], mp: null, mpLoading: false, mpErr: '', ps: null, jours: 28, sv: null, svLoading: false, svErr: '', va: null, vaLoading: false, vaErr: '', hov: null };
+  state = { view: 'month', cursor: null, selId: null, toast: '', tick: 0, hide: [], mp: null, mpLoading: false, mpErr: '', ps: null, jours: 28, sv: null, svLoading: false, svErr: '', va: null, vaLoading: false, vaErr: '', hov: null, boostL: null, boostFor: null, boostMsg: '', boostSending: false, boostErr: '' };
   componentDidMount() {
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sf-change', this._h);
     const SF = window.SF, st = SF && SF.state(); if (!st) return;
@@ -428,6 +440,7 @@ class Component extends DCLogic {
     if (q.get('post')) patch.selId = q.get('post');
     this.setState(patch, () => this.loadMeta(false));
     if (SF.maSemaine) SF.maSemaine().then(ms => this.setState({ ms })).catch(() => {});
+    if (SF.boost) SF.boost().then(boostL => this.setState({ boostL })).catch(() => {});
     if (q.get('ok')) { const n = +q.get('n') || 1, f = { story: 'Story', post_story: 'Post + story' }[q.get('f')] || '';
       this.toast((f ? f + ' · ' : '') + (q.get('ok') === 'valider' ? 'Envoyé : le réseau valide ' + (n > 1 ? 'chacune des ' + n + ' dates' : 'votre post') + ' avant publication.'
         : 'Programmé' + (n > 1 ? ' : ' + n + ' dates, chacune à l’heure prévue.' : ' : il partira à l’heure prévue.'))); }
@@ -484,6 +497,17 @@ class Component extends DCLogic {
     this.setState({ vaLoading: true, vaErr: '', hov: null });
     SF.vues(k).then(r => { this._vc[k] = r; if (this._vk === k) this.setState({ va: r, vaLoading: false }); })
       .catch(e => { if (this._vk === k) this.setState({ vaLoading: false, vaErr: e.message || 'erreur' }); });
+  }
+  /** Proposer au réseau de booster une publication de la Page ou de l'Instagram de la boutique (la marque décide). */
+  async proposerBoost(p) {
+    const SF = window.SF, s = this.state;
+    if (s.boostSending) return;
+    this.setState({ boostSending: true, boostErr: '' });
+    try {
+      const boostL = await SF.boostProposer(p, s.boostMsg.trim());
+      this.setState({ boostL, boostSending: false, boostFor: null, boostMsg: '' });
+      this.toast('Proposé au réseau : sa réponse s’affichera ici et dans « Publicités et opérations ».');
+    } catch (e) { this.setState({ boostSending: false, boostErr: e.message || 'erreur' }); }
   }
   /** Les chiffres (vues…) de la publication Meta ouverte, lus à l'ouverture de sa fiche. */
   loadStats() {
@@ -744,6 +768,20 @@ class Component extends DCLogic {
         hasTiles: sp.status === 'Publié', tiles, hasStatsNote: !!(ps && (ps.loading || ps.err || ps.motif)), statsNote: ps ? (ps.loading ? 'Lecture des vues chez Meta…' : ps.err ? 'Vues illisibles : ' + ps.err : ps.motif || '') : '',
         text: sp.text || '', hasLink: !!sp.permalink, link: sp.permalink || '#', linkLabel: sp.channel === 'Instagram' ? 'Voir sur Instagram ↗' : 'Voir sur Facebook ↗',
         canCancel: false, canRedo: false,
+        ...(() => {
+          // Proposer un boost : une publication en ligne d'un compte de la boutique (pas d'un compte du réseau).
+          const bl = s.boostL, meta = String(sp.id).replace(/^m(fb|ig)-/, ''), dem = bl ? (bl.demandes || []).find(d => d.metaId === meta) : null;
+          const propre = !!acc && !acc.reseau && sp.status === 'Publié', permis = bl ? bl.permis !== false : st.rules.proposerBoost !== false;
+          const can = propre && permis && !!bl && (!dem || dem.statut === 'refusee'), open = s.boostFor === sp.id;
+          const etat = !dem ? '' : dem.statut === 'attente' ? 'Proposé au réseau le ' + SF.dShort(String(dem.le).slice(0, 10)) + ' : en attente de sa décision.'
+            : dem.statut === 'boostee' ? 'Boosté par le réseau' + (dem.traiteLe ? ' le ' + SF.dShort(String(dem.traiteLe).slice(0, 10)) : '') + ' : il est sponsorisé autour de votre boutique.'
+            : 'Le réseau n’a pas retenu ce boost' + (dem.reponse ? ' : « ' + dem.reponse + ' »' : '') + '. Vous pouvez le reproposer.';
+          return { hasBoostState: !!dem, boostState: etat, boostBg: !dem ? '' : dem.statut === 'boostee' ? '#E2F0E8' : dem.statut === 'attente' ? '#FCE7C8' : '#F4EFE8',
+            boostFg: !dem ? '' : dem.statut === 'boostee' ? '#0F6B4A' : dem.statut === 'attente' ? '#7A4100' : '#555555',
+            canBoost: can, boostClosed: can && !open, boostOpened: can && open, boostMsg: s.boostMsg, boostSendLabel: s.boostSending ? 'Envoi…' : 'Proposer au réseau',
+            hasBoostErr: open && !!s.boostErr, boostErr: s.boostErr,
+            boostHint: 'Ce post marche bien ? Le réseau peut le sponsoriser autour de votre boutique : il décide, et sa réponse s’affiche ici.' + (bl && bl.attente ? ' ' + bl.attente + ' demande(s) en attente sur ' + bl.max + ' possibles.' : '') };
+        })(),
         metaNote: sp.status === 'Programmé' ? 'Programmé dans Meta Business Suite : il partira à l’heure prévue. Lu en direct chez Meta, en lecture seule ici.'
           : 'Publication lue en direct chez Meta (faite ' + (acc && acc.reseau ? 'par le réseau' : 'sur votre Page, depuis Meta Business Suite ou l’application') + '). En lecture seule ici.' };
     } else if (sp) {
@@ -813,6 +851,8 @@ class Component extends DCLogic {
       dows: ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'], cells, weekCols,
       listHead: ['Date', 'Heure', '', 'Publication', 'Où', 'Type', 'Réactions', 'Statut'], listRows, listEmpty: listRows.length === 0,
       hasSel: !!sp, sel, closeSel: () => this.setState({ selId: null }),
+      boostOpen: () => this.setState({ boostFor: s.selId, boostMsg: '', boostErr: '' }), boostCancel: () => this.setState({ boostFor: null, boostErr: '' }),
+      setBoostMsg: (e) => this.setState({ boostMsg: e.target.value }), proposeBoost: () => { if (sp) this.proposerBoost(sp); },
       cancel: async () => { if (!sp || !window.confirm('Annuler « ' + sp.title + ' »' + (sp.serie ? ' (cette date seulement)' : '') + ' ?')) return; try { await SF.cancelPost(sp.id); this.setState({ selId: null }); this.toast('Post retiré de votre calendrier.'); } catch (e) { this.toast(e.message); } },
       cancelSerie: async () => { if (!sp || !window.confirm('Annuler toutes les dates à venir de « ' + sp.title + ' » ?')) return; try { const n = await SF.cancelPost(sp.id, true); this.setState({ selId: null }); this.toast(n + ' date(s) retirée(s) de votre calendrier.'); } catch (e) { this.toast(e.message); } },
       upcoming, noNext: upcoming.length === 0,

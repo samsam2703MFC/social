@@ -30,6 +30,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
         <span style="font-size:11px;color:#666666;line-height:1.35;max-width:320px;text-align:right;">{{ impNote }}</span>
+        <button onClick="{{ regOpenBtn }}" title="Mettre en pause automatiquement les pubs dont le coût par clic dépasse un seuil" style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid {{ regBtnBorder }};background:#FFFFFF;color:#222222;font-size:14px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" style-hover="background:#F4EFE8;"><span style="width:7px;height:7px;border-radius:50%;background:{{ regDot }};"></span>{{ regBtnLabel }}</button>
         <button onClick="{{ importMeta }}" title="Relit chez Meta les campagnes de vos comptes publicitaires (créées dans le Gestionnaire de publicités, par une agence…) et met à jour l’état et la dépense de toutes les pubs. Automatique toutes les heures." style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;color:#222222;font-size:14px;font-weight:500;cursor:pointer;opacity:{{ impOp }};" style-hover="background:#F4EFE8;">{{ impLabel }}</button>
         <button onClick="{{ openWiz }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Nouvelle publicité</button>
       </div>
@@ -58,6 +59,68 @@
         <button onClick="{{ x.relancer }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;" style-hover="background:#7A1826;">Corriger et relancer</button>
       </div>
     </sc-for>
+
+    <!-- Règle de pause automatique (marque) -->
+    <sc-if value="{{ regOpen }}" hint-placeholder-val="{{ false }}">
+      <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:15px;font-weight:500;">Règle de pause automatique</span><span style="font-size:11px;color:#666666;">{{ regLe }}</span></div>
+        <span style="font-size:12px;line-height:1.5;color:#444444;">Toutes les heures, à la relecture des pubs créées ici : une pub active dont le coût par clic dépasse le seuil, une fois la dépense minimale atteinte, est mise en pause chez Meta — le motif s’affiche dans son suivi. Reprise à la main, elle n’est plus jamais repausée. Les campagnes récupérées de Meta ne sont pas concernées. Les seuils se fixent par devise de compte publicitaire.</span>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer;"><input type="checkbox" checked="{{ regActive }}" onChange="{{ regToggle }}" style="accent-color:#8D1D2C;margin:0;width:16px;height:16px;">Mettre en pause automatiquement les pubs trop chères</label>
+        <sc-for list="{{ regRows }}" as="r" hint-placeholder-count="1">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:#444444;background:#F4EFE8;border-radius:8px;padding:8px 10px;">
+            <span style="font-weight:600;min-width:38px;">{{ r.dev }}</span>
+            <label style="display:flex;align-items:center;gap:6px;">Coût par clic au-delà de <input type="number" min="0" step="0.05" value="{{ r.cpc }}" onChange="{{ r.setCpc }}" placeholder="—" style="width:78px;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;outline:none;background:#FFFFFF;">{{ r.sym }}</label>
+            <label style="display:flex;align-items:center;gap:6px;">une fois <input type="number" min="1" step="1" value="{{ r.min }}" onChange="{{ r.setMin }}" style="width:78px;font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;outline:none;background:#FFFFFF;">{{ r.sym }} dépensés</label>
+            <span style="color:#8A847C;">{{ r.note }}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ regHasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#8D1D2C;">{{ regErr }}</span></sc-if>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;"><button onClick="{{ regSave }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;opacity:{{ regSaveOp }};">{{ regSaveLabel }}</button><button onClick="{{ regClose }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;">Fermer</button></div>
+      </section>
+    </sc-if>
+
+    <!-- À booster (marque) : demandes des boutiques, meilleurs posts de la semaine -->
+    <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:500;">À booster</span><span style="font-size:12px;color:#666666;line-height:1.4;">{{ bstSub }}</span></div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <sc-for list="{{ bstTabs }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.pick }}" style="border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ t.border }};background:{{ t.bg }};color:{{ t.fg }};">{{ t.label }}</button></sc-for>
+          <button onClick="{{ bstRefresh }}" title="Relit les publications de la semaine chez Meta (sinon gardées deux heures)" style="border:none;background:transparent;color:#8D1D2C;padding:6px 4px;font-size:12px;font-weight:500;cursor:pointer;opacity:{{ bstOp }};">{{ bstRefreshLabel }}</button>
+          <button onClick="{{ bstToggle }}" style="border:none;background:transparent;color:#666666;padding:6px 4px;font-size:12px;cursor:pointer;">{{ bstToggleLabel }}</button>
+        </div>
+      </div>
+      <sc-if value="{{ bstShow }}" hint-placeholder-val="{{ true }}">
+        <sc-if value="{{ bstEmpty }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#666666;">{{ bstEmptyText }}</span></sc-if>
+        <sc-if value="{{ bstHasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.45;color:#8D1D2C;">{{ bstErr }}</span></sc-if>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;">
+          <sc-for list="{{ bstCards }}" as="b" hint-placeholder-count="0">
+            <div style="border:0.5px solid {{ b.border }};border-radius:10px;overflow:hidden;display:flex;flex-direction:column;background:#FFFFFF;">
+              <div style="display:flex;gap:10px;padding:10px;">
+                <img src="{{ b.img }}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:8px;background:#F4EFE8;flex:0 0 auto;">
+                <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+                  <span style="font-size:11px;color:#666666;">{{ b.where }}</span>
+                  <span style="font-size:13px;font-weight:500;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{{ b.titre }}</span>
+                  <span style="font-size:11px;color:#444444;">{{ b.facts }}</span>
+                </div>
+              </div>
+              <sc-if value="{{ b.hasMsg }}" hint-placeholder-val="{{ false }}"><span style="margin:0 10px 8px;font-size:12px;line-height:1.45;background:#F4EFE8;border-radius:8px;padding:7px 9px;">« {{ b.msg }} » — {{ b.par }}</span></sc-if>
+              <sc-if value="{{ b.hasBadge }}" hint-placeholder-val="{{ false }}"><span style="margin:0 10px 8px;align-self:flex-start;font-size:11px;font-weight:500;border-radius:999px;padding:2px 8px;background:{{ b.badgeBg }};color:{{ b.badgeFg }};">{{ b.badge }}</span></sc-if>
+              <sc-if value="{{ b.refusing }}" hint-placeholder-val="{{ false }}">
+                <div style="margin:0 10px 8px;display:flex;flex-direction:column;gap:6px;">
+                  <input type="text" value="{{ b.refusTxt }}" onChange="{{ b.setRefus }}" placeholder="Un mot pour la boutique (facultatif)" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;outline:none;background:#FFFFFF;">
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;"><button onClick="{{ b.refusOk }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;">Refuser la demande</button><button onClick="{{ b.refusCancel }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;">Annuler</button></div>
+                </div>
+              </sc-if>
+              <div style="margin-top:auto;display:flex;gap:8px;align-items:center;padding:8px 10px;border-top:0.5px solid rgba(34,34,34,0.08);">
+                <sc-if value="{{ b.canBoost }}" hint-placeholder-val="{{ false }}"><button onClick="{{ b.boost }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;">{{ b.boostLabel }}</button></sc-if>
+                <sc-if value="{{ b.canRefuse }}" hint-placeholder-val="{{ false }}"><button onClick="{{ b.refuse }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;">Refuser</button></sc-if>
+                <sc-if value="{{ b.hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ b.link }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;margin-left:auto;">Voir le post ↗</a></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </section>
 
     <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
       <!-- Tableau -->
@@ -123,6 +186,8 @@
             </div>
             <sc-if value="{{ d.capAlert }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#FCE7C8;color:#6b3d0a;border-radius:8px;padding:8px 10px;">{{ d.capText }}</span></sc-if>
             <sc-if value="{{ d.exhausted }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#F6DCDF;color:#8D1D2C;border-radius:8px;padding:8px 10px;">Budget épuisé : la diffusion est suspendue par Meta. Augmentez le budget ou arrêtez la publicité.</span></sc-if>
+            <sc-if value="{{ d.hasAuto }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:{{ d.autoBg }};color:{{ d.autoFg }};border-radius:8px;padding:8px 10px;">{{ d.autoText }}</span></sc-if>
+            <sc-if value="{{ d.hasBoost }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#444444;">{{ d.boostText }} <sc-if value="{{ d.hasBoostLink }}" hint-placeholder-val="{{ false }}"><a href="{{ d.boostLink }}" target="_blank" rel="noopener">Voir le post ↗</a></sc-if></span></sc-if>
             <sc-if value="{{ d.refused }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;background:#F6DCDF;color:#8D1D2C;border-radius:8px;padding:8px 10px;"><strong style="font-weight:500;">Refusée par Meta.</strong> {{ d.reason }}</span></sc-if>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <sc-if value="{{ d.canPause }}" hint-placeholder-val="{{ false }}"><button onClick="{{ pause }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">Mettre en pause</button></sc-if>
@@ -305,6 +370,20 @@
               <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">{{ creaTech }}</span>
             </div>
             <span style="font-size:12px;color:#666666;">{{ creaHint }}</span>
+            <sc-if value="{{ hasBoostW }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:12px;align-items:center;border:2px solid #8D1D2C;border-radius:10px;padding:10px;flex-wrap:wrap;">
+                <img src="{{ boostW.img }}" alt="" style="width:84px;height:84px;object-fit:cover;border-radius:8px;background:#F4EFE8;flex:0 0 auto;">
+                <div style="flex:1 1 220px;display:flex;flex-direction:column;gap:3px;min-width:0;">
+                  <span style="font-size:11px;color:#666666;">{{ boostW.where }}</span>
+                  <span style="font-size:13px;font-weight:500;line-height:1.35;">{{ boostW.titre }}</span>
+                  <span style="font-size:11px;color:#666666;">{{ boostW.note }}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+                  <sc-if value="{{ boostW.hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ boostW.link }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;">Voir le post ↗</a></sc-if>
+                  <button onClick="{{ boostClear }}" style="border:none;background:transparent;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;padding:2px;">Choisir plutôt un post du module</button>
+                </div>
+              </div>
+            </sc-if>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));grid-auto-rows:max-content;gap:10px;">
               <sc-for list="{{ creatives }}" as="c" hint-placeholder-count="0">
                 <button onClick="{{ c.pick }}" style="display:block;padding:0;border-radius:10px;border:2px solid {{ c.ring }};background:#FFFFFF;cursor:pointer;overflow:clip;text-align:left;">
@@ -328,6 +407,7 @@
                 </div>
               </sc-if>
             </sc-if>
+            <sc-if value="{{ noBoostW }}" hint-placeholder-val="{{ true }}">
             <div style="border-top:0.5px solid rgba(34,34,34,0.08);padding-top:10px;display:flex;flex-direction:column;gap:8px;">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
                 <span style="font-size:13px;font-weight:500;">Variantes à tester (A/B) <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;">une créa et une pub par variante dans chaque ad set</span></span>
@@ -352,6 +432,7 @@
                 </div>
               </sc-for>
             </div>
+            </sc-if>
             <div style="display:flex;gap:12px;flex-wrap:wrap;">
               <label style="flex:2 1 260px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Lien de destination <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">link *</span><input type="url" value="{{ w.link }}" onChange="{{ setLink }}" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;outline:none;"></label>
               <label style="flex:1 1 180px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Bouton <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;font-weight:400;letter-spacing:0;text-transform:none;">call_to_action.type</span><select value="{{ w.cta }}" onChange="{{ setCta }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;"><sc-for list="{{ ctaOptions }}" as="c" hint-placeholder-count="0"><option value="{{ c.id }}">{{ c.label }}</option></sc-for></select></label>
@@ -413,13 +494,58 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { selId: null, wizOpen: false, step: 1, w: null, err: '', toast: '', tick: 0, com: null, src: 'all', act: 'active', imp: false };
+  state = { selId: null, wizOpen: false, step: 1, w: null, err: '', toast: '', tick: 0, com: null, src: 'all', act: 'active', imp: false,
+    bst: { tab: null, show: true, meilleurs: null, demandes: null, loading: false, err: '' }, refus: null, reg: null, regEdit: null, regOpen: false, regErr: '', regSaving: false };
   componentDidMount() {
     const SA = window.SA;
     if (SA) { const ad = SA.param('ad'); if (ad) this.setState({ selId: ad, act: 'all' }); if (SA.param('new')) this.openWiz(SA.param('c') || '', SA.param('post')); if (SA.param('src') === 'meta') this.setState({ src: 'meta' }); if (SA.param('importer')) this.importMeta(); }
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
+    if (SA) { this.loadBoost(false); this.loadRegles(); }
   }
-  componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); clearTimeout(this._rv); }
+  /** « À booster » : les demandes des boutiques et les meilleurs posts de la semaine (lus chez Meta, gardés deux heures). */
+  async loadBoost(forcer) {
+    const SA = window.SA;
+    if (!SA.pubDemandes) return;
+    this.setState(s => ({ bst: Object.assign({}, s.bst, { loading: true, err: '' }) }));
+    const [dm, mb] = await Promise.all([SA.pubDemandes().catch(e => ({ erreur: e.message })), SA.pubMeilleurs(forcer).catch(e => ({ erreur: e.message }))]);
+    this.setState(s => ({ bst: Object.assign({}, s.bst, { loading: false, demandes: dm.erreur ? null : dm, meilleurs: mb.erreur ? null : mb,
+      err: [dm.erreur ? 'Demandes illisibles : ' + dm.erreur : '', mb.erreur ? 'Publications illisibles : ' + mb.erreur : ''].filter(Boolean).join(' · '),
+      tab: s.bst.tab || (dm && dm.attente ? 'demandes' : 'meilleurs') }) }));
+  }
+  async loadRegles() {
+    const SA = window.SA;
+    if (!SA.pubRegles) return;
+    try { const r = await SA.pubRegles(); this.setState({ reg: r }); } catch (e) { /* le bouton reste « Règles » */ }
+  }
+  async saveRegles() {
+    const SA = window.SA, e = this.state.regEdit;
+    if (!e || this.state.regSaving) return;
+    const seuils = {};
+    Object.keys(e.seuils).forEach(dev => { const x = e.seuils[dev]; if (+x.cpcMax > 0) seuils[dev] = { cpcMax: +x.cpcMax, depenseMin: +x.depenseMin }; });
+    this.setState({ regSaving: true, regErr: '' });
+    try {
+      const r = await SA.pubReglesSave({ pauseActive: !!e.pauseActive, seuils });
+      this.setState({ reg: r, regEdit: null, regSaving: false, regOpen: false });
+      this.toast(r.pauseActive ? 'Règle activée : vérifiée à chaque relecture horaire des pubs.' : 'Règle désactivée : aucune pub n’est mise en pause automatiquement.');
+    } catch (err) { this.setState({ regSaving: false, regErr: err.message }); }
+  }
+  /** Booster un post de la Page ou de l'Instagram : l'assistant s'ouvre prérempli (engagement, la boutique du post). */
+  openBoost(b, demande) {
+    const SA = window.SA, st = SA.state();
+    this.openWiz('');
+    const sh = b.shop ? st.shops.find(x => x.id === b.shop) : null, propre = !!(sh && sh.ads === 'connected' && !sh.test);
+    const titre = String(b.titre || 'Publication').slice(0, 60), eng = SA.META.objectives.find(o => o.id === 'OUTCOME_ENGAGEMENT');
+    this.setState(s => ({ w: Object.assign({}, s.w, { account: b.shop ? (propre ? 'boutique' : 'reseau') : s.w.account, shops: b.shop ? [b.shop] : s.w.shops, crea: 'existing', post: null, variants: [],
+      objective: 'OUTCOME_ENGAGEMENT', goal: eng ? eng.goals[0] : 'POST_ENGAGEMENT', dest: eng ? eng.dest[0] : 'ON_AD', cta: 'LEARN_MORE', interests: [],
+      boost: { metaId: b.metaId, compte: b.compte, canal: b.canal, shop: b.shop || null, titre: b.titre || '', img: b.img || null, permalink: b.permalink || null, date: b.date || b.datePost || '', demande: demande || null },
+      name: 'Boost · ' + titre, adName: 'Boost · ' + titre, urlTags: 'utm_source=facebook&utm_medium=paid&utm_campaign=boost' }) }));
+  }
+  async refuser(id, txt) {
+    const SA = window.SA;
+    try { const dm = await SA.pubRefuser(id, txt || ''); this.setState(s => ({ refus: null, bst: Object.assign({}, s.bst, { demandes: dm }) })); this.toast('Demande refusée : la boutique voit votre réponse.'); }
+    catch (e) { this.toast('Refus impossible : ' + e.message); }
+  }
+  componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); clearTimeout(this._rv); clearTimeout(this._bt); }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 3200); }
   /** Le format de pub qu'un post du module donne (comme le serveur : frise et panorama en carrousel à ordre fixe). */
   fmtOf(p) {
@@ -627,6 +753,12 @@ class Component extends DCLogic {
     const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
     const W = (patch) => this.setState({ w: Object.assign({}, this.state.w, patch), err: '' });
     const sg = (pairs) => { const o = {}; pairs.forEach(([k, on]) => { const [bg, fg] = seg(on); o[k + 'Bg'] = bg; o[k + 'Fg'] = fg; }); return o; };
+    if (a) {
+      const ap = a.autoPause, bo = a.boost || (a.spec || {}).boost, quand = (t) => t ? SA.dShort(String(t).slice(0, 10)) + ' à ' + String(t).slice(11, 16) : '';
+      Object.assign(d, { hasAuto: !!ap, autoText: !ap ? '' : a.autoPauseLevee ? 'Reprise à la main après une pause automatique (' + quand(ap.le) + ') : la règle ne la repausera plus.' : ap.texte + ' — ' + quand(ap.le) + '.',
+        autoBg: a.autoPauseLevee ? '#F4EFE8' : '#FCE7C8', autoFg: a.autoPauseLevee ? '#444444' : '#6b3d0a',
+        hasBoost: !!bo, boostText: bo ? 'Post ' + (bo.canal || '') + ' boosté : « ' + String(bo.titre || '').slice(0, 80) + ' »' + (bo.demande ? ', à la demande de la boutique.' : '.') : '', hasBoostLink: !!(bo && bo.permalink), boostLink: (bo && bo.permalink) || '#' });
+    }
     let wiz = {};
     if (w) {
       const meta = st.meta || { ids: M.ids, version: M.version };
@@ -657,7 +789,7 @@ class Component extends DCLogic {
       const ids = (sid) => (meta.ids || M.ids)[sid] || {};
       const accFor = (sid) => w.account === 'reseau' ? M.networkAccount : ids(sid).ad_account_id;
       const promoted = isLeads || w.objective === 'OUTCOME_ENGAGEMENT' ? '{ page_id }' : w.objective === 'OUTCOME_SALES' ? '{ pixel_id: ' + ids(w.shops[0] || (SA.SHOPS[0] || {}).id).pixel_id + ', custom_event_type: PURCHASE }' : '—';
-      const errFor = (step) => step === 1 && !w.name.trim() ? 'Nommez la campagne.' : step === 1 && w.account === 'reseau' && capErr() ? capErr() : step === 2 && !w.shops.length ? (w.account === 'boutique' && !propres.length ? 'Aucune boutique n\u2019a son propre compte publicitaire : revenez à l\u2019étape 1 et choisissez « Compte réseau ».' : 'Cochez au moins une boutique dans « Boutiques et rayon de diffusion ».') : step === 2 && (w.end < w.start || w.amount <= 0) ? 'Vérifiez les dates et le montant.' : step === 2 && capErr() ? capErr() : step === 2 && budErr() ? budErr() : step === 2 && (!w.dsaB.trim() || !w.dsaP.trim()) ? 'Bénéficiaire et payeur sont obligatoires pour cibler l\u2019UE.' : step === 3 && !w.post ? 'Choisissez un post ou un visuel.' : step === 3 && isLeads && !w.leadForm ? 'Choisissez un formulaire de leads.' : step === 3 && w.crea === 'existing' && (w.variants || []).some(v => !v.post) ? 'Choisissez le post de chaque variante.' : step === 4 && !w.adName.trim() ? 'Nommez la pub.' : '';
+      const errFor = (step) => step === 1 && !w.name.trim() ? 'Nommez la campagne.' : step === 1 && w.account === 'reseau' && capErr() ? capErr() : step === 2 && !w.shops.length ? (w.account === 'boutique' && !propres.length ? 'Aucune boutique n\u2019a son propre compte publicitaire : revenez à l\u2019étape 1 et choisissez « Compte réseau ».' : 'Cochez au moins une boutique dans « Boutiques et rayon de diffusion ».') : step === 2 && (w.end < w.start || w.amount <= 0) ? 'Vérifiez les dates et le montant.' : step === 2 && w.boost && w.boost.shop && (w.shops.length !== 1 || w.shops[0] !== w.boost.shop) ? 'Ce post est sur le compte de ' + ((SA.byId(SA.SHOPS, w.boost.shop) || {}).name || 'sa boutique') + ' : ne cochez que cette boutique (une pub ne sponsorise que les posts de la Page de son ad set).' : step === 2 && capErr() ? capErr() : step === 2 && budErr() ? budErr() : step === 2 && (!w.dsaB.trim() || !w.dsaP.trim()) ? 'Bénéficiaire et payeur sont obligatoires pour cibler l\u2019UE.' : step === 3 && !w.post && !w.boost ? 'Choisissez un post ou un visuel.' : step === 3 && isLeads && !w.leadForm ? 'Choisissez un formulaire de leads.' : step === 3 && w.crea === 'existing' && (w.variants || []).some(v => !v.post) ? 'Choisissez le post de chaque variante.' : step === 4 && !w.adName.trim() ? 'Nommez la pub.' : '';
       const sid0 = w.shops[0] || (SA.SHOPS[0] || {}).id, geoOf = (sid) => ({ latitude: M.geo[sid][0], longitude: M.geo[sid][1], radius: w.radius[sid], distance_unit: 'kilometer' });
       const budgetKey = w.budgetType === 'daily' ? 'daily_budget' : 'lifetime_budget';
       // Seules les enchères plafonnées prennent un montant ; « coût le plus bas » n'en a pas (comme le serveur, SOC_ENCHERES_MONTANT).
@@ -680,7 +812,8 @@ class Component extends DCLogic {
         : fmt.kind === 'carousel' ? { link_data: { link: w.link, message: w.message, child_attachments: Array.from({ length: fmt.n }, (_, i) => ({ link: w.link, image_hash: '{image_hash_' + (i + 1) + '}', name: w.headline, call_to_action: cta })),
           multi_share_optimized: !fmt.locked, multi_share_end_card: !fmt.locked, call_to_action: cta } }
         : { link_data: { link: w.link, message: w.message, name: w.headline, description: w.description, image_hash: '{image_hash}', call_to_action: cta } };
-      const creaBody = w.crea === 'existing' ? { name: 'Créa · ' + (post ? post.title : ''), object_story_id: post && post.dark ? '{dark post déjà diffusé}' : ids(sid0).page_id + '_{post_id}', url_tags: w.urlTags }
+      const creaBody = w.boost ? Object.assign({ name: 'Créa · boost · ' + String(w.boost.titre || '').slice(0, 80) }, w.boost.canal === 'Instagram' ? { object_id: '{page_id}', instagram_user_id: '{instagram_user_id}', source_instagram_media_id: w.boost.metaId } : { object_story_id: w.boost.metaId }, { url_tags: w.urlTags })
+        : w.crea === 'existing' ? { name: 'Créa · ' + (post ? post.title : ''), object_story_id: post && post.dark ? '{dark post déjà diffusé}' : ids(sid0).page_id + '_{post_id}', url_tags: w.urlTags }
         : { name: 'Créa · ' + (w.headline || (post ? post.title : '')), object_story_spec: Object.assign({ page_id: ids(sid0).page_id, instagram_user_id: ids(sid0).instagram_user_id || (SA.reseau && SA.reseau().instagram ? ids('marque').instagram_user_id : undefined) }, creaSpec), url_tags: w.urlTags };
       const adBody = Object.assign({ name: w.adName, adset_id: '{adset_id}', creative: { creative_id: '{creative_id}' }, status: w.adStatus }, w.pixel ? { tracking_specs: [{ 'action.type': ['offsite_conversion'], fb_pixel: [ids(sid0).pixel_id] }], conversion_domain: (((w.link || '').match(/^https?:\/\/([^/?#]+)/i) || [])[1] || '').toLowerCase().split('.').slice(-2).join('.') } : {});
       const base = M.base + (meta.version || M.version) + '/';
@@ -718,12 +851,15 @@ class Component extends DCLogic {
         interests: ['Boulangerie', 'Pâtisserie', 'Brunch', 'Cuisine maison', 'Famille', 'Bio et local', 'Café', 'Anti-gaspillage'].map(n => Object.assign(chip(w.interests.includes(n)), { name: n, toggle: () => W({ interests: w.interests.includes(n) ? w.interests.filter(x => x !== n) : w.interests.concat(n) }) })),
         platforms: M.platforms.map(p => Object.assign(chip(w.platforms.includes(p)), { name: p, toggle: () => W({ platforms: w.platforms.includes(p) ? w.platforms.filter(x => x !== p) : w.platforms.concat(p) }) })),
         setDsaB: (e) => W({ dsaB: e.target.value }), setDsaP: (e) => W({ dsaP: e.target.value }), audSize: SA.fmt(Math.round(aud / 100) * 100),
-        csExisting: () => W({ crea: 'existing', variants: [] }), csNew: () => W({ crea: 'new', variants: [] }), isNewCrea: w.crea === 'new',
-        creaTech: w.crea === 'existing' ? 'object_story_id = {page_id}_{post_id}' : fmt.kind === 'video' ? 'POST /act_{id}/advideos → object_story_spec.video_data'
+        csExisting: () => W({ crea: 'existing', variants: [] }), csNew: () => W({ crea: 'new', variants: [], boost: null }), isNewCrea: w.crea === 'new',
+        hasBoostW: !!w.boost, noBoostW: !w.boost, boostClear: () => W({ boost: null }),
+        boostW: w.boost ? { img: w.boost.img || 'img/illus/decorative/bubble.png', titre: w.boost.titre || 'Publication', where: 'Post ' + w.boost.canal + ' à booster · ' + (w.boost.shop ? ((SA.byId(SA.SHOPS, w.boost.shop) || {}).name || w.boost.shop) : 'Marque') + (w.boost.date ? ' · publié le ' + SA.dShort(w.boost.date) : ''),
+          note: (w.boost.demande ? 'Proposé par la boutique. ' : '') + 'Sponsorisé tel quel : ses réactions et commentaires se cumulent.', hasLink: !!w.boost.permalink, link: w.boost.permalink || '#' } : {},
+        creaTech: w.boost ? (w.boost.canal === 'Instagram' ? 'source_instagram_media_id = ' + w.boost.metaId : 'object_story_id = ' + w.boost.metaId) : w.crea === 'existing' ? 'object_story_id = {page_id}_{post_id}' : fmt.kind === 'video' ? 'POST /act_{id}/advideos → object_story_spec.video_data'
           : fmt.kind === 'carousel' ? 'POST /act_{id}/adimages ×' + fmt.n + ' → object_story_spec.link_data.child_attachments' : 'POST /act_{id}/adimages → image_hash, puis object_story_spec',
-        creaHint: w.crea === 'existing' ? 'Choisissez un post publié ou programmé, ou un dark post déjà diffusé par une autre pub : il est sponsorisé tel quel, et ses likes et commentaires se cumulent.'
+        creaHint: w.boost ? 'Publication déjà en ligne sur ' + (w.boost.canal === 'Instagram' ? 'Instagram' : 'la Page Facebook') + ', lue chez Meta : elle est sponsorisée telle quelle, sans variante.' : w.crea === 'existing' ? 'Choisissez un post publié ou programmé, ou un dark post déjà diffusé par une autre pub : il est sponsorisé tel quel, et ses likes et commentaires se cumulent.'
           : 'Dark post : Meta crée un post visible seulement en sponsorisé — ni sur le mur de la Page, ni sur la grille Instagram. Le format suit le visuel choisi : image, carrousel (ordre fixe pour un panorama ou une frise) ou vidéo. Préparez-le dans « Créer un post » → Réservé à la publicité.',
-        canAddVariant: (w.variants || []).length < 2, addVariant: () => W({ variants: (w.variants || []).concat({ post: '', message: '', headline: '', messageNl: '', headlineNl: '' }) }),
+        canAddVariant: !w.boost && (w.variants || []).length < 2, addVariant: () => W({ variants: (w.variants || []).concat({ post: '', message: '', headline: '', messageNl: '', headlineNl: '' }) }),
         variantHint: w.crea === 'existing' ? 'Sponsorisez jusqu\u2019à 3 posts dans la même pub : Meta répartit la diffusion et privilégie celui qui marche le mieux.'
           : 'Jusqu\u2019à 3 variantes (autre visuel, autre texte) : Meta répartit la diffusion et privilégie la plus performante. Un champ vide reprend celui de la variante A ; les résultats par variante s\u2019affichent dans le suivi.',
         variants: (w.variants || []).map((v, i) => {
@@ -735,7 +871,7 @@ class Component extends DCLogic {
             setMessageNl: (e) => setV({ messageNl: e.target.value }), setHeadlineNl: (e) => setV({ headlineNl: e.target.value }),
             remove: () => W({ variants: w.variants.filter((_, j) => j !== i) }) };
         }),
-        creatives: pool.slice(0, 18).map(p => ({ img: p.img, title: p.title, meta: p.dark ? (diffused(p) ? 'Dark post déjà diffusé · réutilisé' : 'Dark post') : SA.dShort(p.date) + ' · ' + p.status, ring: w.post === p.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)',
+        creatives: (w.boost ? [] : pool.slice(0, 18)).map(p => ({ img: p.img, title: p.title, meta: p.dark ? (diffused(p) ? 'Dark post déjà diffusé · réutilisé' : 'Dark post') : SA.dShort(p.date) + ' · ' + p.status, ring: w.post === p.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)',
           fmt: this.fmtOf(p).label, fmtBg: p.dark ? '#232220' : '#F4EFE8', fmtFg: p.dark ? '#F2C9A0' : '#444444',
           pick: () => W({ post: p.id, message: w.message || SA.fill(p.text || '', sid0, null, 'fr'), messageNl: w.messageNl || SA.fill(p.textNl || '', (SA.SHOPS[0] || {}).id, null, 'nl'), headline: w.headline || p.title, adName: w.adName || p.title + ' · ' + obj.label.toLowerCase() }) })),
         needsNl: w.shops.some(id => SA.langsOf(id).includes('nl')), nlShopsLabel: w.shops.filter(id => SA.langsOf(id).includes('nl')).map(id => SA.byId(SA.SHOPS, id).name).join(', '),
@@ -746,8 +882,8 @@ class Component extends DCLogic {
         isLeads, leadOptions: leadForms.map(f => ({ id: f.id, name: f.name + ' · v' + f.version })), setLeadForm: (e) => W({ leadForm: e.target.value }), leadsHref: SA.href('leads'), setUrlTags: (e) => W({ urlTags: e.target.value }),
         setAdName: (e) => W({ adName: e.target.value }), adPaused: () => W({ adStatus: 'PAUSED' }), adActive: () => W({ adStatus: 'ACTIVE' }), togglePixel: () => W({ pixel: !w.pixel }), pixelId: ids(sid0).pixel_id,
         createNote: w.account === 'boutique' ? 'Franchise Buddy crée ' + w.shops.length + ' jeux campagne / ad set / créa / pub, un par compte publicitaire de boutique, avec le rayon de chaque boutique.' : 'Franchise Buddy crée une campagne sur le compte réseau ' + reseauAcc + ', avec un ad set par boutique (' + w.shops.length + ') : sa zone, sa Page.',
-        recapImg: post ? post.img : 'img/illus/decorative/bubble.png',
-        recap: [['Objectif', obj.label + ' · ' + w.objective], ['Opération', camp ? camp.name : 'Hors opération'], ['Comptes', w.account === 'boutique' ? w.shops.length + ' comptes boutique' : 'Compte réseau'], ['Optimisation', w.goal + (obj.dest[0] ? ' → ' + w.dest : '')], ['Audience', w.ageMin + '–' + w.ageMax + ' ans · ' + w.shops.map(id => SA.byId(SA.SHOPS, id).name + ' ' + w.radius[id] + ' km').join(', ')], ['Créa', (w.crea === 'existing' ? 'Post sponsorisé · ' : 'Dark post · ' + fmt.label + ' · ') + (post ? post.title : '—') + ' · ' + M.ctaLabels[w.cta]], ['Variantes', (w.variants || []).length ? (1 + w.variants.length) + ' (A' + w.variants.map((_, i) => ', ' + String.fromCharCode(66 + i)).join('') + ') · une pub par variante' : 'Une seule'], ['Budget', (w.budgetType === 'daily' ? m$(w.amount) + ' / jour' : m$(w.amount) + ' total') + ' · ' + (w.spendCap > 0 ? 'plafond ' + m$(w.spendCap) : 'sans plafond') + ' · ' + (w.budgetLevel === 'campaign' ? 'CBO' : 'ABO')], ['Diffusion', SA.dLabel(w.start) + ' → ' + SA.dLabel(w.end) + ' · statut ' + w.status]].map(([k, v]) => ({ k, v })),
+        recapImg: w.boost && w.boost.img ? w.boost.img : post ? post.img : 'img/illus/decorative/bubble.png',
+        recap: [['Objectif', obj.label + ' · ' + w.objective], ['Opération', camp ? camp.name : 'Hors opération'], ['Comptes', w.account === 'boutique' ? w.shops.length + ' comptes boutique' : 'Compte réseau'], ['Optimisation', w.goal + (obj.dest[0] ? ' → ' + w.dest : '')], ['Audience', w.ageMin + '–' + w.ageMax + ' ans · ' + w.shops.map(id => SA.byId(SA.SHOPS, id).name + ' ' + w.radius[id] + ' km').join(', ')], ['Créa', w.boost ? 'Post ' + w.boost.canal + ' boosté · ' + String(w.boost.titre || '').slice(0, 60) : (w.crea === 'existing' ? 'Post sponsorisé · ' : 'Dark post · ' + fmt.label + ' · ') + (post ? post.title : '—') + ' · ' + M.ctaLabels[w.cta]], ['Variantes', (w.variants || []).length ? (1 + w.variants.length) + ' (A' + w.variants.map((_, i) => ', ' + String.fromCharCode(66 + i)).join('') + ') · une pub par variante' : 'Une seule'], ['Budget', (w.budgetType === 'daily' ? m$(w.amount) + ' / jour' : m$(w.amount) + ' total') + ' · ' + (w.spendCap > 0 ? 'plafond ' + m$(w.spendCap) : 'sans plafond') + ' · ' + (w.budgetLevel === 'campaign' ? 'CBO' : 'ABO')], ['Diffusion', SA.dLabel(w.start) + ' → ' + SA.dLabel(w.end) + ' · statut ' + w.status]].map(([k, v]) => ({ k, v })),
         callsNote: ((w.variants || []).length ? (1 + w.variants.length) + ' variantes : une créa et une pub par variante · ' : '') + (w.shops.some(id => SA.langsOf(id).length > 1) ? 'boutique bilingue : un ad set par langue (targeting.locales nl / fr) · ' : '') + 'exemple pour ' + SA.byId(SA.SHOPS, sid0).name + (w.shops.length > 1 ? ', répété pour chaque boutique' : '') + (w.account === 'reseau' ? ' · compte réseau ' + reseauAcc : ''),
         calls: [['POST ' + base + accFor(sid0) + '/campaigns', campBody], ['POST ' + base + accFor(sid0) + '/adsets', adsetBody], ['POST ' + base + accFor(sid0) + '/adcreatives', creaBody], ['POST ' + base + accFor(sid0) + '/ads', adBody]].map(([title, body]) => ({ title, body: J(body) })),
         canBack: s.step > 1, back: () => this.setState({ step: s.step - 1, err: '' }), stepErr: s.err, fwdLabel: s.step === 5 ? 'Envoyer à Meta' : 'Continuer',
@@ -756,16 +892,62 @@ class Component extends DCLogic {
           if (s.step < 5) { this.setState({ step: s.step + 1 }); return; }
           const ad = { id: 'a' + Date.now(), name: w.adName, campaign: w.campaign || null, objective: obj.label, metaObjective: w.objective, shops: w.shops, scope: w.account === 'reseau' ? 'reseau' : 'boutique', budgetType: w.budgetType === 'daily' ? 'quotidien' : 'total',
             budget: w.account === 'boutique' ? w.amount * w.shops.length : w.amount, cap: w.spendCap, spent: 0, start: w.start, end: w.end, status: w.status === 'PAUSED' && w.adStatus === 'PAUSED' ? 'En pause' : 'En revue', radius: Math.round(w.shops.reduce((x, id) => x + w.radius[id], 0) / w.shops.length), post: w.post, leadForm: w.leadForm || null, dark: w.crea === 'new', variants: 1 + (w.variants || []).length, devise: dev, spec: SA.live ? w : undefined };
+          if (w.boost) { ad.thumb = w.boost.img || undefined; ad.boost = w.boost; ad.objective = obj.label + ' · boost'; }
           // Reprise d'une pub que Meta n'a pas créée : la nouvelle remplace l'ancienne.
           SA.save({ ads: st.ads.filter(x => x.id !== s.replaceId).concat(ad) }); SA.log('Sarah Lambert (Franchiseur)', 'Publicité', '« ' + ad.name + ' » créée (' + w.objective + (ad.dark ? ', dark post' : '') + ')');
           if (!SA.live && ad.dark) w.shops.forEach(sid => SA.langsOf(sid).forEach(L => [w.post].concat((w.variants || []).map(v => v.post || w.post)).forEach((pid, k) =>
             SA.DARK.push({ ad: ad.id, post: pid, shop: sid, lang: L, variant: String.fromCharCode(65 + k), story: 'demo', ig: '', link: '', linkIg: '', comments: 0, hidden: 0 }))));
+          if (w.boost && w.boost.demande) { if (SA.pubDemandeBoostee) SA.pubDemandeBoostee(w.boost.demande, ad.id); clearTimeout(this._bt); this._bt = setTimeout(() => this.loadBoost(false), SA.live ? 3000 : 0); }
           this.setState({ wizOpen: false, selId: ad.id }); this.toast(ad.status === 'En pause' ? 'Publicité créée en pause : activez-la quand vous êtes prêt.' : 'Publicité envoyée : en revue chez Meta.');
           if (ad.status === 'En revue' && !SA.live) this._rv = setTimeout(() => { this.upd(ad.id, { status: 'Active' }, '« ' + ad.name + ' » validée par Meta'); this.toast('Meta a validé « ' + ad.name + ' ».'); }, 4500);
         },
       }, sg([['as', w.account === 'boutique'], ['an', w.account === 'reseau'], ['ba', w.budgetLevel === 'adset'], ['bc', w.budgetLevel === 'campaign'], ['sp', w.status === 'PAUSED'], ['sa', w.status === 'ACTIVE'], ['bd', w.budgetType === 'daily'], ['bt', w.budgetType === 'lifetime'],
         ['g0', w.gender === 'all'], ['g1', w.gender === 'men'], ['g2', w.gender === 'women'], ['ce', w.crea === 'existing'], ['cn', w.crea === 'new'], ['ap', w.adStatus === 'PAUSED'], ['aa', w.adStatus === 'ACTIVE']]));
     }
+    // « À booster » : demandes des boutiques et meilleurs posts de la semaine.
+    const B = s.bst, tab = B.tab || 'meilleurs', dm = B.demandes || { demandes: [], attente: 0 }, mb = B.meilleurs || { posts: [] }, bubble = 'img/illus/decorative/bubble.png';
+    const nb = (n, one, many) => SA.fmt(n) + ' ' + (n > 1 ? many : one);
+    const factsM = (x) => [x.interactions != null ? nb(x.interactions, 'interaction', 'interactions') : '', x.indice ? '×' + String(x.indice).replace('.', ',') + ' son habitude' : '', x.date ? SA.dShort(x.date) : ''].filter(Boolean).join(' · ');
+    const cardsD = (dm.demandes || []).map(x => { const refusing = !!(s.refus && s.refus.id === x.id), st2 = x.statut, att = st2 === 'attente';
+      return { img: x.img || bubble, where: x.shopNom + ' · ' + x.canal + ' · proposé le ' + SA.dShort(String(x.le).slice(0, 10)), titre: x.titre, facts: x.datePost ? 'Publié le ' + SA.dShort(x.datePost) : '',
+        hasMsg: !!x.message, msg: x.message, par: x.par, border: att ? '#8D1D2C' : 'rgba(34,34,34,0.12)',
+        hasBadge: !att, badge: st2 === 'boostee' ? 'Boostée' + (x.traitePar ? ' par ' + x.traitePar : '') : 'Refusée' + (x.reponse ? ' : ' + x.reponse : ''), badgeBg: st2 === 'boostee' ? '#DCEFE6' : '#F4EFE8', badgeFg: st2 === 'boostee' ? '#0F6B4A' : '#666666',
+        refusing, refusTxt: refusing ? s.refus.txt : '', setRefus: (e) => this.setState({ refus: { id: x.id, txt: e.target.value } }), refusOk: () => this.refuser(x.id, s.refus ? s.refus.txt : ''), refusCancel: () => this.setState({ refus: null }),
+        canBoost: att && !refusing, boostLabel: 'Booster', boost: () => this.openBoost(x, x.id), canRefuse: att && !refusing, refuse: () => this.setState({ refus: { id: x.id, txt: '' } }),
+        hasLink: !!x.permalink, link: x.permalink || '#' }; });
+    const cardsM = (mb.posts || []).map(x => ({ img: x.img || bubble, where: x.shopNom + ' · ' + x.canal, titre: x.titre, facts: factsM(x), hasMsg: false, msg: '', par: '', border: 'rgba(34,34,34,0.12)',
+      hasBadge: !!x.boostee, badge: x.boostee ? 'Déjà boosté : « ' + x.boostee.nom + ' »' : '', badgeBg: '#DCEFE6', badgeFg: '#0F6B4A', refusing: false, refusTxt: '', setRefus: () => {}, refusOk: () => {}, refusCancel: () => {},
+      canBoost: true, boostLabel: x.boostee ? 'Booster à nouveau' : 'Booster', boost: () => this.openBoost(x, null), canRefuse: false, refuse: () => {}, hasLink: !!x.permalink, link: x.permalink || '#' }));
+    const cards = tab === 'demandes' ? cardsD : cardsM;
+    const bandVals = {
+      bstTabs: [['demandes', 'Demandes des boutiques (' + (dm.attente || 0) + ')'], ['meilleurs', 'Meilleurs posts de la semaine (' + (mb.posts || []).length + ')']].map(([id, label]) => ({ label,
+        bg: tab === id ? '#8D1D2C' : '#FFFFFF', fg: tab === id ? '#FFFFFF' : '#222222', border: tab === id ? '#8D1D2C' : 'rgba(34,34,34,0.18)', pick: () => this.setState({ bst: Object.assign({}, B, { tab: id, show: true }) }) })),
+      bstSub: tab === 'demandes' ? 'Les publications que les boutiques vous proposent de booster, depuis le calendrier de leur espace. Vous décidez ; la pub part de leur compte publicitaire, ou du compte réseau.'
+        : 'La publication la plus engageante de chaque boutique ces 7 derniers jours, comparée à l’habitude de son compte' + (B.meilleurs && B.meilleurs.le ? ' · lu chez Meta le ' + SA.dShort(B.meilleurs.le.slice(0, 10)) + ' à ' + B.meilleurs.le.slice(11, 16) : '') + '.',
+      bstShow: B.show, bstToggle: () => this.setState({ bst: Object.assign({}, B, { show: !B.show }) }), bstToggleLabel: B.show ? 'Masquer' : 'Afficher',
+      bstRefresh: () => !B.loading && this.loadBoost(true), bstRefreshLabel: B.loading ? 'Lecture chez Meta…' : 'Actualiser', bstOp: B.loading ? 0.6 : 1,
+      bstCards: cards, bstEmpty: !cards.length, bstEmptyText: B.loading && !B.meilleurs ? 'Lecture des publications de la semaine chez Meta…' : tab === 'demandes' ? 'Aucune demande des boutiques pour l’instant : elles proposent un post depuis le calendrier de leur espace.'
+        : 'Aucune publication mesurable cette semaine (rien de publié, ou Meta ne donne pas les interactions).',
+      bstHasErr: !!B.err || !!(mb.erreurs || []).length, bstErr: [B.err].concat((mb.erreurs || []).map(e => 'Meta : ' + e)).filter(Boolean).join(' · '),
+    };
+    // Règle de pause automatique : seuils par devise des comptes publicitaires.
+    const R = s.reg || { pauseActive: false, seuils: {} }, E = s.regEdit;
+    const devs = Array.from(new Set(['EUR'].concat(Object.values(SA.META.comptes || {}).map(c => c && c.devise).filter(Boolean), Object.keys(R.seuils || {}), ads.filter(x => x.origin !== 'meta').map(devOf))))
+      .sort((x, y) => x === 'EUR' ? -1 : y === 'EUR' ? 1 : x.localeCompare(y));
+    const regVals = {
+      regBtnLabel: R.pauseActive ? 'Pause auto activée' : 'Pause auto', regDot: R.pauseActive ? '#1F8A60' : '#B8B2A8', regBtnBorder: R.pauseActive ? '#0F6B4A' : 'rgba(34,34,34,0.18)',
+      regOpenBtn: () => this.setState({ regOpen: !s.regOpen, regErr: '', regEdit: s.regOpen ? null : { pauseActive: !!R.pauseActive,
+        seuils: devs.reduce((o, dv) => { const x = (R.seuils || {})[dv] || {}; o[dv] = { cpcMax: x.cpcMax || '', depenseMin: x.depenseMin || 20 }; return o; }, {}) } }),
+      regOpen: s.regOpen && !!E, regActive: !!(E && E.pauseActive), regToggle: () => E && this.setState({ regEdit: Object.assign({}, E, { pauseActive: !E.pauseActive }) }),
+      regRows: E ? devs.map(dv => { const x = E.seuils[dv] || { cpcMax: '', depenseMin: 20 };
+        const setX = (patch) => this.setState({ regEdit: Object.assign({}, this.state.regEdit, { seuils: Object.assign({}, this.state.regEdit.seuils, { [dv]: Object.assign({}, x, patch) }) }) });
+        const nA = ads.filter(x2 => x2.origin !== 'meta' && devOf(x2) === dv && x2.status === 'Active').length;
+        return { dev: dv, sym: SA.devSym(dv), cpc: x.cpcMax, min: x.depenseMin, setCpc: (e) => setX({ cpcMax: e.target.value }), setMin: (e) => setX({ depenseMin: e.target.value }),
+          note: (+x.cpcMax > 0 ? '' : 'vide : pas de règle · ') + nA + ' pub(s) active(s) dans cette devise' }; }) : [],
+      regLe: R.le ? 'Réglée le ' + SA.dShort(R.le.slice(0, 10)) + ' à ' + R.le.slice(11, 16) + (R.par ? ' par ' + R.par : '') : 'Jamais réglée : désactivée.',
+      regHasErr: !!s.regErr, regErr: s.regErr, regSave: () => this.saveRegles(), regSaveLabel: s.regSaving ? 'Enregistrement…' : 'Enregistrer la règle', regSaveOp: s.regSaving ? 0.6 : 1,
+      regClose: () => this.setState({ regOpen: false, regEdit: null, regErr: '' }),
+    };
     return Object.assign({
       openWiz: () => this.openWiz(''), closeWiz: () => this.setState({ wizOpen: false }), wizOpen: s.wizOpen && !!w,
       kpis, head: ['Publicité', 'Statut Meta', 'Budget', 'Dépensé / restant', 'Opération · boutiques'], rows, aRelancer,
@@ -791,7 +973,7 @@ class Component extends DCLogic {
       showComments: () => { if (!a) return; if (s.com && s.com.ad === a.id && s.com.open) this.setState({ com: Object.assign({}, s.com, { open: false }) }); else this.comments(a, false); },
       syncComments: () => a && this.comments(a, true),
       hasToast: !!s.toast, toast: s.toast,
-    }, wiz);
+    }, bandVals, regVals, wiz);
   }
 }
 </script>

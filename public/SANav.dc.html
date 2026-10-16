@@ -90,7 +90,8 @@ class Component extends DCLogic {
       ['grid', 'Grille Instagram', 0],
       ['post', 'Créer un post', 0],
       ['camp', 'Opérations', 0],
-      ['ads', 'Publicités Meta', refused],
+      // Les refusées à corriger, et les demandes de boost des boutiques à traiter.
+      ['ads', 'Publicités Meta', refused + ((st.alertes || {}).boost || 0)],
       ['roi', 'Retour sur opération', 0],
       ['bilan', 'Bilan des boutiques', 0],
       ['suivi', 'Suivi des boutiques', 0],

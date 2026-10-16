@@ -36,6 +36,7 @@ require_once __DIR__ . '/commentaires.php';
 require_once __DIR__ . '/google.php';
 require_once __DIR__ . '/bilan.php';
 require_once __DIR__ . '/kit.php';
+require_once __DIR__ . '/boost.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -132,6 +133,12 @@ function socRoute(string $method, string $path): array
     // Le kit du mois de l'espace franchisé (src/kit.php).
     if ($method === 'GET' && $path === '/kit') { return [200, socKitVue()]; }
     if ($method === 'POST' && $path === '/kit') { return [200, socKitPut((array) (body()['items'] ?? []))]; }
+    // La publicité pilotée (src/boost.php) : règle de pause, meilleurs posts à booster, demandes des boutiques.
+    if ($method === 'GET' && $path === '/pub/regles') { return [200, socPubRegles()]; }
+    if ($method === 'POST' && $path === '/pub/regles') { return [200, socPubReglesPut((array) (body()['regles'] ?? []))]; }
+    if ($method === 'GET' && $path === '/pub/meilleurs') { return [200, socBoostMeilleurs(!empty($_GET['forcer']))]; }
+    if ($method === 'GET' && $path === '/pub/demandes') { return [200, socBoostDemandes()]; }
+    if ($method === 'POST' && $path === '/pub/demandes/refuser') { $b = body(); return [200, socBoostRefuser((int) ($b['id'] ?? 0), (string) ($b['reponse'] ?? ''))]; }
     if ($method === 'GET' && $path === '/bilan') { return [200, socBilan(!empty($_GET['forcer']))]; }
     if ($method === 'POST' && $path === '/google/reglages') { return [200, ['reglages' => socGoogleReglagesPut(body())]]; }
     if ($method === 'POST' && $path === '/google/relire') {

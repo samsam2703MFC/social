@@ -23,6 +23,7 @@ declare(strict_types=1);
  *                        et pour chaque pub le post qu'elle diffuse (dark post : `story_id`,
  *                        `ig_media_id`, liens) ;
  *  - social_commentaire : les commentaires des Pages, de l'Instagram et des dark posts, et les avis Google, classés vert / orange / rouge ;
+ *  - social_boost_demande : les publications que les boutiques proposent au réseau de booster (src/boost.php) ;
  *  - social_modele_franchise : les modèles de post ouverts aux franchisés (espace /social_franchisee) ;
  *  - social_resultat   : résultats Meta + ventes par campagne et boutique ;
  *  - social_rattachement : publication Meta (lue en direct) → opération du Marketing du BO (le lien seul) ;
@@ -131,6 +132,13 @@ function socInstall(): void
         . 'avis INT NOT NULL DEFAULT 0, PRIMARY KEY (jour, shop_id))' . $t);
     Db::exec('CREATE TABLE IF NOT EXISTS social_avis_scan (id BIGINT AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL,'
         . 'source VARCHAR(10) NOT NULL, le DATETIME NOT NULL, KEY idx_shop (shop_id, le))' . $t);
+
+    // Les demandes de boost des boutiques (src/boost.php) : une publication de leur Page ou de leur Instagram proposée au réseau.
+    Db::exec('CREATE TABLE IF NOT EXISTS social_boost_demande (id INT AUTO_INCREMENT PRIMARY KEY, shop_id VARCHAR(16) NOT NULL, compte VARCHAR(80) NOT NULL,'
+        . 'meta_id VARCHAR(100) NOT NULL, canal VARCHAR(16) NOT NULL, titre VARCHAR(255) NULL, texte TEXT NULL, img VARCHAR(1000) NULL, permalink VARCHAR(1000) NULL,'
+        . 'date_post DATE NULL, message VARCHAR(500) NULL, par VARCHAR(120) NULL, statut VARCHAR(12) NOT NULL DEFAULT \'attente\', reponse VARCHAR(500) NULL,'
+        . 'ad_id VARCHAR(64) NULL, cree_le DATETIME NOT NULL, traite_le DATETIME NULL, traite_par VARCHAR(120) NULL,'
+        . 'UNIQUE KEY uq_shop_post (shop_id, meta_id), KEY idx_statut (statut, cree_le))' . $t);
 
     // Le lien seul entre une publication lue chez Meta (mfb-…, mig-…) et une opération du Marketing du BO.
     Db::exec('CREATE TABLE IF NOT EXISTS social_rattachement (objet VARCHAR(80) PRIMARY KEY, operation_id VARCHAR(64) NOT NULL,'

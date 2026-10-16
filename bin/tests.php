@@ -1954,6 +1954,116 @@ check('programmé à ±7 jours de la date conseillée : fait, pour cette boutiqu
 check('kit modifié : même élément (même id)', $cK2 === 200 && socKit()[0]['id'] === $idK);
 unset($_COOKIE[SF_COOKIE]); Db::exec("DELETE FROM social_content WHERE id = 'kitp1'"); socSettingPut('kit_mois', null, false);
 
+echo "Publicité pilotée : règle de pause (marque), meilleurs posts à booster, demandes de boost (franchisé)\n";
+$err = static function (string $route, array $b): array { $GLOBALS['SOC_BODY'] = $b; try { $r = socRoute('POST', $route); return [$r[0], $r[1]]; } catch (HttpError $e) { return [$e->status, $e->getMessage()]; } finally { unset($GLOBALS['SOC_BODY']); } };
+[, $rg0] = socRoute('GET', '/pub/regles');
+check('règle de pause : désactivée par défaut', $rg0['pauseActive'] === false && $rg0['seuils'] === []);
+[$cR0, $mR0] = $err('/pub/regles', ['regles' => ['pauseActive' => true, 'seuils' => []]]);
+[$cR1, $mR1] = $err('/pub/regles', ['regles' => ['pauseActive' => true, 'seuils' => ['EUR' => ['cpcMax' => 0.5, 'depenseMin' => 0]]]]);
+check('règle active sans seuil, ou dépense minimale nulle : 422', $cR0 === 422 && str_contains((string) $mR0, 'coût par clic') && $cR1 === 422, json_encode([$mR0, $mR1]));
+// a1 (relue plus haut : 3 pubs, 40,50 € et 60 clics chacune → CPC 0,675 €).
+// Seuils en francs suisses : seule a1 (CHF) est concernée, pas les autres pubs de la recette.
+$a1 = socItem('ads', 'a1'); $a1['devise'] = 'CHF'; $a1['status'] = 'Active'; unset($a1['autoPause'], $a1['autoPauseLevee']); socItemPut('ads', $a1);
+$adsA1 = array_column(Db::rows("SELECT ad_id FROM social_meta_objet WHERE kind = 'ad' AND local_id = 'a1' AND ad_id IS NOT NULL"), 'ad_id');
+$pausesA1 = static function () use (&$appels, $adsA1): int { return count(array_filter($appels, static fn ($a) => $a[0] === 'POST' && in_array($a[1], $adsA1, true) && ($a[2]['status'] ?? '') === 'PAUSED')); };
+socPubReglesPut(['pauseActive' => true, 'seuils' => ['CHF' => ['cpcMax' => 1.0, 'depenseMin' => 20], 'PLN' => ['cpcMax' => 4, 'depenseMin' => 80]]]);
+$appels = []; socAdsSync();
+check('CPC sous le seuil : la pub tourne', socItem('ads', 'a1')['status'] === 'Active' && !isset(socItem('ads', 'a1')['autoPause']));
+socPubReglesPut(['pauseActive' => true, 'seuils' => ['CHF' => ['cpcMax' => 0.5, 'depenseMin' => 20]]]);
+$appels = []; socAdsSync();
+$a1 = socItem('ads', 'a1');
+check('CPC au-dessus du seuil après la dépense minimale : pause chez Meta (chaque pub), motif noté', $a1['status'] === 'En pause' && ($a1['autoPause']['cpc'] ?? null) === 0.68
+    && $pausesA1() === 3 && count($adsA1) === 3 && str_contains((string) $a1['autoPause']['texte'], 'coût par clic'), json_encode($a1['autoPause'] ?? null));
+$a1['autoPause'] = null; $a1['autoPauseLevee'] = false;  // l'écran ne peut ni effacer ni lever la trace de la pause
+socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($a1, ['status' => 'Active'])]]]]);
+$a1 = socItem('ads', 'a1');
+check('reprise à la main : la pause automatique est levée pour de bon (gardée par le serveur)', $a1['status'] === 'Active' && ($a1['autoPauseLevee'] ?? false) === true && isset($a1['autoPause']['cpc']));
+$appels = []; socAdsSync();
+check('pub reprise à la main : plus jamais repausée par la règle', socItem('ads', 'a1')['status'] === 'Active' && $pausesA1() === 0);
+check('verdict : sans clic après la dépense minimale → pause ; autre devise sans seuil → rien ; campagne Meta → rien',
+    array_key_exists('cpc', $vz = socPubPauseVerdict(['devise' => 'CHF'], 25.0, 0) ?? []) && $vz['cpc'] === null && str_contains($vz['texte'], 'aucun clic')
+    && socPubPauseVerdict(['devise' => 'PLN'], 500.0, 1) === null && socPubPauseVerdict(['devise' => 'CHF', 'origin' => 'meta'], 500.0, 1) === null
+    && socPubPauseVerdict(['devise' => 'CHF'], 10.0, 1) === null);
+socPubReglesPut(['pauseActive' => false, 'seuils' => []]);
+
+// Meilleurs posts de la semaine : la Page de Halle (interactions lues) et son Instagram.
+$metaAvantB = Meta::$transport; $bAppels = [];
+Meta::$transport = static function (string $m, string $url, array $p) use ($metaAvantB, &$bAppels): array {
+    $path = preg_replace('#^https://graph\.facebook\.com/v[\d.]+/#', '', $url);
+    $q = static fn (string $id, string $txt, int $r, int $c, int $sh, string $quand) => ['id' => $id, 'message' => $txt, 'created_time' => date('c', strtotime($quand)), 'permalink_url' => 'https://facebook.com/' . $id,
+        'full_picture' => 'https://cdn.fb/' . $id . '.jpg', 'reactions' => ['summary' => ['total_count' => $r]], 'comments' => ['summary' => ['total_count' => $c]], 'shares' => ['count' => $sh]];
+    if ($m === 'GET' && $path === '111/published_posts' && !str_contains((string) ($p['fields'] ?? ''), 'comments.limit(') && !str_contains((string) ($p['fields'] ?? ''), 'insights.metric(')) {
+        return [200, ['data' => [$q('111_9101', 'La tarte du week-end est là', 80, 12, 8, '-2 days'), $q('111_9102', 'Horaires de la semaine', 10, 0, 0, '-3 days'), $q('111_9103', 'Nouveau pain', 14, 2, 1, '-4 days')]]];
+    }
+    if ($m === 'GET' && $path === '17841/media' && !str_contains((string) ($p['fields'] ?? ''), 'comments.limit(') && !str_contains((string) ($p['fields'] ?? ''), 'insights.metric(')) {
+        return [200, ['data' => [['id' => 'm2', 'caption' => 'La brioche', 'media_type' => 'IMAGE', 'media_url' => 'https://cdn.ig/m2.jpg', 'permalink' => 'https://instagram.com/p/m2', 'timestamp' => date('c', strtotime('-1 day')), 'like_count' => 30, 'comments_count' => 2],
+            ['id' => 'mst', 'media_type' => 'IMAGE', 'media_product_type' => 'STORY', 'timestamp' => date('c', strtotime('-1 day')), 'like_count' => 999]]]];
+    }
+    if ($m === 'GET' && $path === '111_9101') { $bAppels[] = [$m, $path, $p]; return [200, $q('111_9101', 'La tarte du week-end est là', 80, 12, 8, '-2 days')]; }
+    if ($m === 'GET' && $path === 'm2' && str_contains((string) ($p['fields'] ?? ''), 'caption')) { return [200, ['id' => 'm2', 'caption' => 'La brioche', 'media_type' => 'IMAGE', 'media_url' => 'https://cdn.ig/m2.jpg', 'permalink' => 'https://instagram.com/p/m2', 'timestamp' => date('c', strtotime('-1 day'))]]; }
+    if ($m === 'POST' && preg_match('#^act_\d+/adcreatives$#', $path)) { $bAppels[] = [$m, $path, $p]; }
+    return $metaAvantB($m, $url, $p);
+};
+socSettingPut('pub_meilleurs_cache', null, false);
+[, $mb] = socRoute('GET', '/pub/meilleurs');
+$mbs = array_column($mb['posts'], null, 'metaId');
+check('meilleurs posts : le meilleur de la boutique (interactions), comparé à la médiane de sa Page ; pas de story', isset($mbs['111_9101']) && $mbs['111_9101']['interactions'] === 100
+    && $mbs['111_9101']['shop'] === '4' && $mbs['111_9101']['indice'] === 5.9 && !isset($mbs['111_9102']) && !isset($mbs['mst']) && $mbs['111_9101']['boostee'] === null, json_encode($mb));
+check('un seul post par boutique (le meilleur, Page et Instagram confondus)', count(array_filter($mb['posts'], static fn ($x) => $x['shop'] === '4')) === 1);
+
+// Demande de boost d'une boutique.
+sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
+[$cB0] = $fr('POST', '/franchise/boost', ['id' => 'mfb-222_7001', 'compte' => 'fb:222', 'message' => 'x']);
+[$cB1] = $fr('POST', '/franchise/boost', ['id' => 'mfb-222_7001', 'compte' => 'fb:111']);
+[$cB, $bL] = $fr('POST', '/franchise/boost', ['id' => 'mfb-111_9101', 'compte' => 'fb:111', 'message' => '  Très bons retours en boutique  ', 'titre' => 'TITRE INVENTÉ']);
+[$cB2] = $fr('POST', '/franchise/boost', ['id' => 'mfb-111_9101', 'compte' => 'fb:111']);
+$d0 = $bL['demandes'][0] ?? [];
+check('franchisé : un post d’une autre boutique (ou sur une Page qui n’est pas la sienne) → 404 ; le sien → proposé, relu chez Meta (pas le titre du navigateur) ; deux fois → 409',
+    $cB0 === 404 && $cB1 === 404 && $cB === 200 && ($d0['statut'] ?? '') === 'attente' && $d0['message'] === 'Très bons retours en boutique' && $d0['img'] === 'https://cdn.fb/111_9101.jpg'
+    && str_starts_with($d0['titre'], 'La tarte') && $cB2 === 409 && count($bAppels) === 1 && ($bAppels[0][2]['access_token'] ?? '') === 'PT111', json_encode([$cB0, $cB1, $cB, $cB2, $d0]));
+[$cBi] = $fr('POST', '/franchise/boost', ['id' => 'mig-m2', 'compte' => 'ig:17841']);
+[, $bL2] = $fr('GET', '/franchise/boost');
+check('franchisé : son Instagram aussi ; la liste de ses demandes', $cBi === 200 && $bL2['attente'] === 2 && $bL2['max'] === SOC_BOOST_ATTENTE_MAX && $bL2['demandes'][0]['canal'] === 'Instagram');
+$regBo = sfRegles(); sfReglesPut(array_merge($regBo, ['proposerBoost' => false]));
+[$cBf] = $fr('POST', '/franchise/boost', ['id' => 'mfb-111_9103', 'compte' => 'fb:111']);
+sfReglesPut($regBo); unset($_COOKIE[SF_COOKIE]);
+check('règle « proposer un boost » coupée par le réseau : 403', $cBf === 403);
+[, $st] = socRoute('GET', '/state');
+[, $dm] = socRoute('GET', '/pub/demandes');
+check('marque : les demandes en attente (pastille du menu), avec le nom de la boutique', ($st['alertes']['boost'] ?? null) === 2 && $dm['attente'] === 2 && $dm['demandes'][0]['shopNom'] === 'Halle', json_encode($dm['demandes'][0] ?? null));
+$idIg = (int) array_values(array_filter($dm['demandes'], static fn ($x) => $x['canal'] === 'Instagram'))[0]['id'];
+$idFb = (int) array_values(array_filter($dm['demandes'], static fn ($x) => $x['canal'] === 'Facebook'))[0]['id'];
+[$cRf, $dm2] = $err('/pub/demandes/refuser', ['id' => $idIg, 'reponse' => 'Déjà en pub ce mois-ci']);
+[$cRf2] = $err('/pub/demandes/refuser', ['id' => $idIg, 'reponse' => '']);
+check('marque : refuser avec un mot ; deux fois → 409', $cRf === 200 && $dm2['attente'] === 1 && $cRf2 === 409);
+
+// La marque booste : l'assistant envoie spec.boost (le post, son compte, la demande).
+$specB = array_merge($spec, ['name' => 'Boost tarte', 'shops' => ['4'], 'post' => null, 'adName' => 'Boost tarte', 'variants' => [],
+    'boost' => ['metaId' => '111_9101', 'compte' => 'fb:111', 'canal' => 'Facebook', 'shop' => '4', 'titre' => 'La tarte du week-end', 'demande' => $idFb]]);
+$pubB = ['id' => 'ab1', 'name' => 'Boost tarte', 'shops' => ['4'], 'scope' => 'boutique', 'budgetType' => 'quotidien', 'budget' => 10, 'cap' => 0, 'spent' => 0, 'start' => $spec['start'], 'end' => $spec['end'],
+    'status' => 'En revue', 'radius' => 8, 'post' => null, 'devise' => 'EUR', 'spec' => $specB];
+$bAppels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [$pubB]]]]);
+$ab1 = socItem('ads', 'ab1');
+$crB = array_column($bAppels, 2);
+check('boost d’un post de la Page : créa object_story_id = le post, une par langue de la boutique', $ab1['status'] === 'En revue' && $crB && !array_filter($crB, static fn ($c) => ($c['object_story_id'] ?? '') !== '111_9101')
+    && ($ab1['boost']['metaId'] ?? '') === '111_9101', json_encode([$ab1['status'], $ab1['reason'] ?? null, $crB]));
+[, $dm3] = socRoute('GET', '/pub/demandes');
+check('la demande passe « boostée » avec la pub ; la boutique le voit', array_column($dm3['demandes'], 'statut', 'id')[$idFb] === 'boostee' && array_column($dm3['demandes'], 'adId', 'id')[$idFb] === 'ab1');
+[, $mb2] = socRoute('GET', '/pub/meilleurs');
+check('meilleurs posts : déjà boosté (lu du cache, la pub en plus)', (array_column($mb2['posts'], 'boostee', 'metaId')['111_9101']['id'] ?? '') === 'ab1');
+try { socBoostCrea(['metaId' => '111_9101', 'compte' => 'fb:111'], socShop('5')); $mAb = ''; } catch (MetaError $e) { $mAb = $e->getMessage(); }
+try { socBoostCrea(['metaId' => '222_7001', 'compte' => 'fb:111'], socShop('4')); $mAb2 = ''; } catch (MetaError $e) { $mAb2 = $e->getMessage(); }
+check('boost d’un post de Halle sur l’ad set de Wavre, ou d’un post d’une autre Page : refusé', str_contains($mAb, 'autre boutique') && str_contains($mAb2, 'pas sur la Page'), $mAb . ' | ' . $mAb2);
+$bAppels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($pubB, ['id' => 'ab3', 'spec' => array_merge($specB, ['boost' => ['metaId' => 'm2', 'compte' => 'ig:17841', 'canal' => 'Instagram', 'shop' => '4', 'titre' => 'La brioche']])])]]]]);
+$crI = $bAppels[0][2] ?? [];
+check('boost d’un post Instagram : source_instagram_media_id, sous le compte Instagram et sa Page', socItem('ads', 'ab3')['status'] === 'En revue' && ($crI['source_instagram_media_id'] ?? '') === 'm2'
+    && ($crI['instagram_user_id'] ?? '') === '17841' && ($crI['object_id'] ?? '') === '111', json_encode([$crI, socItem('ads', 'ab3')['reason'] ?? null]));
+Meta::$transport = $metaAvantB;
+foreach (['ab1', 'ab2', 'ab3'] as $x) { socItemDelete('ads', $x); Db::exec("DELETE FROM social_meta_objet WHERE kind = 'ad' AND local_id = ?", [$x]); }
+Db::exec('DELETE FROM social_boost_demande'); socSettingPut('pub_meilleurs_cache', null, false); socSettingPut('pub_regles', null, false);
+
 echo "Idées de posts : promotions sans post, opérations, gammes, heures creuses (BO)\n";
 $auj = date('Y-m-d'); $j = static fn (int $n) => date('Y-m-d', strtotime($auj . ' ' . ($n >= 0 ? '+' : '') . $n . ' days'));
 socSettingPut('tfb_cache_promos', ['le' => time(), 'items' => [

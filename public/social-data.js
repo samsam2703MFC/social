@@ -524,7 +524,7 @@
   ];
   // Espace franchisé : les modèles et les règles livrés (le serveur fait foi en réel).
   const FTEMPLATES = [{"id": "fp-produit", "order": 1, "name": "Produit du jour", "description": "Mettre un produit de votre vitrine en avant, à son prix.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "{produit}", "text": "{produit} : {prix} € chez L’Atelier By {ville}. Ouvert {horaires}.", "textNl": "{produit}: {prix} € bij L’Atelier By {ville}. Open {horaires}.", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "choix", "visual": {"style": "epure", "eyebrow": "Aujourd’hui en vitrine", "eyebrowNl": "Vandaag in de etalage"}}, {"id": "fp-remise", "order": 2, "name": "Promotion en %", "description": "Une remise sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{produit} -{remise} %", "text": "-{remise} % sur {produit} chez L’Atelier By {ville}, du {du} au {au}. Ouvert {horaires}.", "textNl": "-{remise} % op {produit} bij L’Atelier By {ville}, van {du} tot {au}. Open {horaires}.", "product": "choix", "promo": {"kind": "remise", "min": 10, "max": 30}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "ruby", "eyebrow": "Promotion", "eyebrowNl": "Promotie"}}, {"id": "fp-offre", "order": 3, "name": "Offre spéciale", "description": "4+1, 2+1… sur un produit, pour une durée limitée.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": true, "title": "{offre} · {produit}", "text": "{offre} sur {produit} chez L’Atelier By {ville}, du {du} au {au} !", "textNl": "{offre} op {produit} bij L’Atelier By {ville}, van {du} tot {au}!", "product": "choix", "promo": {"kind": "offre", "offres": ["4+1", "2+1", "1 acheté = 1 offert"]}, "period": true, "free": 0, "photo": "choix", "visual": {"style": "abricot", "eyebrow": "Offre spéciale", "eyebrowNl": "Speciale actie"}}, {"id": "fp-evenement", "order": 4, "name": "Événement en boutique", "description": "Une dégustation, une animation, un horaire spécial.", "active": true, "type": "Événement local", "fb": true, "ig": true, "validation": true, "title": "Événement à {ville}", "text": "Chez L’Atelier By {ville} : {libre}", "textNl": "Bij L’Atelier By {ville}: {libre}", "product": "aucun", "promo": {"kind": "aucune"}, "period": false, "free": 90, "photo": "upload", "visual": {"style": "noir", "eyebrow": "En boutique", "eyebrowNl": "In de winkel"}}, {"id": "fp-vitrine", "order": 5, "name": "Nouveau en vitrine", "description": "Votre photo d’un produit qui arrive.", "active": true, "type": "Produit", "fb": true, "ig": true, "validation": false, "title": "Nouveau : {produit}", "text": "Nouveau dans notre vitrine à {ville} : {produit}. À découvrir {horaires} !", "textNl": "Nieuw in onze etalage in {ville}: {produit}. Te ontdekken {horaires}!", "product": "choix", "promo": {"kind": "aucune"}, "period": false, "free": 0, "photo": "upload", "visual": {"style": "plein", "eyebrow": "Nouveau", "eyebrowNl": "Nieuw"}}];
-  const FRULES = {"actif": true, "validation": "modele", "quotaSemaine": 3, "delaiMinHeures": 24, "horizonJours": 30, "jours": [1, 2, 3, 4, 5, 6, 0], "heureMin": "07:00", "heureMax": "20:00", "fb": true, "ig": true, "remiseMax": 30, "promoDureeMax": 14, "voirReseau": true, "voirCampagnes": true, "voirResultats": true, "voirSuivi": true, "voirAnalyse": true, "voirPublicites": true, "voirBudgetPub": false, "voirCommentaires": true, "voirAvisGoogle": true, "repondreCommentaires": true, "rouges": "reseau", "delaiReponseHeures": 24, "voirClassement": true, "story": true, "recurrenceMax": 8, "persoVisuel": true, "message": "Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By."};
+  const FRULES = {"actif": true, "validation": "modele", "quotaSemaine": 3, "delaiMinHeures": 24, "horizonJours": 30, "jours": [1, 2, 3, 4, 5, 6, 0], "heureMin": "07:00", "heureMax": "20:00", "fb": true, "ig": true, "remiseMax": 30, "promoDureeMax": 14, "voirReseau": true, "voirCampagnes": true, "voirResultats": true, "voirSuivi": true, "voirAnalyse": true, "voirPublicites": true, "voirBudgetPub": false, "voirCommentaires": true, "voirAvisGoogle": true, "repondreCommentaires": true, "rouges": "reseau", "delaiReponseHeures": 24, "voirClassement": true, "proposerBoost": true, "story": true, "recurrenceMax": 8, "persoVisuel": true, "message": "Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By."};
   // Les dark posts créés par les pubs (relus chez Meta par le serveur) : pub, post, boutique, langue, variante, liens, commentaires.
   const DARK = [];
   const LEADS = [
@@ -843,6 +843,45 @@
     DEMO_KIT = items.map((k, i) => Object.assign({ id: k.id || 'kd' + Date.now() + i }, k));
     return Promise.resolve(kitVueDemo());
   }
+  /** La publicité pilotée (src/boost.php) : règle de pause, meilleurs posts à booster, demandes des boutiques. */
+  let DEMO_REGLES = { pauseActive: false, seuils: {}, le: null, par: null }, DEMO_DEMANDES = null;
+  function pubRegles() { return LIVE ? api('GET', '/pub/regles') : Promise.resolve(DEMO_REGLES); }
+  function pubReglesSave(regles) {
+    if (LIVE) return api('POST', '/pub/regles', { regles });
+    if (regles.pauseActive && !Object.keys(regles.seuils || {}).length) return Promise.reject(new Error('Indiquez un coût par clic maximum pour au moins une devise.'));
+    DEMO_REGLES = Object.assign({}, regles, { le: TODAY + ' 10:00', par: 'Sarah Lambert' });
+    return Promise.resolve(DEMO_REGLES);
+  }
+  function demoBoostPost(sh, i) {
+    const p = (state().posts || []).filter(x => x.img)[i] || {};
+    return { metaId: '1000' + i + '_20' + i, compte: 'fb:1000' + i, canal: i % 2 ? 'Instagram' : 'Facebook', shop: sh.id, shopNom: sh.name, compteNom: "L'Atelier By " + sh.name,
+      date: addDays(TODAY, -1 - i), type: 'Photo', titre: p.title || 'Publication de la semaine', texte: p.text || '', img: p.img || null, permalink: null,
+      stats: { reactions: 60 - i * 9, comments: 8 - i, shares: 4 }, interactions: 72 - i * 10, mediane: 14, indice: Math.round((72 - i * 10) / 14 * 10) / 10, boostee: null };
+  }
+  function pubMeilleurs(forcer) {
+    if (LIVE) return api('GET', '/pub/meilleurs' + (forcer ? '?forcer=1' : ''));
+    return Promise.resolve({ du: addDays(TODAY, -7), au: TODAY, le: TODAY + ' 10:00', lus: SHOPS.length, erreurs: [], posts: SHOPS.slice(0, 3).map(demoBoostPost) });
+  }
+  function demandesDemo() {
+    const l = DEMO_DEMANDES || [];
+    return { demandes: l, attente: l.filter(d => d.statut === 'attente').length };
+  }
+  function pubDemandes() {
+    if (LIVE) return api('GET', '/pub/demandes');
+    if (!DEMO_DEMANDES) DEMO_DEMANDES = SHOPS.slice(1, 2).map((sh, i) => { const b = demoBoostPost(sh, 3 + i);
+      return { id: 900 + i, shop: sh.id, shopNom: sh.name, compte: b.compte, metaId: b.metaId, canal: 'Facebook', titre: b.titre, texte: b.texte, img: b.img, permalink: null, datePost: b.date,
+        message: 'Très bons retours en boutique, on aimerait qu’il soit vu plus largement.', par: 'Gérant ' + sh.name, statut: 'attente', reponse: '', adId: null, le: TODAY + ' 08:30', traiteLe: null, traitePar: '' }; });
+    return Promise.resolve(demandesDemo());
+  }
+  function pubRefuser(id, reponse) {
+    if (LIVE) return api('POST', '/pub/demandes/refuser', { id, reponse });
+    DEMO_DEMANDES = (DEMO_DEMANDES || []).map(d => d.id === id ? Object.assign({}, d, { statut: 'refusee', reponse, traiteLe: TODAY + ' 10:00', traitePar: 'Sarah Lambert' }) : d);
+    return Promise.resolve(demandesDemo());
+  }
+  function pubDemandeBoostee(id, adId) {
+    if (LIVE) return;
+    DEMO_DEMANDES = (DEMO_DEMANDES || []).map(d => d.id === id ? Object.assign({}, d, { statut: 'boostee', adId, traiteLe: TODAY + ' 10:00', traitePar: 'Sarah Lambert' }) : d);
+  }
   /** Le bilan de la semaine, boutique par boutique (src/bilan.php). En démonstration : quatre boutiques d'exemple. */
   function bilan(forcer) {
     if (LIVE) return api('GET', '/bilan' + (forcer ? '?forcer=1' : ''));
@@ -920,6 +959,7 @@
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
     api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT,
     commentaires, commentairesRelire, commentaireTraiter, commentaireRepondre, bilan, kit, kitSave, google, googleRelire, googleSynchroniser, googleReglages,
+    pubRegles, pubReglesSave, pubMeilleurs, pubDemandes, pubRefuser, pubDemandeBoostee,
     comptesMeta: () => LIVE ? api('GET', '/meta/comptes').then(r => { META.comptes = (r && r.comptes) || META.comptes; return META.comptes; }) : Promise.resolve(META.comptes), calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, charte, relire, ia: () => (LIVE && LIVE.ia) || { configure: false, modele: '' }, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.

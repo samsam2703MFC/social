@@ -52,6 +52,24 @@
       </div>
     </section>
     </sc-if>
+    <sc-if value="{{ bstShow }}" hint-placeholder-val="{{ false }}">
+    <section style="background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.10);padding:18px 20px;display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;flex-direction:column;gap:3px;"><span style="font-size:18px;font-weight:500;">Mes propositions de boost</span><span style="font-size:12px;line-height:1.45;color:#666666;">{{ bstSub }}</span></div>
+      <sc-if value="{{ bstEmpty }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#666666;background:#FBF8F4;border-radius:8px;padding:10px 12px;">Aucune proposition pour l’instant. Ouvrez une de vos publications dans le calendrier : « Proposer au réseau de booster ce post ».</span></sc-if>
+      <sc-for list="{{ bstRows }}" as="b" hint-placeholder-count="0">
+        <div class="sf-wrap" style="display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:10px;background:#FBF8F4;">
+          <img src="{{ b.img }}" alt="" style="width:48px;height:48px;border-radius:8px;object-fit:cover;background:#F4EFE8;flex:0 0 auto;">
+          <span style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 220px;">
+            <span style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;">{{ b.titre }}</span>
+            <span style="font-size:11px;line-height:1.4;color:#666666;">{{ b.meta }}</span>
+            <sc-if value="{{ b.hasReponse }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.45;color:#444444;">Réponse du réseau : « {{ b.reponse }} »</span></sc-if>
+          </span>
+          <span style="font-size:10px;font-weight:600;border-radius:999px;padding:3px 9px;background:{{ b.bg }};color:{{ b.fg }};white-space:nowrap;">{{ b.statut }}</span>
+          <sc-if value="{{ b.hasLink }}" hint-placeholder-val="{{ false }}"><a href="{{ b.link }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;white-space:nowrap;">Voir ↗</a></sc-if>
+        </div>
+      </sc-for>
+    </section>
+    </sc-if>
     <sc-if value="{{ hidden }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Le réseau ne partage pas les opérations dans l’espace boutique.</div></sc-if>
     <sc-if value="{{ none }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Aucune opération du réseau ne concerne votre boutique pour l’instant.</div></sc-if>
     <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:16px;font-size:13px;color:#666666;">Lecture des opérations du réseau…</div></sc-if>
@@ -107,10 +125,11 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { data: null, err: '', pubs: null };
+  state = { data: null, err: '', pubs: null, boostL: null };
   componentDidMount() {
     const SF = window.SF; if (!SF || !SF.state() || !SF.operations) return;
     SF.operations().then(d => this.setState({ data: d })).catch(e => this.setState({ data: { operations: [] }, err: e.message || 'erreur' }));
+    if (SF.boost) SF.boost().then(boostL => this.setState({ boostL })).catch(() => {});
     if (SF.publicites) SF.publicites().then(d => this.setState({ pubs: d })).catch(() => this.setState({ pubs: { reseau: [], boutique: [], erreur: true } }));
   }
   renderVals() {
@@ -166,7 +185,15 @@ class Component extends DCLogic {
     const pubCols = [['Pour tout le réseau', P ? P.reseau || [] : [], 'Aucune publicité du réseau ne passe en ce moment autour de votre boutique.'],
       ['Pour votre boutique', P ? P.boutique || [] : [], 'Aucune publicité propre à votre boutique pour le moment.']]
       .map(([title, list, emptyText]) => ({ title, items: list.map(carte), empty: !!P && !P.erreur && !list.length, emptyText }));
-    return { ok: true, pubShow: !pubHidden, pubLoading: !P, pubErr: !!(P && P.erreur), pubCols,
+    // Les propositions de boost de la boutique et la réponse du réseau.
+    const BL = s.boostL, STB = { attente: ['En attente', '#FCE7C8', '#7A4100'], boostee: ['Boosté', '#E2F0E8', '#0F6B4A'], refusee: ['Non retenu', '#EAE4DC', '#555555'] };
+    const bstRows = ((BL && BL.demandes) || []).map(d => { const [lab, bg, fg] = STB[d.statut] || STB.attente;
+      return { img: d.img || 'img/illus/customer-facing/webshop.png', titre: d.titre || 'Publication', statut: lab, bg, fg, hasReponse: d.statut === 'refusee' && !!d.reponse, reponse: d.reponse || '',
+        meta: d.canal + (d.datePost ? ' · publié le ' + SF.dShort(d.datePost) : '') + ' · proposé le ' + SF.dShort(String(d.le).slice(0, 10)) + (d.traiteLe ? ' · traité le ' + SF.dShort(String(d.traiteLe).slice(0, 10)) : ''),
+        hasLink: !!d.permalink, link: d.permalink || '#' }; });
+    const bstVals = { bstShow: !!BL && (BL.permis !== false || bstRows.length > 0), bstRows, bstEmpty: !!BL && !bstRows.length,
+      bstSub: 'Une de vos publications marche bien ? Proposez au réseau de la sponsoriser autour de votre boutique, depuis sa fiche dans le calendrier. Le réseau décide et paie.' + (BL && BL.attente ? ' ' + BL.attente + ' en attente (' + BL.max + ' au plus).' : '') };
+    return { ...bstVals, ok: true, pubShow: !pubHidden, pubLoading: !P, pubErr: !!(P && P.erreur), pubCols,
       pubSub: 'Les publicités Meta qui passent autour de ' + st.shop.name + ', décidées et payées par le réseau · en cours, à venir et terminées depuis moins d’un mois · lecture seule', hasError: !!s.err, error: s.err, shopName: st.shop.name, loading: !s.data, hidden, none: !!s.data && !hidden && camps.length === 0, camps };
   }
 }
