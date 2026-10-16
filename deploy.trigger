@@ -108,3 +108,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-10-16T15:16:58Z avis google reputation
 2026-10-16T15:20:56Z avis google par l'API du BO
 2026-10-16T17:50:05Z espace franchise vue mobile
+2026-10-16T17:52:59Z vue mobile libelles barre du bas

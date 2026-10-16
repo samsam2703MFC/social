@@ -159,7 +159,7 @@ class Component extends DCLogic {
         .concat(r.voirCampagnes !== false || r.voirPublicites !== false ? [['camp', 'Publicités', '◎', SF.href('camp'), ['camp'], 0]] : [])
         .concat(r.voirAvisGoogle !== false ? [['google', 'Avis Google', '★', SF.href('google'), ['google'], 0]] : [])
         .map(([k, label, ic, href, pages, badge]) => { const on = pages.includes(sub), creer = k === 'pub';
-          return { label, ic, href, current: on ? 'page' : 'false', fg: on ? '#8D1D2C' : '#555555', w: on ? 600 : 500, badge, hasBadge: badge > 0,
+          return { label, ic, href, current: on ? 'page' : 'false', fg: on ? '#8D1D2C' : '#555555', w: 500, badge, hasBadge: badge > 0,
             size: creer ? '44px' : '26px', lift: creer ? '-18px' : '0', radius: creer ? '50%' : '8px', icSize: creer ? '24px' : '14px',
             icBg: creer ? '#8D1D2C' : on ? '#F4EFE8' : 'transparent', icFg: creer ? '#FFFFFF' : on ? '#8D1D2C' : '#666666', shadow: creer ? '0 4px 12px rgba(141,29,44,0.35)' : 'none' }; }),
     };

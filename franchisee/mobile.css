@@ -79,3 +79,9 @@
   .sf-sheet-img { padding-bottom: 46% !important; }
   .sf-sheet button[title="Fermer"] { width: 36px !important; height: 36px !important; font-size: 18px !important; }
 }
+
+/* Petits téléphones : les libellés de la barre du bas tiennent sur une ligne. */
+@media (max-width: 380px) {
+  .sf-bottom { padding-left: 0 !important; padding-right: 0 !important; }
+  .sf-bottom a > span:nth-child(2) { font-size: 9px !important; letter-spacing: -0.2px !important; }
+}
