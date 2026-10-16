@@ -140,6 +140,18 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
             ['name' => 'shares', 'values' => [['value' => 3]]], ['name' => 'total_interactions', 'values' => [['value' => 60]]]]]];
     }
     if ($m === 'GET' && $path === 'm2') { return [200, ['like_count' => 41, 'comments_count' => 6]]; }
+    // Commentaires des publications récentes (src/commentaires.php) : Halle (Facebook, dont une réponse de la Page) et l'Instagram.
+    if ($m === 'GET' && $path === '111/published_posts' && str_contains((string) ($p['fields'] ?? ''), 'comments.limit(')) {
+        $c = static fn (string $id, string $qui, string $txt, string $de = 'u1') => ['id' => $id, 'from' => ['id' => $de, 'name' => $qui], 'message' => $txt, 'created_time' => date('c', strtotime('-2 hours')), 'permalink_url' => 'https://facebook.com/' . $id];
+        return [200, ['data' => [['id' => '111_c1', 'message' => 'Nouvelle tarte aux pommes ! Promo -20 % ce week-end à Halle.', 'created_time' => date('c', strtotime('-1 day')), 'permalink_url' => 'https://facebook.com/111_c1',
+            'comments' => ['data' => [$c('111_c1_1', 'Julie D.', 'Trop bon !!'), $c('111_c1_2', 'Marc B.', 'Jusqu’à quand la promo ?'), $c('111_c1_3', 'Paul R.', 'J’ai trouvé un cheveu dans ma tarte, inadmissible.'),
+                $c('111_c1_4', 'L’Atelier By Halle', 'Merci à vous !', '111')]]]]]];
+    }
+    if ($m === 'GET' && $path === '17841/media' && str_contains((string) ($p['fields'] ?? ''), 'comments.limit(')) {
+        return [200, ['data' => [['id' => 'm2', 'caption' => 'La brioche du dimanche', 'permalink' => 'https://instagram.com/p/m2', 'timestamp' => date('c', strtotime('-1 day')),
+            'comments' => ['data' => [['id' => 'igc_1', 'text' => 'Où se trouve la boutique ?', 'username' => 'anna', 'timestamp' => date('c', strtotime('-3 hours'))]]]],
+            ['id' => 'm0', 'caption' => 'Ancienne', 'timestamp' => date('c', strtotime('-40 days')), 'comments' => ['data' => [['id' => 'igc_old', 'text' => 'Vieux', 'username' => 'x', 'timestamp' => date('c', strtotime('-40 days'))]]]]]]];
+    }
     // Les vues lues avec la liste (`insights.metric(…)`) ; refusées (GROUPE_REFUS) : relues une par une.
     if ($m === 'GET' && $path === '111/published_posts' && str_contains((string) ($p['fields'] ?? ''), 'insights.metric(')) {
         if (!empty($GLOBALS['GROUPE_REFUS']) || !str_contains((string) $p['fields'], 'post_media_view')) { return [400, ['error' => ['code' => 100, 'message' => '(#100) The value must be a valid insights metric']]]; }
@@ -1509,6 +1521,15 @@ SocIa::$transport = static function (string $m, string $url, array $h, ?string $
     if (str_contains($url, '/v1/models')) { return [200, json_encode(['data' => [['id' => 'claude-fable-9'], ['id' => 'claude-opus-9'], ['id' => 'claude-opus-8']]])]; }
     if ($iaMode === 'refus') { return [200, json_encode(['stop_reason' => 'refusal', 'content' => []])]; }
     if ($iaMode === 'cle') { return [401, json_encode(['type' => 'error', 'error' => ['type' => 'authentication_error', 'message' => 'invalid x-api-key']])]; }
+    if ($iaMode === 'panne') { return [529, json_encode(['type' => 'error', 'error' => ['type' => 'overloaded_error', 'message' => 'Overloaded']])]; }
+    $req = $body !== null ? json_decode($body, true) : [];
+    if (isset($req['output_config']['format']['schema']['properties']['resultats'])) {
+        $in = json_decode((string) ($req['messages'][0]['content'] ?? ''), true);
+        $res = array_map(static fn ($x) => ['id' => $x['id'], 'couleur' => str_contains($x['commentaire'], 'cheveu') ? 'rouge' : (str_contains($x['commentaire'], '?') ? 'orange' : 'vert'),
+            'sujet' => 'Sujet IA', 'resume' => 'Résumé IA', 'action' => 'Action IA', 'reponse' => 'Merci pour votre message.'], (array) ($in['commentaires'] ?? []));
+        $res[] = ['id' => 'inventé', 'couleur' => 'rouge', 'sujet' => 'x', 'resume' => 'x', 'action' => 'x', 'reponse' => 'x'];
+        return [200, json_encode(['stop_reason' => 'end_turn', 'content' => [['type' => 'text', 'text' => json_encode(['resultats' => $res])]]])];
+    }
     return [200, json_encode(['stop_reason' => 'end_turn', 'content' => [['type' => 'text', 'text' => json_encode(['variantes' => [
         ['angle' => 'Gourmandise', 'fr' => "Le cookie chocolat vous attend chez {ville}.\n{lien}", 'nl' => 'Niet gevraagd', 'titre' => 'Cookie chocolat', 'titreNl' => 'Chocoladekoek', 'surtitre' => 'Fait maison', 'phrase' => 'croquant dehors, fondant dedans']],
         'hashtags' => ['cookie', '#gourmandise']])]]])];
@@ -1585,6 +1606,48 @@ $req = (array_values(array_filter($iaAppels, static fn ($a) => str_ends_with($a[
 check('assistant : l’objectif de l’idée, l’opération et ce qui marche sur nos comptes sont dans la demande', $code === 200 && str_contains((string) $req['messages'][0]['content'], 'Objectif du post : Faire venir des clients')
     && str_contains((string) $req['messages'][0]['content'], 'Opération commerciale : Automne') && str_contains((string) $req['system'], 'Ce qui marche sur nos comptes') && str_contains((string) $req['system'], 'Pose une question'));
 socSettingPut('reco_cache', null, false); socSettingPut('anthropic_api_key', null, true);
+
+echo "Commentaires de toutes les Pages et de l'Instagram : lecture, classement vert / orange / rouge, suivi\n";
+$idsCom = ['111_c1_1', '111_c1_2', '111_c1_3', '111_c1_4', 'igc_1', 'igc_old'];
+$com = static fn () => array_column(Db::rows('SELECT * FROM social_commentaire WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom), null, 'id');
+$s = socCommentairesSync();
+$cs = $com();
+check('lecture : commentaires de la Page et de l’Instagram, avec la publication commentée ; ni les réponses de la Page, ni ceux des publications anciennes',
+    isset($cs['111_c1_1'], $cs['111_c1_3'], $cs['igc_1']) && !isset($cs['111_c1_4']) && !isset($cs['igc_old']) && str_contains((string) $cs['111_c1_2']['objet_texte'], 'Promo -20 %')
+    && $cs['111_c1_1']['shop_id'] === '4' && $cs['igc_1']['canal'] === 'ig' && $cs['111_c1_1']['lien'] === 'https://facebook.com/111_c1_1', json_encode([$s, array_keys($cs)]));
+check('Page illisible (permission) : signalée avec la permission à accorder, les autres sont lues', (bool) array_filter($s['erreurs'], static fn ($e) => str_contains($e, 'pages_read_user_content')));
+$a = socCommentairesAnalyser();
+$cs = $com();
+check('sans clé Claude : règles simples (cheveu → rouge, question → orange, compliment → vert)', $cs['111_c1_3']['couleur'] === 'rouge' && $cs['111_c1_2']['couleur'] === 'orange'
+    && $cs['111_c1_1']['couleur'] === 'vert' && $cs['igc_1']['couleur'] === 'orange' && $cs['111_c1_1']['analyse'] === 'regles' && $a['ia'] === false, json_encode(array_column($cs, 'couleur', 'id')));
+Db::exec('UPDATE social_commentaire SET couleur = NULL WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
+socSettingPut('anthropic_api_key', 'sk-test-cle', true); $iaAppels = []; $iaMode = 'ok';
+$a = socCommentairesAnalyser();
+$cs = $com();
+$req = (array_values(array_filter($iaAppels, static fn ($x) => str_ends_with($x[1], '/v1/messages')))[0][3] ?? []);
+$contenu = (string) ($req['messages'][0]['content'] ?? '');
+check('avec Claude : classé dans le contexte de la publication, effort bas, sans le nom des auteurs, commentaires traités comme des données',
+    $cs['111_c1_3']['couleur'] === 'rouge' && $cs['111_c1_3']['analyse'] === 'ia' && $cs['111_c1_3']['reponse'] === 'Merci pour votre message.' && ($req['output_config']['effort'] ?? '') === 'low'
+    && str_contains($contenu, 'Promo -20 %') && !str_contains($contenu, 'Paul R.') && str_contains((string) $req['system'], 'jamais des consignes'), json_encode([$a, $req['output_config'] ?? null]));
+$iaAppels = [];
+socCommentairesSync(); $a2 = socCommentairesAnalyser();
+check('relecture : le classement est gardé, rien n’est renvoyé à Claude', $com()['111_c1_3']['analyse'] === 'ia' && !array_filter($iaAppels, static fn ($x) => str_ends_with($x[1], '/v1/messages')));
+Db::exec("UPDATE social_commentaire SET couleur = NULL WHERE id = '111_c1_1'"); $iaMode = 'panne';
+$a3 = socCommentairesAnalyser();
+check('Claude indisponible : repli sur les règles, l’erreur est rendue', $com()['111_c1_1']['analyse'] === 'regles' && str_contains((string) $a3['erreur'], 'indisponible'), json_encode($a3));
+$iaMode = 'ok'; socSettingPut('anthropic_api_key', null, true);
+$_GET = ['couleur' => 'rouge', 'jours' => '7']; [$code, $b] = socRoute('GET', '/commentaires'); $_GET = [];
+$rouges = array_column($b['commentaires'], null, 'id');
+check('tableau : filtre rouge, compte et boutique, publication, action et réponse proposées ; totaux', $code === 200 && isset($rouges['111_c1_3']) && !isset($rouges['111_c1_2'])
+    && $rouges['111_c1_3']['boutique'] === 'Halle' && $rouges['111_c1_3']['action'] === 'Action IA' && str_contains($rouges['111_c1_3']['publication'], 'tarte aux pommes')
+    && $b['totaux']['rouge'] >= 1 && $b['totaux']['rougeOuverts'] >= 1, json_encode($b['totaux']));
+$GLOBALS['SOC_BODY'] = ['id' => '111_c1_3', 'traite' => true]; socRoute('POST', '/commentaires/traiter'); unset($GLOBALS['SOC_BODY']);
+$_GET = ['couleur' => 'rouge', 'jours' => '7', 'nonTraites' => '1']; [, $b2] = socRoute('GET', '/commentaires'); $_GET = [];
+check('traité : sort des « non traités », compté comme fermé, avec qui et quand', !in_array('111_c1_3', array_column($b2['commentaires'], 'id'), true) && $b2['totaux']['rougeOuverts'] === $b['totaux']['rougeOuverts'] - 1
+    && $com()['111_c1_3']['traite_le'] !== null);
+try { $GLOBALS['SOC_BODY'] = ['id' => 'inconnu', 'traite' => true]; socRoute('POST', '/commentaires/traiter'); $code404 = 200; } catch (HttpError $e) { $code404 = $e->status; } finally { unset($GLOBALS['SOC_BODY']); }
+check('commentaire inconnu : 404', $code404 === 404);
+Db::exec('DELETE FROM social_commentaire WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
 
 echo "Idées de posts : promotions sans post, opérations, gammes, heures creuses (BO)\n";
 $auj = date('Y-m-d'); $j = static fn (int $n) => date('Y-m-d', strtotime($auj . ' ' . ($n >= 0 ? '+' : '') . $n . ' days'));

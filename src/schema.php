@@ -22,7 +22,7 @@ declare(strict_types=1);
  *  - social_meta_objet : les objets créés chez Meta (campagne, ad set, créa, pub, formulaire),
  *                        et pour chaque pub le post qu'elle diffuse (dark post : `story_id`,
  *                        `ig_media_id`, liens) ;
- *  - social_commentaire : les commentaires reçus sur les dark posts (Facebook et Instagram) ;
+ *  - social_commentaire : les commentaires des Pages, de l'Instagram et des dark posts, classés vert / orange / rouge ;
  *  - social_modele_franchise : les modèles de post ouverts aux franchisés (espace /social_franchisee) ;
  *  - social_resultat   : résultats Meta + ventes par campagne et boutique ;
  *  - social_rattachement : publication Meta (lue en direct) → opération du Marketing du BO (le lien seul) ;
@@ -109,6 +109,11 @@ function socInstall(): void
     Db::exec('CREATE TABLE IF NOT EXISTS social_commentaire (id VARCHAR(80) PRIMARY KEY, canal VARCHAR(4) NOT NULL, objet_id VARCHAR(80) NOT NULL,'
         . 'shop_id VARCHAR(16) NULL, post_id VARCHAR(64) NULL, pub_id VARCHAR(64) NULL, auteur VARCHAR(160) NULL, message TEXT NULL,'
         . 'cree_le DATETIME NOT NULL, masque TINYINT NOT NULL DEFAULT 0, maj_le DATETIME NOT NULL, KEY idx_objet (objet_id), KEY idx_pub (pub_id, cree_le))' . $t);
+
+    // Les commentaires de toutes les Pages et de l'Instagram (src/commentaires.php) : compte, publication commentée, classement, suivi.
+    socColonnes('social_commentaire', ['compte' => 'VARCHAR(40) NULL', 'compte_nom' => 'VARCHAR(160) NULL', 'objet_texte' => 'TEXT NULL', 'objet_lien' => 'VARCHAR(500) NULL',
+        'lien' => 'VARCHAR(500) NULL', 'couleur' => 'VARCHAR(6) NULL', 'sujet' => 'VARCHAR(80) NULL', 'resume' => 'VARCHAR(300) NULL', 'action' => 'VARCHAR(300) NULL',
+        'reponse' => 'TEXT NULL', 'analyse' => 'VARCHAR(10) NULL', 'analyse_le' => 'DATETIME NULL', 'traite_le' => 'DATETIME NULL', 'traite_par' => 'VARCHAR(120) NULL']);
 
     Db::exec('CREATE TABLE IF NOT EXISTS social_modele_franchise (id VARCHAR(64) PRIMARY KEY, nom VARCHAR(160) NULL, type VARCHAR(60) NULL,'
         . 'actif TINYINT NOT NULL DEFAULT 1, ordre INT NULL, validation TINYINT NULL, texte_fr TEXT NULL, texte_nl TEXT NULL, data LONGTEXT NOT NULL, ' . $maj . ')' . $t);

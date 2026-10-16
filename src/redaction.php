@@ -80,15 +80,15 @@ final class SocIa
     }
 
     /**
-     * Un message à sortie JSON (schéma imposé) ; rend le JSON décodé. Effort moyen : des textes
-     * courts, soignés, en une vingtaine de secondes.
+     * Un message à sortie JSON (schéma imposé) ; rend le JSON décodé. Effort moyen par défaut : des textes
+     * courts, soignés, en une vingtaine de secondes ; bas pour un classement.
      */
-    public static function json(string $system, string $user, array $schema, int $max = 16000): array
+    public static function json(string $system, string $user, array $schema, int $max = 16000, string $effort = 'medium'): array
     {
         $modele = self::modele();
         $body = ['model' => $modele, 'max_tokens' => $max, 'system' => $system,
             'messages' => [['role' => 'user', 'content' => $user]],
-            'output_config' => ['effort' => 'medium', 'format' => ['type' => 'json_schema', 'schema' => $schema]]];
+            'output_config' => ['effort' => $effort, 'format' => ['type' => 'json_schema', 'schema' => $schema]]];
         $betas = [];
         // Un refus des garde-fous est repris par le modèle de repli recommandé par Anthropic.
         if (preg_match('/^claude-(opus|fable)-/', $modele)) { $body['fallbacks'] = 'default'; $betas[] = 'server-side-fallback-2026-07-01'; }

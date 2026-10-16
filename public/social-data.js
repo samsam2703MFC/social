@@ -460,7 +460,7 @@
     LOCALES.set(src, p); p.catch(() => LOCALES.delete(src));
     return p;
   }
-  const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', suivi: 'SA Suivi.dc.html', ctrl: 'SA Controle.dc.html', set: 'SA Parametres.dc.html' };
+  const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', suivi: 'SA Suivi.dc.html', ctrl: 'SA Controle.dc.html', com: 'SA Commentaires.dc.html', set: 'SA Parametres.dc.html' };
   const param = (k) => { try { return new URLSearchParams(location.search).get(k); } catch (e) { return null; } };
   // Intégré dans une autre application (`?embed=1`, ex. le module /marketing/) : sans le rail,
   // et chaque lien interne garde le paramètre pour que la navigation reste dans le cadre.
@@ -740,6 +740,44 @@
       enregistrements: fb ? null : h % 12, interactions: fb ? null : 20 + h % 80, motif: null, le: TODAY, demo: true }), 350));
   }
 
+  /**
+   * Les commentaires de toutes les Pages et de l'Instagram, classés vert / orange / rouge (src/commentaires.php).
+   * En démonstration : quelques commentaires d'exemple, classés comme le ferait le serveur.
+   */
+  let DEMO_COM = null;
+  function demoCommentaires(jours) {
+    if (!DEMO_COM) {
+      const h = (n, k) => addDays(TODAY, -n) + ' ' + k;
+      const pub = 'Nouvelle tarte aux pommes ! −20 % ce week-end sur les tartes entières.';
+      DEMO_COM = [
+        ['d1', 'fb', 'L’Atelier By Halle', 'Halle', 'Paul R.', 'J’ai trouvé un cheveu dans ma tarte, inadmissible.', h(0, '09:12'), pub, 'rouge', 'Plainte hygiène', 'Client mécontent : un cheveu dans sa tarte.', 'Répondre vite et proposer d’en parler en message privé.', 'Bonjour Paul, nous sommes vraiment désolés. Pouvez-vous nous écrire en message privé pour que nous puissions arranger cela ?'],
+        ['d2', 'fb', 'L’Atelier By Halle', 'Halle', 'Marc B.', 'Jusqu’à quand la promo ?', h(0, '08:40'), pub, 'orange', 'Question promotion', 'Demande la date de fin de la promotion.', 'Répondre avec les dates de la promotion.', 'Bonjour Marc, la promotion court jusqu’à dimanche inclus. À bientôt !'],
+        ['d3', 'ig', 'Instagram · L’Atelier By', 'Réseau', 'anna.b', 'Waar is de winkel in Halle?', h(1, '18:05'), 'De zondagsbrioche is er weer!', 'orange', 'Question adresse', 'Demande l’adresse de la boutique de Halle.', 'Répondre avec l’adresse de Halle.', 'Hallo Anna, u vindt ons in de Auguste Demaeghtlaan 227 in Halle. Tot snel!'],
+        ['d4', 'fb', 'L’Atelier By Corbais', 'Corbais', 'Julie D.', 'Trop bon !! 😍', h(1, '12:30'), 'Les cookies du jour sont sortis du four.', 'vert', 'Compliment', 'Apprécie les cookies.', 'Un j’aime suffit.', 'Merci beaucoup Julie !'],
+        ['d5', 'fb', 'L’Atelier By Gosselies', 'Gosselies', 'Sam V.', '@Lucie on y va samedi ?', h(2, '20:14'), 'Brunch du samedi : réservez votre table.', 'vert', 'Mention d’un ami', 'Invite une amie au brunch.', '', ''],
+      ].map(([id, canal, compte, boutique, auteur, message, le, publication, couleur, sujet, resume, action, reponse]) => ({ id, canal, compte, boutique, auteur, message, le, masque: false,
+        publication, lienPublication: '', lien: '', couleur, sujet, resume, action, reponse, analyse: 'ia', traite: false, traiteLe: null, traitePar: '', compteKey: canal + ':' + compte }));
+    }
+    const liste = DEMO_COM.filter(c => daysBetween(c.le.slice(0, 10), TODAY) < jours);
+    const totaux = { rouge: 0, orange: 0, vert: 0, aClasser: 0, rougeOuverts: 0, orangeOuverts: 0, total: liste.length };
+    liste.forEach(c => { totaux[c.couleur]++; if (!c.traite && c.couleur !== 'vert') totaux[c.couleur + 'Ouverts']++; });
+    return { jours, commentaires: liste.map(c => Object.assign({}, c)), totaux, comptes: [...new Set(liste.map(c => c.canal + ':' + c.compte))].map(k => ({ key: k, name: k.split(':').slice(1).join(':') })),
+      relu: { le: TODAY + ' 08:00', lus: liste.length, comptes: 6, erreurs: [] }, ia: { configure: true, modele: 'démonstration' }, demo: true };
+  }
+  function commentaires(jours) {
+    if (LIVE) return api('GET', '/commentaires?jours=' + jours);
+    return Promise.resolve(demoCommentaires(jours));
+  }
+  function commentairesRelire(jours) {
+    if (LIVE) return api('POST', '/commentaires/relire', { jours });
+    return Promise.resolve(Object.assign(demoCommentaires(jours), { sync: { lus: 5, comptes: 6, erreurs: [], dark: 0 }, analyse: { classes: 0, ia: true, erreur: null } }));
+  }
+  function commentaireTraiter(id, traite) {
+    if (LIVE) return api('POST', '/commentaires/traiter', { id, traite });
+    const c = (DEMO_COM || []).find(x => x.id === id);
+    if (c) { c.traite = !!traite; c.traiteLe = traite ? TODAY + ' ' + new Date().toTimeString().slice(0, 5) : null; c.traitePar = traite ? 'Vous' : ''; }
+    return Promise.resolve({ ok: true });
+  }
   function suivi(jours) {
     if (LIVE) return api('GET', '/suivi/abonnes?jours=' + jours);
     const au = addDays(TODAY, -1), du = addDays(au, -(jours - 1)), lignes = [];
@@ -801,6 +839,7 @@
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
     api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT,
+    commentaires, commentairesRelire, commentaireTraiter,
     comptesMeta: () => LIVE ? api('GET', '/meta/comptes').then(r => { META.comptes = (r && r.comptes) || META.comptes; return META.comptes; }) : Promise.resolve(META.comptes), calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, charte, relire, ia: () => (LIVE && LIVE.ia) || { configure: false, modele: '' }, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.

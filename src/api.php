@@ -32,6 +32,7 @@ require_once __DIR__ . '/catalogue.php';
 require_once __DIR__ . '/redaction.php';
 require_once __DIR__ . '/recommandations.php';
 require_once __DIR__ . '/detourage.php';
+require_once __DIR__ . '/commentaires.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -107,6 +108,15 @@ function socRoute(string $method, string $path): array
         return [200, ['dernier' => socIdsAuto(true), 'config' => socIdsAutoConfig(), 'shops' => socShops(), 'brand' => socBrand(), 'portefeuille' => socSetting('meta_portefeuille')]];
     }
     // Les campagnes déjà présentes chez Meta (src/metacampagnes.php), puis l'état des pubs du module.
+    // Les commentaires de toutes les Pages et de l'Instagram, classés vert / orange / rouge (src/commentaires.php).
+    if ($method === 'GET' && $path === '/commentaires') { return [200, socCommentairesListe($_GET)]; }
+    if ($method === 'POST' && $path === '/commentaires/relire') {
+        $b = body();
+        $sync = socCommentairesSync((int) ($b['jours'] ?? SOC_COM_JOURS));
+        $dark = socDarkCommentsSync();
+        return [200, ['sync' => $sync + ['dark' => $dark['lus'] ?? 0], 'analyse' => socCommentairesAnalyser()] + socCommentairesListe(['jours' => $b['jours'] ?? 14])];
+    }
+    if ($method === 'POST' && $path === '/commentaires/traiter') { $b = body(); return [200, socCommentaireTraiter((string) ($b['id'] ?? ''), !empty($b['traite']))]; }
     if ($method === 'GET' && $path === '/meta/comptes') { return [200, ['comptes' => socComptesMinimums(!empty($_GET['forcer']))]]; }
     if ($method === 'GET' && $path === '/meta/campagnes') { return [200, ['import' => socSetting('meta_campagnes_import'), 'comptes' => array_values(socComptesPub())]]; }
     if ($method === 'POST' && $path === '/meta/campagnes/rafraichir') {

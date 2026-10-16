@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
+    section{padding-top:0;padding-bottom:0;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button,textarea{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="com" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Les derniers commentaires de toutes les Pages Facebook et d’Instagram · lus dans le contexte de la publication</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">COMMENTAIRES</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="display:inline-flex;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:3px;gap:2px;">
+          <sc-for list="{{ periods }}" as="pp" hint-placeholder-count="3"><button onClick="{{ pp.pick }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:13px;font-weight:500;cursor:pointer;background:{{ pp.bg }};color:{{ pp.fg }};">{{ pp.label }}</button></sc-for>
+        </div>
+        <button onClick="{{ relire }}" style="height:34px;padding:0 14px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ relireOp }};" style-hover="background:#7A1826;">{{ relireLabel }}</button>
+      </div>
+    </header>
+
+    <sc-if value="{{ hasMsg }}" hint-placeholder-val="{{ false }}"><div style="background:{{ msgBg }};color:{{ msgFg }};border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.45;">{{ msg }}</div></sc-if>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+        <button onClick="{{ k.pick }}" style="text-align:left;background:#FFFFFF;border:{{ k.border }};border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;">
+          <span style="display:flex;align-items:center;gap:7px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;"><span style="width:9px;height:9px;border-radius:50%;background:{{ k.dot }};"></span>{{ k.label }}</span>
+          <span style="font-size:24px;font-weight:300;color:{{ k.fg }};">{{ k.value }}</span>
+          <span style="font-size:12px;color:#666666;">{{ k.sub }}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <sc-for list="{{ filtres }}" as="f" hint-placeholder-count="4"><button onClick="{{ f.pick }}" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};"><span style="width:7px;height:7px;border-radius:50%;background:{{ f.dot }};"></span>{{ f.label }}</button></sc-for>
+      <select value="{{ compte }}" onChange="{{ setCompte }}" style="font-size:12px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:999px;padding:6px 10px;">
+        <option value="">Tous les comptes</option>
+        <sc-for list="{{ comptes }}" as="c" hint-placeholder-count="0"><option value="{{ c.key }}">{{ c.name }}</option></sc-for>
+      </select>
+      <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ nonTraites }}" onChange="{{ toggleNonTraites }}" style="accent-color:#8D1D2C;margin:0;">Non traités seulement</label>
+      <span style="font-size:11px;color:#666666;margin-left:auto;">{{ etat }}</span>
+    </div>
+    <sc-if value="{{ hasErreurs }}" hint-placeholder-val="{{ false }}"><div style="background:#FCE7C8;color:#6b3d0a;border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.5;">{{ erreurs }}</div></sc-if>
+
+    <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Lecture des commentaires…</div></sc-if>
+    <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:13px;">{{ err }}</div></sc-if>
+
+    <sc-if value="{{ showTable }}" hint-placeholder-val="{{ true }}">
+    <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
+      <div style="display:grid;grid-template-columns:150px minmax(240px,2fr) minmax(170px,1.1fr) minmax(220px,1.5fr) 118px;min-width:960px;">
+        <sc-for list="{{ head }}" as="h" hint-placeholder-count="5"><span style="padding:10px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">{{ h }}</span></sc-for>
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="0">
+          <div style="display:contents;">
+            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:5px;">
+              <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;background:{{ r.cBg }};color:{{ r.cFg }};"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.cDot }};"></span>{{ r.couleur }}</span>
+              <span style="font-size:12px;font-weight:500;color:#222222;">{{ r.sujet }}</span>
+              <span style="font-size:10px;color:#8A847C;">{{ r.source }}</span>
+            </span>
+            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:4px;min-width:0;">
+              <span style="font-size:11px;color:#666666;">{{ r.meta }}</span>
+              <span style="font-size:13px;line-height:1.45;color:#222222;white-space:pre-wrap;word-break:break-word;">{{ r.message }}</span>
+              <sc-if value="{{ r.hasResume }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.4;color:#666666;font-style:italic;">{{ r.resume }}</span></sc-if>
+            </span>
+            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:4px;min-width:0;">
+              <span style="font-size:12px;line-height:1.4;color:#444444;word-break:break-word;">{{ r.publication }}</span>
+              <sc-if value="{{ r.hasLienPub }}" hint-placeholder-val="{{ false }}"><a href="{{ r.lienPub }}" target="_blank" rel="noopener" style="font-size:11px;font-weight:500;">Voir la publication ↗</a></sc-if>
+            </span>
+            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;min-width:0;">
+              <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.4;color:#222222;font-weight:500;">{{ r.action }}</span></sc-if>
+              <sc-if value="{{ r.hasReponse }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:12px;line-height:1.45;color:#444444;background:#F7F3EE;border-radius:8px;padding:7px 9px;">{{ r.reponse }}</span>
+                <button onClick="{{ r.copier }}" style="align-self:flex-start;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:500;cursor:pointer;">Copier la réponse</button>
+              </sc-if>
+            </span>
+            <span style="padding:12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;gap:6px;">
+              <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ r.traite }}" onChange="{{ r.toggle }}" style="accent-color:#0F6B4A;margin:0;">Traité</label>
+              <span style="font-size:10px;color:#8A847C;">{{ r.traiteInfo }}</span>
+              <sc-if value="{{ r.hasLien }}" hint-placeholder-val="{{ false }}"><a href="{{ r.lien }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;">Répondre ↗</a></sc-if>
+            </span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}"><div style="grid-column:1 / -1;padding:28px 16px;text-align:center;font-size:13px;color:#666666;">{{ noRowsText }}</div></sc-if>
+      </div>
+    </section>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+// Les derniers commentaires de toutes les Pages Facebook et d'Instagram (et des dark posts), classés vert / orange /
+// rouge dans le contexte de la publication (src/commentaires.php) : à traiter d'abord le rouge, puis l'orange.
+class Component extends DCLogic {
+  state = { jours: 14, couleur: '', compte: '', nonTraites: false, data: null, loading: true, err: '', busy: false, msg: '', msgKind: 'ok' };
+  componentDidMount() {
+    const SA = window.SA, j = SA && +SA.param('jours'), c = SA && SA.param('couleur');
+    if (['rouge', 'orange', 'vert'].includes(c)) this.setState({ couleur: c, nonTraites: c !== 'vert' });
+    this.load([1, 7, 14, 30].includes(j) ? j : 14);
+  }
+  load(jours) {
+    const SA = window.SA; if (!SA) return;
+    const k = this._k = (this._k || 0) + 1; this.setState({ jours, loading: true, err: '' });
+    SA.commentaires(jours).then(r => { if (k === this._k) this.setState({ data: r, loading: false }); })
+      .catch(e => { if (k === this._k) this.setState({ loading: false, err: e.message || 'erreur' }); });
+  }
+  relire() {
+    const SA = window.SA; if (!SA || this.state.busy) return;
+    this.setState({ busy: true, msg: '' });
+    SA.commentairesRelire(this.state.jours).then(r => {
+      const s = r.sync || {}, a = r.analyse || {};
+      const txt = (s.lus || 0) + ' commentaire' + ((s.lus || 0) > 1 ? 's' : '') + ' relu' + ((s.lus || 0) > 1 ? 's' : '') + ' sur ' + (s.comptes || 0) + ' compte' + ((s.comptes || 0) > 1 ? 's' : '')
+        + ' · ' + (a.classes || 0) + ' nouveau' + ((a.classes || 0) > 1 ? 'x' : '') + ' classé' + ((a.classes || 0) > 1 ? 's' : '') + (a.classes ? (a.ia && !a.erreur ? ' par Claude' : ' par les règles simples') : '')
+        + (a.erreur ? ' — Claude n’a pas répondu (' + a.erreur + ') : classés par les règles, Claude reprendra les suivants.' : '.');
+      this.setState({ data: r, busy: false, msg: txt, msgKind: a.erreur ? 'warn' : 'ok' });
+    }).catch(e => this.setState({ busy: false, msg: 'Relecture impossible : ' + (e.message || 'erreur'), msgKind: 'err' }));
+  }
+  traiter(c) {
+    const SA = window.SA;
+    SA.commentaireTraiter(c.id, !c.traite).then(() => {
+      const d = this.state.data; if (!d) return;
+      const now = new Date(), le = SA.TODAY + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      const commentaires = d.commentaires.map(x => x.id === c.id ? Object.assign({}, x, { traite: !c.traite, traiteLe: !c.traite ? le : null, traitePar: !c.traite ? 'vous' : '' }) : x);
+      const totaux = Object.assign({}, d.totaux); if (['rouge', 'orange'].includes(c.couleur)) totaux[c.couleur + 'Ouverts'] += c.traite ? 1 : -1;
+      this.setState({ data: Object.assign({}, d, { commentaires, totaux }) });
+    }).catch(e => this.setState({ msg: 'Non enregistré : ' + (e.message || 'erreur'), msgKind: 'err' }));
+  }
+  copier(c) {
+    const ok = () => this.setState({ msg: 'Réponse copiée : collez-la sous le commentaire (lien « Répondre ↗ »).', msgKind: 'ok' });
+    try { navigator.clipboard.writeText(c.reponse).then(ok, () => this.setState({ msg: 'Copie impossible : sélectionnez le texte à la main.', msgKind: 'warn' })); }
+    catch (e) { this.setState({ msg: 'Copie impossible : sélectionnez le texte à la main.', msgKind: 'warn' }); }
+  }
+  renderVals() {
+    const SA = window.SA, s = this.state, d = s.data;
+    const C = { rouge: ['#F6DCDF', '#8D1D2C', '#C0392B', 'Rouge'], orange: ['#FCE7C8', '#8A4B00', '#E08A1E', 'Orange'], vert: ['#E2F0E8', '#0F6B4A', '#2E9E6A', 'Vert'], '': ['#EAE4DC', '#555555', '#A39E97', 'À classer'] };
+    const t = (d && d.totaux) || { rouge: 0, orange: 0, vert: 0, aClasser: 0, rougeOuverts: 0, orangeOuverts: 0, total: 0 };
+    const pick = (couleur) => () => this.setState({ couleur: s.couleur === couleur ? '' : couleur, nonTraites: s.couleur === couleur ? s.nonTraites : couleur !== 'vert' && couleur !== '' });
+    const kpis = [['rouge', 'À traiter vite', t.rougeOuverts, t.rouge + ' rouge' + (t.rouge > 1 ? 's' : '') + ' sur la période'],
+      ['orange', 'À répondre', t.orangeOuverts, t.orange + ' orange' + (t.orange > 1 ? 's' : '') + ' sur la période'],
+      ['vert', 'Positifs ou neutres', t.vert, 'rien de particulier à faire'],
+      ['', 'Total', t.total, t.aClasser ? t.aClasser + ' à classer (relire)' : 'tous classés']]
+      .map(([k, label, value, sub]) => ({ label, value: SA ? SA.fmt(value) : value, sub, dot: C[k][2], fg: k === 'rouge' && value ? '#8D1D2C' : '#222222',
+        border: s.couleur === k && k ? '1.5px solid ' + C[k][2] : '0.5px solid rgba(34,34,34,0.10)', pick: pick(k) }));
+    const filtres = [['', 'Tous'], ['rouge', 'Rouge'], ['orange', 'Orange'], ['vert', 'Vert']].map(([k, label]) => {
+      const on = s.couleur === k;
+      return { label, dot: C[k][2], bg: on ? '#232220' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#232220' : 'rgba(34,34,34,0.18)', pick: () => this.setState({ couleur: k }) };
+    });
+    const liste = ((d && d.commentaires) || []).filter(c => (!s.couleur || c.couleur === s.couleur) && (!s.compte || c.compteKey === s.compte)
+      && (!s.nonTraites || !c.traite));
+    // Rouge d'abord, puis orange, puis vert ; à couleur égale, le plus récent d'abord.
+    const ordre = { rouge: 0, orange: 1, '': 2, vert: 3 };
+    liste.sort((a, b) => ((a.traite ? 1 : 0) - (b.traite ? 1 : 0)) || (ordre[a.couleur || ''] - ordre[b.couleur || '']) || String(b.le).localeCompare(String(a.le)));
+    const dl = (x) => SA && x ? SA.dShort(x.slice(0, 10)) + ' ' + x.slice(11, 16) : '';
+    const rows = liste.map(c => {
+      const [cBg, cFg, cDot, cLab] = C[c.couleur || ''];
+      return { couleur: cLab, cBg, cFg, cDot, sujet: c.sujet || '—', source: c.analyse === 'ia' ? 'analyse Claude' : c.analyse === 'regles' ? 'règles simples' : 'pas encore classé',
+        meta: [c.auteur || 'Anonyme', dl(c.le), (/^(Instagram|Publicité)/.test(c.compte) ? c.compte : (c.canal === 'ig' ? 'Instagram · ' : 'Facebook · ') + c.compte), c.boutique, c.masque ? 'masqué' : ''].filter(Boolean).join(' · '),
+        message: c.message || '(sans texte)', hasResume: !!c.resume, resume: c.resume || '', publication: c.publication ? (c.publication.length > 220 ? c.publication.slice(0, 220) + '…' : c.publication) : '—',
+        hasLienPub: !!c.lienPublication, lienPub: c.lienPublication || '#', hasAction: !!c.action, action: c.action || '', hasReponse: !!c.reponse, reponse: c.reponse || '',
+        copier: () => this.copier(c), traite: !!c.traite, toggle: () => this.traiter(c), traiteInfo: c.traite ? 'le ' + dl(c.traiteLe) + (c.traitePar ? ' · ' + c.traitePar : '') : '',
+        hasLien: !!c.lien, lien: c.lien || '#', bg: c.traite ? '#FBFAF8' : '#FFFFFF' };
+    });
+    const relu = d && d.relu, ia = (d && d.ia) || {};
+    const erreurs = relu && relu.erreurs && relu.erreurs.length ? 'Comptes non lus à la dernière relecture : ' + relu.erreurs.join(' · ') : '';
+    return {
+      periods: [[1, '24 h'], [7, '7 j'], [14, '14 j'], [30, '30 j']].map(([j, label]) => ({ label, bg: s.jours === j ? '#232220' : 'transparent', fg: s.jours === j ? '#FFFFFF' : '#444444', pick: () => this.load(j) })),
+      relire: () => this.relire(), relireLabel: s.busy ? 'Relecture et analyse…' : 'Relire chez Meta', relireOp: s.busy ? 0.6 : 1,
+      hasMsg: !!s.msg, msg: s.msg, msgBg: s.msgKind === 'err' ? '#F6DCDF' : s.msgKind === 'warn' ? '#FCE7C8' : '#E2F0E8', msgFg: s.msgKind === 'err' ? '#8D1D2C' : s.msgKind === 'warn' ? '#6b3d0a' : '#0F6B4A',
+      kpis, filtres, compte: s.compte, comptes: ((d && d.comptes) || []).map(c => ({ key: c.key, name: c.name })), setCompte: (e) => this.setState({ compte: e.target.value }),
+      nonTraites: s.nonTraites, toggleNonTraites: () => this.setState({ nonTraites: !s.nonTraites }),
+      etat: (relu ? 'Relu le ' + dl(relu.le) + ' · ' : 'Jamais relu · ') + (ia.configure ? 'analyse par Claude' + (ia.modele ? ' (' + ia.modele + ')' : '') : 'analyse par règles simples (clé Claude : Paramètres → Rédaction IA)')
+        + ' · relu automatiquement toutes les heures',
+      hasErreurs: !!erreurs, erreurs, loading: s.loading && !d, hasErr: !!s.err, err: s.err, showTable: !!d,
+      head: ['Analyse', 'Commentaire', 'Publication', 'Action conseillée · réponse', 'Suivi'], rows,
+      noRows: !!d && !rows.length, noRowsText: (d && d.totaux && d.totaux.total) ? 'Aucun commentaire pour ce filtre.' : 'Aucun commentaire sur la période. Cliquez sur « Relire chez Meta » pour les lire.',
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -22,7 +22,7 @@ try {
     socInstall();
     $r = match ($tache) {
         'queue' => ['publies' => count(socRunQueue())],
-        'sync'  => ['campagnes' => Meta::configured() ? socCampagnesMetaImporter(false)['total'] : 0, 'ads' => socAdsSync(), 'leads' => socLeadsSync(), 'results' => socResultsSync(), 'instagram' => socIgMediaSync(), 'commentaires' => socDarkCommentsSync()],
+        'sync'  => ['campagnes' => Meta::configured() ? socCampagnesMetaImporter(false)['total'] : 0, 'ads' => socAdsSync(), 'leads' => socLeadsSync(), 'results' => socResultsSync(), 'instagram' => socIgMediaSync(), 'commentaires' => socDarkCommentsSync(), 'pages' => socCommentairesSync()['lus'], 'classes' => socCommentairesAnalyser()['classes']],
         'conn'  => ['boutiques' => count(socTestConnexions())],
         'ids'   => socIdsAuto(),
         'audit' => socAuditRun(),

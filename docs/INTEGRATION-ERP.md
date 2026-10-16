@@ -84,7 +84,7 @@ Franchiseur (session `auth`) :
 `POST /posts/{id}/relancer` · `POST /connexions/test` · `POST /sync` · `POST /parametres` ·
 `POST /parametres/cles` · `POST /parametres/tfb` · `GET /meta/portefeuille` ·
 `POST /meta/portefeuille/rafraichir` · `POST /meta/portefeuille/appliquer` ·
-`GET|POST /meta/ids/auto` · `POST /meta/ids/auto/lancer` · `GET /meta/campagnes` · `GET /meta/comptes[?forcer=1]` (devise et minimums Meta des comptes pub) ·
+`GET|POST /meta/ids/auto` · `POST /meta/ids/auto/lancer` · `GET /meta/campagnes` · `GET /meta/comptes[?forcer=1]` (devise et minimums Meta des comptes pub) · `GET /commentaires?jours=` · `POST /commentaires/relire` · `POST /commentaires/traiter` (commentaires de toutes les Pages et de l'Instagram, classés vert / orange / rouge) ·
 `POST /meta/campagnes/rafraichir` · `GET /operations` · `POST /operations/rattacher` · `GET /meta/calendriers?du=&au=` · `GET /meta/post-stats?id=&compte=` · `GET /suivi/abonnes?jours=7|28|90` ·
 `GET|POST /audit/api` · `GET|POST /instagram/grille` · `GET|POST /darkposts/commentaires` ·
 `POST /darkposts/commentaires/{id}/masquer` · `GET /franchise/admin` ·
