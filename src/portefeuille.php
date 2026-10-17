@@ -58,6 +58,21 @@ function socDevinerBoutique(string $libelle, array $shops): ?string
 }
 
 /**
+ * La boutique que cite un texte libre (un message privé, un commentaire, la publication commentée) : le premier texte
+ * qui en nomme une seule l'emporte ; null si aucun n'en nomme, ou si un texte en nomme plusieurs. Les boutiques de
+ * test sont écartées.
+ */
+function socBoutiqueCitee(array $textes): ?string
+{
+    $shops = socReseau();
+    foreach ($textes as $t) {
+        $g = socDevinerBoutique((string) $t, $shops);
+        if ($g !== null && $g !== 'marque') { return $g; }
+    }
+    return null;
+}
+
+/**
  * Un libellé de la marque : « L'Atelier By », « latelierby.be », « L'Atelier By réseau »… — rien d'autre une fois
  * retirés ces mots. « L'Atelier by - Gembloux » ou « L'Atelier by Harmonie » (une boutique,
  * son franchisé) ne sont pas la marque.

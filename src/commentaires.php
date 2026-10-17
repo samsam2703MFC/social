@@ -74,11 +74,15 @@ function socCommentaireGarder(string $canal, array $x, array $objet, array $comp
     string $texteObjet, string $lienObjet, string $lien, bool $masque): void
 {
     $t = strtotime($quand) ?: time();
+    // La marque n'a pas d'écran des commentaires : ceux d'un compte du réseau vont à la boutique qu'ils citent
+    // (dans le commentaire, sinon dans la publication) ; les autres restent au réseau (application Instagram ou Facebook).
+    $shop = $compte['shop'] ?? null;
+    if ($shop === null || $shop === 'marque') { $shop = socBoutiqueCitee([$message, $texteObjet]) ?? $shop; }
     Db::exec('INSERT INTO social_commentaire (id, canal, objet_id, shop_id, post_id, pub_id, auteur, message, cree_le, masque, maj_le, compte, compte_nom, objet_texte, objet_lien, lien, vu_le)'
         . ' VALUES (?,?,?,?,NULL,NULL,?,?,?,?,?,?,?,?,?,?,NOW())'
         . ' ON DUPLICATE KEY UPDATE message = VALUES(message), masque = VALUES(masque), maj_le = VALUES(maj_le), compte = VALUES(compte), compte_nom = VALUES(compte_nom),'
         . ' objet_texte = VALUES(objet_texte), objet_lien = VALUES(objet_lien), lien = VALUES(lien)',
-        [(string) $x['id'], $canal, (string) ($objet['id'] ?? ''), $compte['shop'] ?? null, mb_substr($auteur, 0, 160), mb_substr($message, 0, 5000),
+        [(string) $x['id'], $canal, (string) ($objet['id'] ?? ''), $shop, mb_substr($auteur, 0, 160), mb_substr($message, 0, 5000),
             date('Y-m-d H:i:s', $t), $masque ? 1 : 0, date('Y-m-d H:i:s'), (string) $compte['id'],
             mb_substr($canal === 'ig' ? 'Instagram' . ($compte['name'] ? ' · ' . $compte['name'] : '') : (string) $compte['name'], 0, 160),
             mb_substr($texteObjet, 0, 1500), mb_substr($lienObjet, 0, 500), mb_substr($lien, 0, 500)]);
@@ -129,6 +133,15 @@ function socCommentairesReprise(): void
                 [$a['couleur'], mb_substr((string) $a['sujet'], 0, 80), mb_substr((string) $a['action'], 0, 300), (string) $r['id']]);
         }
         socSettingPut('commentaires_regles_version', SOC_COM_REGLES_VERSION, false);
+    }
+    // Une fois : les commentaires d'un compte du réseau (non traités) vont à la boutique qu'ils citent.
+    if (!socSetting('commentaires_routage')) {
+        foreach (Db::rows("SELECT id, message, objet_texte FROM social_commentaire WHERE canal IN ('fb','ig') AND (shop_id IS NULL OR shop_id = 'marque') AND traite_le IS NULL") as $r) {
+            if (($sid = socBoutiqueCitee([(string) $r['message'], (string) $r['objet_texte']])) !== null) {
+                Db::exec('UPDATE social_commentaire SET shop_id = ? WHERE id = ?', [$sid, (string) $r['id']]);
+            }
+        }
+        socSettingPut('commentaires_routage', date('Y-m-d H:i:s'), false);
     }
     if (SocIa::configured() && !socSetting('commentaires_ia_reprise')) {
         Db::exec("UPDATE social_commentaire SET couleur = NULL WHERE analyse = 'regles' AND traite_le IS NULL AND (cree_le >= ? OR canal = 'gg')",
@@ -248,7 +261,7 @@ function socCommentairesListe(array $q): array
             'couleur' => $r['couleur'] ?? null, 'sujet' => (string) ($r['sujet'] ?? ''), 'resume' => (string) ($r['resume'] ?? ''), 'action' => (string) ($r['action'] ?? ''),
             'reponse' => (string) ($r['reponse'] ?? ''), 'analyse' => (string) ($r['analyse'] ?? ''), 'note' => $r['note'] !== null ? (int) $r['note'] : null, 'traite' => $r['traite_le'] !== null,
             // Qui traite, depuis quand, en retard ou non ; la réponse publiée depuis l'outil.
-            'vuLe' => substr($vu, 0, 16), 'ageH' => $age, 'enRetard' => $retard, 'responsable' => $resp, 'escalade' => $retard && $resp === 'franchise',
+            'vuLe' => substr($vu, 0, 16), 'ageH' => $age, 'enRetard' => $retard, 'responsable' => $resp, 'escalade' => $retard && $resp === 'franchise' && $r['canal'] === 'gg',
             'peutRepondre' => in_array($r['canal'], ['fb', 'ig'], true), 'reponseEnvoyee' => (string) ($r['reponse_envoyee'] ?? ''),
             'reponseLe' => $r['reponse_le'] !== null ? substr((string) $r['reponse_le'], 0, 16) : null, 'reponsePar' => (string) ($r['reponse_par'] ?? ''),
             'traiteLe' => $r['traite_le'] !== null ? substr((string) $r['traite_le'], 0, 16) : null, 'traitePar' => (string) ($r['traite_par'] ?? '')];
@@ -279,13 +292,15 @@ const SOC_COM_VU = "COALESCE(c.vu_le, IF(c.canal = 'gg', c.maj_le, c.cree_le))";
 /**
  * Qui traite un commentaire : le réseau pour ses propres comptes (Page de la marque, Instagram du réseau) et, selon la
  * règle de l'espace franchisé (« rouges », réseau par défaut), pour les rouges ; la boutique pour le reste de sa Page.
- * Un orange qu'une boutique laisse sans réponse au-delà du délai remonte au réseau (`escalade`).
+ * Les commentaires Facebook et Instagram sont à la boutique, rouges compris : la marque n'a pas d'écran pour eux. Les avis
+ * Google rouges suivent la règle « rouges » (la marque garde l'écran Avis Google) ; un avis qu'une boutique laisse sans
+ * réponse au-delà du délai y remonte (`escalade`).
  */
 function socComResponsable(array $r, array $regles): string
 {
     $shop = (string) ($r['shop_id'] ?? '');
     if ($shop === '' || $shop === 'marque') { return 'reseau'; }
-    if (($r['couleur'] ?? '') === 'rouge' && ($regles['rouges'] ?? 'reseau') === 'reseau') { return 'reseau'; }
+    if (($r['canal'] ?? '') === 'gg' && ($r['couleur'] ?? '') === 'rouge' && ($regles['rouges'] ?? 'reseau') === 'reseau') { return 'reseau'; }
     return 'franchise';
 }
 
@@ -310,16 +325,16 @@ function socCommentairesAlertes(?string $shop = null): array
     $lim = date('Y-m-d H:i:s', strtotime('-' . (int) $regles['delaiReponseHeures'] . ' hours'));
     $vide = static fn () => ['rouges' => 0, 'oranges' => 0, 'enRetard' => 0, 'pourBoutique' => 0, 'pourReseau' => 0];
     $out = ['com' => $vide(), 'google' => $vide()];
-    foreach (Db::rows("SELECT c.canal = 'gg' AS gg, c.couleur, c.shop_id, " . SOC_COM_VU . ' < ? AS retard, COUNT(*) n FROM social_commentaire c'
-        . " WHERE c.traite_le IS NULL AND c.couleur IN ('rouge','orange')" . ($shop !== null ? ' AND c.shop_id = ?' : '') . ' GROUP BY gg, c.couleur, c.shop_id, retard',
+    foreach (Db::rows("SELECT c.canal, c.canal = 'gg' AS gg, c.couleur, c.shop_id, " . SOC_COM_VU . ' < ? AS retard, COUNT(*) n FROM social_commentaire c'
+        . " WHERE c.traite_le IS NULL AND c.couleur IN ('rouge','orange')" . ($shop !== null ? ' AND c.shop_id = ?' : '') . ' GROUP BY c.canal, gg, c.couleur, c.shop_id, retard',
         $shop !== null ? [$lim, $shop] : [$lim]) as $r) {
         $k = (int) $r['gg'] ? 'google' : 'com'; $n = (int) $r['n'];
         $out[$k][$r['couleur'] === 'rouge' ? 'rouges' : 'oranges'] += $n;
         if ((int) $r['retard']) { $out[$k]['enRetard'] += $n; }
         $resp = socComResponsable($r, $regles);
         if ($resp === 'franchise') { $out[$k]['pourBoutique'] += $n; }
-        // Le réseau traite ce qui lui revient, plus ce qu'une boutique a laissé passer au-delà du délai (escalade).
-        if ($resp === 'reseau' || (int) $r['retard']) { $out[$k]['pourReseau'] += $n; }
+        // Le réseau traite ce qui lui revient ; pour les avis Google, plus ce qu'une boutique a laissé passer au-delà du délai.
+        if ($resp === 'reseau' || ((int) $r['retard'] && $k === 'google')) { $out[$k]['pourReseau'] += $n; }
     }
     return $out;
 }

@@ -1672,9 +1672,9 @@ Db::exec("UPDATE social_commentaire SET vu_le = ? WHERE id = '111_c1_2'", [date(
 Db::exec("UPDATE social_commentaire SET vu_le = NOW() WHERE id IN ('111_c1_1', '111_c1_3', 'igc_1')");
 $_GET = ['jours' => '30']; [, $b] = socRoute('GET', '/commentaires'); $_GET = [];
 $cm = array_column($b['commentaires'], null, 'id');
-check('qui traite : rouge → le réseau (règle par défaut), orange de la boutique → la boutique, Instagram du réseau → le réseau', $cm['111_c1_3']['responsable'] === 'reseau'
+check('qui traite : les commentaires d’une Page de boutique sont à la boutique, rouges compris (plus d’écran côté marque) ; Instagram du réseau sans boutique citée → le réseau', $cm['111_c1_3']['responsable'] === 'franchise'
     && $cm['111_c1_2']['responsable'] === 'franchise' && $cm['igc_1']['responsable'] === 'reseau', json_encode(array_column($b['commentaires'], 'responsable', 'id')));
-check('retard : un orange vu il y a 30 h et non traité est en retard et remonte au réseau ; total en retard', $cm['111_c1_2']['enRetard'] === true && $cm['111_c1_2']['escalade'] === true
+check('retard : un orange vu il y a 30 h et non traité est en retard (sans remonter au réseau, qui n’a plus d’écran des commentaires) ; total en retard', $cm['111_c1_2']['enRetard'] === true && $cm['111_c1_2']['escalade'] === false
     && $cm['111_c1_2']['ageH'] >= 29 && $cm['111_c1_3']['enRetard'] === false && $b['totaux']['enRetard'] === 1, json_encode([$cm['111_c1_2']['ageH'], $b['totaux']]));
 $_GET = ['jours' => '30', 'enRetard' => '1']; [, $b2] = socRoute('GET', '/commentaires'); $_GET = [];
 check('filtre « en retard »', array_column($b2['commentaires'], 'id') === ['111_c1_2']);
@@ -1711,8 +1711,8 @@ sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
 [$cF] = $fr('POST', '/franchise/commentaires/repondre', ['id' => '111_c1_2', 'message' => 'Bonjour Marc, jusqu’à dimanche !']);
 [$cF2] = $fr('POST', '/franchise/commentaires/traiter', ['id' => '111_c1_3', 'traite' => false]);
 [$cF3] = $fr('POST', '/franchise/commentaires/repondre', ['id' => '111_c1_3', 'message' => 'Désolé']);
-check('franchisé : répond lui-même à un orange de sa Page (au nom de sa Page) ; un rouge est pris en charge par le réseau (403)', $cF === 200 && (end($repl)[0] ?? '') === '111_c1_2/comments'
-    && Db::row("SELECT reponse_par FROM social_commentaire WHERE id = '111_c1_2'")['reponse_par'] === 'Gérant Halle' && $cF2 === 403 && $cF3 === 403, json_encode([$cF, $cF2, $cF3]));
+check('franchisé : répond lui-même aux commentaires de sa Page (au nom de sa Page), rouges compris : les rouvre, y répond', $cF === 200 && in_array('111_c1_2/comments', array_column($repl, 0), true)
+    && Db::row("SELECT reponse_par FROM social_commentaire WHERE id = '111_c1_2'")['reponse_par'] === 'Gérant Halle' && $cF2 === 200 && $cF3 === 200 && (end($repl)[0] ?? '') === '111_c1_3/comments', json_encode([$cF, $cF2, $cF3]));
 [, $etF] = $fr('GET', '/franchise/etat');
 check('franchisé : ses alertes dans son état (ce que la boutique doit traiter)', isset($etF['alertes']['com']['pourBoutique']) && $etF['alertes']['com']['rouges'] === 0, json_encode($etF['alertes'] ?? null));
 $regV2 = sfRegles();
@@ -1720,10 +1720,23 @@ sfReglesPut(array_merge($regV2, ['rouges' => 'franchise']));
 [$cF4] = $fr('POST', '/franchise/commentaires/traiter', ['id' => '111_c1_3', 'traite' => true]);
 sfReglesPut(array_merge($regV2, ['repondreCommentaires' => false]));
 [$cF5] = $fr('POST', '/franchise/commentaires/repondre', ['id' => '111_c1_2', 'message' => 'Re']);
-check('règles : rouges confiés à la boutique → elle les traite ; réponse depuis l’outil coupée → 403 ; délai borné', $cF4 === 200 && $cF5 === 403
+check('règles : la boutique traite ses rouges ; réponse depuis l’outil coupée → 403 ; délai borné', $cF4 === 200 && $cF5 === 403
     && sfReglesPut(array_merge($regV2, ['delaiReponseHeures' => 999]))['delaiReponseHeures'] === 168);
 sfReglesPut($regV2); unset($_COOKIE[SF_COOKIE]);
 Meta::$transport = $metaAvant;
+// Plus d'écran côté marque : un commentaire d'un compte du réseau va à la boutique qu'il cite (le commentaire, sinon la publication).
+$cptReseau = ['shop' => 'marque', 'id' => '17841', 'name' => 'Réseau'];
+socCommentaireGarder('ig', ['id' => 'rt_c1'], ['id' => 'mr1'], $cptReseau, 'Zoé', 'Super accueil à Wavre hier !', date('c'), 'La nouvelle gamme', '', '', false);
+socCommentaireGarder('ig', ['id' => 'rt_c2'], ['id' => 'mr2'], $cptReseau, 'Léo', 'Halle ou Wavre, laquelle ouvre dimanche ?', date('c'), 'Ouverture exceptionnelle à Halle', '', '', false);
+socCommentaireGarder('ig', ['id' => 'rt_c3'], ['id' => 'mr3'], $cptReseau, 'Max', 'Miam 😍', date('c'), 'La nouvelle gamme dans toutes nos boutiques', '', '', false);
+$shRt = array_column(Db::rows("SELECT id, shop_id FROM social_commentaire WHERE id IN ('rt_c1','rt_c2','rt_c3')"), 'shop_id', 'id');
+check('commentaire du compte réseau : à la boutique citée (commentaire, sinon publication) ; aucune citée → reste au réseau', $shRt['rt_c1'] === '5' && $shRt['rt_c2'] === '4' && $shRt['rt_c3'] === 'marque', json_encode($shRt));
+Db::exec("INSERT INTO social_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le) VALUES ('rt_c4', 'ig', 'mr4', NULL, 'Eva', 'Vous livrez à Wavre ?', NOW(), 0, NOW())");
+$routAvant = socSetting('commentaires_routage'); socSettingPut('commentaires_routage', null, false);
+socCommentairesReprise();
+check('une fois : les commentaires déjà gardés du compte réseau vont à la boutique citée', Db::row("SELECT shop_id FROM social_commentaire WHERE id = 'rt_c4'")['shop_id'] === '5' && socSetting('commentaires_routage') !== null);
+socSettingPut('commentaires_routage', $routAvant, false);
+Db::exec("DELETE FROM social_commentaire WHERE id IN ('rt_c1','rt_c2','rt_c3','rt_c4')");
 $_GET = ['jours' => '30']; [, $b] = socRoute('GET', '/commentaires'); $_GET = [];
 check('délai médian de traitement (rouges et oranges traités)', is_float($b['totaux']['delaiMedianH']) && $b['totaux']['delaiMedianH'] >= 0, json_encode($b['totaux']));
 Db::exec("DELETE FROM social_commentaire WHERE id = 'wavre_c1'");
@@ -2153,8 +2166,20 @@ check('règles : réponse coupée → 403 ; messages masqués → rien, 403', $c
 $GLOBALS['MSG_REFUS'] = true; $syR = socMessagesSync(); unset($GLOBALS['MSG_REFUS']);
 check('permission refusée par Meta : l’erreur nomme la permission et le réglage Instagram', str_contains(implode(' ', $syR['erreurs']), 'instagram_manage_messages') && str_contains(implode(' ', $syR['erreurs']), 'Autoriser l’accès aux messages'), json_encode($syR['erreurs']));
 check('alertes : à répondre pour le réseau (non confiées) dans l’état', isset($stM['alertes']['messages']['aRepondre']));
+// Plus d'écran côté marque : une conversation du compte du réseau va d'elle-même à la boutique que le client cite.
+$cptIgReseau = ['id' => '9990', 'key' => 'ig:9990', 'page' => '111', 'shop' => 'marque', 'token' => 'PT111', 'name' => 'Réseau'];
+$cvR = static fn (string $id, string $txt) => ['id' => $id, 'updated_time' => date('c'), 'participants' => ['data' => [['id' => '9990', 'username' => 'latelierby'], ['id' => 'ig_' . $id, 'username' => 'client_' . $id]]],
+    'messages' => ['data' => [['id' => 'm_' . $id, 'created_time' => date('c', strtotime('-5 minutes')), 'from' => ['id' => 'ig_' . $id, 'username' => 'client_' . $id], 'message' => $txt]]]];
+socMsgGarder($cvR('cvr1', 'Bonjour, ma commande à retirer à Wavre est-elle prête ?'), $cptIgReseau);
+socMsgGarder($cvR('cvr2', 'Vous faites des gâteaux d’anniversaire ?'), $cptIgReseau);
+$r1 = Db::row("SELECT attribue_shop, attribue_par, attribue_note FROM social_conversation WHERE id = 'cvr1'"); $r2 = Db::row("SELECT attribue_shop FROM social_conversation WHERE id = 'cvr2'");
+sfSessionOuvrir(['5'], 'Gérant Wavre', 'code');
+[, $sfW] = $fr('GET', '/franchise/messages', [], ['shop' => '5']);
+unset($_COOKIE[SF_COOKIE]);
+check('message privé du compte réseau : confié tout seul à la boutique citée, qui le voit ; aucune citée → reste au réseau', $r1['attribue_shop'] === '5' && $r1['attribue_par'] === 'Automatique'
+    && str_contains((string) $r1['attribue_note'], 'Wavre') && $r2['attribue_shop'] === null && in_array('cvr1', array_column($sfW['conversations'], 'id'), true), json_encode([$r1, $r2, array_column($sfW['conversations'] ?? [], 'id')]));
 Meta::$transport = $metaAvantM;
-Db::exec("DELETE FROM social_message WHERE conversation_id IN ('cv1','cv2','cv3')"); Db::exec("DELETE FROM social_conversation WHERE id IN ('cv1','cv2','cv3')"); socSettingPut('messages_relus', null, false);
+Db::exec("DELETE FROM social_message WHERE conversation_id IN ('cv1','cv2','cv3','cvr1','cvr2')"); Db::exec("DELETE FROM social_conversation WHERE id IN ('cv1','cv2','cv3','cvr1','cvr2')"); socSettingPut('messages_relus', null, false);
 
 echo "Idées de posts : promotions sans post, opérations, gammes, heures creuses (BO)\n";
 $auj = date('Y-m-d'); $j = static fn (int $n) => date('Y-m-d', strtotime($auj . ' ' . ($n >= 0 ? '+' : '') . $n . ' days'));

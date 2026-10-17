@@ -7,11 +7,11 @@ declare(strict_types=1);
  * dans ses réglages « Outils connectés »). Les messages privés de Facebook (Messenger) demandent `pages_messaging`,
  * que le token n'a pas : la boîte le dit, sans rien tenter.
  *
- *  - La marque : toutes les conversations des comptes Instagram (en Instagram unique, celui du réseau), celles à
- *    répondre d'abord ; elle répond, marque traité, ou confie une conversation à une boutique (question sur une
- *    commande, des horaires, un retrait) — la boutique la voit alors dans son espace.
- *  - La boutique : les conversations que le réseau lui a confiées, et celles de son propre Instagram s'il en a un ;
- *    elle répond (règle « repondreMessages ») — sa réponse part du compte Instagram de la conversation.
+ *  - Les messages privés sont l'affaire des boutiques : la marque n'a pas d'écran pour eux. Une conversation du compte
+ *    du réseau va d'elle-même à la boutique que le client cite (socMsgRouter) ; sans boutique citée, elle reste dans
+ *    l'application Instagram du réseau. L'API garde l'attribution manuelle (`/messages/attribuer`).
+ *  - La boutique : les conversations qui la citent, et celles de son propre Instagram s'il en a un ; elle répond
+ *    (règle « repondreMessages ») — sa réponse part du compte Instagram de la conversation.
  *
  * Meta n'autorise une réponse que dans les 24 h qui suivent le dernier message du client (fenêtre standard) : au-delà,
  * l'outil le dit et renvoie vers l'application Instagram. Rien n'est envoyé à Claude.
@@ -90,6 +90,7 @@ function socMsgGarder(array $cv, array $c): int
     if ($der && (string) $der['texte'] === '' && $der['pieces']) { $der['texte'] = 'Photo ou vidéo'; }
     $dIn = Db::row("SELECT MAX(cree_le) d FROM social_message WHERE conversation_id = ? AND sens = 'in'", [(string) $cv['id']])['d'] ?? null;
     $shop = $c['shop'] !== null && $c['shop'] !== 'marque' ? (string) $c['shop'] : null;
+    $idc = (string) $cv['id'];
     $maintenant = date('Y-m-d H:i:s');
     Db::exec('INSERT INTO social_conversation (id, canal, compte, page_id, shop_id, client_id, client_nom, dernier_le, dernier_sens, dernier_texte, dernier_in_le, vu_le, maj_le)
         VALUES (?,\'ig\',?,?,?,?,?,?,?,?,?,?,?)
@@ -98,7 +99,23 @@ function socMsgGarder(array $cv, array $c): int
             traite_le = IF(VALUES(dernier_in_le) IS NOT NULL AND traite_le IS NOT NULL AND VALUES(dernier_in_le) > traite_le, NULL, traite_le)',
         [(string) $cv['id'], (string) $c['key'], (string) $c['page'], $shop, $clientId, mb_substr($clientNom, 0, 120),
          $der['cree_le'] ?? null, $der['sens'] ?? null, mb_substr((string) ($der['texte'] ?? ''), 0, 500), $dIn, $maintenant, $maintenant]);
+    socMsgRouter($idc);
     return $n;
+}
+
+/**
+ * Une conversation du compte du réseau, que personne n'a encore confiée, va à la boutique que le client cite dans ses
+ * messages (« Halle », « Corbais »…) : c'est elle qui la voit et y répond. Sans boutique citée, elle reste au réseau
+ * (application Instagram).
+ */
+function socMsgRouter(string $id): void
+{
+    $c = Db::row('SELECT shop_id, attribue_shop FROM social_conversation WHERE id = ?', [$id]);
+    if (!$c || $c['shop_id'] !== null || $c['attribue_shop'] !== null) { return; }
+    $sid = socBoutiqueCitee(array_column(Db::rows("SELECT texte FROM social_message WHERE conversation_id = ? AND sens = 'in' ORDER BY cree_le, id", [$id]), 'texte'));
+    if ($sid === null) { return; }
+    Db::exec('UPDATE social_conversation SET attribue_shop = ?, attribue_par = ?, attribue_le = ?, attribue_note = ? WHERE id = ? AND attribue_shop IS NULL',
+        [$sid, 'Automatique', date('Y-m-d H:i:s'), 'Le client cite la boutique ' . (socMsgNoms()[$sid] ?? $sid) . '.', $id]);
 }
 
 /** Une conversation, telle que l'écran la montre (sans ses messages). */

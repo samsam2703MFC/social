@@ -29,17 +29,17 @@
   <dc-import name="FNav" active="msg" hint-size="228px,100vh"></dc-import>
   <main class="sf-main" style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
     <header style="display:flex;flex-direction:column;gap:4px;">
-      <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Messages privés Instagram confiés à L’Atelier By {{ shopName }} par le réseau</span>
+      <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Messages privés Instagram de L’Atelier By {{ shopName }}</span>
       <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">MESSAGES PRIVES</h1>
     </header>
     <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:12px 14px;font-size:13px;">{{ errText }}</div></sc-if>
     <sc-if value="{{ masque }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Le réseau ne partage pas les messages privés dans l’espace boutique.</div></sc-if>
     <sc-if value="{{ visible }}" hint-placeholder-val="{{ true }}">
-      <span style="font-size:12px;line-height:1.5;color:#666666;">Quand un client écrit au réseau sur Instagram à propos de votre boutique (une commande, un retrait, vos horaires…), le réseau vous confie la conversation : elle apparaît ici. {{ repondreNote }}</span>
+      <span style="font-size:12px;line-height:1.5;color:#666666;">Quand un client écrit sur Instagram en citant votre boutique (une commande, un retrait, vos horaires…), la conversation vous est confiée automatiquement : elle apparaît ici. {{ repondreNote }}</span>
       <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
         <section class="msg-list" data-sel="{{ selFlag }}" style="flex:1 1 300px;min-width:0;max-width:420px;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:hidden;display:flex;flex-direction:column;">
           <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="padding:22px 16px;text-align:center;font-size:13px;color:#666666;">Lecture des conversations…</div></sc-if>
-          <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="padding:22px 16px;text-align:center;font-size:13px;color:#666666;line-height:1.5;">Aucune conversation confiée à votre boutique ces 30 derniers jours.</div></sc-if>
+          <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="padding:22px 16px;text-align:center;font-size:13px;color:#666666;line-height:1.5;">Aucun message privé pour votre boutique ces 30 derniers jours.</div></sc-if>
           <sc-for list="{{ convs }}" as="c" hint-placeholder-count="0">
             <button onClick="{{ c.open }}" style="display:flex;gap:10px;align-items:flex-start;text-align:left;border:none;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ c.bg }};padding:12px 14px;cursor:pointer;width:100%;">
               <span style="width:34px;height:34px;border-radius:50%;background:#F4EFE8;color:#8D1D2C;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex:0 0 auto;">{{ c.ini }}</span>
@@ -123,7 +123,7 @@ class Component extends DCLogic {
     if (s.selId) {
       const c = cv ? cv.conversation : ((B && B.conversations) || []).find(x => x.id === s.selId) || { client: '…' };
       sel = { client: c.client, sub: 'Instagram du réseau' + (c.dernierLe ? ' · dernier message ' + quand(c.dernierLe) : '') + (c.reponduPar ? ' · répondu par ' + c.reponduPar : ''),
-        hasNote: !!c.attribue, noteText: 'Confiée par ' + (c.attribuePar || 'le réseau') + (c.note ? ' : « ' + c.note + ' »' : '') + '.', traiterLabel: c.aRepondre ? 'Marquer traitée' : 'Rouvrir',
+        hasNote: !!c.attribue, noteText: c.attribuePar === 'Automatique' ? (c.note || 'Confiée automatiquement : le client cite votre boutique.') : 'Confiée par ' + (c.attribuePar || 'le réseau') + (c.note ? ' : « ' + c.note + ' »' : '') + '.', traiterLabel: c.aRepondre ? 'Marquer traitée' : 'Rouvrir',
         msgs: (cv ? cv.messages : []).map(m => ({ side: m.sens === 'out' ? 'flex-end' : 'flex-start', bg: m.sens === 'out' ? '#8D1D2C' : '#F4EFE8', fg: m.sens === 'out' ? '#FFFFFF' : '#222222', texte: m.texte,
           pieces: (m.pieces || []).map(p => ({ url: p.url, label: p.type === 'video' ? 'Vidéo ↗' : p.type === 'image' ? 'Photo ↗' : 'Pièce jointe ↗' })), meta: quand(m.le) + (m.sens === 'out' && m.par ? ' · ' + m.par : '') })),
         peutEcrire: peut && !!c.fenetre, fenetreFermee: peut && !c.fenetre && !!cv, lectureSeule: !peut,

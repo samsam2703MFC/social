@@ -406,7 +406,7 @@
         ['d3', 'Julie D.', 'Trop bon !! 😍', h(1, '12:30'), 'vert', 'Compliment', 'Apprécie la tarte.', 'Un j’aime suffit.', 'Merci beaucoup Julie !'],
       ].map(([id, auteur, message, le, couleur, sujet, resume, action, reponse]) => ({ id, canal: 'fb', compte: 'L’Atelier By ' + STATE.shop.name, compteKey: 'fb:demo', boutique: STATE.shop.name,
         auteur, message, le, masque: false, publication: pub, lienPublication: '', lien: '', couleur, sujet, resume, action, reponse, analyse: 'ia', traite: false, traiteLe: null, traitePar: '',
-        responsable: couleur === 'rouge' && STATE.rules.rouges !== 'franchise' ? 'reseau' : 'franchise', enRetard: id === 'd2', escalade: id === 'd2', ageH: id === 'd2' ? 27 : 1, peutRepondre: true, reponseEnvoyee: '' }));
+        responsable: 'franchise', enRetard: id === 'd2', escalade: false, ageH: id === 'd2' ? 27 : 1, peutRepondre: true, reponseEnvoyee: '' }));
     }
     const liste = DEMO_COM.filter(c => Math.round((d2(STATE.today) - d2(c.le.slice(0, 10))) / 864e5) < jours).map(c => Object.assign({}, c));
     const totaux = { rouge: 0, orange: 0, vert: 0, aClasser: 0, rougeOuverts: 0, orangeOuverts: 0, total: liste.length };
@@ -455,7 +455,7 @@
     if (DEMO_MSG) return DEMO_MSG;
     const h = (n) => { const d = new Date(Date.now() - n * 3600000); return STATE.today + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
     DEMO_MSG = { conv: [{ id: 'dc2', canal: 'Instagram', client: 'marc_b', dernierTexte: 'Il manquait un pain dans ma commande de ce matin', dernierSens: 'in', dernierLe: h(5), ageH: 5, fenetre: true, fenetreFin: null,
-      aRepondre: true, traiteLe: null, shop: STATE.shop.id, shopNom: STATE.shop.name, attribue: true, attribuePar: 'Sarah Lambert', note: 'Commande retirée chez vous ce matin', reponduPar: '' }],
+      aRepondre: true, traiteLe: null, shop: STATE.shop.id, shopNom: STATE.shop.name, attribue: true, attribuePar: 'Automatique', note: 'Le client cite la boutique ' + STATE.shop.name + '.', reponduPar: '' }],
       msgs: { dc2: [{ id: 'm3', sens: 'in', auteur: 'marc_b', texte: 'Bonjour, il manquait un pain dans ma commande de ce matin', le: h(5), pieces: [] }] } };
     return DEMO_MSG;
   }

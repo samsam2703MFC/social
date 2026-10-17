@@ -96,10 +96,8 @@ class Component extends DCLogic {
       ['bilan', 'Bilan des boutiques', 0],
       ['suivi', 'Suivi des boutiques', 0],
       ['ctrl', 'Contrôle', 0],
-      // Ce que le réseau doit traiter : ses rouges, et ce que les boutiques ont laissé passer au-delà du délai.
-      ['com', 'Commentaires', ((st.alertes || {}).com || {}).pourReseau || 0],
-      // Messages privés Instagram à répondre (ceux que le réseau n'a pas confiés à une boutique).
-      ['msg', 'Messages privés', ((st.alertes || {}).messages || {}).aRepondre || 0],
+      // Avis Google : ce que le réseau doit traiter (ses rouges, ce que les boutiques ont laissé passer au-delà du délai).
+      // Commentaires et messages privés : seulement dans l'espace franchisé.
       ['google', 'Avis Google', ((st.alertes || {}).google || {}).pourReseau || 0],
       ['fr', 'Espace franchisé', st.posts.filter(p => p.origin === 'franchise' && p.status === 'À valider').length],
       ['set', 'Paramètres', alerts.length],

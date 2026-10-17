@@ -41,8 +41,9 @@ function sfReglesDefaut(): array
         'voirCommentaires' => true,
         // Les avis Google de la boutique (note, cible, avis 5★ à obtenir, avis classés vert / orange / rouge).
         'voirAvisGoogle' => true,
-        // Qui répond : le franchisé publie lui-même sa réponse sous les commentaires de sa Page ; les rouges sont traités
-        // par le réseau ('reseau') ou par la boutique ('franchise') ; au-delà du délai, un orange non traité remonte au réseau.
+        // Qui répond : le franchisé publie lui-même sa réponse sous les commentaires de sa Page (rouges compris : la marque
+        // n'a pas d'écran des commentaires) ; les avis Google rouges sont traités par le réseau ('reseau') ou par la
+        // boutique ('franchise') ; au-delà du délai, un avis Google non traité remonte au réseau.
         'repondreCommentaires' => true, 'rouges' => 'reseau', 'delaiReponseHeures' => 24,
         // « Ma semaine » : la boutique voit son rang dans le réseau (régularité, réactivité, avis gagnés).
         'voirClassement' => true,
