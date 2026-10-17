@@ -480,7 +480,7 @@ function socAdHook(?array $avant, array $ad): array
     if (($avant['origin'] ?? '') === 'meta') { return socCampagneMetaHook($avant, $ad); }
     // Les champs qui viennent de Meta restent ceux du serveur.
     // Le budget ne change que sur demande explicite (`budgetDemande`, appliquée chez Meta plus bas).
-    foreach (['spent', 'reason', 'spec', 'stats', 'budget'] as $k) { if (array_key_exists($k, $avant)) { $ad[$k] = $avant[$k]; } }
+    foreach (['spent', 'reason', 'spec', 'stats', 'budget', 'clicks', 'impressions'] as $k) { if (array_key_exists($k, $avant)) { $ad[$k] = $avant[$k]; } }
     // Ce que seul le serveur écrit (post boosté, pause par la règle) : jamais pris de l'écran.
     foreach (['boost', 'autoPause', 'autoPauseLevee'] as $k) { if (array_key_exists($k, $avant)) { $ad[$k] = $avant[$k]; } else { unset($ad[$k]); } }
     // Reprise à la main d'une pub mise en pause par la règle : la règle ne la repausera plus.
@@ -673,6 +673,9 @@ function socAdsSync(): int
             $ad['ab'] = socAbVerdict($ad['stats']);
         }
         if (!$lu) { continue; }
+        // Clics et impressions cumulés (toutes variantes, toutes boutiques) : la colonne « Clics » du tableau.
+        $ad['clicks'] = (int) array_sum(array_column($parVariante, 'clicks'));
+        $ad['impressions'] = (int) array_sum(array_column($parVariante, 'impressions'));
         $statuts = array_filter($statuts);
         $s = in_array('Active', $statuts, true) ? 'Active' : (in_array('En revue', $statuts, true) ? 'En revue'
             : (in_array('Refusée', $statuts, true) ? 'Refusée' : (in_array('En pause', $statuts, true) ? 'En pause' : ($statuts ? 'Arrêtée' : ($ad['status'] ?? '')))));

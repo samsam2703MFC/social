@@ -601,7 +601,10 @@ check('reprise : pubs, ad sets et campagnes remis en ACTIVE chez Meta', count(ar
 $appels = [];
 socStateSave(['changes' => ['ads' => ['upsert' => [array_merge(socItem('ads', 'a1'), ['status' => 'En pause'])]]]]);
 socAdsSync();
-check('synchro : statut Meta ACTIVE, dépense relue', socItem('ads', 'a1')['status'] === 'Active' && (float) socItem('ads', 'a1')['spent'] === 121.5);
+check('synchro : statut Meta ACTIVE, dépense relue ; clics et impressions cumulés (colonne « Clics »)', socItem('ads', 'a1')['status'] === 'Active' && (float) socItem('ads', 'a1')['spent'] === 121.5
+    && socItem('ads', 'a1')['clicks'] === 180 && socItem('ads', 'a1')['impressions'] === 9000, json_encode(array_intersect_key(socItem('ads', 'a1'), array_flip(['spent', 'clicks', 'impressions']))));
+$a1c = socItem('ads', 'a1'); socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($a1c, ['clicks' => 999999, 'impressions' => 1])]]]]);
+check('clics et impressions : gardés par le serveur (l’écran ne les écrase pas)', socItem('ads', 'a1')['clicks'] === 180 && socItem('ads', 'a1')['impressions'] === 9000);
 check('dépense en colonne', Db::row("SELECT depense FROM social_publicite WHERE id = 'a1'")['depense'] === '121.50');
 socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a2', 'name' => 'Sans spec', 'shops' => ['5'], 'status' => 'En revue']]]]]);
 check('pub sans description d’assistant : refusée avec motif', socItem('ads', 'a2')['status'] === 'Refusée');

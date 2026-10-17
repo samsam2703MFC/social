@@ -125,7 +125,7 @@
     <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
       <!-- Tableau -->
       <section style="flex:1 1 640px;min-width:0;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
-        <div style="display:grid;grid-template-columns:minmax(190px,2fr) 150px 120px minmax(140px,1.2fr) minmax(120px,1.1fr);min-width:760px;">
+        <div style="display:grid;grid-template-columns:minmax(190px,2fr) 150px 120px minmax(140px,1.2fr) 112px minmax(120px,1.1fr);min-width:870px;">
           <sc-for list="{{ head }}" as="h" hint-placeholder-count="5"><span style="padding:10px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">{{ h }}</span></sc-for>
           <sc-for list="{{ rows }}" as="r" hint-placeholder-count="0">
             <div onClick="{{ r.pick }}" style="display:contents;cursor:pointer;">
@@ -143,6 +143,7 @@
                 <span style="font-size:11px;color:#444444;">{{ r.spentLabel }}</span>
                 <span style="height:5px;border-radius:999px;background:#EAE4DC;overflow:hidden;"><span style="display:block;height:100%;width:{{ r.spentPct }};background:{{ r.barColor }};"></span></span>
               </span>
+              <span title="{{ r.clicksTip }}" style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;justify-content:center;gap:2px;"><span style="font-size:14px;font-weight:500;color:#222222;">{{ r.clicks }}</span><span style="font-size:11px;color:#666666;">{{ r.clicksSub }}</span></span>
               <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:12px;color:#444444;display:flex;flex-direction:column;justify-content:center;gap:2px;"><span>{{ r.campName }}</span><span style="font-size:11px;color:#666666;">{{ r.shops }}</span><span style="font-size:11px;color:#8A847C;">{{ r.period }}</span></span>
             </div>
           </sc-for>
@@ -659,6 +660,14 @@ class Component extends DCLogic {
     // Le budget se change depuis la fiche (pas pour une pub non créée, arrêtée, terminée ou sans budget propre).
     const budEditable = (a) => !a.gone && !nonCreee(a) && a.budget > 0 && !['Refusée', 'Arrêtée', 'Terminée'].includes(a.status);
     const aRelancer = ads.filter(nonCreee).map(a => ({ name: a.name, reason: String(a.reason || '').replace(/^Non créée chez Meta — /, ''), relancer: () => { this.setState({ selId: a.id }); this.reprendre(a); } }));
+    // Clics relus chez Meta (toutes les heures) : campagne récupérée de Meta (ses insights) ou pub créée ici (ses pubs cumulées).
+    const clicsOf = (a) => {
+      const ins = a.origin === 'meta' ? (a.insights || {}) : null, c = ins ? ins.clicks : a.clicks, imp = ins ? ins.impressions : a.impressions;
+      if (c == null) return { clicks: '—', clicksSub: a.status === 'Refusée' ? '' : 'relu toutes les heures', clicksTip: 'Pas encore relu chez Meta' };
+      const cpc = ins && ins.cpc != null ? ins.cpc : c > 0 && a.spent ? a.spent / c : null;
+      return { clicks: SA.fmt(c), clicksSub: c === 0 ? 'aucun clic' : [cpc != null ? money(a, cpc, 2) + ' / clic' : '', imp ? SA.pct(c / imp, 1) : ''].filter(Boolean).join(' · '),
+        clicksTip: SA.fmt(c) + ' clics' + (imp ? ' pour ' + SA.fmt(imp) + ' impressions (taux de clic ' + SA.pct(c / imp, 2) + ')' : '') + (cpc != null ? ' · coût par clic ' + money(a, cpc, 2) : '') };
+    };
     const rows = sorted.map(a => {
       const sc = SA.AD_STATUS[a.status] || SA.AD_STATUS['Active'], tot = Math.min(totalOf(a), a.cap || Infinity), p = postOf(a.post);
       const ratio = tot ? a.spent / tot : 0;
@@ -669,7 +678,7 @@ class Component extends DCLogic {
         status: a.status, stBg: sc.bg, stFg: sc.fg, hasReason: (!!a.reason && a.status === 'Refusée') || (!!a.note && (!isMeta || ['Active', 'En revue'].includes(a.status))), reason: a.status === 'Refusée' ? (a.reason || '') : isMeta ? String(a.note || '').split(' : ')[0] : String(a.note || ''), period: period(a),
         // Refusée avant toute création chez Meta : relancée depuis la ligne même (l'assistant rouvert avec ses réglages).
         hasStatusSel: pilotable(a), noStatusSel: !pilotable(a), statusOpts: (STATUTS[a.status] || []).map(([v, l]) => ({ v, l })), setStatus: (e) => changerStatut(a, e.target.value), budEditable: budEditable(a),
-        bg: a.id === s.selId ? '#F4EFE8' : '#FFFFFF', pick: () => this.setState({ selId: a.id }) };
+        bg: a.id === s.selId ? '#F4EFE8' : '#FFFFFF', pick: () => this.setState({ selId: a.id }), ...clicsOf(a) };
     });
     const active = ads.filter(a => a.status === 'Active');
     // Les comptes publicitaires n'ont pas tous la même devise : un total par devise.
@@ -950,7 +959,7 @@ class Component extends DCLogic {
     };
     return Object.assign({
       openWiz: () => this.openWiz(''), closeWiz: () => this.setState({ wizOpen: false }), wizOpen: s.wizOpen && !!w,
-      kpis, head: ['Publicité', 'Statut Meta', 'Budget', 'Dépensé / restant', 'Opération · boutiques'], rows, aRelancer,
+      kpis, head: ['Publicité', 'Statut Meta', 'Budget', 'Dépensé / restant', 'Clics', 'Opération · boutiques'], rows, aRelancer,
       hasSel: !!a, noSel: !a, d,
       pause: () => this.upd(a.id, { status: 'En pause' }, '« ' + a.name + ' » mise en pause'),
       resume: () => this.upd(a.id, { status: 'Active' }, '« ' + a.name + ' » reprise'),

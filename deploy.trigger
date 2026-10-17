@@ -118,3 +118,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-10-16T20:17:16Z classement negations pause hors notoriete
 2026-10-16T20:32:30Z espace franchise integre marketing embed
 2026-10-17T05:50:04Z commentaires messages seulement franchises
+2026-10-17T14:18:35Z colonne clics publicites
