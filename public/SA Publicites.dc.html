@@ -125,7 +125,7 @@
     <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
       <!-- Tableau -->
       <section style="flex:1 1 640px;min-width:0;background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);overflow:auto;">
-        <div style="display:grid;grid-template-columns:minmax(190px,2fr) 150px 120px minmax(140px,1.2fr) 112px minmax(120px,1.1fr);min-width:870px;">
+        <div style="display:grid;grid-template-columns:minmax(190px,2fr) 150px 112px 120px minmax(140px,1.2fr) minmax(120px,1.1fr);min-width:870px;">
           <sc-for list="{{ head }}" as="h" hint-placeholder-count="5"><span style="padding:10px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">{{ h }}</span></sc-for>
           <sc-for list="{{ rows }}" as="r" hint-placeholder-count="0">
             <div onClick="{{ r.pick }}" style="display:contents;cursor:pointer;">
@@ -138,12 +138,12 @@
                 <sc-if value="{{ r.noStatusSel }}" hint-placeholder-val="{{ true }}"><span style="align-self:flex-start;font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ r.stBg }};color:{{ r.stFg }};">{{ r.status }}</span></sc-if>
                 <sc-if value="{{ r.hasReason }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;line-height:1.35;color:#8D1D2C;">{{ r.reason }}</span></sc-if>
               </span>
+              <span title="{{ r.clicksTip }}" style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;justify-content:center;gap:2px;"><span style="font-size:14px;font-weight:500;color:#222222;">{{ r.clicks }}</span><span style="font-size:11px;color:#666666;">{{ r.clicksSub }}</span></span>
               <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:12px;display:flex;flex-direction:column;justify-content:center;gap:2px;"><span>{{ r.budget }}</span><span style="font-size:11px;color:#666666;">{{ r.scope }}</span><sc-if value="{{ r.budEditable }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:500;color:#8D1D2C;">Modifier ›</span></sc-if></span>
               <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;justify-content:center;gap:4px;">
                 <span style="font-size:11px;color:#444444;">{{ r.spentLabel }}</span>
                 <span style="height:5px;border-radius:999px;background:#EAE4DC;overflow:hidden;"><span style="display:block;height:100%;width:{{ r.spentPct }};background:{{ r.barColor }};"></span></span>
               </span>
-              <span title="{{ r.clicksTip }}" style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};display:flex;flex-direction:column;justify-content:center;gap:2px;"><span style="font-size:14px;font-weight:500;color:#222222;">{{ r.clicks }}</span><span style="font-size:11px;color:#666666;">{{ r.clicksSub }}</span></span>
               <span style="padding:10px 12px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:{{ r.bg }};font-size:12px;color:#444444;display:flex;flex-direction:column;justify-content:center;gap:2px;"><span>{{ r.campName }}</span><span style="font-size:11px;color:#666666;">{{ r.shops }}</span><span style="font-size:11px;color:#8A847C;">{{ r.period }}</span></span>
             </div>
           </sc-for>
@@ -152,7 +152,7 @@
       </section>
 
       <!-- Suivi -->
-      <aside style="flex:0 1 330px;min-width:290px;display:flex;flex-direction:column;gap:14px;">
+      <aside style="flex:0 1 330px;min-width:290px;display:{{ asideDisp }};flex-direction:column;gap:14px;">
         <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
           <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
@@ -160,7 +160,7 @@
                 <span style="font-size:15px;font-weight:500;">{{ d.name }}</span>
                 <span style="font-size:12px;color:#666666;">{{ d.sub }}</span>
               </div>
-              <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ d.stBg }};color:{{ d.stFg }};white-space:nowrap;">{{ d.status }}</span>
+              <span style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ d.stBg }};color:{{ d.stFg }};white-space:nowrap;">{{ d.status }}</span><button onClick="{{ closeSel }}" title="Fermer le suivi" aria-label="Fermer le suivi" style="border:none;background:transparent;font-size:18px;line-height:1;color:#666666;cursor:pointer;padding:0 2px;font-family:inherit;">×</button></span>
             </div>
             <sc-if value="{{ d.budEditable }}" hint-placeholder-val="{{ false }}">
               <div style="border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
@@ -250,9 +250,6 @@
               </div>
             </sc-if>
           </div>
-        </sc-if>
-        <sc-if value="{{ noSel }}" hint-placeholder-val="{{ true }}">
-          <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:24px 18px;font-size:13px;color:#666666;line-height:1.5;text-align:center;">Sélectionnez une publicité pour suivre sa diffusion : dépensé, restant, pause, reprise ou arrêt.</div>
         </sc-if>
       </aside>
     </div>
@@ -959,8 +956,8 @@ class Component extends DCLogic {
     };
     return Object.assign({
       openWiz: () => this.openWiz(''), closeWiz: () => this.setState({ wizOpen: false }), wizOpen: s.wizOpen && !!w,
-      kpis, head: ['Publicité', 'Statut Meta', 'Budget', 'Dépensé / restant', 'Clics', 'Opération · boutiques'], rows, aRelancer,
-      hasSel: !!a, noSel: !a, d,
+      kpis, head: ['Publicité', 'Statut Meta', 'Clics', 'Budget', 'Dépensé / restant', 'Opération · boutiques'], rows, aRelancer,
+      hasSel: !!a, asideDisp: a ? 'flex' : 'none', closeSel: () => this.setState({ selId: null }), d,
       pause: () => this.upd(a.id, { status: 'En pause' }, '« ' + a.name + ' » mise en pause'),
       resume: () => this.upd(a.id, { status: 'Active' }, '« ' + a.name + ' » reprise'),
       stop: () => this.upd(a.id, { status: 'Arrêtée' }, '« ' + a.name + ' » arrêtée'),
