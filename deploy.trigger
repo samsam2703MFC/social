@@ -121,3 +121,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-10-17T14:18:35Z colonne clics publicites
 2026-10-18T15:43:20Z clics visibles sans defiler
 2026-10-19T12:37:26Z maquette repost auto
+2026-10-19T12:48:48Z maquette repost auto simplifiee
