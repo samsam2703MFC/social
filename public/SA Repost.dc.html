@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+  <script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+  <script src="social-data.js"></script>
+  <style>
+    html,body{margin:0;padding:0;background:#EAE4DC;-webkit-font-smoothing:antialiased;}
+    /* La règle « section » du design system (48 px, pages vitrines) ne vaut pas pour les cartes des écrans. */
+    section{padding-top:0;padding-bottom:0;}
+    a{color:#8D1D2C;} a:hover{color:#232220;}
+    select,input,button,textarea{font-family:var(--font-ui);}
+  </style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#EAE4DC;font-family:var(--font-ui);color:#222222;">
+  <dc-import name="SANav" active="repost" hint-size="228px,100vh"></dc-import>
+  <main style="flex:1 1 auto;min-width:0;padding:20px 24px 32px;display:flex;flex-direction:column;gap:14px;">
+
+    <div style="background:#232220;color:#F2C9A0;border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.45;">Maquette à valider : rien n’est enregistré ni publié. Les posts sont les vrais, publiés ces 30 derniers jours sur la Page Facebook de la marque (lus en direct chez Meta), et les Pages sont celles des boutiques. Réglez la règle : à droite, ce qui aurait été reposté et à quoi cela ressemble sur la Page d’une boutique.</div>
+
+    <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Page de la marque → Pages des boutiques</span>
+        <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">REPOST AUTO</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <label style="display:inline-flex;align-items:center;gap:8px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;cursor:pointer;">
+          <input type="checkbox" checked="{{ actif }}" onChange="{{ toggleActif }}" style="accent-color:#0F6B4A;margin:0;width:16px;height:16px;">
+          <span style="color:{{ actifFg }};">{{ actifLabel }}</span>
+        </label>
+        <button onClick="{{ essayer }}" style="background:#FFFFFF;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;">Essayer sur la Page test</button>
+        <button onClick="{{ enregistrer }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:500;cursor:pointer;">Enregistrer la règle</button>
+      </div>
+    </header>
+
+    <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#FBEDE4;color:#8A4B00;border-radius:8px;padding:8px 12px;font-size:12px;">{{ err }}</div>
+    </sc-if>
+
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+      <!-- Formulaire -->
+      <div style="flex:1 1 520px;min-width:0;display:flex;flex-direction:column;gap:14px;">
+
+        <!-- 1. Source -->
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:11px;font-weight:600;color:#8D1D2C;">1</span><span style="font-size:15px;font-weight:500;">Le compte de la marque à suivre</span></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+            <div style="border:1.5px solid #8D1D2C;background:#FBF7F2;border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;">
+              <img src="{{ brandPic }}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#F4EFE8;">
+              <span style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+                <span style="font-size:13px;font-weight:500;">Page Facebook · {{ brandFb }}</span>
+                <span style="font-size:12px;color:#444444;line-height:1.4;">{{ brandFbSub }}</span>
+              </span>
+            </div>
+            <div style="border:0.5px dashed rgba(34,34,34,0.25);background:#F7F4EF;border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;">
+              <span style="width:36px;height:36px;border-radius:50%;background:#E9DCE6;color:#8A3A73;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex:0 0 auto;">IG</span>
+              <span style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+                <span style="font-size:13px;font-weight:500;color:#666666;">Instagram · {{ brandIg }}</span>
+                <span style="font-size:12px;color:#666666;line-height:1.4;">{{ igNote }}</span>
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Quels posts -->
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:11px;font-weight:600;color:#8D1D2C;">2</span><span style="font-size:15px;font-weight:500;">Quels posts reposter</span></div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <span style="font-size:12px;color:#666666;">Types de publication</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <sc-for list="{{ types }}" as="t" hint-placeholder-count="5"><button onClick="{{ t.toggle }}" style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ t.border }};background:{{ t.bg }};color:{{ t.fg }};">{{ t.mark }} {{ t.label }} <span style="font-weight:400;opacity:0.75;">{{ t.n }}</span></button></sc-for>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#666666;">Seulement si le texte contient
+              <input type="text" value="{{ inclure }}" onChange="{{ setInclure }}" placeholder="ex. #nouveauté (vide : tous)" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 9px;outline:none;">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#666666;">Jamais si le texte contient
+              <input type="text" value="{{ exclure }}" onChange="{{ setExclure }}" placeholder="ex. franchise, recrutement" style="font-size:13px;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 9px;outline:none;">
+            </label>
+          </div>
+          <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" checked="{{ fr }}" onChange="{{ toggleFr }}" style="accent-color:#8D1D2C;margin:2px 0 0;width:16px;height:16px;flex:0 0 auto;">
+            <span style="display:flex;flex-direction:column;gap:2px;"><span>Seulement les posts dans la langue de la boutique</span><span style="font-size:12px;color:#666666;">La marque publie en français et en néerlandais ; chaque boutique ne reçoit que sa langue ({{ langsNote }}).</span></span>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" checked="{{ ops }}" onChange="{{ toggleOps }}" style="accent-color:#8D1D2C;margin:2px 0 0;width:16px;height:16px;flex:0 0 auto;">
+            <span style="display:flex;flex-direction:column;gap:2px;"><span>Seulement les posts rattachés à une opération, vers les boutiques de l’opération</span><span style="font-size:12px;color:#666666;">{{ opsNote }}</span></span>
+          </label>
+        </section>
+
+        <!-- 3. Boutiques -->
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:11px;font-weight:600;color:#8D1D2C;">3</span><span style="font-size:15px;font-weight:500;">Vers quelles Pages de boutique</span></div>
+            <span style="display:flex;gap:10px;font-size:12px;"><button onClick="{{ toutes }}" style="border:none;background:none;padding:0;color:#8D1D2C;font-weight:500;cursor:pointer;font-size:12px;">Toutes les boutiques ouvertes</button><button onClick="{{ aucune }}" style="border:none;background:none;padding:0;color:#666666;cursor:pointer;font-size:12px;">Aucune</button></span>
+          </div>
+          <div style="display:flex;flex-direction:column;">
+            <sc-for list="{{ cibles }}" as="c" hint-placeholder-count="5">
+              <label style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-top:0.5px solid rgba(34,34,34,0.08);cursor:pointer;">
+                <input type="checkbox" checked="{{ c.on }}" onChange="{{ c.toggle }}" style="accent-color:#8D1D2C;margin:0;width:16px;height:16px;flex:0 0 auto;">
+                <img src="{{ c.pic }}" alt="" style="width:30px;height:30px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#F4EFE8;">
+                <span style="display:flex;flex-direction:column;gap:1px;min-width:0;flex:1 1 auto;">
+                  <span style="font-size:13px;font-weight:500;">{{ c.name }}</span>
+                  <span style="font-size:12px;color:#666666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Page « {{ c.page }} »</span>
+                </span>
+                <span style="font-size:11px;font-weight:500;border-radius:999px;padding:2px 8px;background:{{ c.tagBg }};color:{{ c.tagFg }};white-space:nowrap;">{{ c.tag }}</span>
+              </label>
+            </sc-for>
+          </div>
+        </section>
+
+        <!-- 4. Comment -->
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:11px;font-weight:600;color:#8D1D2C;">4</span><span style="font-size:15px;font-weight:500;">Comment le post arrive sur la Page de la boutique</span></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;">
+            <sc-for list="{{ modes }}" as="m" hint-placeholder-count="2">
+              <button onClick="{{ m.pick }}" style="text-align:left;border:{{ m.border }};background:{{ m.bg }};border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:5px;cursor:pointer;color:#222222;">
+                <span style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;"><span style="width:14px;height:14px;border-radius:50%;border:1.5px solid {{ m.dot }};display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;"><span style="width:7px;height:7px;border-radius:50%;background:{{ m.dotIn }};"></span></span>{{ m.label }}</span>
+                <span style="font-size:12px;color:#444444;line-height:1.45;">{{ m.desc }}</span>
+                <span style="font-size:11px;color:#8A847C;line-height:1.4;">{{ m.note }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ isCopie }}" hint-placeholder-val="{{ false }}">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+              <input type="checkbox" checked="{{ garder }}" onChange="{{ toggleGarder }}" style="accent-color:#8D1D2C;margin:0;width:16px;height:16px;">
+              Reprendre le texte de la marque, puis ajouter le texte de la boutique
+            </label>
+          </sc-if>
+          <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#666666;">{{ texteLabel }}
+            <textarea value="{{ texte }}" onChange="{{ setTexte }}" rows="3" style="font-size:13px;line-height:1.45;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 9px;resize:vertical;outline:none;"></textarea>
+          </label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <span style="font-size:12px;color:#666666;">Insérer :</span>
+            <sc-for list="{{ vars }}" as="v" hint-placeholder-count="4"><button onClick="{{ v.add }}" title="{{ v.tip }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#F7F4EF;border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;color:#222222;">{{ v.code }}</button></sc-for>
+          </div>
+        </section>
+
+        <!-- 5. Quand -->
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:11px;font-weight:600;color:#8D1D2C;">5</span><span style="font-size:15px;font-weight:500;">Quand</span></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <sc-for list="{{ quands }}" as="q" hint-placeholder-count="4"><button onClick="{{ q.pick }}" style="border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ q.border }};background:{{ q.bg }};color:{{ q.fg }};">{{ q.label }}</button></sc-for>
+            <sc-if value="{{ isLendemain }}" hint-placeholder-val="{{ false }}"><input type="time" value="{{ heure }}" onChange="{{ setHeure }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 8px;"></sc-if>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#666666;">Étaler entre deux boutiques
+              <select value="{{ etaler }}" onChange="{{ setEtaler }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;background:#FFFFFF;"><option value="0">En même temps</option><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="30">30 minutes</option><option value="60">1 heure</option></select>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#666666;">Plage autorisée
+              <span style="display:flex;align-items:center;gap:6px;color:#222222;font-size:13px;"><input type="time" value="{{ de }}" onChange="{{ setDe }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 8px;"> à <input type="time" value="{{ a }}" onChange="{{ setA }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 8px;"></span>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#666666;">Au plus, par boutique
+              <select value="{{ maxJour }}" onChange="{{ setMaxJour }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;background:#FFFFFF;"><option value="1">1 repost par jour</option><option value="2">2 reposts par jour</option><option value="3">3 reposts par jour</option></select>
+            </label>
+          </div>
+          <span style="font-size:12px;color:#666666;line-height:1.45;">Hors de la plage, le repost attend son ouverture suivante. Un même post n’est jamais reposté deux fois sur la même Page.</span>
+        </section>
+
+        <!-- 6. Validation -->
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:11px;font-weight:600;color:#8D1D2C;">6</span><span style="font-size:15px;font-weight:500;">Validation par le franchisé</span></div>
+          <sc-for list="{{ valids }}" as="v" hint-placeholder-count="3">
+            <button onClick="{{ v.pick }}" style="text-align:left;border:{{ v.border }};background:{{ v.bg }};border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;color:#222222;">
+              <span style="width:14px;height:14px;border-radius:50%;border:1.5px solid {{ v.dot }};display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:2px;"><span style="width:7px;height:7px;border-radius:50%;background:{{ v.dotIn }};"></span></span>
+              <span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:13px;font-weight:500;">{{ v.label }}</span><span style="font-size:12px;color:#666666;line-height:1.4;">{{ v.desc }}</span></span>
+            </button>
+          </sc-for>
+          <sc-if value="{{ isValidAuto }}" hint-placeholder-val="{{ false }}">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;">Sans réponse, publié au bout de
+              <select value="{{ delaiV }}" onChange="{{ setDelaiV }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 8px;background:#FFFFFF;"><option value="1">1 heure</option><option value="2">2 heures</option><option value="4">4 heures</option><option value="12">12 heures</option></select>
+            </label>
+          </sc-if>
+          <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" checked="{{ refus }}" onChange="{{ toggleRefus }}" style="accent-color:#8D1D2C;margin:2px 0 0;width:16px;height:16px;flex:0 0 auto;">
+            <span style="display:flex;flex-direction:column;gap:2px;"><span>Le franchisé peut refuser un repost</span><span style="font-size:12px;color:#666666;">Il le voit dans son calendrier (« Repost de la marque ») et peut l’écarter avant sa publication.</span></span>
+          </label>
+        </section>
+      </div>
+
+      <!-- Aperçu -->
+      <aside style="flex:0 1 400px;min-width:300px;display:flex;flex-direction:column;gap:14px;">
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:10px;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Ces 30 derniers jours, avec cette règle</span>
+          <span style="font-size:22px;font-weight:500;color:#232220;">{{ simTotal }}</span>
+          <span style="font-size:12px;color:#444444;line-height:1.45;">{{ simSub }}</span>
+          <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Lecture des posts de la marque chez Meta…</span></sc-if>
+          <div style="display:flex;flex-direction:column;max-height:300px;overflow:auto;margin:0 -6px;">
+            <sc-for list="{{ sim }}" as="x" hint-placeholder-count="0">
+              <button onClick="{{ x.pick }}" style="display:flex;align-items:center;gap:9px;text-align:left;border:none;border-radius:8px;background:{{ x.bg }};padding:6px;cursor:pointer;color:#222222;">
+                <img src="{{ x.img }}" alt="" style="width:38px;height:38px;border-radius:6px;object-fit:cover;flex:0 0 auto;background:#F4EFE8;">
+                <span style="display:flex;flex-direction:column;gap:1px;min-width:0;flex:1 1 auto;">
+                  <span style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ x.title }}</span>
+                  <span style="font-size:11px;color:#666666;">{{ x.when }} · {{ x.type }}</span>
+                </span>
+                <span style="flex:0 0 auto;font-size:11px;font-weight:500;color:{{ x.fg }};text-align:right;max-width:120px;line-height:1.3;">{{ x.verdict }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </section>
+
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Aperçu sur la Page de</span>
+            <select value="{{ pvShop }}" onChange="{{ setPvShop }}" style="font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:4px 6px;background:#FFFFFF;"><sc-for list="{{ pvShops }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select>
+          </div>
+          <sc-if value="{{ pvExclu }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A4B00;background:#FBEDE4;border-radius:6px;padding:6px 8px;">Ce post ne serait pas reposté : {{ pvWhy }}. Aperçu donné pour information.</span></sc-if>
+          <sc-if value="{{ hasPv }}" hint-placeholder-val="{{ false }}">
+            <div style="border:0.5px solid rgba(34,34,34,0.14);border-radius:10px;overflow:hidden;background:#FFFFFF;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+              <div style="display:flex;align-items:center;gap:8px;padding:10px 12px 6px;">
+                <img src="{{ pv.pic }}" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;background:#F4EFE8;">
+                <span style="display:flex;flex-direction:column;gap:1px;min-width:0;"><span style="font-size:13px;font-weight:600;color:#050505;">{{ pv.page }}<span style="font-weight:400;color:#65676B;">{{ pv.verb }}</span></span><span style="font-size:11px;color:#65676B;">{{ pv.when }} · 🌐</span></span>
+              </div>
+              <div style="padding:0 12px 8px;font-size:13px;line-height:1.4;color:#050505;white-space:pre-wrap;word-break:break-word;">{{ pv.message }}</div>
+              <sc-if value="{{ pv.share }}" hint-placeholder-val="{{ false }}">
+                <div style="margin:0 12px 12px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;overflow:hidden;">
+                  <img src="{{ pv.img }}" alt="" style="display:block;width:100%;max-height:260px;object-fit:cover;background:#F0F2F5;">
+                  <div style="display:flex;align-items:center;gap:8px;padding:8px 10px 4px;"><img src="{{ pv.brandPic }}" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;background:#F4EFE8;"><span style="display:flex;flex-direction:column;"><span style="font-size:12px;font-weight:600;color:#050505;">{{ pv.brand }}</span><span style="font-size:11px;color:#65676B;">{{ pv.orig }}</span></span></div>
+                  <div style="padding:0 10px 10px;font-size:12px;line-height:1.4;color:#050505;white-space:pre-wrap;">{{ pv.origText }}</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ pv.copy }}" hint-placeholder-val="{{ false }}">
+                <img src="{{ pv.img }}" alt="" style="display:block;width:100%;max-height:320px;object-fit:cover;background:#F0F2F5;">
+              </sc-if>
+              <div style="display:flex;justify-content:space-around;border-top:0.5px solid rgba(0,0,0,0.1);padding:6px 0;font-size:12px;color:#65676B;"><span>J’aime</span><span>Commenter</span><span>Partager</span></div>
+            </div>
+            <span style="font-size:11px;color:#8A847C;line-height:1.4;">{{ pv.foot }}</span>
+          </sc-if>
+        </section>
+
+        <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px;display:flex;flex-direction:column;gap:8px;">
+          <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">{{ planTitle }}</span>
+          <sc-for list="{{ plan }}" as="l" hint-placeholder-count="0">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:6px 0;border-top:0.5px solid rgba(34,34,34,0.08);">
+              <span style="font-size:13px;font-weight:500;">{{ l.shop }}</span>
+              <span style="font-size:12px;color:#444444;text-align:right;line-height:1.4;">{{ l.txt }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noPlan }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Cochez au moins une Page de boutique.</span></sc-if>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#232220;color:#FFFFFF;border-radius:8px;padding:11px 16px;font-size:13px;z-index:60;box-shadow:0 12px 30px rgba(35,34,32,0.3);">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  // Maquette : les vrais posts de la Page Facebook de la marque (lus en direct chez Meta, comme le Calendrier) et
+  // les vraies Pages des boutiques ; la règle reste dans l'onglet (rien n'est enregistré, rien n'est publié).
+  state = { posts: null, err: '', pics: {}, brandPic: '', actif: true,
+    types: { Photo: true, Album: true, 'Vidéo': true, Lien: false, Texte: false }, inclure: '', exclure: '', fr: true, ops: false,
+    cibles: null, mode: 'partage', garder: true, texte: '📍 L’Atelier By {ville} · {adresse}\n{lien}',
+    quand: 'repere', heure: '09:00', etaler: '10', de: '08:00', a: '20:00', maxJour: '1',
+    valid: 'auto', delaiV: '4', refus: true, pvShop: '', pvPost: '', toast: '' };
+  componentDidMount() { this.load(); }
+  componentWillUnmount() { clearTimeout(this._tt); }
+  load() {
+    const SA = window.SA; if (!SA || !SA.calendriers) return;
+    const au = SA.TODAY, du = SA.addDays(au, -29);
+    SA.calendriers(du, au).then(r => {
+      const posts = (r.posts || []).filter(p => p.marque && p.channel === 'Facebook' && p.status === 'Publié')
+        .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+      const pics = {}; let brandPic = '';
+      (r.comptes || []).forEach(c => { if (c.type !== 'facebook' || !c.picture) return; if (c.shop === 'marque') brandPic = brandPic || c.picture; else if (c.shop && !pics[c.shop]) pics[c.shop] = c.picture; });
+      const errs = (r.erreurs || []).map(String).filter(e => !/programmés/.test(e));
+      this.setState(s => ({ posts, pics, brandPic, err: errs.length ? 'Illisible chez Meta : ' + errs.join(' · ') : '', pvPost: s.pvPost || (posts[0] || {}).id || '' }));
+    }).catch(e => this.setState({ posts: [], err: 'Posts de la marque illisibles : ' + (e.message || 'erreur') }));
+  }
+  toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 3600); }
+  renderVals() {
+    const SA = window.SA, s = this.state;
+    if (!SA) return {};
+    const M = SA.marque(), R = SA.reseau();
+    const shops = SA.SHOPS.concat(SA.TEST_SHOPS || []), isTest = (x) => (SA.TEST_SHOPS || []).some(t => t.id === x.id);
+    const on = (x) => s.cibles ? !!s.cibles[x.id] : !isTest(x);
+    const choisies = shops.filter(on);
+    const pageOf = (x) => (x.connDetail && x.connDetail.fb) || x.page || x.name;
+    const picOf = (x) => s.pics[x.id] || SA.avatar(pageOf(x), 'facebook');
+    const brandPic = s.brandPic || SA.avatar((M.connDetail || {}).fb || M.name, 'facebook');
+    const posts = s.posts || [];
+    const tkey = (p) => /^Album/.test(p.type || '') ? 'Album' : (p.type || 'Texte');
+    // Langue du texte (repérage simple) : les boutiques ne reçoivent que les posts dans leur langue.
+    const langue = (t) => { const w = ' ' + String(t || '').toLowerCase().replace(/[^\p{L}\s]/gu, ' ').replace(/\s+/g, ' ') + ' ';
+      const n = (l) => l.reduce((k, x) => k + w.split(' ' + x + ' ').length - 1, 0);
+      return n(['het', 'een', 'van', 'voor', 'met', 'onze', 'jouw', 'bij', 'ook', 'niet', 'zijn', 'wij', 'je', 'ons', 'deze', 'naar', 'wat']) >
+        n(['le', 'la', 'les', 'des', 'et', 'pour', 'avec', 'nos', 'une', 'un', 'est', 'vous', 'du', 'au', 'sur', 'pas', 'qui']) ? 'nl' : 'fr'; };
+    const mots = (v) => String(v || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+    const inc = mots(s.inclure), exc = mots(s.exclure), maxJ = +s.maxJour || 1;
+    const langsCibles = [...new Set(choisies.flatMap(x => x.langs && x.langs.length ? x.langs : ['fr']))];
+    // Ce que la règle aurait fait sur les 30 derniers jours (du plus ancien au plus récent, pour le plafond par jour).
+    const parJour = {}, verdicts = {};
+    posts.slice().sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).forEach(p => {
+      const t = String(p.text || '').toLowerCase(), k = tkey(p), ex = exc.find(m => t.includes(m));
+      let why = '';
+      if (!s.types[k]) why = k.toLowerCase() + ' : type non coché';
+      else if (s.fr && langsCibles.length && !langsCibles.includes(langue(p.text))) why = langue(p.text) === 'nl' ? 'en néerlandais' : 'en français';
+      else if (inc.length && !inc.some(m => t.includes(m))) why = 'ne contient pas « ' + inc.join(' » / « ') + ' »';
+      else if (ex) why = 'contient « ' + ex + ' »';
+      else if (s.ops && !p.campaign) why = 'rattaché à aucune opération';
+      else if ((parJour[p.date] || 0) >= maxJ) why = 'déjà ' + maxJ + ' repost' + (maxJ > 1 ? 's' : '') + ' ce jour-là';
+      if (!why) parJour[p.date] = (parJour[p.date] || 0) + 1;
+      verdicts[p.id] = why;
+    });
+    const nOk = posts.filter(p => !verdicts[p.id]).length, nPub = nOk * choisies.length;
+    const sim = posts.map(p => { const why = verdicts[p.id];
+      return { title: p.title || '(sans texte)', img: p.img || brandPic, when: SA.dShort(p.date) + ' ' + (p.time || ''), type: p.type, verdict: why ? '✕ ' + why : '✓ reposté', fg: why ? '#8A847C' : '#0F6B4A',
+        bg: p.id === s.pvPost ? '#F4EFE8' : 'transparent', pick: () => this.setState({ pvPost: p.id }) }; });
+    const nTypes = {}; posts.forEach(p => { const k = tkey(p); nTypes[k] = (nTypes[k] || 0) + 1; });
+    const TYPES = [['Photo', 'Photo'], ['Album', 'Album'], ['Vidéo', 'Vidéo / Reel'], ['Lien', 'Lien'], ['Texte', 'Texte seul']];
+    // Le texte de la boutique, variables remplacées pour une Page donnée (comme Créer un post).
+    const resoudre = (x) => { const lien = SA.lienTexte('fr') + ' ' + SA.webshopUrl(x.id);
+      return SA.placerLien(SA.fill(s.texte, x, null, 'fr'), lien).replace(/[ \t]*[·—][ \t]*(\n|$)/g, '$1').trim(); };
+    const hm = (v) => { const [h, m] = String(v || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+    const fmt = (m) => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+    const JOURS = ['le jour même', 'le lendemain', 'le surlendemain'];
+    // Aperçu : le post choisi dans la liste, sur la Page choisie.
+    const pvPost = posts.find(p => p.id === s.pvPost) || posts[0] || null;
+    const pvShop = choisies.find(x => x.id === s.pvShop) || choisies[0] || shops[0] || null;
+    const share = s.mode === 'partage';
+    const added = pvShop ? resoudre(pvShop) : '';
+    const orig = pvPost ? String(pvPost.text || '') : '';
+    const pv = pvPost && pvShop ? { pic: picOf(pvShop), page: pageOf(pvShop), verb: share ? ' a partagé une publication.' : '', when: 'à l’instant',
+      message: share ? added : [s.garder ? orig : '', added].filter(Boolean).join('\n\n'), share, copy: !share, img: pvPost.img || brandPic, brandPic, brand: (M.connDetail || {}).fb || M.name,
+      orig: SA.dShort(pvPost.date) + ' · ' + pvPost.type, origText: orig.length > 220 ? orig.slice(0, 220).trim() + '… Voir plus' : orig,
+      foot: share ? 'Partage : les réactions et commentaires restent sur le post de la marque. ' + (pvPost.type === 'Vidéo' ? 'La vidéo se lit dans le partage.' : '')
+        : 'Copie : publiée par la Page de la boutique, elle compte dans sa portée et ses statistiques. ' + (/^Album|Vidéo/.test(pvPost.type || '') ? 'L’album ou la vidéo est reproduit tel quel.' : '') } : null;
+    // Planning : si la marque publie ce post, à quelle heure chaque Page le reçoit.
+    const base = pvPost && pvPost.time ? hm(pvPost.time) : hm('10:00'), de = hm(s.de), a = hm(s.a), pas = +s.etaler || 0;
+    const plan = choisies.map((x, i) => {
+      let jour = 0, t;
+      if (s.quand === 'lendemain') { t = hm(s.heure) + i * pas; jour = 1; }
+      else t = base + ({ repere: 15, h1: 60, h3: 180 }[s.quand] || 15) + i * pas;
+      while (t >= 1440) { t -= 1440; jour++; }
+      if (t < de) t = de + i * pas; else if (t > a) { jour++; t = de + i * pas; }
+      const quand = fmt(t) + (jour ? ' ' + (JOURS[jour] || '+' + jour + ' j') : '');
+      const txt = s.valid === 'auto' ? 'publié vers ' + quand
+        : s.valid === 'auto_sauf' ? 'proposé vers ' + quand + ' · publié à sa validation, sinon vers ' + fmt(Math.min(t + 60 * (+s.delaiV || 4), 1439))
+        : 'proposé vers ' + quand + ' · publié seulement s’il valide';
+      return { shop: x.name, txt };
+    });
+    const sel = (o, cur) => ({ border: o === cur ? '1.5px solid #8D1D2C' : '0.5px solid rgba(34,34,34,0.18)', bg: o === cur ? '#FBF7F2' : '#FFFFFF', dot: o === cur ? '#8D1D2C' : '#B5ADA2', dotIn: o === cur ? '#8D1D2C' : 'transparent' });
+    const pill = (o, cur) => ({ border: o === cur ? '#8D1D2C' : 'rgba(34,34,34,0.18)', bg: o === cur ? '#8D1D2C' : '#FFFFFF', fg: o === cur ? '#FFFFFF' : '#222222' });
+    const ownIg = shops.filter(x => !isTest(x) && x.ig).length;
+    const lesTest = shops.filter(isTest).map(x => x.name).join(', ');
+    return {
+      actif: s.actif, actifLabel: s.actif ? 'Règle active' : 'Règle en pause', actifFg: s.actif ? '#0F6B4A' : '#666666', toggleActif: () => this.setState({ actif: !s.actif }),
+      essayer: () => this.toast(lesTest ? 'Maquette : en réel, le dernier post retenu partirait sur la Page test (' + lesTest + ') seulement.' : 'Maquette : aucune Page test dans le réseau.'),
+      enregistrer: () => this.toast(choisies.length ? 'Maquette : rien n’est enregistré. En réel, la règle s’appliquerait aux prochains posts de la marque.' : 'Cochez au moins une Page de boutique.'),
+      hasErr: !!s.err, err: s.err,
+      brandPic, brandFb: (M.connDetail || {}).fb || M.name, brandFbSub: posts.length + ' posts ces 30 derniers jours · vérifiée toutes les 15 minutes : chaque nouveau post passe par la règle.',
+      brandIg: M.ig || (M.connDetail || {}).igs || '', igNote: R.instagram && !ownIg ? 'Les boutiques n’ont pas de compte Instagram à elles : tout le réseau publie déjà sur ce compte, il n’y a rien à reposter.'
+        : 'Instagram n’a pas de repost par l’API : copie du post, ou post « collab » que la boutique accepte dans l’appli.',
+      types: TYPES.map(([k, l]) => ({ label: l, n: nTypes[k] ? '(' + nTypes[k] + ')' : '', mark: s.types[k] ? '✓' : '', ...pill(true, s.types[k]),
+        toggle: () => this.setState({ types: Object.assign({}, s.types, { [k]: !s.types[k] }) }) })),
+      inclure: s.inclure, setInclure: (e) => this.setState({ inclure: e.target.value }), exclure: s.exclure, setExclure: (e) => this.setState({ exclure: e.target.value }),
+      fr: s.fr, toggleFr: () => this.setState({ fr: !s.fr }), langsNote: choisies.length ? choisies.map(x => x.name + ' : ' + (x.langs || ['fr']).join(' + ')).join(', ') : 'aucune Page cochée',
+      ops: s.ops, toggleOps: () => this.setState({ ops: !s.ops }),
+      opsNote: posts.some(p => p.campaign) ? 'Les autres posts de la marque ne partent pas.' : 'Aucun post de la marque n’est rattaché à une opération ces 30 jours : cochée, la règle ne reposterait rien.',
+      toutes: () => this.setState({ cibles: Object.fromEntries(shops.map(x => [x.id, !isTest(x)])) }), aucune: () => this.setState({ cibles: {} }),
+      cibles: shops.map(x => ({ on: on(x), name: x.name, page: pageOf(x), pic: picOf(x),
+        tag: isTest(x) ? 'Page test' : x.fb === 'connected' ? 'Page connectée' : 'Page à connecter', tagBg: isTest(x) ? '#FBEDE4' : x.fb === 'connected' ? '#E6F2EC' : '#F6E3E5', tagFg: isTest(x) ? '#8A4B00' : x.fb === 'connected' ? '#0F6B4A' : '#8D1D2C',
+        toggle: () => this.setState({ cibles: Object.assign(Object.fromEntries(shops.map(y => [y.id, on(y)])), { [x.id]: !on(x) }) }) })),
+      modes: [['partage', 'Partager le post de la marque', 'La Page de la boutique partage le post : on voit « … a partagé une publication » avec le post de la marque dedans.', 'Le plus simple. Rendu exact à confirmer par un essai sur la Page test.'],
+        ['copie', 'Republier une copie', 'La Page de la boutique publie le même visuel (et le texte) comme son propre post.', 'Meilleure portée locale ; le texte peut être adapté à la boutique.']]
+        .map(([k, label, desc, note]) => ({ label, desc, note, ...sel(k, s.mode), pick: () => this.setState({ mode: k }) })),
+      isCopie: !share, garder: s.garder, toggleGarder: () => this.setState({ garder: !s.garder }),
+      texteLabel: share ? 'Texte de la boutique au-dessus du partage' : s.garder ? 'Texte ajouté sous celui de la marque' : 'Texte du post (à la place de celui de la marque)',
+      texte: s.texte, setTexte: (e) => this.setState({ texte: e.target.value }),
+      vars: [['{ville}', 'Nom de la boutique'], ['{adresse}', 'Adresse de la boutique'], ['{horaires}', 'Horaires de la boutique'], ['{lien}', '« ' + SA.lienTexte('fr') + ' » + le webshop de la boutique']]
+        .map(([code, tip]) => ({ code, tip, add: () => this.setState({ texte: (s.texte ? s.texte.replace(/\s+$/, '') + ' ' : '') + code }) })),
+      quands: [['repere', 'Dès que la marque publie'], ['h1', '1 h après'], ['h3', '3 h après'], ['lendemain', 'Le lendemain à']].map(([k, label]) => ({ label, ...pill(k, s.quand), pick: () => this.setState({ quand: k }) })),
+      isLendemain: s.quand === 'lendemain', heure: s.heure, setHeure: (e) => this.setState({ heure: e.target.value }),
+      etaler: s.etaler, setEtaler: (e) => this.setState({ etaler: e.target.value }), de: s.de, setDe: (e) => this.setState({ de: e.target.value }), a: s.a, setA: (e) => this.setState({ a: e.target.value }),
+      maxJour: s.maxJour, setMaxJour: (e) => this.setState({ maxJour: e.target.value }),
+      valids: [['auto', 'Automatique', 'Publié sur la Page de la boutique sans rien demander au franchisé.'],
+        ['auto_sauf', 'Le franchisé valide, sinon publié quand même', 'Il reçoit le repost dans son espace ; sans réponse dans le délai, il part.'],
+        ['franchise', 'Le franchisé valide, sinon rien', 'Le repost ne part que si le franchisé l’accepte dans son espace.']]
+        .map(([k, label, desc]) => ({ label, desc, ...sel(k, s.valid), pick: () => this.setState({ valid: k }) })),
+      isValidAuto: s.valid === 'auto_sauf', delaiV: s.delaiV, setDelaiV: (e) => this.setState({ delaiV: e.target.value }),
+      refus: s.refus, toggleRefus: () => this.setState({ refus: !s.refus }),
+      loading: s.posts === null,
+      simTotal: s.posts === null ? '…' : nPub + ' publication' + (nPub > 1 ? 's' : '') + ' sur les Pages',
+      simSub: s.posts === null ? '' : nOk + ' post' + (nOk > 1 ? 's' : '') + ' de la marque sur ' + posts.length + ' × ' + choisies.length + ' Page' + (choisies.length > 1 ? 's' : '') + ' de boutique. Cliquez un post pour le voir en aperçu.',
+      sim,
+      pvShops: (choisies.length ? choisies : shops).map(x => ({ v: x.id, l: x.name + ' · ' + pageOf(x) })), pvShop: pvShop ? pvShop.id : '', setPvShop: (e) => this.setState({ pvShop: e.target.value }),
+      hasPv: !!pv, pv: pv || {}, pvExclu: !!(pvPost && verdicts[pvPost.id]), pvWhy: pvPost ? verdicts[pvPost.id] || '' : '',
+      planTitle: pvPost ? 'Si la marque publie ce post à ' + (pvPost.time || '10:00') : 'Planning des Pages', plan, noPlan: !choisies.length,
+      hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

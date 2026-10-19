@@ -71,7 +71,7 @@
   </div>
 </nav>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:228,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cal&quot;,&quot;grid&quot;,&quot;fr&quot;,&quot;post&quot;,&quot;camp&quot;,&quot;ads&quot;,&quot;roi&quot;,&quot;suivi&quot;,&quot;ctrl&quot;,&quot;set&quot;],&quot;default&quot;:&quot;cal&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:228,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cal&quot;,&quot;grid&quot;,&quot;fr&quot;,&quot;post&quot;,&quot;repost&quot;,&quot;camp&quot;,&quot;ads&quot;,&quot;roi&quot;,&quot;suivi&quot;,&quot;ctrl&quot;,&quot;set&quot;],&quot;default&quot;:&quot;cal&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
   componentDidMount() { this._h = () => this.forceUpdate(); window.addEventListener('sa-change', this._h); }
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); }
@@ -89,6 +89,8 @@ class Component extends DCLogic {
       ['cal', 'Calendrier', toValidate + failed],
       ['grid', 'Grille Instagram', 0],
       ['post', 'Créer un post', 0],
+      // Maquette : les posts de la Page de la marque repris automatiquement par les Pages des boutiques.
+      ['repost', 'Repost auto', 0],
       ['camp', 'Opérations', 0],
       // Les refusées à corriger, et les demandes de boost des boutiques à traiter.
       ['ads', 'Publicités Meta', refused + ((st.alertes || {}).boost || 0)],

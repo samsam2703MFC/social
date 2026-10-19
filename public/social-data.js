@@ -460,7 +460,7 @@
     LOCALES.set(src, p); p.catch(() => LOCALES.delete(src));
     return p;
   }
-  const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', suivi: 'SA Suivi.dc.html', ctrl: 'SA Controle.dc.html', google: 'SA Google.dc.html', bilan: 'SA Bilan.dc.html', set: 'SA Parametres.dc.html' };
+  const PAGES = { cal: 'SA Calendrier.dc.html', grid: 'SA Grille.dc.html', fr: 'SA Franchise.dc.html', post: 'SA Post.dc.html', repost: 'SA Repost.dc.html', camp: 'SA Campagnes.dc.html', ads: 'SA Publicites.dc.html', leads: 'SA Leads.dc.html', roi: 'SA Retour.dc.html', suivi: 'SA Suivi.dc.html', ctrl: 'SA Controle.dc.html', google: 'SA Google.dc.html', bilan: 'SA Bilan.dc.html', set: 'SA Parametres.dc.html' };
   const param = (k) => { try { return new URLSearchParams(location.search).get(k); } catch (e) { return null; } };
   // Intégré dans une autre application (`?embed=1`, ex. le module /marketing/) : sans le rail,
   // et chaque lien interne garde le paramètre pour que la navigation reste dans le cadre.
