@@ -1625,6 +1625,74 @@ $iaAppels = [];
 $req = (array_values(array_filter($iaAppels, static fn ($a) => str_ends_with($a[1], '/v1/messages')))[0][3] ?? []);
 check('assistant : l’objectif de l’idée, l’opération et ce qui marche sur nos comptes sont dans la demande', $code === 200 && str_contains((string) $req['messages'][0]['content'], 'Objectif du post : Faire venir des clients')
     && str_contains((string) $req['messages'][0]['content'], 'Opération commerciale : Automne') && str_contains((string) $req['system'], 'Ce qui marche sur nos comptes') && str_contains((string) $req['system'], 'Pose une question'));
+echo "Plan de posts d'une campagne : durée, réseaux, mix, meilleurs jours et heure → brouillons au calendrier\n";
+// Ce qui marche ($an) : le samedi au-dessus de l'habitude, le mardi en dessous ; les bonnes publications du matin à 09:15.
+$lun = '2030-03-04';   // un lundi
+$pl = socPlanProposer(['du' => $lun, 'au' => '2030-03-31', 'rythme' => ['fbig' => 3, 'story' => 2], 'mix' => 'equilibre', 'demain' => '2030-01-01'], $an);
+$fbig = array_values(array_filter($pl['posts'], static fn ($p) => $p['reseau'] === 'fbig'));
+$parSem = []; foreach ($fbig as $p) { $parSem[date('W', strtotime($p['date']))][] = strtotime($p['date']); }
+$espaces = true; foreach ($parSem as $l) { sort($l); for ($i = 1; $i < count($l); $i++) { if ($l[$i] - $l[$i - 1] < 1.5 * 86400) { $espaces = false; } } }
+$dates = array_column($pl['posts'], 'date'); $tri = $dates; sort($tri);
+check('4 semaines, 3 posts Facebook + Instagram et 2 stories par semaine : 20 posts, dans l’ordre des dates', $pl['resume']['total'] === 20 && $pl['resume']['parReseau'] === ['fbig' => 12, 'story' => 8]
+    && $dates === $tri, json_encode($pl['resume']));
+check('meilleurs jours : chaque samedi a son post, aucun mardi ; jamais deux jours de suite sur un réseau ; l’heure des bonnes publications (09:15)',
+    count(array_filter($fbig, static fn ($p) => date('N', strtotime($p['date'])) === '6')) === 4 && !array_filter($fbig, static fn ($p) => date('N', strtotime($p['date'])) === '2')
+    && $espaces && array_unique(array_column($pl['posts'], 'heure')) === ['09:15'] && str_contains($fbig[0]['raison'], 'samedi ×') === (date('N', strtotime($fbig[0]['date'])) === '6')
+    && $pl['creneaux']['jours'][0]['jour'] === 'Samedi' && end($pl['creneaux']['jours'])['jour'] === 'Mardi', json_encode(array_column($fbig, 'date')));
+$nbS = array_count_values(array_column($pl['posts'], 'sujet')); ksort($nbS);
+check('mix équilibré : produit 40 %, coulisses, offre et avis 20 % chacun ; format du sujet (carrousel, reel, story)', $nbS === ['avis' => 4, 'coulisses' => 4, 'offre' => 4, 'produit' => 8]
+    && !array_filter($pl['posts'], static fn ($p) => $p['reseau'] === 'story' && $p['format'] !== 'Story')
+    && !array_filter($fbig, static fn ($p) => $p['format'] !== socPlanSujets()[$p['sujet']][2]['instagram']), json_encode($nbS));
+$suite = array_column($pl['posts'], 'sujet');
+check('sujets entrelacés : jamais trois fois le même de suite', !array_filter(array_keys($suite), static fn ($i) => $i >= 2 && $suite[$i] === $suite[$i - 1] && $suite[$i] === $suite[$i - 2]), implode(',', $suite));
+$pl = socPlanProposer(['du' => '2030-03-06', 'au' => '2030-03-15', 'rythme' => ['facebook' => 2], 'mix' => 'lancement', 'demain' => '2030-01-01'], null);
+check('sans statistiques : 09:00, jours répartis ; semaine incomplète au prorata (2 + 1) ; lancement : le premier post annonce la campagne (vidéo)', $pl['resume']['total'] === 3
+    && $pl['posts'][0]['sujet'] === 'annonce' && $pl['posts'][0]['format'] === 'Vidéo' && $pl['posts'][0]['type'] === 'Événement local'
+    && array_unique(array_column($pl['posts'], 'heure')) === ['09:00'] && str_contains($pl['creneaux']['source'], 'sans statistiques'), json_encode($pl['posts']));
+$pl = socPlanProposer(['du' => '2030-03-04', 'au' => '2030-03-17', 'rythme' => ['instagram' => 3], 'mix' => 'promo', 'demain' => '2030-01-01'], $an);
+$pl2 = socPlanProposer(['du' => $lun, 'au' => '2030-03-17', 'rythme' => ['fbig' => 3, 'instagram' => 2, 'facebook' => 2], 'demain' => '2030-01-01'], $an);
+$fil = []; foreach ($pl2['posts'] as $p) { foreach (SOC_PLAN_FILS[$p['reseau']] as $f) { $fil[$f][] = $p['date']; } }
+check('un fil sans deux posts le même jour : Facebook + Instagram, Instagram seul et Facebook seul se répartissent la semaine',
+    count($fil['ig']) === 10 && count(array_unique($fil['ig'])) === 10 && count($fil['fb']) === 10 && count(array_unique($fil['fb'])) === 10, json_encode($fil));
+check('promotion : l’offre en tête du mix, les rappels « derniers jours » à la fin', end($pl['posts'])['sujet'] === 'rappel' && array_count_values(array_column($pl['posts'], 'sujet'))['offre'] === 3
+    && $pl['posts'][0]['sujet'] !== 'rappel');
+$pl = socPlanProposer(['du' => '2030-02-01', 'au' => '2030-03-10', 'rythme' => ['fbig' => 1], 'demain' => '2030-03-04'], $an);
+check('campagne déjà commencée : le plan part de demain', $pl['du'] === '2030-03-04' && $pl['posts'][0]['date'] >= '2030-03-04');
+$refus = static function (array $in) use ($an) { try { socPlanProposer($in + ['demain' => '2030-01-01'], $an); return 0; } catch (HttpError $e) { return $e->status . ' ' . $e->getMessage(); } };
+check('refusé (422) : fin avant le début, aucun réseau, mix inconnu, période passée, plus d’un an',
+    str_starts_with((string) $refus(['du' => '2030-03-10', 'au' => '2030-03-01', 'rythme' => ['fbig' => 2]]), '422') && str_contains((string) $refus(['du' => '2030-03-01', 'au' => '2030-03-10', 'rythme' => ['fbig' => 0]]), 'au moins un réseau')
+    && str_contains((string) $refus(['du' => '2030-03-01', 'au' => '2030-03-10', 'rythme' => ['fbig' => 2], 'mix' => 'x']), 'Mix inconnu')
+    && str_contains((string) $refus(['du' => '2029-03-01', 'au' => '2029-03-10', 'rythme' => ['fbig' => 2]]), 'déjà passée')
+    && str_contains((string) $refus(['du' => '2030-03-01', 'au' => '2031-06-10', 'rythme' => ['fbig' => 2]]), 'un an'));
+$gp = static function (string $m, string $p, array $b = []): array {
+    $GLOBALS['SOC_BODY'] = $b;
+    try { return socRoute($m, $p); } catch (HttpError $e) { return [$e->status, ['error' => $e->getMessage()]]; } finally { unset($GLOBALS['SOC_BODY']); }
+};
+[$code, $b] = $gp('GET', '/campagnes/plan');
+check('GET /campagnes/plan : réseaux, mix préétablis (composition) et l’heure conseillée', $code === 200 && array_keys($b['reseaux']) === ['fbig', 'facebook', 'instagram', 'story'] && count($b['mix']) === 4
+    && $b['mix']['equilibre']['composition'][0] === ['sujet' => 'Produit vedette', 'part' => 40] && $b['heure'] === '09:15', json_encode($b));
+$du = date('Y-m-d', strtotime('+10 days')); $au = date('Y-m-d', strtotime('+23 days'));
+$avantPlan = count(socItems('posts'));
+[$code, $b] = $gp('POST', '/campagnes/plan/proposer', ['du' => $du, 'au' => $au, 'rythme' => ['fbig' => 2, 'story' => 1], 'mix' => 'equilibre', 'demain' => '2020-01-01']);
+check('POST /campagnes/plan/proposer : rien n’est écrit', $code === 200 && $b['resume']['total'] >= 5 && count(socItems('posts')) === $avantPlan, json_encode($b['resume'] ?? $b));
+$nPlan = $b['resume']['total'];
+[$code, $c] = $gp('POST', '/campagnes/plan/creer', ['campagne' => 'bo-1', 'du' => $du, 'au' => $au, 'rythme' => ['fbig' => 2, 'story' => 1], 'mix' => 'equilibre']);
+$crees = array_values(array_filter(socItems('posts'), static fn ($p) => in_array($p['id'], $c['ids'] ?? [], true)));
+$st = array_values(array_filter($crees, static fn ($p) => $p['plan']['reseau'] === 'story'));
+check('POST /campagnes/plan/creer : des brouillons rattachés à la campagne, sur ses boutiques, rien en file de publication', $code === 200 && $c['crees'] === $nPlan && count($crees) === $nPlan
+    && !array_filter($crees, static fn ($p) => $p['status'] !== 'Brouillon' || $p['campaign'] !== 'bo-1' || $p['shops'] !== ['4', '5'] || $p['text'] !== '')
+    && $st && $st[0]['story'] === 'seule' && $st[0]['fb'] && $st[0]['ig'] && str_ends_with($crees[0]['title'], ' · Automne')
+    && (int) Db::row('SELECT COUNT(*) n FROM social_publication WHERE content_id IN (' . implode(',', array_fill(0, count($c['ids']), '?')) . ')', $c['ids'])['n'] === 0, json_encode($crees[0] ?? $c));
+$garde = $crees[0]; $garde['text'] = 'Déjà rédigé.'; socItemPut('posts', $garde);
+[$code, $c2] = $gp('POST', '/campagnes/plan/creer', ['campagne' => 'bo-1', 'du' => $du, 'au' => $au, 'rythme' => ['fbig' => 2, 'story' => 1], 'mix' => 'equilibre', 'remplacer' => true]);
+check('refaire le plan (remplacer) : les brouillons encore vides du plan précédent sont retirés, un brouillon déjà rédigé est gardé', $code === 200 && $c2['retires'] === $nPlan - 1
+    && socItem('posts', $garde['id']) !== null && socItem('posts', $crees[1]['id']) === null && count(socItems('posts')) === $avantPlan + $nPlan + 1);
+[$code404] = $gp('POST', '/campagnes/plan/creer', ['campagne' => 'bo-999', 'du' => $du, 'au' => $au, 'rythme' => ['fbig' => 2]]);
+[$code400] = $gp('POST', '/campagnes/plan/creer', ['campagne' => 'automne', 'du' => $du, 'au' => $au, 'rythme' => ['fbig' => 2]]);
+check('campagne inconnue → 404 ; identifiant invalide → 400', $code404 === 404 && $code400 === 400);
+foreach (array_merge($c['ids'], $c2['ids']) as $id) { socItemDelete('posts', $id); }
+check('nettoyage : les posts d’avant le plan, seuls', count(socItems('posts')) === $avantPlan);
+
 socSettingPut('reco_cache', null, false); socSettingPut('anthropic_api_key', null, true);
 
 echo "Commentaires de toutes les Pages et de l'Instagram : lecture, classement vert / orange / rouge, suivi\n";
@@ -1927,7 +1995,8 @@ $a1 = socGoogleSynchroAuto(); $a2 = socGoogleSynchroAuto();
 check('synchronisation automatique : une fois par jour (le BO relit Google), pas deux', ($a1['ok'] ?? false) === true && $a2 === null && count($autoAppels) === 1
     && str_ends_with($autoAppels[0], '/api/cockpit/reputation/sync'), json_encode([$a1, $autoAppels]));
 socSettingPut('google_synchro_auto_dernier', null, false);
-Db::exec("UPDATE ceo_shop_reputation SET synced_at = NOW() WHERE shop_id = 'hal'");
+// L'heure de PHP (Bruxelles), pas NOW() de MySQL (UTC ici) : sinon, entre minuit et 2 h, « aujourd'hui » n'est pas le même jour.
+Db::exec("UPDATE ceo_shop_reputation SET synced_at = ? WHERE shop_id = 'hal'", [date('Y-m-d H:i:s')]);
 $a3 = socGoogleSynchroAuto();
 check('… et rien si le BO a déjà synchronisé aujourd’hui (un clic dans le BO)', $a3 === null && count($autoAppels) === 1 && (socSetting('google_synchro_auto_dernier')['message'] ?? '') === 'déjà synchronisé aujourd’hui');
 socSettingPut('google_synchro_auto_dernier', null, false);

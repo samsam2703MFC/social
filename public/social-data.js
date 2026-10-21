@@ -628,6 +628,14 @@
     }
     return api('POST', '/meta/campagnes/rafraichir').then(r => { IMPORT = r.import || IMPORT; return refresh().then(() => IMPORT); });
   }
+  /**
+   * Le plan de posts d'une campagne (src/plan.php) : options (réseaux, mix, heure conseillée), plan proposé
+   * (rien n'est écrit), puis ajout au calendrier en brouillons rattachés à la campagne. Calculé par le serveur.
+   */
+  const SANS_SERVEUR = () => Promise.reject(new Error('le plan se calcule sur le serveur, indisponible en démonstration'));
+  function plan() { return LIVE ? api('GET', '/campagnes/plan') : SANS_SERVEUR(); }
+  function planProposer(p) { return LIVE ? api('POST', '/campagnes/plan/proposer', p) : SANS_SERVEUR(); }
+  function planCreer(p) { return LIVE ? api('POST', '/campagnes/plan/creer', p).then(r => refresh().then(() => r)) : SANS_SERVEUR(); }
   /** Une pastille de profil sans photo : les initiales sur un rond aux couleurs de la marque. */
   function avatar(name, net) {
     const ini = String(name || '?').replace(/^l[’']atelier\s*by\s*[-–·]?\s*/i, '').split(/[\s.@_-]+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'AB';
@@ -963,7 +971,7 @@
     comptesMeta: () => LIVE ? api('GET', '/meta/comptes').then(r => { META.comptes = (r && r.comptes) || META.comptes; return META.comptes; }) : Promise.resolve(META.comptes), calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, charte, relire, ia: () => (LIVE && LIVE.ia) || { configure: false, modele: '' }, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.
-    ctype, rattacher, webshopUrl, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
+    ctype, rattacher, webshopUrl, plan, planProposer, planCreer, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
     igUnique: () => LIVE ? !!LIVE.instagramUnique : true, reseau, marque, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
     TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, TEST_SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
     byId, fmt, eur, argent, devSym, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param, embed };

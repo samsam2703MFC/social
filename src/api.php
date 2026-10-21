@@ -39,6 +39,7 @@ require_once __DIR__ . '/bilan.php';
 require_once __DIR__ . '/kit.php';
 require_once __DIR__ . '/boost.php';
 require_once __DIR__ . '/messages.php';
+require_once __DIR__ . '/plan.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -204,6 +205,18 @@ function socRoute(string $method, string $path): array
     // Ce qui marche (publications des 90 derniers jours, lues chez Meta, gardées 12 h) et idées de posts (src/recommandations.php).
     if ($method === 'GET' && $path === '/recommandations') { return [200, ['reco' => socRecommandations(!empty($_GET['cache']), !empty($_GET['forcer']))]]; }
     if ($method === 'GET' && $path === '/idees') { return [200, socIdees()]; }
+    // Le plan de posts d'une campagne (src/plan.php) : se relit d'abord, puis s'ajoute au calendrier en brouillons.
+    if ($method === 'GET' && $path === '/campagnes/plan') {
+        $c = socPlanCreneaux(socRecommandations(true));
+        return [200, socPlanOptions() + ['heure' => $c['heure'], 'creneau' => $c['creneau'], 'source' => $c['source']]];
+    }
+    if ($method === 'POST' && $path === '/campagnes/plan/proposer') { return [200, socPlanProposer(array_diff_key(body(), ['demain' => 1]), socRecommandations(true))]; }
+    if ($method === 'POST' && $path === '/campagnes/plan/creer') {
+        $b = array_diff_key(body(), ['demain' => 1]);
+        $id = (string) ($b['campagne'] ?? '');
+        if (!preg_match('/^bo-\d{1,9}$/', $id)) { throw new HttpError(400, 'campagne invalide'); }
+        return [200, socPlanCreer($id, $b, !empty($b['remplacer']))];
+    }
     if ($method === 'POST' && $path === '/redaction/tester') {
         try { $m = SocIa::modele(true); } catch (SocIaError $e) { throw new HttpError($e->http === 401 || $e->http === 403 ? 409 : ($e->http ?: 502), $e->getMessage()); }
         return [200, ['ok' => true, 'modele' => $m] + socIaStatut()];

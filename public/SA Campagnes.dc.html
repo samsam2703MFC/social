@@ -126,6 +126,84 @@
           </div>
         </div>
 
+        <!-- Plan de posts : durée, réseaux et rythme, mix → liste aux meilleurs jours et heure → brouillons au calendrier -->
+        <div id="sec-plan" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px 20px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <span style="display:flex;flex-direction:column;gap:3px;">
+              <span style="font-size:13px;font-weight:500;">Plan de posts de la campagne</span>
+              <span style="font-size:11px;color:#666666;line-height:1.45;">Choisissez la durée, les réseaux et le mix : la liste des posts se place aux meilleurs jours et à la meilleure heure de vos publications, puis s’ajoute au calendrier en brouillons rattachés à la campagne.</span>
+            </span>
+            <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 9px;background:#F4EFE8;color:#444444;white-space:nowrap;">{{ pl.periodeLabel }}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;">
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Durée</span>
+              <select value="{{ pl.dur }}" onChange="{{ pl.setDur }}" style="height:34px;font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:0 8px;">
+                <sc-for list="{{ pl.durs }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}">{{ o.l }}</option></sc-for>
+              </select>
+              <span style="display:{{ pl.datesDisp }};gap:6px;align-items:center;flex-wrap:wrap;font-size:12px;color:#444444;">
+                du <input type="date" value="{{ pl.du }}" min="{{ pl.min }}" onChange="{{ pl.setDu }}" style="font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 8px;">
+                au <input type="date" value="{{ pl.au }}" min="{{ pl.du }}" onChange="{{ pl.setAu }}" style="font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 8px;">
+              </span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Mix de posts</span>
+              <select value="{{ pl.mix }}" onChange="{{ pl.setMix }}" style="height:34px;font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:0 8px;">
+                <sc-for list="{{ pl.mixes }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}">{{ o.l }}</option></sc-for>
+              </select>
+              <span style="display:flex;gap:4px;flex-wrap:wrap;"><sc-for list="{{ pl.compo }}" as="k" hint-placeholder-count="4"><span style="font-size:11px;background:#FBF3F4;color:#8D1D2C;border-radius:999px;padding:3px 9px;">{{ k.t }}</span></sc-for></span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <span style="font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Réseaux et rythme</span>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;">
+              <sc-for list="{{ pl.reseaux }}" as="r" hint-placeholder-count="4">
+                <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:{{ r.bg }};border:{{ r.border }};cursor:pointer;">
+                  <input type="checkbox" checked="{{ r.on }}" onChange="{{ r.toggle }}" style="width:16px;height:16px;accent-color:#8D1D2C;flex:0 0 auto;">
+                  <span style="display:flex;flex-direction:column;gap:1px;flex:1 1 auto;min-width:0;"><span style="font-size:13px;font-weight:500;">{{ r.label }}</span><span style="font-size:11px;color:#666666;">{{ r.sub }}</span></span>
+                  <select value="{{ r.n }}" onChange="{{ r.setN }}" style="height:28px;font-size:12px;color:#222222;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:0 4px;">
+                    <sc-for list="{{ pl.rythmes }}" as="o" hint-placeholder-count="7"><option value="{{ o.v }}">{{ o.l }}</option></sc-for>
+                  </select>
+                </label>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ pl.loading }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;">Calcul du plan…</span></sc-if>
+          <sc-if value="{{ pl.hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8D1D2C;">{{ pl.err }}</span></sc-if>
+          <div style="display:{{ pl.resDisp }};flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#F4EFE8;border-radius:8px;padding:10px 12px;">
+              <span style="display:flex;flex-direction:column;gap:3px;">
+                <span style="font-size:14px;font-weight:500;">{{ pl.resume }}</span>
+                <span style="font-size:11px;color:#666666;">{{ pl.creneau }}</span>
+              </span>
+              <span style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;"><span style="font-size:11px;color:#666666;">Meilleurs jours :</span><sc-for list="{{ pl.jours }}" as="j" hint-placeholder-count="7"><span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ j.bg }};color:{{ j.fg }};">{{ j.t }}</span></sc-for></span>
+            </div>
+            <div style="border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;overflow:auto;max-height:360px;">
+              <div style="display:grid;grid-template-columns:96px 54px minmax(165px,1fr) 84px minmax(140px,1.3fr) minmax(115px,1fr) 104px;min-width:760px;">
+                <sc-for list="{{ pl.head }}" as="h" hint-placeholder-count="7"><span style="position:sticky;top:0;padding:8px 10px;font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;background:#FBF8F4;border-bottom:0.5px solid rgba(34,34,34,0.10);">{{ h.t }}</span></sc-for>
+                <sc-for list="{{ pl.rows }}" as="r" hint-placeholder-count="0">
+                  <span style="padding:7px 10px;font-size:12px;font-weight:500;border-top:{{ r.sep }};white-space:nowrap;">{{ r.date }}</span>
+                  <span style="padding:7px 10px;font-size:12px;border-top:{{ r.sep }};">{{ r.heure }}</span>
+                  <span style="padding:6px 10px;border-top:{{ r.sep }};display:flex;align-items:center;"><span style="font-size:11px;font-weight:500;border-radius:999px;padding:2px 8px;background:{{ r.netBg }};color:{{ r.netFg }};white-space:nowrap;">{{ r.reseau }}</span></span>
+                  <span style="padding:7px 10px;font-size:12px;color:#444444;border-top:{{ r.sep }};">{{ r.format }}</span>
+                  <span style="padding:7px 10px;font-size:12px;border-top:{{ r.sep }};">{{ r.sujet }}</span>
+                  <span style="padding:7px 10px;font-size:12px;color:#444444;border-top:{{ r.sep }};">{{ r.type }}</span>
+                  <span style="padding:7px 10px;font-size:11px;color:#666666;border-top:{{ r.sep }};">{{ r.raison }}</span>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+              <label style="display:{{ pl.remplDisp }};align-items:center;gap:8px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ pl.remplacer }}" onChange="{{ pl.toggleRempl }}" style="width:15px;height:15px;accent-color:#8D1D2C;">{{ pl.remplLabel }}</label>
+              <span style="font-size:11px;color:#666666;display:{{ pl.noRemplDisp }};">Les brouillons ne partent pas : on les complète (visuel, texte) et on les programme depuis le calendrier.</span>
+              <button onClick="{{ pl.creer }}" disabled="{{ pl.busy }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ pl.btnOp }};">{{ pl.btnLabel }}</button>
+            </div>
+          </div>
+          <div style="display:{{ pl.doneDisp }};align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#E2F0E8;border-radius:8px;padding:10px 12px;">
+            <span style="font-size:13px;color:#0F6B4A;font-weight:500;">{{ pl.doneLabel }}</span>
+            <a href="{{ pl.calHref }}" style="font-size:13px;font-weight:500;color:#0F6B4A;">Voir dans le calendrier →</a>
+          </div>
+        </div>
+
         <!-- Budget par boutique -->
         <div style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:16px 20px;display:flex;flex-direction:column;gap:10px;">
           <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;">
@@ -207,14 +285,101 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { selId: null, tab: 'all', refOpen: false, tick: 0, rtTab: 'posts', mpo: null };
+  state = { selId: null, tab: 'all', refOpen: false, tick: 0, rtTab: 'posts', mpo: null,
+    // Plan de posts : durée ('' = la campagne si elle a une fin, sinon 4 semaines), réseaux et rythme par semaine, mix.
+    pl: { dur: '', du: '', au: '', on: { fbig: true, facebook: false, instagram: false, story: true }, n: { fbig: 3, facebook: 2, instagram: 2, story: 2 }, mix: 'equilibre', remplacer: true },
+    plOpts: null, plRes: null, plBusy: false, plDone: null, plErr: '' };
   componentDidMount() {
     const SA = window.SA; const c = SA && SA.param('c'); if (c) this.setState({ selId: c });
     this.loadMeta();
+    if (SA && SA.plan) SA.plan().then(o => this.setState({ plOpts: o })).catch(e => this.setState({ plOpts: { err: e.message } }));
+    this.loadPlan();
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
   }
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); }
-  componentDidUpdate() { this.loadMeta(); }
+  componentDidUpdate() { this.loadMeta(); this.loadPlan(); }
+  campagne() { const camps = window.SA.state().campaigns; return camps.find(x => x.id === this.state.selId) || camps[0]; }
+  /** La période du plan : à partir de demain au plus tôt ; « toute la campagne » si le BO lui donne une fin. */
+  planPeriode(c) {
+    const SA = window.SA, p = this.state.pl, demain = SA.addDays(SA.TODAY, 1);
+    const debut = c.start && c.start > demain ? c.start : demain, campOk = !!(c.end && c.end >= debut && SA.daysBetween(debut, c.end) <= 365);
+    const dur = p.dur || (campOk ? 'camp' : '4');
+    let du = debut, au;
+    if (dur === 'camp') au = campOk ? c.end : SA.addDays(debut, 27);
+    else if (dur === 'dates') { du = p.du && p.du >= demain ? p.du : debut; au = p.au && p.au >= du ? p.au : (campOk ? c.end : SA.addDays(du, 27)); }
+    else au = SA.addDays(debut, 7 * (+dur) - 1);
+    return { dur, du, au, debut, campOk, demain };
+  }
+  planDemande(c) {
+    const p = this.state.pl, per = this.planPeriode(c), rythme = {};
+    Object.keys(p.on).forEach(k => { if (p.on[k]) rythme[k] = p.n[k]; });
+    return { du: per.du, au: per.au, rythme, mix: p.mix };
+  }
+  /** Le plan proposé par le serveur, recalculé dès qu'une option change (rien n'est écrit). */
+  loadPlan() {
+    const SA = window.SA; if (!SA || !SA.planProposer) return;
+    const c = this.campagne(); if (!c) return;
+    const q = this.planDemande(c), key = JSON.stringify(q);
+    if (this._pk === key) return;
+    this._pk = key; clearTimeout(this._pt);
+    if (!Object.keys(q.rythme).length) { this.setState({ plRes: { key, err: 'Choisissez au moins un réseau.' } }); return; }
+    this.setState({ plRes: { key, loading: true } });
+    this._pt = setTimeout(() => SA.planProposer(q).then(r => { if (this._pk === key) this.setState({ plRes: { key, data: r } }); })
+      .catch(e => { if (this._pk === key) this.setState({ plRes: { key, err: 'Plan impossible : ' + e.message } }); }), 250);
+  }
+  planVide() { return { durs: [], mixes: [], compo: [], reseaux: [], rythmes: [], jours: [], head: [], rows: [], datesDisp: 'none', resDisp: 'none', remplDisp: 'none', noRemplDisp: 'none', doneDisp: 'none' }; }
+  planVals(c, st) {
+    const SA = window.SA, s = this.state, p = s.pl, per = this.planPeriode(c), o = s.plOpts || {}, res = s.plRes && s.plRes.key === this._pk ? s.plRes : { loading: true };
+    const setPl = (patch) => this.setState(z => ({ pl: Object.assign({}, z.pl, patch), plDone: null, plErr: '' }));
+    const NETS = [['fbig', 'Facebook + Instagram', 'le même post, publié sur les deux', '#EFE9F7', '#4B2E83'], ['facebook', 'Facebook seul', 'Page Facebook seulement', '#E7EEF9', '#1F4E9C'],
+      ['instagram', 'Instagram seul', 'compte Instagram seulement', '#FBE7F1', '#9C2266'], ['story', 'Stories', 'story seule, Facebook et Instagram', '#FCE7C8', '#7A4100']];
+    const net = (k) => NETS.find(x => x[0] === k) || NETS[0];
+    const sem = (a, b) => Math.ceil((SA.daysBetween(a, b) + 1) / 7);
+    const durs = [{ v: 'camp', l: per.campOk ? 'Toute la campagne · ' + SA.dShort(per.debut) + ' → ' + SA.dShort(c.end) + ' (' + sem(per.debut, c.end) + ' sem.)' : 'Toute la campagne (sans fin dans le BO : 4 semaines)' }]
+      .concat([1, 2, 3, 4, 6, 8].map(n => ({ v: String(n), l: n + (n > 1 ? ' semaines' : ' semaine') + ' à partir du ' + SA.dShort(per.debut) })), [{ v: 'dates', l: 'Dates choisies…' }]);
+    const mixes = o.mix ? Object.keys(o.mix).map(k => ({ v: k, l: o.mix[k].libelle })) : [{ v: p.mix, l: 'Chargement des mix…' }];
+    const compo = o.mix && o.mix[p.mix] ? o.mix[p.mix].composition.map(x => ({ t: x.sujet + ' · ' + x.part + ' %' })) : [];
+    const d = res.data, posts = d ? d.posts : [];
+    const lundi = (x) => SA.addDays(x, -((SA.d2(x).getDay() + 6) % 7));
+    const rows = posts.map((x, i) => { const [, lab, , bg, fg] = net(x.reseau);
+      return { date: SA.DAYS[SA.d2(x.date).getDay()] + ' ' + SA.dShort(x.date), heure: x.heure, reseau: lab, netBg: bg, netFg: fg, format: x.format, sujet: x.sujetLibelle, type: x.type, raison: x.raison,
+        sep: i && lundi(x.date) !== lundi(posts[i - 1].date) ? '1px solid rgba(34,34,34,0.22)' : '0.5px solid rgba(34,34,34,0.07)' }; });
+    const parReseau = d ? Object.keys(d.resume.parReseau).map(k => d.resume.parReseau[k] + ' ' + (k === 'story' ? (d.resume.parReseau[k] > 1 ? 'stories' : 'story') : net(k)[1])).join(' · ') : '';
+    const jours = d && d.creneaux.jours.some(j => j.indice !== 1) ? d.creneaux.jours.map(j => ({ t: j.jour.slice(0, 3) + '. ×' + SA.fmt(j.indice, 1),
+      bg: j.indice >= 1.1 ? '#E2F0E8' : j.indice <= 0.9 ? '#F6DCDF' : '#F4EFE8', fg: j.indice >= 1.1 ? '#0F6B4A' : j.indice <= 0.9 ? '#8D1D2C' : '#444444' })) : [{ t: 'répartis sur la semaine', bg: '#F4EFE8', fg: '#444444' }];
+    const vides = st.posts.filter(x => x.campaign === c.id && x.plan && x.status === 'Brouillon' && !String(x.text || '').trim() && !(x.media || []).length && !x.img).length;
+    const done = s.plDone && s.plDone.cid === c.id ? s.plDone : null, n = posts.length, busy = s.plBusy;
+    const err = s.plErr || res.err || (o.err && !d ? 'Plan indisponible : ' + o.err : '');
+    return {
+      dur: per.dur, durs, du: per.du, au: per.au, min: per.demain, datesDisp: per.dur === 'dates' ? 'flex' : 'none',
+      periodeLabel: SA.dShort(per.du) + ' → ' + SA.dShort(per.au) + ' · ' + sem(per.du, per.au) + ' sem.',
+      setDur: (e) => { const v = e.target.value; setPl(v === 'dates' ? { dur: v, du: per.du, au: per.au } : { dur: v }); },
+      setDu: (e) => { if (e.target.value) setPl({ dur: 'dates', du: e.target.value }); }, setAu: (e) => { if (e.target.value) setPl({ dur: 'dates', au: e.target.value }); },
+      mix: p.mix, mixes, compo, setMix: (e) => setPl({ mix: e.target.value }),
+      rythmes: [1, 2, 3, 4, 5, 6, 7].map(k => ({ v: String(k), l: k + ' / sem.' })),
+      reseaux: NETS.map(([k, label, sub]) => ({ label, sub, on: !!p.on[k], n: String(p.n[k]), bg: p.on[k] ? '#FBF3F4' : '#FBF8F4', border: p.on[k] ? '1px solid #8D1D2C' : '0.5px solid rgba(34,34,34,0.10)',
+        toggle: (e) => setPl({ on: Object.assign({}, p.on, { [k]: e.target.checked }) }),
+        setN: (e) => setPl({ n: Object.assign({}, p.n, { [k]: +e.target.value }), on: Object.assign({}, p.on, { [k]: true }) }) })),
+      loading: !!res.loading && !err, hasErr: !!err, err,
+      resDisp: d && n ? 'flex' : 'none',
+      resume: n + ' posts sur ' + (d ? d.resume.semaines : 0) + ' semaine' + (d && d.resume.semaines > 1 ? 's' : '') + (parReseau ? ' : ' + parReseau : ''),
+      creneau: d ? 'Heure : ' + d.creneaux.heure + (d.creneaux.creneau ? ' (' + d.creneaux.creneau.toLowerCase() + ')' : '') + ' — ' + d.creneaux.source : '', jours,
+      head: ['Date', 'Heure', 'Réseau', 'Format', 'Sujet', 'Type de post', 'Pourquoi ce jour'].map(t => ({ t })), rows,
+      remplDisp: vides ? 'flex' : 'none', noRemplDisp: vides ? 'none' : 'inline', remplacer: p.remplacer, toggleRempl: (e) => setPl({ remplacer: e.target.checked }),
+      remplLabel: 'Remplacer les ' + vides + ' brouillon' + (vides > 1 ? 's' : '') + ' encore vide' + (vides > 1 ? 's' : '') + ' du plan précédent',
+      busy, btnOp: busy || !n ? '0.6' : '1', btnLabel: busy ? 'Ajout au calendrier…' : 'Ajouter ' + n + ' brouillon' + (n > 1 ? 's' : '') + ' au calendrier',
+      creer: () => {
+        if (busy || !n) return;
+        this.setState({ plBusy: true, plErr: '' });
+        SA.planCreer(Object.assign(this.planDemande(c), { campagne: c.id, remplacer: !!(vides && p.remplacer) }))
+          .then(r => this.setState({ plBusy: false, plDone: { cid: c.id, crees: r.crees, retires: r.retires, first: posts[0].date } }))
+          .catch(e => this.setState({ plBusy: false, plErr: 'Ajout impossible : ' + e.message }));
+      },
+      doneDisp: done ? 'flex' : 'none',
+      doneLabel: done ? done.crees + ' brouillon' + (done.crees > 1 ? 's' : '') + ' ajouté' + (done.crees > 1 ? 's' : '') + ' au calendrier' + (done.retires ? ' · ' + done.retires + ' brouillon' + (done.retires > 1 ? 's' : '') + ' vide' + (done.retires > 1 ? 's' : '') + ' du plan précédent retiré' + (done.retires > 1 ? 's' : '') : '') + '.' : '',
+      calHref: done ? SA.href('cal', 'operation=' + encodeURIComponent(c.id) + '&date=' + done.first) : '#',
+    };
+  }
   /** Les publications des Pages (lues chez Meta) sur la période de l'opération affichée, 100 jours au plus. */
   loadMeta() {
     const SA = window.SA; if (!SA || !SA.calendriers) return;
@@ -229,7 +394,7 @@ class Component extends DCLogic {
   }
   renderVals() {
     const SA = window.SA, s = this.state;
-    if (!SA) return { f: {}, list: [] };
+    if (!SA) return { f: {}, list: [], pl: this.planVide() };
     const st = SA.state(), camps = st.campaigns;
     const tint = (hex) => hex + '22';
     // Le type vient du Marketing du BO : référentiel du module s'il le connaît, sinon son libellé tel quel.
@@ -317,7 +482,8 @@ class Component extends DCLogic {
       refHead: ['', 'Type', 'Levier', 'KPI attendu', 'Durée'],
       ctypes: SA.CTYPES.map(t => ({ name: t.name, color: t.color, tint: tint(t.color), icon: t.icon, lev: t.lev, levName: SA.LEVERS[t.lev].name, kpi: t.kpi, dur: t.continuous ? 'Continue' : 'Datée' })),
       tabs: tabsDef.map(([k, label, arr]) => ({ label, n: arr.length, bg: s.tab === k ? '#8D1D2C' : 'transparent', fg: s.tab === k ? '#FFFFFF' : '#444444', pick: () => this.setState({ tab: k }) })),
-      list, f, rt: typeof rt !== 'undefined' ? rt : { tabs: [], rows: [] }, boHref: SA.opsLink(), nOps: camps.length + ' opération' + (camps.length > 1 ? 's' : ''),
+      list, f, rt: typeof rt !== 'undefined' ? rt : { tabs: [], rows: [] }, boHref: SA.opsLink(),
+      pl: c ? this.planVals(c, st) : this.planVide(), nOps: camps.length + ' opération' + (camps.length > 1 ? 's' : ''),
       hasOpsErr: !!SA.opsErreur(), opsErr: SA.opsErreur() || '',
     };
   }

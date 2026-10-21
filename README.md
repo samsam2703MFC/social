@@ -448,6 +448,19 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   ou depuis l'opération (panneau « Rattacher » : posts et pubs de la période, à
   cocher). Post du module et publicité : leur champ `campaign` ; publication lue
   chez Meta : le lien seul, table `social_rattachement`.
+- **Plan de posts d'une campagne** (`src/plan.php`, panneau de l'opération) — durée (toute la
+  campagne, 1 à 8 semaines ou dates choisies ; jamais avant demain), réseaux et rythme par semaine
+  (Facebook + Instagram — le même post —, Facebook seul, Instagram seul, stories) et un mix
+  préétabli de sujets (équilibré, lancement, promotion, notoriété) → la liste des posts : chaque
+  semaine les meilleurs jours de « Ce qui marche » (indice du jour, pas deux jours de suite sur un
+  réseau, pas deux posts le même jour sur un même fil quand la semaine le permet), à l'heure des
+  bonnes publications du meilleur créneau (09:00 sans statistiques), les sujets au prorata du mix
+  et entrelacés, les annonces en première semaine et les rappels en dernière, le format du sujet
+  (photo, carrousel, reel, story) et son type de post. `GET /campagnes/plan` (options),
+  `POST /campagnes/plan/proposer {du, au, rythme, mix}` (rien n'est écrit), `POST
+  /campagnes/plan/creer {campagne, …, remplacer}` : des **brouillons** rattachés à la campagne,
+  sur ses boutiques, avec le sujet et le format (`plan`) — jamais en file de publication ;
+  `remplacer` retire d'abord les brouillons d'un plan précédent restés vides (ni texte ni visuel).
 - **Retour sur campagne** — CA additionnel = CA des produits de la campagne
   pendant la période − moyenne des mêmes jours sur les 6 semaines précédentes
   (**estimation**, affichée comme telle).

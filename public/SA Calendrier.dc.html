@@ -425,6 +425,8 @@ class Component extends DCLogic {
     const net = SA && SA.param('reseau'); if (net === 'facebook' || net === 'instagram') this.setState({ fNet: net });
     const op = SA && SA.param('operation'); if (op && /^[\w-]{1,40}$/.test(op)) this.setState({ fCamp: op });
     const v = SA && SA.param('view'); if (v) this.setState({ view: v });
+    // Ouvert sur un mois précis (le premier post d'un plan de campagne, par exemple).
+    const dt = SA && SA.param('date'); if (/^\d{4}-\d{2}-\d{2}$/.test(dt || '')) this.setState({ cursor: dt });
     this._t = setTimeout(() => this.setState({ loading: false }), 450);
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
     this.loadMeta();
