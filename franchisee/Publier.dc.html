@@ -34,51 +34,44 @@
         <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">{{ eyebrow }}</span>
         <h1 style="font-family:var(--font-display);font-weight:400;font-size:30px;line-height:1.1;margin:0;color:#232220;">{{ title }}</h1>
       </div>
-      <sc-if value="{{ hasTpl }}" hint-placeholder-val="{{ false }}"><button onClick="{{ back }}" style="height:36px;padding:0 14px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;">← Changer de modèle</button></sc-if>
     </header>
 
     <sc-if value="{{ quotaFull }}" hint-placeholder-val="{{ false }}"><div style="background:#FCE7C8;color:#7A4100;border-radius:10px;padding:12px 14px;font-size:13px;">Vous avez atteint le quota de la semaine ({{ quotaMax }} posts). Vous pourrez de nouveau publier la semaine prochaine — ou annuler un post prévu.</div></sc-if>
 
-    <!-- Étape 1 : le modèle -->
-    <sc-if value="{{ noTpl }}" hint-placeholder-val="{{ true }}">
-      <!-- Le kit du mois : les posts que le réseau demande ce mois-ci (src/kit.php), préparés au clic. -->
-      <sc-if value="{{ hasKit }}" hint-placeholder-val="{{ false }}">
-      <section style="background:#FFFFFF;border-radius:12px;border:1px solid rgba(141,29,44,0.45);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
-        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8D1D2C;">À publier ce mois-ci · demandé par le réseau</span>
-          <span style="font-size:12px;color:#666666;">{{ kitResume }}</span>
-        </div>
-        <sc-for list="{{ kit }}" as="k" hint-placeholder-count="2">
-          <div class="sf-wrap" style="display:flex;gap:12px;align-items:center;padding:8px 10px;border-radius:10px;background:#FBF8F4;">
-            <span style="flex:0 0 auto;width:48px;text-align:center;display:flex;flex-direction:column;line-height:1.1;"><span style="font-size:18px;font-weight:600;color:#232220;">{{ k.jour }}</span><span style="font-size:10px;text-transform:uppercase;color:#666666;">{{ k.mois }}</span></span>
-            <span style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;"><span style="font-size:14px;font-weight:500;">{{ k.nom }}</span><sc-if value="{{ k.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;line-height:1.4;">{{ k.note }}</span></sc-if></span>
-            <span style="flex:0 0 auto;font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;background:{{ k.stBg }};color:{{ k.stFg }};white-space:nowrap;">{{ k.statut }}</span>
-            <sc-if value="{{ k.aFaire }}" hint-placeholder-val="{{ true }}"><a href="{{ k.href }}" style="flex:0 0 auto;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;background:#8D1D2C;color:#FFFFFF;text-decoration:none;white-space:nowrap;">Préparer</a></sc-if>
-          </div>
-        </sc-for>
-      </section>
-      </sc-if>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ filters }}" as="f" hint-placeholder-count="2"><button onClick="{{ f.pick }}" style="border-radius:999px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};">{{ f.label }}</button></sc-for></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;">
-        <sc-for list="{{ tpls }}" as="t" hint-placeholder-count="5">
-          <button onClick="{{ t.pick }}" style="text-align:left;background:#FFFFFF;border-radius:12px;border:0.5px solid rgba(34,34,34,0.12);padding:0;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;">
-            <span style="display:block;height:8px;background:{{ t.sw }};"></span>
-            <span style="padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
-              <span style="font-size:16px;font-weight:500;color:#222222;">{{ t.name }}</span>
-              <span style="font-size:12px;color:#4A443E;line-height:1.5;">{{ t.description }}</span>
-              <span style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;"><sc-for list="{{ t.badges }}" as="b" hint-placeholder-count="2"><span style="font-size:10px;font-weight:600;border-radius:999px;padding:2px 8px;background:{{ b.bg }};color:{{ b.fg }};">{{ b.t }}</span></sc-for></span>
-            </span>
-          </button>
-        </sc-for>
+    <!-- Le kit du mois : les posts que le réseau demande ce mois-ci (src/kit.php), préparés au clic. -->
+    <sc-if value="{{ hasKit }}" hint-placeholder-val="{{ false }}">
+    <section style="background:#FFFFFF;border-radius:12px;border:1px solid rgba(141,29,44,0.45);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#8D1D2C;">À publier ce mois-ci · demandé par le réseau</span>
+        <span style="font-size:12px;color:#666666;">{{ kitResume }}</span>
       </div>
+      <sc-for list="{{ kit }}" as="k" hint-placeholder-count="2">
+        <div class="sf-wrap" style="display:flex;gap:12px;align-items:center;padding:8px 10px;border-radius:10px;background:#FBF8F4;">
+          <span style="flex:0 0 auto;width:48px;text-align:center;display:flex;flex-direction:column;line-height:1.1;"><span style="font-size:18px;font-weight:600;color:#232220;">{{ k.jour }}</span><span style="font-size:10px;text-transform:uppercase;color:#666666;">{{ k.mois }}</span></span>
+          <span style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;"><span style="font-size:14px;font-weight:500;">{{ k.nom }}</span><sc-if value="{{ k.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;line-height:1.4;">{{ k.note }}</span></sc-if></span>
+          <span style="flex:0 0 auto;font-size:11px;font-weight:600;border-radius:999px;padding:3px 9px;background:{{ k.stBg }};color:{{ k.stFg }};white-space:nowrap;">{{ k.statut }}</span>
+          <sc-if value="{{ k.aFaire }}" hint-placeholder-val="{{ true }}"><a href="{{ k.href }}" style="flex:0 0 auto;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:500;background:#8D1D2C;color:#FFFFFF;text-decoration:none;white-space:nowrap;">Préparer</a></sc-if>
+        </div>
+      </sc-for>
+    </section>
+    </sc-if>
+
+    <!-- Aucun modèle ouvert par le réseau -->
+    <sc-if value="{{ noTpl }}" hint-placeholder-val="{{ false }}">
       <sc-if value="{{ noTpls }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:20px;font-size:13px;color:#666666;text-align:center;">Aucun modèle ouvert pour l’instant : le réseau n’a pas encore ouvert de modèle de ce type.</div></sc-if>
     </sc-if>
 
-    <!-- Étape 2 : les champs ouverts par le modèle -->
+    <!-- L'éditeur : les champs ouverts par le modèle -->
     <sc-if value="{{ hasTpl }}" hint-placeholder-val="{{ false }}">
+      <!-- Le modèle : une bascule, changée sur place (le produit choisi est gardé) -->
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="sf-wrap" style="display:flex;flex-wrap:wrap;gap:2px;align-self:flex-start;max-width:100%;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.12);border-radius:10px;padding:3px;">
+          <sc-for list="{{ tplToggle }}" as="m" hint-placeholder-count="5"><button onClick="{{ m.pick }}" title="{{ m.tip }}" style="border:none;border-radius:8px;padding:8px 13px;font-size:13px;font-weight:500;cursor:pointer;background:{{ m.bg }};color:{{ m.fg }};white-space:nowrap;">{{ m.name }}</button></sc-for>
+        </div>
+        <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;color:#4A443E;line-height:1.5;">{{ tplDescription }}<sc-for list="{{ tplBadges }}" as="b" hint-placeholder-count="2"><span style="font-size:10px;font-weight:600;border-radius:999px;padding:2px 8px;background:{{ b.bg }};color:{{ b.fg }};">{{ b.t }}</span></sc-for></span>
+      </div>
       <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
         <div style="flex:1 1 440px;min-width:300px;display:flex;flex-direction:column;gap:12px;">
-          <span style="font-size:13px;color:#4A443E;line-height:1.5;">{{ tplDescription }}</span>
 
           <sc-if value="{{ needProduct }}" hint-placeholder-val="{{ false }}">
             <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:10px;">
@@ -722,7 +715,8 @@ class Component extends DCLogic {
     if (/^\d{4}-\d{2}-\d{2}$/.test(jour || '') && jour > slot.date && jour <= SF.addDays(st.today, r.horizonJours) && (r.jours || []).includes(SF.d2(jour).getDay()))
       slot = { date: jour, time: r.heureMin < '09:00' && r.heureMax >= '09:00' ? '09:00' : r.heureMin };
     Object.assign(base, slot, { from: slot.date, to: SF.addDays(slot.date, Math.min(6, st.rules.promoDureeMax - 1)) });
-    const t = q.get('template') && st.templates.find(x => x.id === q.get('template'));
+    const promo = (x) => ((x.promo || {}).kind || 'aucune') !== 'aucune';
+    const t = (q.get('template') && st.templates.find(x => x.id === q.get('template'))) || (base.filter === 'promo' && st.templates.find(promo)) || st.templates[0];
     if (t) Object.assign(base, this.forTpl(t, st));
     return base;
   }
@@ -1045,12 +1039,10 @@ class Component extends DCLogic {
     if (!st || !V) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', tpls: [], filters: [] };
     const r = st.rules, seg = (on) => on ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
     const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
-    const SW = { epure: '#F5EFE4', abricot: '#F2C9A0', ruby: '#8D1D2C', noir: '#232220', plein: '#8A847C', duo: '#EAE4DC' };
     const q = st.quota || { used: 0, max: r.quotaSemaine }, quotaFull = q.used >= q.max;
     const t = s.tpl ? st.templates.find(x => x.id === s.tpl) : null;
-    const isPromo = (x) => ((x.promo || {}).kind || 'aucune') !== 'aucune';
     const valOf = (x) => r.validation === 'toujours' || (r.validation === 'modele' && x.validation);
-    // Le kit du mois (« À publier ce mois-ci ») : en tête du choix du modèle.
+    // Le kit du mois (« À publier ce mois-ci ») : en tête de l'écran.
     const kitVals = (() => {
         const items = this.state.kitItems || [], M = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
         const aFaire = items.filter(k => !k.fait).length;
@@ -1061,20 +1053,9 @@ class Component extends DCLogic {
             href: SF.href('pub', 'template=' + encodeURIComponent(k.modele) + (k.passe ? '' : '&date=' + k.date)) })) };
       })();
     const common = Object.assign({ ok: true, hasError: false, quotaFull, quotaMax: q.max, hasTpl: !!t, noTpl: !t }, kitVals);
-    if (!t) {
-      const list = st.templates.filter(x => s.filter === 'all' || isPromo(x));
-      return Object.assign(common, {
-        eyebrow: 'Publier · L’Atelier By ' + st.shop.name, title: s.filter === 'promo' ? 'NOUVELLE PROMOTION' : 'CHOISIR UN MODELE',
-        filters: [['all', 'Tous les modèles'], ['promo', 'Promotions']].map(([k, label]) => Object.assign(chip(s.filter === k), { label, pick: () => this.setState({ filter: k }) })),
-        tpls: list.map(x => ({ name: x.name, description: x.description || '', sw: SW[(x.visual || {}).style] || '#EAE4DC',
-          badges: [(x.visual || {}).style === 'fixe' ? { t: 'visuel du réseau', bg: '#232220', fg: '#F2C9A0' } : null, isPromo(x) ? { t: ((V.PROMOS.find(p => p[0] === x.promo.kind) || [])[1] || 'Promotion'), bg: '#8D1D2C', fg: '#FFFFFF' } : null,
-            valOf(x) ? { t: 'validé par le réseau', bg: '#FCE7C8', fg: '#7A4100' } : { t: 'publication directe', bg: '#E2F0E8', fg: '#0F6B4A' },
-            { t: [x.fb && r.fb ? 'Facebook' : '', x.ig && r.ig ? 'Instagram' : ''].filter(Boolean).join(' + '), bg: '#F4EFE8', fg: '#444444' }].filter(Boolean),
-          pick: () => this.setState(this.forTpl(x, st)) })),
-        noTpls: list.length === 0,
-      });
-    }
-    // Étape 2
+    // Aucun modèle ouvert par le réseau : le message seul.
+    if (!t) return Object.assign(common, { eyebrow: 'Publier · L’Atelier By ' + st.shop.name, title: 'CRÉER UN POST', noTpls: true });
+    // L'éditeur, sur le modèle choisi dans la bascule
     const S = (patch) => this.setState(Object.assign({ errors: [] }, patch));
     const prod = s.product ? st.catalogue.find(p => p.id === s.product) : null, p = t.promo || {}, kind = p.kind || 'aucune';
     const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -1098,7 +1079,12 @@ class Component extends DCLogic {
     const chans = [['fb', 'Facebook', t.fb && r.fb, st.shop.fb === 'connected'], ['ig', 'Instagram', t.ig && r.ig, st.shop.igs === 'connected']]
       .filter(([, , allowed]) => allowed).map(([k, label, , conn]) => ({ label: label + (conn ? '' : ' (non connecté)'), on: !!s[k] && conn, dis: !conn, fg: conn ? '#222222' : '#9A948C', toggle: () => S({ [k]: !s[k] }) }));
     return Object.assign(common, {
-      eyebrow: 'Publier · modèle du réseau', title: t.name.toUpperCase(), back: () => this.setState({ tpl: null, errors: [] }), tplDescription: t.description || '',
+      eyebrow: 'Publier · L’Atelier By ' + st.shop.name, title: s.filter === 'promo' ? 'NOUVELLE PROMOTION' : 'CRÉER UN POST', tplDescription: t.description || '',
+      // La bascule des modèles ouverts par le réseau ; changer de modèle garde le produit choisi s'il en demande un.
+      tplToggle: st.templates.map(x => ({ name: x.name, tip: x.description || '', bg: x.id === t.id ? '#8D1D2C' : 'transparent', fg: x.id === t.id ? '#FFFFFF' : '#444444',
+        pick: () => { if (x.id !== t.id) this.setState(Object.assign(this.forTpl(x, st), x.product === 'choix' ? { product: s.product } : {})); } })),
+      tplBadges: [(t.visual || {}).style === 'fixe' ? { t: 'visuel du réseau', bg: '#232220', fg: '#F2C9A0' } : null,
+        valOf(t) ? { t: 'validé par le réseau', bg: '#FCE7C8', fg: '#7A4100' } : { t: 'publication directe', bg: '#E2F0E8', fg: '#0F6B4A' }].filter(Boolean),
       needProduct: t.product === 'choix', q: s.q, setQ: (e) => this.setState({ q: e.target.value }), qPh: 'Rechercher parmi vos ' + st.catalogue.length + ' produits…',
       products: products.slice(0, 60).map(c => ({ name: c.name, price: c.price ? c.price + ' €' : '', img: c.photo || SF.media(c.img), fit: c.photo ? 'cover' : 'contain', ring: s.product === c.id ? '#8D1D2C' : 'rgba(34,34,34,0.10)', pick: () => S({ product: c.id, apiOffre: null }) })),
       // Les promotions, bundles et formules du produit (TFBuddy), valables dans la boutique.
