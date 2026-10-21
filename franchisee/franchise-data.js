@@ -126,6 +126,9 @@
     if (DEMO) { STATE = demoLoad(); if (SHOP && STATE.me.shops.some(x => x.id === SHOP) && SHOP !== STATE.shop.id) { const x = STATE.me.shops.find(y => y.id === SHOP); STATE.shop = Object.assign({}, STATE.shop, { id: x.id, name: x.name, langs: x.id === 'halle' ? ['nl', 'fr'] : ['fr'] }); } return; }
     const r = xhr('GET', '/franchise/etat' + (SHOP ? '?shop=' + encodeURIComponent(SHOP) : ''));
     if (r.status === 401) { ERR = HORS_SESSION; return; }
+    // Boutique demandée dans l'adresse mais pas ouverte : on le dit, sans se rabattre sur une autre boutique.
+    if (r.status === 403 && Q.get('shop')) { ERR = (r.json && r.json.error) || 'Cette boutique n’est pas ouverte.'; return; }
+    // Boutique gardée d'une visite précédente (plus ouverte) : on ouvre celle de la session.
     if (r.status === 403 && SHOP) { try { localStorage.removeItem('sf.shop'); } catch (e) {} const r2 = xhr('GET', '/franchise/etat'); if (r2.status === 200) { STATE = r2.json; return; } ERR = (r2.json && r2.json.error) || 'Accès refusé.'; return; }
     if (r.status !== 200 || !r.json) { ERR = (r.json && r.json.error) || 'Espace indisponible (HTTP ' + r.status + ').'; return; }
     STATE = r.json;

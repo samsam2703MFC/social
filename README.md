@@ -480,9 +480,10 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   franchiseur), un aperçu dans un cookie signé limité à une boutique, qui se ferme
   depuis l'espace (« Fermer l'aperçu »). **En attendant l'ERP** (pas de
   `franchise_session` configuré), la règle « accès ouvert » (`accesLibre`, écran
-  Espace franchisé → 3 · Accès) ouvre l'espace **sans connexion sur une seule
-  boutique** (ex. 4 : `/social_franchisee/` arrive sur `?shop=4`, les autres boutiques
-  restent refusées) ; dès que l'ERP est branché, elle ne joue plus. L'ancienne table `social_acces_franchise`
+  Espace franchisé → 3 · Accès) ouvre l'espace **sans connexion sur les boutiques
+  cochées** : chaque lien `?shop=` ouvre la sienne, `/social_franchisee/` arrive sur la
+  première, une boutique non cochée est refusée (l'écran le dit, sans se rabattre sur
+  une autre) ; dès que l'ERP est branché, elle ne joue plus. L'ancienne table `social_acces_franchise`
   (codes d'accès) n'est plus créée ni lue ; une base qui l'a encore peut la garder.
 - **Des adresses propres, sans « .dc.html »** : `/social_franchisee/calendrier`, `publier`,
   `operations` (Opérations du réseau), `instagram` (grille) — réécrites vers les fichiers par

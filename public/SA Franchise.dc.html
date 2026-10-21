@@ -222,12 +222,10 @@
         <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">3 · Accès des boutiques · par l’ERP</span>
         <span style="font-size:12px;color:#444444;line-height:1.55;">Les gérants entrent dans leur espace <strong style="font-weight:600;">depuis l’ERP</strong>, où ils sont déjà connectés : pas de compte ni de code à gérer ici. L’ERP dit leurs boutiques ; le lien de l’espace porte la boutique (<span style="font-family:ui-monospace,monospace;">?shop=</span>) et n’ouvre que l’une des leurs.</span>
         <div style="display:flex;flex-direction:column;gap:6px;background:#F4EFE8;border-radius:8px;padding:10px 12px;">
-          <label style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:#222222;font-weight:500;">En attendant l’ERP, ouvrir l’espace sans connexion sur
-            <select value="{{ libre }}" onChange="{{ setLibre }}" style="font-size:12px;font-weight:500;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:5px 8px;">
-              <option value="">— aucune boutique (fermé sans l’ERP) —</option>
-              <sc-for list="{{ shopOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.name }} ({{ o.id }})</option></sc-for>
-            </select>
-          </label>
+          <span style="font-size:12px;color:#222222;font-weight:500;">En attendant l’ERP, ouvrir l’espace sans connexion sur :</span>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;">
+            <sc-for list="{{ libreOpts }}" as="o" hint-placeholder-count="0"><label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;cursor:pointer;"><input type="checkbox" checked="{{ o.on }}" onChange="{{ o.toggle }}" style="accent-color:#8D1D2C;margin:0;width:15px;height:15px;">{{ o.name }} ({{ o.id }})</label></sc-for>
+          </div>
           <span style="font-size:11px;color:#666666;line-height:1.45;">{{ libreNote }} À enregistrer avec les règles. Une fois l’ERP branché, c’est lui qui ouvre l’espace : ce réglage ne joue plus.</span>
         </div>
         <div style="border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;overflow:hidden;">
@@ -324,7 +322,7 @@ class Component extends DCLogic {
       { label: 'Espace', value: rules.actif === false ? 'Fermé' : 'Ouvert', sub: (rules.validation === 'toujours' ? 'tout est validé par vous' : rules.validation === 'jamais' ? 'publication directe' : 'validation selon le modèle'), color: rules.actif === false ? '#8D1D2C' : '#0F6B4A', border: 'rgba(34,34,34,0.10)', href: '#regles' },
       { label: 'Modèles ouverts', value: tpls.filter(t => t.active).length + ' / ' + tpls.length, sub: 'textes et visuels figés', color: '#222222', border: 'rgba(34,34,34,0.10)', href: '#' },
       { label: 'À valider', value: pending.length, sub: 'propositions des boutiques', color: pending.length ? '#8A4B00' : '#222222', border: pending.length ? '#E3B155' : 'rgba(34,34,34,0.10)', href: SA.href('cal', 'status=' + encodeURIComponent('À valider')) },
-      { label: 'Accès des boutiques', value: rules.accesLibre ? 'Ouvert · ' + ((SA.byId(SA.SHOPS, rules.accesLibre) || {}).name || rules.accesLibre) : 'Par l’ERP', sub: rules.accesLibre ? 'sans connexion, en attendant l’ERP' : 'session de l’ERP, boutique dans le lien', color: '#222222', border: 'rgba(34,34,34,0.10)', href: '#acces' },
+      { label: 'Accès des boutiques', value: (Array.isArray(rules.accesLibre) ? rules.accesLibre.length : !!rules.accesLibre) ? 'Ouvert · ' + SA.SHOPS.filter(x => [].concat(rules.accesLibre).map(String).includes(String(x.id))).map(x => x.name).join(', ') : 'Par l’ERP', sub: rules.accesLibre ? 'sans connexion, en attendant l’ERP' : 'session de l’ERP, boutique dans le lien', color: '#222222', border: 'rgba(34,34,34,0.10)', href: '#acces' },
     ];
     const list = tpls.slice().sort((a, b) => (+a.order || 99) - (+b.order || 99)).map(t => ({ name: t.name, resume: (t.description ? t.description + ' — ' : '') + V.resume(t),
       state: t.active ? 'ouvert' : 'fermé', stBg: t.active ? '#E2F0E8' : '#F4EFE8', stFg: t.active ? '#0F6B4A' : '#666666',
@@ -410,8 +408,12 @@ class Component extends DCLogic {
         .map(([k, label]) => ({ label, on: r[k] !== false, toggle: () => RS(k, r[k] === false) })),
       setMessage: (ev) => RS('message', ev.target.value), saveRules: () => this.saveRules(), rulesLabel: 'Enregistrer les règles',
       // Le lien que l'ERP ouvre pour chaque boutique (la boutique dans l'adresse).
-      libre: r.accesLibre || '', setLibre: (ev) => RS('accesLibre', ev.target.value),
-      libreNote: r.accesLibre ? 'L’adresse ' + fr.url + ' ouvre directement l’espace de ' + ((SA.byId(SA.SHOPS, r.accesLibre) || {}).name || r.accesLibre) + ' (?shop=' + r.accesLibre + '), sans connexion — les autres boutiques restent fermées.' : 'Sans l’ERP, l’espace reste fermé (seul l’aperçu « Voir comme cette boutique » l’ouvre).',
+      // Les boutiques ouvertes sans l'ERP : une liste (l'ancien réglage d'une seule boutique, '4', se lit ['4']).
+      ...(() => { const libre = (Array.isArray(r.accesLibre) ? r.accesLibre : String(r.accesLibre || '').split(',')).map(String).filter(Boolean);
+        const noms = SA.SHOPS.filter(x => libre.includes(String(x.id))).map(x => x.name);
+        return { libreOpts: SA.SHOPS.map(x => ({ id: x.id, name: x.name, on: libre.includes(String(x.id)),
+            toggle: () => RS('accesLibre', libre.includes(String(x.id)) ? libre.filter(i => i !== String(x.id)) : libre.concat(String(x.id))) })),
+          libreNote: noms.length ? 'Les liens ci-dessous ouvrent directement l’espace de ' + noms.join(', ') + ', sans connexion' + (noms.length < SA.SHOPS.length ? ' — les autres boutiques restent fermées.' : '.') : 'Sans l’ERP, l’espace reste fermé (seul l’aperçu « Voir comme cette boutique » l’ouvre).' }; })(),
       accessRows: SA.SHOPS.map(sh => ({ name: sh.name, link: fr.url + 'calendrier?shop=' + encodeURIComponent(sh.id), view: () => this.viewAs(sh.id) })),
       shopOptions: SA.SHOPS.map(x => ({ id: x.id, name: x.name })), asShop: s.asShop, setAsShop: (ev) => this.setState({ asShop: ev.target.value }),
       viewAs: () => this.viewAs(s.asShop || (SA.SHOPS[0] || {}).id),

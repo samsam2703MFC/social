@@ -801,8 +801,25 @@ $GLOBALS['SOCIAL_HOTE'] = ['franchise_session' => static fn (): ?array => null];
 [$code] = $fr('GET', '/franchise/etat');
 check('ERP branché : l’accès ouvert ne joue plus (seule la session de l’ERP ouvre l’espace)', $code === 401);
 unset($GLOBALS['SOCIAL_HOTE']);
-check('réglage borné : une boutique hors du réseau est refusée', sfReglesPut(array_merge(sfRegles(), ['accesLibre' => '999']))['accesLibre'] === '');
-$fr('POST', '/franchise/admin/regles', ['rules' => array_merge(sfRegles(), ['accesLibre' => ''])]);
+check('réglage borné : une boutique hors du réseau est refusée', sfReglesPut(array_merge(sfRegles(), ['accesLibre' => '999']))['accesLibre'] === []);
+check('ancien réglage (une boutique, texte) relu comme une liste', (function () { $r = sfRegles(); $r['accesLibre'] = '4'; socSettingPut('franchise_regles', $r, false); return sfRegles()['accesLibre'] === ['4']; })());
+
+echo "Espace franchisé : accès ouvert sur plusieurs boutiques (chaque lien ouvre sa boutique)\n";
+$fr('POST', '/franchise/admin/regles', ['rules' => array_merge(sfRegles(), ['accesLibre' => ['5', '4', '999']])]);
+check('liste enregistrée dans l’ordre du réseau, sans boutique hors réseau', sfRegles()['accesLibre'] === array_values(array_intersect(array_map('strval', array_column(socReseau(), 'id')), ['4', '5'])), json_encode(sfRegles()['accesLibre']));
+[$c4, $b4] = $fr('GET', '/franchise/etat', [], ['shop' => '4']);
+[$c5, $b5] = $fr('GET', '/franchise/etat', [], ['shop' => '5']);
+check('?shop=4 ouvre Halle, ?shop=5 ouvre sa boutique (plus de retour sur la première)', $c4 === 200 && $b4['shop']['id'] === '4' && $c5 === 200 && $b5['shop']['id'] === '5'
+    && $b5['me']['via'] === 'libre' && array_column($b5['me']['shops'], 'id') === sfRegles()['accesLibre'], json_encode([$c4, $c5, $b5['me'] ?? $b5]));
+[$c] = $fr('GET', '/franchise/etat', [], ['shop' => '2']);
+check('une boutique non cochée reste fermée (403)', $c === 403);
+$fr('POST', '/franchise/admin/apercu', ['shop' => '4']);
+[$c5, $b5] = $fr('GET', '/franchise/etat', [], ['shop' => '5']);
+[$c0, $b0] = $fr('GET', '/franchise/etat');
+check('un aperçu ouvert sur Halle n’empêche pas d’ouvrir une autre boutique en accès ouvert ; sans boutique demandée, l’aperçu prime',
+    $c5 === 200 && $b5['shop']['id'] === '5' && $b5['me']['via'] === 'libre' && $c0 === 200 && $b0['shop']['id'] === '4' && $b0['me']['via'] === 'apercu', json_encode([$c5, $c0]));
+$fr('POST', '/franchise/deconnexion');
+$fr('POST', '/franchise/admin/regles', ['rules' => array_merge(sfRegles(), ['accesLibre' => []])]);
 
 echo "Transport dans l'ERP : points d'accroche de l'hôte\n";
 $journalHote = [];

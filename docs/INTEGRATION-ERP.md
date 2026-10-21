@@ -35,7 +35,7 @@ fournit. Chaque entrée est facultative ; sans elle, le comportement « BO » s'
 | `utilisateur` | `social_parametre.utilisateur` | le nom de l'utilisateur connecté |
 | `journal` | copie dans `ceo_journal_entry` (le module garde son journal `social_activite`) | le journal de l'ERP |
 | `boutiques` | API TFBuddy `/public/shops` + `ceo_shop` (zone, franchisé) + `brand_guard_pages` (Page Facebook) + caisse (position) | reçoit la liste calculée et la rend complétée ou remplacée |
-| `franchise_session` | **seul accès des gérants** : sans lui, l'espace franchisé n'est ouvert qu'en aperçu par le franchiseur, ou sur la seule boutique de la règle « accès ouvert » (`accesLibre`, en attendant l'ERP) — pas de page de connexion propre à l'espace | le gérant déjà connecté à l'ERP entre directement dans son espace : `['shops' => [...], 'name' => '…']` ; l'ERP l'y envoie par `/social_franchisee/calendrier?shop={id}` |
+| `franchise_session` | **seul accès des gérants** : sans lui, l'espace franchisé n'est ouvert qu'en aperçu par le franchiseur, ou sur les boutiques cochées dans la règle « accès ouvert » (`accesLibre`, une liste, en attendant l'ERP) — pas de page de connexion propre à l'espace | le gérant déjà connecté à l'ERP entre directement dans son espace : `['shops' => [...], 'name' => '…']` ; l'ERP l'y envoie par `/social_franchisee/calendrier?shop={id}` |
 
 La recette (`bin/tests.php`, section « Transport dans l'ERP ») vérifie chacun de ces
 points.

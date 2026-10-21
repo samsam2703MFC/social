@@ -56,15 +56,23 @@ function sfReglesDefaut(): array
         // Le franchisé peut choisir le format du visuel (carré, portrait) et la couleur de chaque texte (palette de la marque).
         'persoVisuel' => true,
         // En attendant l'ERP (pas de point d'accroche franchise_session) : l'espace s'ouvre sans connexion
-        // sur cette boutique, et elle seule ('' = fermé sans l'ERP).
-        'accesLibre' => '',
+        // sur ces boutiques, et elles seules ([] = fermé sans l'ERP).
+        'accesLibre' => [],
         'message' => 'Bienvenue dans votre espace communication. Choisissez un modèle, complétez les champs : le visuel et le texte suivent la charte de L’Atelier By.'];
 }
 
 function sfRegles(): array
 {
-    $r = socSetting('franchise_regles');
-    return array_replace(sfReglesDefaut(), is_array($r) ? $r : []);
+    $r = array_replace(sfReglesDefaut(), is_array($stock = socSetting('franchise_regles')) ? $stock : []);
+    $r['accesLibre'] = sfListeBoutiques($r['accesLibre']);
+    return $r;
+}
+
+/** Une liste de boutiques (identifiants) ; l'ancien réglage d'une seule boutique ('4') se lit ['4']. */
+function sfListeBoutiques(mixed $v): array
+{
+    $ids = is_array($v) ? $v : preg_split('/\s*,\s*/', (string) $v, -1, PREG_SPLIT_NO_EMPTY);
+    return array_values(array_unique(array_filter(array_map('strval', (array) $ids), static fn ($x) => $x !== '')));
 }
 
 /** Enregistre les règles (écran franchiseur), bornées. */
@@ -95,7 +103,8 @@ function sfReglesPut(array $in): array
         'rouges' => in_array($in['rouges'] ?? '', ['reseau', 'franchise'], true) ? (string) $in['rouges'] : 'reseau',
         'delaiReponseHeures' => max(1, min(168, (int) ($in['delaiReponseHeures'] ?? 24))),
         'story' => (bool) ($in['story'] ?? true), 'recurrenceMax' => max(0, min(26, (int) ($in['recurrenceMax'] ?? $d['recurrenceMax']))),
-        'accesLibre' => in_array((string) ($in['accesLibre'] ?? ''), array_column(socReseau(), 'id'), true) ? (string) $in['accesLibre'] : '',
+        // Dans l'ordre du réseau, sans boutique hors réseau (ni magasin test).
+        'accesLibre' => array_values(array_filter(array_map('strval', array_column(socReseau(), 'id')), static fn ($id) => in_array($id, sfListeBoutiques($in['accesLibre'] ?? []), true))),
         'message' => mb_substr(trim((string) ($in['message'] ?? $d['message'])), 0, 600),
     ];
     if ($r['heureMax'] <= $r['heureMin']) { $r['heureMax'] = $d['heureMax']; $r['heureMin'] = $d['heureMin']; }
@@ -190,25 +199,32 @@ function sfSessionOuvrir(array $shops, string $nom, string $via): array
  * La session de l'espace : l'aperçu du franchiseur (cookie signé) s'il est ouvert, sinon le
  * gérant connecté à l'ERP (config/hote.php → franchise_session), limité aux boutiques du réseau.
  * Tant que l'ERP n'est pas branché (pas de franchise_session), la règle « accès ouvert » ouvre
- * l'espace sans connexion sur une seule boutique (ex. 4) ; une fois l'ERP branché, elle ne joue plus.
+ * l'espace sans connexion sur les boutiques cochées ; une fois l'ERP branché, elle ne joue plus.
+ * `$voulu` : la boutique demandée (?shop=) — la première de ces sessions qui l'ouvre est retenue
+ * (un aperçu sur Halle n'empêche pas d'ouvrir Corbais si Corbais est en accès ouvert).
  */
-function sfSession(): ?array
+function sfSession(?string $voulu = null): ?array
 {
+    $sessions = [];
     $c = (string) ($_COOKIE[SF_COOKIE] ?? '');
     if ($c !== '' && str_contains($c, '.')) {
         [$p, $sig] = explode('.', $c, 2);
         $s = hash_equals(hash_hmac('sha256', $p, sfSecret()), $sig) ? json_decode((string) base64_decode(strtr($p, '-_', '+/')), true) : null;
-        if (is_array($s) && ($s['exp'] ?? 0) >= time() && !empty($s['shops'])) { return $s; }
+        if (is_array($s) && ($s['exp'] ?? 0) >= time() && !empty($s['shops'])) { $sessions[] = $s; }
     }
-    if (($f = socHote('franchise_session')) !== null && is_array($h = $f()) && !empty($h['shops'])) {
-        $ids = array_values(array_intersect(array_map('strval', (array) $h['shops']), array_column(socReseau(), 'id')));
-        return $ids ? ['shops' => $ids, 'name' => (string) ($h['name'] ?? 'Gérant'), 'via' => 'hote', 'exp' => time() + SF_DUREE] : null;
+    $reseau = array_map('strval', array_column(socReseau(), 'id'));
+    if (($f = socHote('franchise_session')) !== null) {
+        if (is_array($h = $f()) && !empty($h['shops']) && ($ids = array_values(array_intersect(array_map('strval', (array) $h['shops']), $reseau)))) {
+            $sessions[] = ['shops' => $ids, 'name' => (string) ($h['name'] ?? 'Gérant'), 'via' => 'hote', 'exp' => time() + SF_DUREE];
+        }
+    } elseif ($libre = array_values(array_intersect(sfRegles()['accesLibre'], $reseau))) {
+        $b = socShop($voulu !== null && in_array($voulu, $libre, true) ? $voulu : $libre[0]);
+        $sessions[] = ['shops' => $libre, 'name' => 'Gérant · ' . ($b['name'] ?? $libre[0]), 'via' => 'libre', 'exp' => time() + SF_DUREE];
     }
-    $libre = (string) sfRegles()['accesLibre'];
-    if (socHote('franchise_session') === null && $libre !== '' && ($b = socShop($libre)) !== null && in_array($libre, array_column(socReseau(), 'id'), true)) {
-        return ['shops' => [$libre], 'name' => 'Gérant · ' . $b['name'], 'via' => 'libre', 'exp' => time() + SF_DUREE];
+    foreach ($sessions as $s) {
+        if ($voulu === null || in_array($voulu, array_map('strval', $s['shops']), true)) { return $s; }
     }
-    return null;
+    return $sessions[0] ?? null;
 }
 
 function sfSessionFermer(): void
@@ -220,9 +236,12 @@ function sfSessionFermer(): void
 /** La session, limitée à une boutique si elle est demandée. */
 function sfExiger(?string $shop = null): array
 {
-    $s = sfSession();
+    $s = sfSession($shop);
     if ($s === null) { throw new HttpError(401, 'Ouvrez votre espace boutique depuis l’ERP.'); }
-    if ($shop !== null && !in_array($shop, $s['shops'], true)) { throw new HttpError(403, 'Cette boutique n’est pas rattachée à votre compte ERP.'); }
+    if ($shop !== null && !in_array($shop, $s['shops'], true)) {
+        throw new HttpError(403, ($s['via'] ?? '') === 'libre' ? 'Cette boutique n’est pas ouverte sans l’ERP (à cocher dans Espace franchisé → Accès des boutiques).'
+            : 'Cette boutique n’est pas rattachée à votre compte ERP.');
+    }
     if (!sfRegles()['actif'] && ($s['via'] ?? '') !== 'apercu') { throw new HttpError(403, 'L’espace franchisé est fermé par le franchiseur.'); }
     return $s;
 }
@@ -1080,9 +1099,8 @@ function sfRoute(string $method, string $path): ?array
     socInstall();
     // Pas de connexion propre à l'espace : l'ERP ouvre la session ; seul l'aperçu du franchiseur se ferme ici.
     if ($method === 'POST' && $path === '/franchise/deconnexion') { sfSessionFermer(); return [200, ['ok' => true]]; }
-    $session = sfExiger();
-    $shop = (string) ($_GET['shop'] ?? (body()['shop'] ?? '')) ?: (string) $session['shops'][0];
-    sfExiger($shop);
+    $shop = (string) ($_GET['shop'] ?? (body()['shop'] ?? '')) ?: (string) sfExiger()['shops'][0];
+    $session = sfExiger($shop);
     if ($method === 'GET' && $path === '/franchise/etat') { return [200, sfEtat($shop, $session)]; }
     if ($method === 'POST' && $path === '/franchise/posts') { return [200, ['post' => sfPostCreer($shop, body(), $session), 'quota' => ['used' => sfQuotaUtilise($shop, date('Y-m-d')), 'max' => sfRegles()['quotaSemaine']]]]; }
     if ($method === 'POST' && preg_match('#^/franchise/posts/([\w.\-]{1,64})/annuler$#', $path, $m)) { return [200, ['ok' => true, 'retires' => sfPostAnnuler($shop, $m[1], !empty(body()['serie']))]]; }
