@@ -291,13 +291,19 @@ class Component extends DCLogic {
     plOpts: null, plRes: null, plBusy: false, plDone: null, plErr: '' };
   componentDidMount() {
     const SA = window.SA; const c = SA && SA.param('c'); if (c) this.setState({ selId: c });
+    // Ouvert depuis le suivi d'une campagne du Marketing (« Planifier les posts ») : la campagne, et son plan de posts.
+    const op = SA && SA.param('op'); if (/^\d{1,9}$/.test(op || '')) { this.setState({ selId: 'bo-' + op }); this._versPlan = true; }
     this.loadMeta();
     if (SA && SA.plan) SA.plan().then(o => this.setState({ plOpts: o })).catch(e => this.setState({ plOpts: { err: e.message } }));
     this.loadPlan();
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
   }
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); }
-  componentDidUpdate() { this.loadMeta(); this.loadPlan(); }
+  componentDidUpdate() {
+    this.loadMeta(); this.loadPlan();
+    const el = this._versPlan && document.getElementById('sec-plan');
+    if (el && this.campagne()) { this._versPlan = false; setTimeout(() => el.scrollIntoView({ block: 'start', behavior: 'smooth' }), 50); }
+  }
   campagne() { const camps = window.SA.state().campaigns; return camps.find(x => x.id === this.state.selId) || camps[0]; }
   /** La période du plan : à partir de demain au plus tôt ; « toute la campagne » si le BO lui donne une fin. */
   planPeriode(c) {

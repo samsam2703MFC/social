@@ -130,3 +130,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-10-21T21:41:00Z calendrier filtre reseau et operation
 2026-10-21T21:46:17Z social sous /marketing
 2026-10-21T22:06:23Z plan de posts de campagne
+2026-10-21T22:08:25Z campagnes ouvertes sur le plan depuis le Marketing
