@@ -128,3 +128,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-10-21T19:32:50Z boutique decidee par le lien seulement
 2026-10-21T21:17:31Z connexion google
 2026-10-21T21:41:00Z calendrier filtre reseau et operation
+2026-10-21T21:46:17Z social sous /marketing

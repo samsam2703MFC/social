@@ -22,6 +22,11 @@ LOCAL_BASE="http://127.0.0.1${ALIAS_PATH}"
 # adresse ; elles appellent l'API du module (même hôte, donc même session).
 FR_DIR="${FR_DIR:-/var/www/social_franchisee}"
 FR_ALIAS="${FR_ALIAS:-/social_franchisee}"
+# Le module fait partie du Marketing : ses écrans sont aussi servis sous /marketing (le module
+# Marketing les ouvre là). Les anciennes adresses restent servies : Meta y envoie ses
+# notifications (webhook), les QR codes imprimés et les liens de l'ERP y mènent.
+MKT_ALIAS="${MKT_ALIAS:-/marketing/social}"
+MKT_FR_ALIAS="${MKT_FR_ALIAS:-/marketing/franchise}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_SRC="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -71,9 +76,12 @@ BO_DIR="$BO_DIR" BO_URL="$BO_URL" PUBLIC_URL="$PUBLIC_URL" php -r '
 ' > "$CFG"
 chmod 640 "$CFG"; chown www-data:www-data "$CFG"
 
-# --- 5. Apache : alias /social -----------------------------------------------------
-log "Apache : alias $ALIAS_PATH → $TARGET_DIR/public"
+# --- 5. Apache : alias /social (et /marketing/social) -------------------------------
+log "Apache : alias $MKT_ALIAS et $ALIAS_PATH → $TARGET_DIR/public ; $MKT_FR_ALIAS et $FR_ALIAS → $FR_DIR"
 cat > /etc/apache2/conf-available/social.conf <<APACHE
+# Sous le module Marketing (/marketing), avant le dossier de son application : ces chemins-là sont au module Social.
+Alias ${MKT_ALIAS} ${TARGET_DIR}/public
+Alias ${MKT_FR_ALIAS} ${FR_DIR}
 Alias ${ALIAS_PATH} ${TARGET_DIR}/public
 <Directory ${TARGET_DIR}/public>
     AllowOverride All
@@ -116,6 +124,13 @@ code=$(curl -s -o /dev/null -w '%{http_code}' "$LOCAL_BASE/")
 [[ "$code" == "200" ]] && log "OK  $ALIAS_PATH/ → 200" || { warn "$ALIAS_PATH/ → HTTP $code"; fail=1; }
 code=$(curl -s -o /dev/null -w '%{http_code}' "$LOCAL_BASE/SA%20Calendrier.dc.html")
 [[ "$code" == "200" ]] && log "OK  calendrier servi" || { warn "calendrier → HTTP $code"; fail=1; }
+# Sous /marketing : les écrans, leur API (adresse relative), l'espace franchisé et ses adresses propres.
+code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1${MKT_ALIAS}/SA%20Calendrier.dc.html")
+[[ "$code" == "200" ]] && log "OK  ${MKT_ALIAS}/ servi" || { warn "${MKT_ALIAS}/ → HTTP $code"; fail=1; }
+st2=$(curl -fsS --max-time 20 "http://127.0.0.1${MKT_ALIAS}/api/v1/social/status" || echo '{}')
+grep -q '"db":true' <<<"$st2" && log "OK  API sous ${MKT_ALIAS}" || { warn "API sous ${MKT_ALIAS} injoignable"; fail=1; }
+code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1${MKT_FR_ALIAS}/publier")
+[[ "$code" == "200" ]] && log "OK  espace franchisé sous ${MKT_FR_ALIAS}" || { warn "${MKT_FR_ALIAS}/publier → HTTP $code"; fail=1; }
 code=$(curl -s -o /dev/null -w '%{http_code}' "$LOCAL_BASE/uploads/__absent__.png")
 [[ "$code" == "404" ]] && log "OK  un visuel absent rend 404" || warn "uploads absent → HTTP $code (404 attendu)"
 code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1${FR_ALIAS}/Calendrier.dc.html")
