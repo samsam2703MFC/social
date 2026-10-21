@@ -24,7 +24,6 @@
     <span style="font-size:10.5px;color:{{ quotaColor }};font-weight:500;">{{ quotaLabel }} cette semaine</span>
   </span>
 </header>
-<sc-if value="{{ manyShops }}" hint-placeholder-val="{{ false }}"><div class="sf-embedbar" style="display:none;position:fixed;top:10px;right:14px;z-index:60;align-items:center;gap:8px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;padding:5px 8px;box-shadow:0 4px 14px rgba(35,34,32,0.12);font-family:var(--font-ui);"><span style="font-size:11px;color:#666666;">Boutique</span><select value="{{ shopId }}" onChange="{{ switchShop }}" style="font-size:13px;font-weight:500;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:5px 7px;"><sc-for list="{{ shops }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></select></div></sc-if>
 <div class="sf-scrim" data-open="{{ drawerOpen }}" onClick="{{ fermer }}" style="display:none;position:fixed;inset:0;background:rgba(35,34,32,0.35);z-index:70;"></div>
 <nav class="sf-side" data-open="{{ drawerOpen }}" style="width:228px;height:100vh;position:sticky;top:0;box-sizing:border-box;background:#FFFFFF;border-right:0.5px solid rgba(34,34,34,0.10);display:flex;flex-direction:column;font-family:var(--font-ui);color:#222222;">
   <div style="position:relative;padding:20px 20px 16px;display:flex;flex-direction:column;gap:6px;border-bottom:0.5px solid rgba(34,34,34,0.10);">
@@ -35,12 +34,8 @@
   <sc-if value="{{ ok }}" hint-placeholder-val="{{ true }}">
   <div style="padding:14px 20px 10px;display:flex;flex-direction:column;gap:6px;border-bottom:0.5px solid rgba(34,34,34,0.10);">
     <span style="font-size:11px;color:#8A847C;">Votre boutique</span>
-    <sc-if value="{{ oneShop }}" hint-placeholder-val="{{ true }}"><span style="font-family:var(--font-display);font-size:22px;line-height:1.1;color:#232220;">{{ shopName }}</span></sc-if>
-    <sc-if value="{{ manyShops }}" hint-placeholder-val="{{ false }}">
-      <select value="{{ shopId }}" onChange="{{ switchShop }}" style="font-size:14px;font-weight:500;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:7px 8px;">
-        <sc-for list="{{ shops }}" as="o" hint-placeholder-count="0"><option value="{{ o.id }}">{{ o.name }}</option></sc-for>
-      </select>
-    </sc-if>
+    <!-- La boutique est celle du lien (?shop=) : elle ne se change pas dans la page. -->
+    <span style="font-family:var(--font-display);font-size:22px;line-height:1.1;color:#232220;">{{ shopName }}</span>
   </div>
   </sc-if>
   <div style="padding:14px 12px 8px;display:flex;flex-direction:column;gap:2px;">
@@ -147,8 +142,7 @@ class Component extends DCLogic {
         return { n: i + 1, label, href: SF.href(k), badge, hasBadge: badge > 0, badgeBg, isGroup: grp, isLink: !grp, open: grp && open, expanded: grp && open ? 'true' : 'false',
           caretRot: open ? '0deg' : '-90deg', toggle, subs: grp ? subs : [],
           fg: on ? '#8D1D2C' : '#222222', bg: on ? '#F4EFE8' : 'transparent', w: on ? 500 : 400, numBg: on ? '#8D1D2C' : '#EAE4DC', numFg: on ? '#FFFFFF' : '#666666' }; }),
-      shopName: st.shop.name, shopId: st.shop.id, shops: (st.me.shops || []), oneShop: (st.me.shops || []).length <= 1, manyShops: (st.me.shops || []).length > 1,
-      switchShop: (e) => SF.switchShop(e.target.value),
+      shopName: st.shop.name,
       quotaLabel: q.used + ' / ' + q.max + ' post' + (q.max > 1 ? 's' : ''), quotaPct: Math.min(100, q.max ? q.used / q.max * 100 : 100) + '%', quotaColor: q.used >= q.max ? '#8D1D2C' : '#1F8A60',
       rulesLine: (jours.length === 7 ? 'Tous les jours' : jours.join(' ')) + ', ' + r.heureMin + '–' + r.heureMax + ' · au moins ' + r.delaiMinHeures + ' h à l’avance' + (r.validation === 'toujours' ? ' · validés par le réseau' : ''),
       userName: name, userIni: name.split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase(),

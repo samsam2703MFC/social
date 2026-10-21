@@ -91,7 +91,6 @@
 }
 
 /* Intégré dans le module Marketing (?embed=1) : le menu de l'espace s'efface, celui du Marketing le remplace.
-   Une boutique de plus : un petit sélecteur flottant (FNav, .sf-embedbar). */
+   La boutique est celle du lien (?shop=), transmise par le Marketing. */
 html[data-sf-embed="1"] .sf-top, html[data-sf-embed="1"] .sf-side, html[data-sf-embed="1"] .sf-bottom, html[data-sf-embed="1"] .sf-scrim { display: none !important; }
 html[data-sf-embed="1"] .sf-main { padding-bottom: 20px !important; }
-html[data-sf-embed="1"] .sf-embedbar { display: flex !important; }

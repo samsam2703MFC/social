@@ -125,3 +125,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-10-21T05:15:57Z acces ouvert plusieurs boutiques
 2026-10-21T05:20:22Z modeles en bascule creer un post
 2026-10-21T19:23:11Z assistant horizontal creer un post valide
+2026-10-21T19:32:50Z boutique decidee par le lien seulement
