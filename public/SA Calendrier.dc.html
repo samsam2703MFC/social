@@ -72,6 +72,11 @@
         <button onClick="{{ s.toggle }}" style="border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid {{ s.border }};background:{{ s.bg }};color:{{ s.fg }};">{{ s.name }}</button>
       </sc-for>
       <span style="width:1px;height:22px;background:rgba(34,34,34,0.12);margin:0 4px;"></span>
+      <select value="{{ fNet }}" onChange="{{ setFNet }}" style="font-size:12px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:7px 8px;">
+        <option value="">Facebook et Instagram</option>
+        <option value="facebook">Facebook</option>
+        <option value="instagram">Instagram</option>
+      </select>
       <select value="{{ fType }}" onChange="{{ setFType }}" style="font-size:12px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:7px 8px;">
         <option value="">Tous les types</option>
         <sc-for list="{{ typeOptions }}" as="o" hint-placeholder-count="0"><option value="{{ o }}">{{ o }}</option></sc-for>
@@ -410,12 +415,15 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { view: 'month', cursor: window.SA ? window.SA.TODAY : '2026-10-10', fShops: [], fType: '', fStatus: '', fCamp: '', selId: null, dragOver: null, loading: true,
+  state = { view: 'month', cursor: window.SA ? window.SA.TODAY : '2026-10-10', fShops: [], fNet: '', fType: '', fStatus: '', fCamp: '', selId: null, dragOver: null, loading: true,
     dupOpen: false, dupDates: [], dupShops: [], dupDateInput: '', toast: '', retrying: false, tick: 0, fAcc: [], mp: null, mpLoading: false, mpErr: '', ps: null,
     delOpen: false, delMeta: true, delBusy: false, delErrs: [], delDone: [] };
   componentDidMount() {
     const SA = window.SA;
     const st = SA && SA.param('status'); if (st) this.setState({ fStatus: st, view: 'list' });
+    // Ouvert depuis un canal du module Marketing (Facebook, Instagram) ou une campagne : déjà filtré.
+    const net = SA && SA.param('reseau'); if (net === 'facebook' || net === 'instagram') this.setState({ fNet: net });
+    const op = SA && SA.param('operation'); if (op && /^[\w-]{1,40}$/.test(op)) this.setState({ fCamp: op });
     const v = SA && SA.param('view'); if (v) this.setState({ view: v });
     this._t = setTimeout(() => this.setState({ loading: false }), 450);
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h);
@@ -482,6 +490,8 @@ class Component extends DCLogic {
     const shopsOf = (p) => (p.shops === 'all' ? SA.SHOPS.map(x => x.id) : p.shops);
     const sansCompte = all.filter(p => {
       if (s.fShops.length && !shopsOf(p).some(id => s.fShops.includes(id))) return false;
+      if (s.fNet === 'facebook' && !p.fb) return false;
+      if (s.fNet === 'instagram' && !p.ig) return false;
       if (s.fType && p.type !== s.fType) return false;
       if (s.fStatus && statusOf(p) !== s.fStatus) return false;
       if (s.fCamp === 'none' && p.campaign) return false;
@@ -618,7 +628,7 @@ class Component extends DCLogic {
       }
     }
     const typeOptions = SA.POST_TYPES;
-    const hasFilters = !!(s.fShops.length || s.fType || s.fStatus || s.fCamp || s.fAcc.length);
+    const hasFilters = !!(s.fShops.length || s.fNet || s.fType || s.fStatus || s.fCamp || s.fAcc.length);
     const isEmpty = !s.loading && inPeriod.length === 0;
     const alerts = SA.alerts();
     const vs = (k) => s.view === k ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
@@ -650,9 +660,9 @@ class Component extends DCLogic {
       reloadMeta: () => this.loadMeta(true),
       shopChips: SA.SHOPS.map(sh => { const on = s.fShops.includes(sh.id); return { name: sh.name, bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)', toggle: () => this.setState({ fShops: on ? s.fShops.filter(x => x !== sh.id) : s.fShops.concat(sh.id) }) }; }),
       typeOptions, campOptions: camps.map(c => ({ id: c.id, name: c.name })),
-      fType: s.fType, fStatus: s.fStatus, fCamp: s.fCamp,
+      fNet: s.fNet, setFNet: (e) => this.setState({ fNet: e.target.value }), fType: s.fType, fStatus: s.fStatus, fCamp: s.fCamp,
       setFType: (e) => this.setState({ fType: e.target.value }), setFStatus: (e) => this.setState({ fStatus: e.target.value }), setFCamp: (e) => this.setState({ fCamp: e.target.value }),
-      hasFilters, clearFilters: () => this.setState({ fShops: [], fType: '', fStatus: '', fCamp: '', fAcc: [] }),
+      hasFilters, clearFilters: () => this.setState({ fShops: [], fNet: '', fType: '', fStatus: '', fCamp: '', fAcc: [] }),
       countLabel: inPeriod.length + (inPeriod.length > 1 ? ' posts' : ' post') + ' sur la période',
       loading: s.loading, skeleton: new Array(35).fill(0), isEmpty,
       showMonth: !s.loading && !isEmpty && s.view === 'month', showWeek: !s.loading && !isEmpty && s.view === 'week', showList: !s.loading && !isEmpty && s.view === 'list',
