@@ -63,15 +63,33 @@
 
     <!-- L'éditeur : les champs ouverts par le modèle -->
     <sc-if value="{{ hasTpl }}" hint-placeholder-val="{{ false }}">
-      <!-- Le modèle : une bascule, changée sur place (le produit choisi est gardé) -->
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <div class="sf-wrap" style="display:flex;flex-wrap:wrap;gap:2px;align-self:flex-start;max-width:100%;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.12);border-radius:10px;padding:3px;">
-          <sc-for list="{{ tplToggle }}" as="m" hint-placeholder-count="5"><button onClick="{{ m.pick }}" title="{{ m.tip }}" style="border:none;border-radius:8px;padding:8px 13px;font-size:13px;font-weight:500;cursor:pointer;background:{{ m.bg }};color:{{ m.fg }};white-space:nowrap;">{{ m.name }}</button></sc-for>
-        </div>
-        <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;color:#4A443E;line-height:1.5;">{{ tplDescription }}<sc-for list="{{ tplBadges }}" as="b" hint-placeholder-count="2"><span style="font-size:10px;font-weight:600;border-radius:999px;padding:2px 8px;background:{{ b.bg }};color:{{ b.fg }};">{{ b.t }}</span></sc-for></span>
-      </div>
+      <!-- Assistant horizontal : les étapes de la création, une à la fois (l'aperçu reste à droite) -->
+      <nav class="sf-steps" style="display:flex;align-items:center;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.10);border-radius:12px;padding:10px 14px;overflow-x:auto;">
+        <sc-for list="{{ wzSteps }}" as="w" hint-placeholder-count="5">
+          <button onClick="{{ w.pick }}" style="flex:0 0 auto;display:flex;align-items:center;gap:8px;border:none;background:transparent;cursor:pointer;padding:4px 6px;white-space:nowrap;">
+            <span style="width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:{{ w.circBg }};color:{{ w.circFg }};border:1.5px solid {{ w.circBorder }};">{{ w.mark }}</span>
+            <span style="font-size:13px;font-weight:{{ w.w }};color:{{ w.fg }};">{{ w.label }}</span>
+          </button>
+          <span style="flex:1 1 24px;min-width:18px;height:2px;border-radius:2px;background:{{ w.lineBg }};display:{{ w.line }};margin:0 6px;"></span>
+        </sc-for>
+      </nav>
       <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
         <div style="flex:1 1 440px;min-width:300px;display:flex;flex-direction:column;gap:12px;">
+          <!-- Étape « Modèle » -->
+          <div style="display:{{ wzModele }};flex-direction:column;gap:12px;">
+            <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:10px;">
+              <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Le modèle du réseau</span>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <div class="sf-wrap" style="display:flex;flex-wrap:wrap;gap:2px;align-self:flex-start;max-width:100%;background:#F4EFE8;border-radius:10px;padding:3px;">
+                  <sc-for list="{{ tplToggle }}" as="m" hint-placeholder-count="5"><button onClick="{{ m.pick }}" title="{{ m.tip }}" style="border:none;border-radius:8px;padding:8px 13px;font-size:13px;font-weight:500;cursor:pointer;background:{{ m.bg }};color:{{ m.fg }};white-space:nowrap;">{{ m.name }}</button></sc-for>
+                </div>
+                <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;color:#4A443E;line-height:1.5;">{{ tplDescription }}<sc-for list="{{ tplBadges }}" as="b" hint-placeholder-count="2"><span style="font-size:10px;font-weight:600;border-radius:999px;padding:2px 8px;background:{{ b.bg }};color:{{ b.fg }};">{{ b.t }}</span></sc-for></span>
+              </div>
+            </section>
+          </div>
+
+          <!-- Étape « Produit & offre » -->
+          <div style="display:{{ wzOffre }};flex-direction:column;gap:12px;">
 
           <sc-if value="{{ needProduct }}" hint-placeholder-val="{{ false }}">
             <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:10px;">
@@ -135,6 +153,10 @@
             </section>
           </sc-if>
 
+          </div>
+
+          <!-- Étape « Texte & lien » -->
+          <div style="display:{{ wzTexte }};flex-direction:column;gap:12px;">
           <sc-if value="{{ needFree }}" hint-placeholder-val="{{ false }}">
             <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:8px;">
               <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Votre phrase</span>
@@ -152,6 +174,10 @@
             <span style="font-size:11px;color:#666666;line-height:1.45;word-break:break-all;">{{ linkLabel }}</span>
           </section>
 
+          </div>
+
+          <!-- Étape « Visuel » -->
+          <div style="display:{{ wzVisuel }};flex-direction:column;gap:12px;">
           <sc-if value="{{ showPhotoSec }}" hint-placeholder-val="{{ false }}">
             <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:10px;">
               <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">{{ photoTitle }}</span>
@@ -577,6 +603,10 @@
           </section>
           </sc-if>
 
+          </div>
+
+          <!-- Étape « Date & publication » -->
+          <div style="display:{{ wzPub }};flex-direction:column;gap:12px;">
           <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px;display:flex;flex-direction:column;gap:10px;">
             <span style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#666666;">Quand et où</span>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
@@ -620,6 +650,16 @@
           <div class="sf-cta" style="display:flex;justify-content:flex-end;gap:10px;align-items:center;flex-wrap:wrap;">
             <span style="font-size:12px;color:#666666;">{{ submitNote }}</span>
             <button onClick="{{ submit }}" style="border:none;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:11px 18px;font-size:14px;font-weight:500;cursor:pointer;">{{ submitLabel }}</button>
+          </div>
+          </div>
+
+          <!-- Navigation de l'assistant -->
+          <div class="sf-wz-nav" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-top:0.5px solid rgba(34,34,34,0.12);padding-top:12px;">
+            <span style="font-size:12px;color:#666666;">{{ wzEtape }}</span>
+            <span style="display:flex;gap:8px;flex-wrap:wrap;">
+              <sc-if value="{{ wzPrev }}" hint-placeholder-val="{{ false }}"><button onClick="{{ prev }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;color:#222222;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:500;cursor:pointer;">{{ wzPrevLabel }}</button></sc-if>
+              <sc-if value="{{ wzNext }}" hint-placeholder-val="{{ true }}"><button onClick="{{ next }}" style="border:none;background:#232220;color:#FFFFFF;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:500;cursor:pointer;">{{ wzNextLabel }}</button></sc-if>
+            </span>
           </div>
         </div>
 
@@ -706,7 +746,9 @@ class Component extends DCLogic {
       // Les promotions, bundles et formules du produit (TFBuddy) : lus par produit ; celle utilisée dans le post.
       offres: {}, offresLoading: false, apiOffre: null,
       // Format : post (fil), story seule, post + story ; répétition : une fois, chaque jour / semaine / 2 semaines / mois, N fois.
-      format: 'post', rec: 'une', recN: 4 };
+      format: 'post', rec: 'une', recN: 4,
+      // L'assistant horizontal : l'étape affichée.
+      wz: 'modele' };
     if (!st) return base;
     base.lang = (st.shop.langs || ['fr'])[0];
     let slot = this.firstSlot(st);
@@ -1034,7 +1076,29 @@ class Component extends DCLogic {
       location.href = SF.href('cal', 'post=' + encodeURIComponent(p.id) + '&ok=' + (p.status === 'À valider' ? 'valider' : 'prog') + (n > 1 ? '&n=' + n : '') + (b.format !== 'post' ? '&f=' + b.format : ''));
     } catch (e) { this.setState({ busy: false, errors: [e.message] }); }
   }
+  /** L'écran, puis l'assistant horizontal par-dessus : les étapes que le modèle ouvre, une à la fois. */
   renderVals() {
+    const v = this.renderEcran();
+    return v.hasTpl ? Object.assign(v, this.wizard(v)) : v;
+  }
+  wizard(v) {
+    const s = this.state, prod = !!s.product;
+    const steps = [['modele', 'Modèle', true], ['offre', 'Produit & offre', !!(v.needProduct || v.hasPromo || v.showOffres)], ['texte', 'Texte & lien', true],
+      ['visuel', 'Visuel', !!(v.showPhotoSec || v.persoOn)], ['pub', 'Date & publication', true]].filter(x => x[2]);
+    const cur = Math.max(0, steps.findIndex(x => x[0] === s.wz)), k = steps[cur][0];
+    const aller = (i) => () => { this.setState({ wz: steps[i][0] }); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} };
+    const vis = (key) => key === k ? 'flex' : 'none';
+    return {
+      wzSteps: steps.map(([, label], i) => ({ label, mark: i < cur ? '✓' : String(i + 1), pick: aller(i),
+        circBg: i === cur ? '#8D1D2C' : i < cur ? '#0F6B4A' : '#FFFFFF', circFg: i <= cur ? '#FFFFFF' : '#666666', circBorder: i === cur ? '#8D1D2C' : i < cur ? '#0F6B4A' : 'rgba(34,34,34,0.25)',
+        fg: i === cur ? '#8D1D2C' : i < cur ? '#222222' : '#666666', w: i === cur ? 600 : 500, line: i < steps.length - 1 ? 'block' : 'none', lineBg: i < cur ? '#0F6B4A' : 'rgba(34,34,34,0.15)' })),
+      wzModele: vis('modele'), wzOffre: vis('offre'), wzTexte: vis('texte'), wzVisuel: vis('visuel'), wzPub: vis('pub'),
+      wzEtape: 'Étape ' + (cur + 1) + ' sur ' + steps.length + (k === 'offre' && v.needProduct && !prod ? ' · choisissez un produit' : ''),
+      wzPrev: cur > 0, wzPrevLabel: cur > 0 ? '← ' + steps[cur - 1][1] : '', prev: cur > 0 ? aller(cur - 1) : () => {},
+      wzNext: cur < steps.length - 1, wzNextLabel: cur < steps.length - 1 ? 'Suivant : ' + steps[cur + 1][1] + ' →' : '', next: cur < steps.length - 1 ? aller(cur + 1) : () => {},
+    };
+  }
+  renderEcran() {
     const SF = window.SF, V = window.SFVisuel, st = SF && SF.state(), s = this.state;
     if (!st || !V) return { ok: false, hasError: true, error: (SF && SF.error) || 'Chargement impossible.', tpls: [], filters: [] };
     const r = st.rules, seg = (on) => on ? ['#8D1D2C', '#FFFFFF'] : ['transparent', '#444444'];
