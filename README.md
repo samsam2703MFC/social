@@ -452,6 +452,25 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   pendant la période − moyenne des mêmes jours sur les 6 semaines précédentes
   (**estimation**, affichée comme telle).
 
+## Google : fiches des boutiques, Google Ads, Google Analytics 4
+
+`src/googleapi.php` est le seul point du module qui parle aux API Google (les avis lus par Google Places
+restent ceux du BO, `src/google.php`). Un seul compte Google, autorisé une fois : l'ID du client OAuth, sa
+clé secrète et un jeton de rafraîchissement, saisis dans **Paramètres → Google** (`POST /parametres/google`,
+les deux derniers secrets) ; le jeton d'accès se redemande à Google. Google Ads n'a plus de jeton
+développeur (9 septembre 2026) : l'accès suit le projet Google Cloud du client OAuth.
+
+- `POST /google/connexion/verifier` : le compte, les autorisations accordées et un premier appel à chaque
+  API (fiches, Ads, Analytics), avec la raison de ce qui attend encore un accès chez Google ;
+- `POST /google/decouvrir` : les fiches (Business Profile), comptes Google Ads et propriétés GA4 du compte ;
+- `POST /google/ids` : le rattachement — par boutique sa fiche et son compte Ads, pour le réseau son compte
+  Ads et la propriété GA4 du webshop. La fiche proposée est celle dont l'identifiant Google est celui de la
+  Réputation digitale du BO, sinon celle dont le nom cite la boutique ;
+- `POST /google/deconnecter` : le jeton est révoqué chez Google et oublié.
+
+Les démarches chez Google (projet, API à activer, consentement, client OAuth, jeton, accès à demander) :
+**docs/GOOGLE.md**.
+
 ## Espace franchisé (`/social_franchisee`)
 
 Un outil de communication et de marketing pour chaque boutique, entièrement cadré

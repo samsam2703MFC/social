@@ -2467,6 +2467,85 @@ foreach ([$ps, $pps] as $x) { if ($x) { Db::exec('DELETE FROM social_publication
 sfReglesPut($regAvant); socSettingPut('instagram_unique', $igUniqueAvant, false);
 unset($_COOKIE[SF_COOKIE]);
 
+echo "Google : connexion, comptes trouvés, rattachement par boutique\n";
+$gAppels = []; $gQuota = true;
+$gr = static function (string $m, string $p, array $b = []): array { $GLOBALS['SOC_BODY'] = $b; try { return socRoute($m, $p); } finally { unset($GLOBALS['SOC_BODY']); } };
+GoogleApi::$sleep = static function (int $s): void {};
+GoogleApi::$transport = static function (string $m, string $url, array $h, ?string $body) use (&$gAppels, &$gQuota): array {
+    $gAppels[] = [$m, preg_replace('/\?.*/', '', $url), $h];
+    if ($url === 'https://oauth2.googleapis.com/token') {
+        parse_str((string) $body, $f);
+        if (($f['refresh_token'] ?? '') !== 'REFRESH-G' || ($f['client_secret'] ?? '') !== 'CS-G') { return [400, ['error' => 'invalid_grant', 'error_description' => 'Bad Request']]; }
+        return [200, ['access_token' => 'AT-' . count($gAppels), 'expires_in' => 3599]];
+    }
+    if (str_starts_with($url, 'https://oauth2.googleapis.com/tokeninfo')) { return [200, ['scope' => implode(' ', GoogleApi::SCOPES), 'email' => 'marketing@atelierby.test']]; }
+    if (str_starts_with($url, 'https://oauth2.googleapis.com/revoke')) { return [200, []]; }
+    if (!preg_grep('/^Authorization: Bearer AT-\d+$/', $h)) { return [401, ['error' => ['code' => 401, 'message' => 'Request had invalid authentication credentials.', 'status' => 'UNAUTHENTICATED']]]; }
+    if (str_contains($url, 'mybusinessaccountmanagement.googleapis.com/v1/accounts')) {
+        if ($gQuota) { return [429, ['error' => ['code' => 429, 'message' => "Quota exceeded for quota metric 'Requests' and limit 'Requests per minute'", 'status' => 'RESOURCE_EXHAUSTED']]]; }
+        return [200, ['accounts' => [['name' => 'accounts/111', 'accountName' => 'L’Atelier By réseau']]]];
+    }
+    if (str_contains($url, 'mybusinessbusinessinformation.googleapis.com/v1/accounts/111/locations')) {
+        return [200, ['locations' => [
+            ['name' => 'locations/901', 'title' => 'Boulangerie du centre', 'storefrontAddress' => ['addressLines' => ['Basiliekstraat 12'], 'postalCode' => '1500', 'locality' => 'Halle'], 'metadata' => ['placeId' => 'P-HAL']],
+            ['name' => 'locations/902', 'title' => "L'Atelier By Wavre", 'storefrontAddress' => ['addressLines' => ['Place Bosch 3'], 'postalCode' => '1300', 'locality' => 'Wavre'], 'metadata' => ['placeId' => 'AUTRE']]]]];
+    }
+    if (str_contains($url, 'customers:listAccessibleCustomers')) { return [200, ['resourceNames' => ['customers/1234567890', 'customers/9876543210']]]; }
+    if (preg_match('#customers/(\d+)/googleAds:search#', $url, $mm)) {
+        if ($mm[1] === '9876543210') {
+            return [403, ['error' => ['code' => 403, 'message' => 'The caller does not have permission', 'status' => 'PERMISSION_DENIED',
+                'details' => [['errors' => [['errorCode' => ['authorizationError' => 'CLOUD_PROJECT_NOT_APPROVED_FOR_PRODUCTION'], 'message' => 'Accès Test seulement.']]]]]]];
+        }
+        return [200, ['results' => [['customer' => ['id' => $mm[1], 'descriptiveName' => 'Atelier By Réseau', 'currencyCode' => 'EUR', 'manager' => false]]]]];
+    }
+    if (str_contains($url, 'analyticsadmin.googleapis.com/v1beta/accountSummaries')) {
+        return [200, ['accountSummaries' => [['displayName' => 'Atelier By', 'propertySummaries' => [['property' => 'properties/4455667', 'displayName' => 'webshop.atelierby.be']]]]]];
+    }
+    return [404, ['error' => ['code' => 404, 'message' => 'inconnu', 'status' => 'NOT_FOUND']]];
+};
+[$code, $g] = $gr('GET', '/google/connexion');
+check('Google pas encore connecté : rien de configuré, aucun appel', $code === 200 && !$g['statut']['configure'] && $gAppels === []);
+$refus = (static function () use ($gr) { try { $gr('POST', '/parametres/google', ['clientId' => 'pas-un-client']); return null; } catch (HttpError $e) { return $e->status; } })();
+check('identifiant de client OAuth mal formé : refusé (422)', $refus === 422);
+[$code, $g] = $gr('POST', '/parametres/google', ['clientId' => '123456789012-abcdefghij.apps.googleusercontent.com', 'clientSecret' => 'CS-G', 'refreshToken' => 'REFRESH-G', 'mcc' => '111-222-3333']);
+$v = $g['statut']['verification'];
+check('clés enregistrées puis vérifiées : compte, trois autorisations', $code === 200 && $g['statut']['configure'] && $v['valide'] && $v['email'] === 'marketing@atelierby.test'
+    && $v['autorisations'] === ['fiches' => true, 'ads' => true, 'ga4' => true], json_encode($v));
+check('fiches pas encore accordées par Google (quota à 0) : dit, Ads et GA4 marchent', !$v['apis']['fiches']['ok'] && str_contains($v['apis']['fiches']['erreur'], 'formulaire Business Profile API')
+    && $v['apis']['ads']['ok'] && $v['apis']['ga4']['ok'], json_encode($v['apis']));
+check('aucun secret renvoyé à l’écran', !str_contains(json_encode($g), 'CS-G') && !str_contains(json_encode($g), 'REFRESH-G') && !str_contains(json_encode($g), 'AT-'));
+$adsAppel = array_values(array_filter($gAppels, static fn ($a) => str_contains($a[1], 'googleads.')))[0] ?? null;
+check('Google Ads : compte administrateur en en-tête, pas de jeton développeur', $adsAppel !== null && in_array('login-customer-id: 1112223333', $adsAppel[2], true)
+    && !preg_grep('/developer-token/i', $adsAppel[2]));
+$nJeton = count(array_filter($gAppels, static fn ($a) => $a[1] === 'https://oauth2.googleapis.com/token'));
+GoogleApi::call('GET', 'https://analyticsadmin.googleapis.com/v1beta/accountSummaries');
+check('jeton d’accès gardé tant qu’il vaut (pas redemandé à chaque appel)', count(array_filter($gAppels, static fn ($a) => $a[1] === 'https://oauth2.googleapis.com/token')) === $nJeton);
+$gQuota = false;
+[$code, $g] = $gr('POST', '/google/decouvrir');
+check('comptes trouvés : 2 fiches, 2 comptes Ads (dont un en accès Test), 1 propriété GA4', $code === 200 && $g['trouves'] === ['fiches' => 2, 'ads' => 2, 'ga4' => 1]
+    && $g['decouverte']['fiches'][0]['id'] === 'accounts/111/locations/901' && $g['decouverte']['ads'][0]['devise'] === 'EUR'
+    && str_contains($g['decouverte']['ads'][1]['erreur'] ?? '', 'Explorer') && $g['decouverte']['ga4'][0]['id'] === '4455667', json_encode($g['decouverte']));
+check('fiche proposée par boutique : Halle par son identifiant Google (Réputation du BO), Wavre par son nom',
+    ($g['suggestions']['4'] ?? '') === 'accounts/111/locations/901' && ($g['suggestions']['5'] ?? '') === 'accounts/111/locations/902', json_encode($g['suggestions']));
+[$code, $g] = $gr('POST', '/google/ids', ['boutiques' => ['4' => ['fiche' => 'accounts/111/locations/901', 'ads' => '123-456-7890'], '5' => ['fiche' => 'n’importe quoi'], '999' => ['ads' => '1234567890']],
+    'reseau' => ['ads' => '1234567890', 'ga4' => '4455667']]);
+check('rattachements bornés : formats vérifiés, boutique inconnue écartée', $code === 200 && $g['ids']['boutiques'] === ['4' => ['fiche' => 'accounts/111/locations/901', 'ads' => '1234567890']]
+    && $g['ids']['reseau'] === ['ads' => '1234567890', 'ga4' => '4455667'], json_encode($g['ids']));
+check('une fiche déjà rattachée n’est plus proposée', !isset($g['suggestions']['4']) && ($g['suggestions']['5'] ?? '') === 'accounts/111/locations/902', json_encode($g['suggestions']));
+socSettingPut('google_access_token', json_encode(['t' => 'PERIME', 'exp' => time() + 3000, 'pour' => hash('sha256', 'REFRESH-G')]), true);
+$r = GoogleApi::call('GET', 'https://analyticsadmin.googleapis.com/v1beta/accountSummaries');
+check('jeton d’accès refusé (401) : redemandé une fois, l’appel passe', isset($r['accountSummaries']));
+socSettingPut('google_refresh_token', 'REVOQUE', true); socSettingPut('google_access_token', '', true);
+$e = (static function () { try { GoogleApi::call('GET', 'https://analyticsadmin.googleapis.com/v1beta/accountSummaries'); return ''; } catch (GoogleError $e) { return $e->getMessage(); } })();
+check('jeton de rafraîchissement refusé : expliqué (mode Test, 7 jours)', str_contains($e, '7 jours'), $e);
+socSettingPut('google_refresh_token', 'REFRESH-G', true);
+[$code, $g] = $gr('POST', '/google/deconnecter');
+check('déconnecter : Google révoque, le module oublie le jeton', $code === 200 && !$g['statut']['configure'] && !$g['statut']['jetonDefini']
+    && in_array('https://oauth2.googleapis.com/revoke', array_column($gAppels, 1), true));
+foreach (['google_client_id', 'google_ads_mcc', 'google_decouverte', 'google_ids', 'google_verification'] as $k) { socSettingPut($k, null, false); }
+foreach (['google_client_secret', 'google_refresh_token', 'google_access_token'] as $k) { socSettingPut($k, '', true); }
+GoogleApi::$transport = null;
+
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');
 check('GET /state', $code === 200 && $b['mode'] === 'live' && count($b['shops']) === 2);

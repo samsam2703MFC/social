@@ -118,7 +118,7 @@ class Component extends DCLogic {
       navDisplay: SA && SA.embed ? 'none' : 'flex',
       // Sous « Paramètres » : chaque réglage (Meta en tête), ouvert sur son onglet ou sa section (?tab=…&section=…).
       setItems: [['conn', '', 'Connexions Meta'], ['api', 'cles', 'Clés d’accès & token'], ['api', 'ids', 'Identifiants par boutique'], ['api', 'pf', 'Portefeuille Business Manager'],
-        ['api', 'version', 'Version & permissions'], ['api', 'dsa', 'Transparence UE (DSA)'], ['ia', '', 'Rédaction IA & charte'], ['tpl', '', 'Modèles de posts'], ['grp', '', 'Groupes de boutiques'],
+        ['api', 'version', 'Version & permissions'], ['api', 'dsa', 'Transparence UE (DSA)'], ['google', '', 'Connexions Google'], ['ia', '', 'Rédaction IA & charte'], ['tpl', '', 'Modèles de posts'], ['grp', '', 'Groupes de boutiques'],
         ['rights', '', 'Droits'], ['log', '', 'Journal d’activité'], ['tfb', '', 'API TFBuddy']]
         .filter(([tab]) => tab !== 'tfb' || (SA && SA.live))
         .map(([tab, sec, label]) => {

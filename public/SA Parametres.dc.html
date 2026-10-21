@@ -315,6 +315,73 @@
       </section>
     </sc-if>
 
+    <!-- GOOGLE : une connexion (fiches des boutiques, Google Ads, Analytics), les comptes trouvés, le rattachement par boutique -->
+    <sc-if value="{{ isGoogle }}" hint-placeholder-val="{{ false }}">
+      <sc-if value="{{ gDemo }}" hint-placeholder-val="{{ false }}"><div style="background:#FCE7C8;border-radius:8px;padding:10px 14px;font-size:13px;color:#6b3d0a;margin-bottom:12px;">En démonstration : la connexion Google se règle sur le serveur réel.</div></sc-if>
+      <sc-if value="{{ gLive }}" hint-placeholder-val="{{ true }}">
+      <section id="sec-gconn" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;"><span style="font-size:13px;font-weight:500;">Connexion Google</span><span style="font-size:12px;color:{{ gEtatFg }};font-weight:500;">{{ gEtat }}</span></div>
+        <span style="font-size:12px;color:#666666;line-height:1.5;">Un seul compte Google pour les fiches des boutiques, Google Ads et Google Analytics. Les clés restent sur le serveur, jamais dans l’écran.</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <sc-for list="{{ gApis }}" as="a" hint-placeholder-count="3"><span title="{{ a.tip }}" style="font-size:12px;font-weight:500;border-radius:999px;padding:4px 10px;background:{{ a.bg }};color:{{ a.fg }};">{{ a.label }}</span></sc-for>
+        </div>
+        <sc-for list="{{ gErreurs }}" as="e" hint-placeholder-count="0"><span style="font-size:12px;color:#8A4B00;background:#FBEDE4;border-radius:6px;padding:6px 9px;line-height:1.45;">{{ e.t }}</span></sc-for>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">ID du client OAuth<input value="{{ gClientId }}" onChange="{{ setGClientId }}" placeholder="{{ gClientIdPh }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;font-family:ui-monospace,monospace;font-size:12px;"></label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Clé secrète du client<input type="password" autocomplete="off" value="{{ gSecret }}" onChange="{{ setGSecret }}" placeholder="{{ gSecretPh }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;font-family:ui-monospace,monospace;font-size:12px;"></label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Jeton de rafraîchissement<input type="password" autocomplete="off" value="{{ gRefresh }}" onChange="{{ setGRefresh }}" placeholder="{{ gRefreshPh }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;font-family:ui-monospace,monospace;font-size:12px;"></label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Compte administrateur Google Ads (facultatif)<input value="{{ gMcc }}" onChange="{{ setGMcc }}" placeholder="123-456-7890" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 10px;"></label>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onClick="{{ gSave }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">{{ gSaveLabel }}</button>
+          <sc-if value="{{ gConfigure }}" hint-placeholder-val="{{ false }}"><button onClick="{{ gVerifier }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Vérifier</button><button onClick="{{ gDeconnecter }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;color:#8D1D2C;">Déconnecter</button></sc-if>
+        </div>
+        <details style="font-size:12px;color:#444444;line-height:1.55;"><summary style="cursor:pointer;font-weight:500;">Où trouver ces clés ?</summary>
+          <ol style="margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px;">
+            <li>Console Google Cloud : un projet, avec les API « My Business Account Management », « My Business Business Information », « Google Ads API », « Google Analytics Admin » et « Google Analytics Data » activées.</li>
+            <li>Écran de consentement OAuth : publié « En production » (en « Test », le jeton expire au bout de 7 jours).</li>
+            <li>Identifiants → ID client OAuth de type « Application Web », avec l’URI de redirection https://developers.google.com/oauthplayground : l’ID et la clé secrète vont ici.</li>
+            <li>OAuth Playground (réglages ⚙ → « Use your own OAuth credentials ») : autoriser les trois accès {{ gScopes }} avec le compte Google qui gère les fiches, Ads et Analytics, puis « Exchange authorization code for tokens » : le Refresh token va ici.</li>
+            <li>Les accès que Google doit accorder : fiches (formulaire « Business Profile API »), Google Ads (niveau « Explorer » dans la console Google Cloud). Le détail : docs/GOOGLE.md.</li>
+          </ol>
+        </details>
+      </section>
+
+      <section id="sec-gcomptes" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+          <span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:13px;font-weight:500;">Vos comptes Google</span><span style="font-size:12px;color:#666666;">{{ gDecouverteLe }}</span></span>
+          <button onClick="{{ gDecouvrir }}" disabled="{{ gDecouvrirDis }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">{{ gDecouvrirLabel }}</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <sc-for list="{{ gTrouves }}" as="t" hint-placeholder-count="3"><span style="font-size:12px;border-radius:8px;padding:6px 10px;background:#F4EFE8;color:#222222;"><strong style="font-weight:600;">{{ t.n }}</strong> {{ t.label }}</span></sc-for>
+        </div>
+        <sc-for list="{{ gDecErreurs }}" as="e" hint-placeholder-count="0"><span style="font-size:12px;color:#8A4B00;background:#FBEDE4;border-radius:6px;padding:6px 9px;line-height:1.45;">{{ e.t }}</span></sc-for>
+      </section>
+
+      <section id="sec-gids" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+        <span style="font-size:13px;font-weight:500;">Rattachement par boutique</span>
+        <span style="font-size:12px;color:#666666;line-height:1.5;">La fiche Google de chaque boutique (avis, réponses, statistiques) et son compte Google Ads s’il en a un. « proposée » : la fiche dont l’identifiant Google est celui de la Réputation digitale du BO, ou dont le nom cite la boutique — à vérifier puis enregistrer.</span>
+        <div style="border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;overflow:auto;">
+          <div style="display:grid;grid-template-columns:minmax(120px,0.8fr) minmax(220px,1.6fr) minmax(200px,1.2fr);min-width:560px;">
+            <span style="padding:8px 10px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">Boutique</span>
+            <span style="padding:8px 10px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">Fiche Google</span>
+            <span style="padding:8px 10px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;border-bottom:0.5px solid rgba(34,34,34,0.10);">Compte Google Ads</span>
+            <sc-for list="{{ gRows }}" as="r" hint-placeholder-count="0">
+              <span style="padding:8px 10px;border-bottom:0.5px solid rgba(34,34,34,0.06);display:flex;flex-direction:column;justify-content:center;gap:2px;"><span style="font-size:13px;font-weight:500;">{{ r.name }}</span><span style="font-size:11px;color:{{ r.noteFg }};">{{ r.note }}</span></span>
+              <span style="padding:8px 10px;border-bottom:0.5px solid rgba(34,34,34,0.06);"><select value="{{ r.fiche }}" onChange="{{ r.setFiche }}" style="width:100%;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;background:#FFFFFF;"><sc-for list="{{ gFicheOpts }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></span>
+              <span style="padding:8px 10px;border-bottom:0.5px solid rgba(34,34,34,0.06);"><select value="{{ r.ads }}" onChange="{{ r.setAds }}" style="width:100%;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;background:#FFFFFF;"><sc-for list="{{ gAdsOpts }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></span>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Compte Google Ads du réseau<select value="{{ gResAds }}" onChange="{{ setGResAds }}" style="font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 8px;background:#FFFFFF;"><sc-for list="{{ gAdsOpts }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Propriété Google Analytics 4 du webshop<select value="{{ gGa4 }}" onChange="{{ setGGa4 }}" style="font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:7px 8px;background:#FFFFFF;"><sc-for list="{{ gGa4Opts }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></label>
+        </div>
+        <div><button onClick="{{ gSaveIds }}" style="background:#232220;color:#FFFFFF;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Enregistrer les rattachements</button></div>
+      </section>
+      </sc-if>
+    </sc-if>
+
     <sc-if value="{{ isTfb }}" hint-placeholder-val="{{ false }}">
       <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
         <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Compte de l'API TFBuddy</span><span style="font-size:11px;color:#666666;">Source principale des données du module · stocké en base (social_parametre) · swagger : <span style="font-family:ui-monospace,monospace;">{{ tfbSwagger }}</span></span></div>
@@ -373,7 +440,9 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { tab: 'conn', busy: {}, testing: false, logF: '', toast: '', tick: 0, keys: { appId: '', systemToken: '', appSecret: '', verifyToken: '' }, publicUrl: null, pf: null, pfBiz: null, pfBusy: false, tfb: {}, tfbTest: '', audit: null, auditing: false, auditF: 'ko', auditQ: '' };
+  state = { tab: 'conn', busy: {}, testing: false, logF: '', toast: '', tick: 0, keys: { appId: '', systemToken: '', appSecret: '', verifyToken: '' }, publicUrl: null, pf: null, pfBiz: null, pfBusy: false, tfb: {}, tfbTest: '', audit: null, auditing: false, auditF: 'ko', auditQ: '',
+    // Onglet Google : l'écran (GET /google/connexion), les clés saisies, le rattachement en cours, l'action en cours.
+    g: null, gKeys: { clientId: '', clientSecret: '', refreshToken: '', mcc: null }, gIds: null, gBusy: '' };
   componentDidMount() { const SA = window.SA; const t = SA && SA.param('tab'); if (t) this.setState({ tab: t });
     // ?section=cles|pf|version|perms|dsa|ids : ouvre l'onglet sur cette section (rail de /marketing/).
     const sec = SA && SA.param('section'); if (sec && /^\w+$/.test(sec)) setTimeout(() => { const el = document.getElementById('sec-' + sec); if (el) el.scrollIntoView({ block: 'start' }); }, 400); this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h); }
@@ -385,7 +454,7 @@ class Component extends DCLogic {
     const st = SA.state(), alerts = SA.alerts();
     const groups = st.groups || SA.GROUPS, templates = st.templates || SA.TEMPLATES;
     const chip = (on) => ({ bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : '#222222', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)' });
-    const tabsDef = [['conn', 'Connexions', alerts.length], ['api', 'API Meta', 0], ['ia', 'Rédaction IA & charte', 0], ['tpl', 'Modèles de posts', 0], ['grp', 'Groupes de boutiques', 0], ['rights', 'Droits', 0], ['log', "Journal d'activité", 0]].concat(SA.live ? [['tfb', 'API TFBuddy', (() => { const r = (st.tfbAudit || {}).resume || {}; return (r.refuse || 0) + (r.erreur || 0) + (r.injoignable || 0); })()]] : []);
+    const tabsDef = [['conn', 'Connexions', alerts.length], ['api', 'API Meta', 0], ['google', 'Google', 0], ['ia', 'Rédaction IA & charte', 0], ['tpl', 'Modèles de posts', 0], ['grp', 'Groupes de boutiques', 0], ['rights', 'Droits', 0], ['log', "Journal d'activité", 0]].concat(SA.live ? [['tfb', 'API TFBuddy', (() => { const r = (st.tfbAudit || {}).resume || {}; return (r.refuse || 0) + (r.erreur || 0) + (r.injoignable || 0); })()]] : []);
     const fixConn = (shopId, key, label) => {
       const k = shopId + key; this.setState({ busy: Object.assign({}, this.state.busy, { [k]: true }) });
       if (SA.live) {
@@ -458,6 +527,57 @@ class Component extends DCLogic {
           chTags: Array.isArray(ch.hashtags) ? ch.hashtags.join(' ') : ch.hashtags || '', setChTags: put('hashtags'), chSign: ch.signature || '', setChSign: put('signature'),
           saveCharte: () => { const c = Object.assign({}, ch, { hashtags: String(Array.isArray(ch.hashtags) ? ch.hashtags.join(' ') : ch.hashtags || '').split(/[\s,;]+/).filter(Boolean) });
             SA.api('POST', '/parametres', { charte_editoriale: c }).then(() => { this.setState({ charte: null }); this.toast('Charte éditoriale enregistrée.'); return SA.refresh(); }).catch(e => this.toast('Enregistrement impossible : ' + e.message)); } };
+      })(),
+      ...(() => {
+        // Onglet Google : la connexion (client OAuth + jeton de rafraîchissement), les comptes trouvés, le rattachement par boutique.
+        if (s.tab !== 'google') return { isGoogle: false };
+        if (!SA.live) return { isGoogle: true, gDemo: true, gLive: false };
+        const G = s.g;
+        if (!G && !this._gLoading) { this._gLoading = true; SA.api('GET', '/google/connexion').then(r => { this._gLoading = false; this.setState({ g: r }); }).catch(e => { this._gLoading = false; this.setState({ g: { erreur: e.message } }); }); }
+        const St = (G && G.statut) || {}, V = St.verification || null, D = (G && G.decouverte) || null, I = (G && G.ids) || { boutiques: {}, reseau: { ads: '', ga4: '' } }, Sg = (G && G.suggestions) || {};
+        const K = s.gKeys, busy = s.gBusy;
+        const appel = (cle, methode, chemin, corps, ok) => { this.setState({ gBusy: cle });
+          return SA.api(methode, chemin, corps).then(r => { this.setState({ g: r, gBusy: '' }); if (ok) this.toast(ok(r)); return r; })
+            .catch(e => { this.setState({ gBusy: '' }); this.toast(e.message || 'Erreur'); }); };
+        const API = [['fiches', 'Fiches Google des boutiques'], ['ads', 'Google Ads'], ['ga4', 'Google Analytics 4']];
+        const fmtAds = (id) => String(id || '').replace(/^(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3');
+        // Le rattachement en cours d'édition : l'enregistré, complété des fiches proposées.
+        const ids = s.gIds || { boutiques: Object.fromEntries(SA.SHOPS.concat(SA.TEST_SHOPS || []).map(x => [x.id, { fiche: (I.boutiques[x.id] || {}).fiche || Sg[x.id] || '', ads: (I.boutiques[x.id] || {}).ads || '' }])), reseau: Object.assign({ ads: '', ga4: '' }, I.reseau) };
+        const majIds = (f) => this.setState({ gIds: f(JSON.parse(JSON.stringify(ids))) });
+        const fiches = (D && D.fiches) || [], ads = (D && D.ads) || [], ga4 = (D && D.ga4) || [];
+        return { isGoogle: true, gDemo: false, gLive: true,
+          gEtat: G && G.erreur ? 'Illisible : ' + G.erreur : !St.configure ? 'Pas encore connecté' : V && V.valide ? 'Connecté' + (V.email ? ' · ' + V.email : '') + ' · vérifié le ' + V.le : V && V.erreur ? 'Connexion refusée' : 'À vérifier',
+          gEtatFg: St.configure && V && V.valide ? '#0F6B4A' : St.configure ? '#8D1D2C' : '#666666',
+          gApis: API.map(([k, label]) => { const a = V && V.apis ? V.apis[k] : null, ok = !!(a && a.ok);
+            return { label: (ok ? '✓ ' : a ? '⏳ ' : '') + label, tip: a && a.erreur ? a.erreur : '', bg: ok ? '#E2F0E8' : a ? '#FCE7C8' : '#F4EFE8', fg: ok ? '#0F6B4A' : a ? '#7A4100' : '#666666' }; }),
+          gErreurs: [V && V.erreur ? V.erreur : ''].concat(API.map(([k, label]) => V && V.apis && V.apis[k] && V.apis[k].erreur ? label + ' : ' + V.apis[k].erreur : '')).filter(Boolean).map(t => ({ t })),
+          gConfigure: !!St.configure, gScopes: '(business.manage, adwords, analytics.readonly)',
+          gClientId: K.clientId, setGClientId: (e) => this.setState({ gKeys: Object.assign({}, K, { clientId: e.target.value }) }), gClientIdPh: St.clientId || '…apps.googleusercontent.com',
+          gSecret: K.clientSecret, setGSecret: (e) => this.setState({ gKeys: Object.assign({}, K, { clientSecret: e.target.value }) }), gSecretPh: St.secretDefini ? 'définie — laisser vide pour la garder' : 'GOCSPX-…',
+          gRefresh: K.refreshToken, setGRefresh: (e) => this.setState({ gKeys: Object.assign({}, K, { refreshToken: e.target.value }) }), gRefreshPh: St.jetonDefini ? 'défini — laisser vide pour le garder' : '1//…',
+          gMcc: K.mcc !== null ? K.mcc : fmtAds(St.mcc), setGMcc: (e) => this.setState({ gKeys: Object.assign({}, K, { mcc: e.target.value }) }),
+          gSaveLabel: busy === 'cles' ? 'Vérification chez Google…' : 'Enregistrer et vérifier',
+          gSave: () => { if (busy) return; const corps = { clientId: K.clientId.trim(), clientSecret: K.clientSecret.trim(), refreshToken: K.refreshToken.trim() }; if (K.mcc !== null) corps.mcc = K.mcc;
+            appel('cles', 'POST', '/parametres/google', corps, (r) => { this.setState({ gKeys: { clientId: '', clientSecret: '', refreshToken: '', mcc: null } }); const v = r.statut && r.statut.verification; return v && v.valide ? 'Google connecté.' : 'Clés enregistrées — ' + ((v && v.erreur) || 'à compléter'); }); },
+          gVerifier: () => { if (!busy) appel('verif', 'POST', '/google/connexion/verifier', {}, (r) => (r.statut.verification || {}).valide ? 'Connexion Google vérifiée.' : 'Google refuse : ' + ((r.statut.verification || {}).erreur || '')); },
+          gDeconnecter: () => { if (!busy && window.confirm('Déconnecter Google ? Le jeton est révoqué chez Google ; il faudra en refaire un.')) appel('deco', 'POST', '/google/deconnecter', {}, () => 'Google déconnecté.'); },
+          gDecouverteLe: D ? 'Dernière recherche : ' + D.le : St.configure ? 'Pas encore cherchés.' : 'Connectez Google d’abord.',
+          gDecouvrirLabel: busy === 'dec' ? 'Recherche chez Google…' : 'Rechercher mes fiches, comptes Ads et propriétés GA4', gDecouvrirDis: !St.configure || !!busy,
+          gDecouvrir: () => { if (!busy) appel('dec', 'POST', '/google/decouvrir', {}, (r) => { this.setState({ gIds: null }); return 'Trouvés : ' + r.trouves.fiches + ' fiche(s), ' + r.trouves.ads + ' compte(s) Ads, ' + r.trouves.ga4 + ' propriété(s) GA4.'; }); },
+          gTrouves: D ? [[fiches.length, 'fiches Google'], [ads.length, 'comptes Google Ads'], [ga4.length, 'propriétés GA4']].map(([n, label]) => ({ n, label })) : [],
+          gDecErreurs: D ? API.map(([k, label]) => D.erreurs && D.erreurs[k] ? label + ' : ' + D.erreurs[k] : '').filter(Boolean).map(t => ({ t })) : [],
+          gFicheOpts: [{ v: '', l: '— aucune —' }].concat(fiches.map(f => ({ v: f.id, l: f.nom + (f.adresse ? ' · ' + f.adresse : '') }))),
+          gAdsOpts: [{ v: '', l: '— aucun —' }].concat(ads.map(a => ({ v: a.id, l: (a.nom || 'Compte') + ' · ' + fmtAds(a.id) + (a.devise ? ' · ' + a.devise : '') + (a.administrateur ? ' · administrateur' : '') }))),
+          gGa4Opts: [{ v: '', l: '— aucune —' }].concat(ga4.map(p => ({ v: p.id, l: p.nom + ' · ' + p.id }))),
+          gRows: SA.SHOPS.concat(SA.TEST_SHOPS || []).map(x => { const b = ids.boutiques[x.id] || { fiche: '', ads: '' }, prop = !(I.boutiques[x.id] || {}).fiche && Sg[x.id] && b.fiche === Sg[x.id];
+            return { name: x.name, note: prop ? 'fiche proposée — à enregistrer' : (I.boutiques[x.id] || {}).fiche ? 'rattachée' : (SA.TEST_SHOPS || []).some(t => t.id === x.id) ? 'magasin test' : 'pas de fiche', noteFg: prop ? '#7A4100' : (I.boutiques[x.id] || {}).fiche ? '#0F6B4A' : '#8A847C',
+              fiche: b.fiche, ads: b.ads,
+              setFiche: (e) => majIds(n => { n.boutiques[x.id] = Object.assign({ fiche: '', ads: '' }, n.boutiques[x.id], { fiche: e.target.value }); return n; }),
+              setAds: (e) => majIds(n => { n.boutiques[x.id] = Object.assign({ fiche: '', ads: '' }, n.boutiques[x.id], { ads: e.target.value }); return n; }) }; }),
+          gResAds: ids.reseau.ads, setGResAds: (e) => majIds(n => { n.reseau.ads = e.target.value; return n; }),
+          gGa4: ids.reseau.ga4, setGGa4: (e) => majIds(n => { n.reseau.ga4 = e.target.value; return n; }),
+          gSaveIds: () => { if (!busy) appel('ids', 'POST', '/google/ids', ids, () => { this.setState({ gIds: null }); return 'Rattachements Google enregistrés.'; }); },
+        };
       })(),
       ...(() => {
         // Onglet API TFBuddy : compte, boutiques de l'API, audit des routes (GET /audit/api).

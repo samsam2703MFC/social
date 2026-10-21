@@ -34,6 +34,7 @@ require_once __DIR__ . '/recommandations.php';
 require_once __DIR__ . '/detourage.php';
 require_once __DIR__ . '/commentaires.php';
 require_once __DIR__ . '/google.php';
+require_once __DIR__ . '/googleapi.php';
 require_once __DIR__ . '/bilan.php';
 require_once __DIR__ . '/kit.php';
 require_once __DIR__ . '/boost.php';
@@ -100,6 +101,22 @@ function socRoute(string $method, string $path): array
         $ids = in_array('meta_system_token', $faits, true) ? socIdsAuto(true) : null;
         return [200, ['ok' => true, 'maj' => $faits, 'metaStatus' => Meta::statut(), 'ids' => $ids]];
     }
+    // Google (fiches des boutiques, Google Ads, Analytics) : la connexion, les comptes trouvés, le rattachement par boutique.
+    if ($method === 'GET' && $path === '/google/connexion') { return [200, socGapiEcran()]; }
+    if ($method === 'POST' && $path === '/parametres/google') {
+        $faits = GoogleApi::clesPut(body());
+        if ($faits) { socLog(socUser(), 'Connexion', 'Clés Google mises à jour : ' . implode(', ', $faits)); }
+        if (GoogleApi::configure()) { GoogleApi::verifier(); }
+        return [200, ['maj' => $faits] + socGapiEcran()];
+    }
+    if ($method === 'POST' && $path === '/google/connexion/verifier') { GoogleApi::verifier(); return [200, socGapiEcran()]; }
+    if ($method === 'POST' && $path === '/google/decouvrir') {
+        if (!GoogleApi::configure()) { throw new HttpError(409, 'Connectez d’abord Google (client OAuth et jeton de rafraîchissement).'); }
+        $d = socGapiDecouvrir();
+        return [200, ['trouves' => ['fiches' => count($d['fiches']), 'ads' => count($d['ads']), 'ga4' => count($d['ga4'])]] + socGapiEcran()];
+    }
+    if ($method === 'POST' && $path === '/google/ids') { socGapiIdsPut(body()); return [200, socGapiEcran()]; }
+    if ($method === 'POST' && $path === '/google/deconnecter') { GoogleApi::deconnecter(); socLog(socUser(), 'Connexion', 'Google déconnecté'); return [200, socGapiEcran()]; }
     if ($method === 'POST' && $path === '/parametres') {
         // Les réglages non secrets modifiables depuis l'écran.
         $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'marketing_api' => 'string', 'webshop_url' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool', 'lien_texte' => 'array', 'lien_fiche' => 'bool', 'etiquettes_modeles' => 'etiquettes', 'charte_editoriale' => 'charte', 'ia_modele' => 'string', 'visuels_modeles' => 'visuels'];
