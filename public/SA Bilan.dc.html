@@ -129,11 +129,12 @@ class Component extends DCLogic {
       const [rgBg, rgFg] = pill(l.rangs && l.rangs.regularite), [rrBg, rrFg] = pill(l.rangs && l.rangs.reactivite), [raBg, raFg] = pill(l.rangs && l.rangs.avis);
       // Le conseil de la semaine : ce qui pèse le plus, dans l'ordre (retards, rien publié, note sous la cible, sinon bravo).
       const conseil = l.enRetard > 0 ? l.enRetard + ' commentaire' + (l.enRetard > 1 ? 's' : '') + ' ou avis en retard : à traiter aujourd’hui.'
-        : l.quotaUtilise === 0 ? 'Aucun post de la boutique ' + surPeriode + ' : proposer un modèle du réseau.'
+        : l.posts === 0 ? 'Aucune publication sur la Page ' + surPeriode + ' : proposer un modèle du réseau.'
         : l.avis5Requis > 0 ? 'Note sous la cible : ' + l.avis5Requis + ' avis 5★ à obtenir — affiche « Laissez-nous un avis ».'
         : 'Rien à signaler : bravo.';
       return { nom: l.nom, rang: String(l.rang), rangBg: l.rang === 1 ? '#8D1D2C' : '#EAE4DC', rangFg: l.rang === 1 ? '#FFFFFF' : '#444444',
-        posts: fI(l.posts) + ' publié' + (l.posts > 1 ? 's' : ''), postsSub: l.postsBoutique + ' par la boutique · ' + l.postsReseau + ' par le réseau · quota ' + (semaine ? '' : 'de la période ') + l.quotaUtilise + ' / ' + l.quota,
+        posts: fI(l.posts) + ' publié' + (l.posts > 1 ? 's' : ''), postsSub: (l.postsSource === 'meta' ? 'sur la Page, lus chez Meta · dont ' + (l.postsBoutique + l.postsReseau) + ' par le module' : l.postsBoutique + ' par la boutique · ' + l.postsReseau + ' par le réseau (module)')
+          + ' · rythme attendu ' + l.quota,
         rgTxt: rTxt(l.rangs && l.rangs.regularite, 'régularité'), rgBg, rgFg,
         aTraiter: l.aTraiter ? l.aTraiter + ' à traiter' + (l.enRetard ? ' · ' + l.enRetard + ' en retard' : '') : 'Rien à traiter', aTraiterFg: l.enRetard ? '#8D1D2C' : '#222222',
         reactSub: (l.dansDelaiPct == null ? 'aucun traité sur ' + ((d && d.reactJours) || 30) + ' j' : l.dansDelaiPct + ' % traités dans le délai (' + ((d && d.reactJours) || 30) + ' j)') + (l.delaiMedianH != null ? ' · médiane ' + String(l.delaiMedianH).replace('.', ',') + ' h' : ''),
@@ -154,13 +155,13 @@ class Component extends DCLogic {
       hasAlertes: !!(d && d.erreurs && d.erreurs.length), alertes: d && d.erreurs ? 'Lu en partie chez Meta : ' + d.erreurs.join(' · ') : '',
       // Une période longue se calcule une fois (puis le cron la garde) : la première lecture chez Meta peut être longue.
       loadingTxt: s.periode === 'semaine' ? 'Calcul du bilan…' : 'Calcul du bilan sur la période… la première lecture chez Meta peut prendre une minute.',
-      kpis: [['Posts publiés', fI(res.posts), 'sur ' + ((d && d.jours) || 7) + ' jours, ' + fI(res.boutiques) + ' boutiques', '#222222'],
+      kpis: [['Posts publiés', fI(res.posts), 'sur les Pages, ' + ((d && d.jours) || 7) + ' jours, ' + fI(res.boutiques) + ' boutiques', '#222222'],
         ['À traiter', fI(res.aTraiter), fI(res.enRetard) + ' en retard (> ' + ((d && d.delaiReponseHeures) || 24) + ' h)', res.enRetard ? '#8D1D2C' : '#222222'],
         ['Avis Google gagnés', (res.avisGagnes > 0 ? '+' : '') + fI(res.avisGagnes), d && d.avisDepuis ? 'suivis depuis le ' + dS(d.avisDepuis) : 'sur la période', res.avisGagnes > 0 ? '#2d7a3e' : '#222222'],
         ['Abonnés nets', (res.abonnesNet > 0 ? '+' : '') + fI(res.abonnesNet), d && d.instagramPartiel ? 'Facebook ; Instagram sur 30 jours (limite de Meta)' : 'Pages Facebook et Instagram', '#222222'],
         ['Pub dépensée', argent(res.depense), 'toutes boutiques', '#222222']].map(([label, value, sub, fg]) => ({ label, value, sub, fg })),
       head: ['Boutique', 'Régularité', 'Réactivité', 'Avis Google', 'Meta', semaine ? 'Cette semaine' : 'À faire'], rows, noRows: !!d && !rows.length,
-      legende: 'Classement sur la période choisie : trois critères — régularité (posts de la boutique rapportés à son quota' + (semaine ? '' : ', quota de la semaine × ' + ((d && d.semaines) || 1) + ' semaines') + '), réactivité (part des commentaires et avis traités dans le délai, moins les retards), avis Google gagnés ; le rang général additionne les trois. Chaque boutique voit son rang dans « Ma semaine » (règle « Voir son classement » de l’espace franchisé).',
+      legende: 'Classement sur la période choisie : trois critères — régularité (publications de la Page de la boutique, lues chez Meta, rapportées au rythme attendu : le quota de la semaine' + (semaine ? '' : ' × ' + ((d && d.semaines) || 1) + ' semaines') + '), réactivité (part des commentaires et avis traités dans le délai, moins 5 points par retard ; sans rien de traité, rien en retard vaut le meilleur score), avis Google gagnés ; le rang général additionne les trois. Chaque boutique voit son rang dans « Ma semaine » (règle « Voir son classement » de l’espace franchisé).',
     };
   }
 }

@@ -2052,8 +2052,9 @@ foreach ([['bc1', '4', 'orange', $ilya(5), $ilya(3)], ['bc2', '4', 'rouge', $ily
 }
 $bil = socBilan(true);
 $L = array_column($bil['lignes'], null, 'id');
-check('régularité : posts publiés sur 7 jours (réseau et boutique), pas les programmés ni les anciens ; quota de la semaine', $L['4']['posts'] - $base['4']['posts'] === 2 && $L['4']['postsBoutique'] - $base['4']['postsBoutique'] === 1
-    && $L['5']['posts'] - $base['5']['posts'] === 1 && $L['4']['quotaUtilise'] >= 1 && $L['4']['quota'] === sfRegles()['quotaSemaine'], json_encode([$L['4']['posts'] ?? null, $L['5']['posts'] ?? null]));
+$mod = static fn (array $l) => $l['postsReseau'] + $l['postsBoutique'];  // les posts du module
+check('régularité : posts du module publiés sur 7 jours (réseau et boutique), pas les programmés ni les anciens ; quota de la semaine', $mod($L['4']) - $mod($base['4']) === 2 && $L['4']['postsBoutique'] - $base['4']['postsBoutique'] === 1
+    && $mod($L['5']) - $mod($base['5']) === 1 && $L['4']['quotaUtilise'] >= 1 && $L['4']['quota'] === sfRegles()['quotaSemaine'], json_encode([$mod($L['4']), $mod($L['5'])]));
 check('réactivité : à traiter, en retard, part traitée dans le délai (30 j), délai médian', $L['4']['enRetard'] === 1 && $L['4']['rouges'] === 1 && $L['4']['dansDelaiPct'] === 100
     && $L['5']['dansDelaiPct'] === 0 && $L['4']['delaiMedianH'] === 2.0 && $L['5']['delaiMedianH'] === 42.0, json_encode([$L['4']['dansDelaiPct'] ?? null, $L['4']['delaiMedianH'] ?? null, $L['5']['delaiMedianH'] ?? null]));
 check('classement : rang par critère et rang général ; la boutique réactive passe devant', $L['4']['rangs']['reactivite'] === 1 && $L['5']['rangs']['reactivite'] === 2 && $L['4']['rangs']['regularite'] === 1
@@ -2061,12 +2062,12 @@ check('classement : rang par critère et rang général ; la boutique réactive 
 socItemPut('posts', ['id' => 'bil5', 'date' => $hier, 'time' => '13:00', 'title' => 'B5', 'status' => 'Publié', 'shops' => ['5'], 'fb' => true, 'ig' => false]);
 [$cB, $bB] = socRoute('GET', '/bilan');
 $_GET = ['forcer' => '1']; [, $bF] = socRoute('GET', '/bilan'); $_GET = [];
-check('gardé par le cron (deux heures) ; « Recalculer » le refait', $cB === 200 && array_column($bB['lignes'], null, 'id')['5']['posts'] === $L['5']['posts'] && array_column($bF['lignes'], null, 'id')['5']['posts'] === $L['5']['posts'] + 1);
+check('gardé par le cron (deux heures) ; « Recalculer » le refait', $cB === 200 && $mod(array_column($bB['lignes'], null, 'id')['5']) === $mod($L['5']) && $mod(array_column($bF['lignes'], null, 'id')['5']) === $mod($L['5']) + 1);
 // Les périodes : mois, trimestre, année, chacune gardée à part.
 $_GET = ['periode' => 'mois', 'forcer' => '1']; [$cM, $bM] = socRoute('GET', '/bilan'); $_GET = [];
 $M = array_column($bM['lignes'], null, 'id');
 check('bilan du mois : posts publiés sur 30 jours (celui d’il y a 10 jours compris), quota de la semaine × 4, réactivité sur 30 jours',
-    $cM === 200 && $bM['periode'] === 'mois' && $bM['jours'] === 30 && $bM['reactJours'] === 30 && $M['5']['posts'] - $baseM['5']['posts'] === 3
+    $cM === 200 && $bM['periode'] === 'mois' && $bM['jours'] === 30 && $bM['reactJours'] === 30 && $mod($M['5']) - $mod($baseM['5']) === 3
     && $M['4']['postsBoutique'] - $baseM['4']['postsBoutique'] === 1 && $M['4']['quota'] === 4 * sfRegles()['quotaSemaine'] && $M['4']['quotaUtilise'] === $M['4']['postsBoutique']
     && is_array(socSetting('bilan_cache_mois')), json_encode([$bM['periode'] ?? null, $M['5']['posts'] ?? null, $baseM['5']['posts'] ?? null, $M['4']['quota'] ?? null]));
 $bT = socBilan(true, 'trimestre'); $bA = socBilan(true, 'annee');
@@ -2075,6 +2076,18 @@ check('trimestre et année : 90 et 365 jours, réactivité sur la période, Inst
     && $bil['instagramPartiel'] === false && count($bA['lignes']) === count($bil['lignes']), json_encode([$bT['jours'], $bA['jours'], $bA['semaines']]));
 [$cX] = (static function () { $_GET = ['periode' => 'decennie']; try { return socRoute('GET', '/bilan'); } catch (HttpError $e) { return [$e->status]; } finally { $_GET = []; } })();
 check('période inconnue : 400', $cX === 400);
+$vieux = socSetting('bilan_cache_mois'); socSettingPut('bilan_cache_mois', ['t' => time(), 'data' => ['vieux' => true]] , false);
+check('un bilan gardé sous d’anciennes règles est recalculé', !isset(socBilan(false, 'mois')['vieux']) && (socSetting('bilan_cache_mois')['v'] ?? null) === SOC_BILAN_VERSION);
+// La régularité se lit chez Meta : les publications de la Page de la boutique (module ou Meta Business Suite), sur la période seulement.
+$publiesAvant = $GLOBALS['META_PUBLIES'] ?? null;
+$pj = static fn (int $j) => date('c', strtotime('-' . $j . ' days 12:00'));
+$GLOBALS['META_PUBLIES'] = [['id' => '111_b1', 'message' => 'a', 'created_time' => $pj(1)], ['id' => '111_b2', 'message' => 'b', 'created_time' => $pj(2)],
+    ['id' => '111_b3', 'message' => 'c', 'created_time' => $pj(10)], ['id' => '111_b4', 'message' => 'd', 'created_time' => $pj(400)]];
+$pS = array_column(socBilanCalculer('semaine')['lignes'], null, 'id')['4']; $pM = array_column(socBilanCalculer('mois')['lignes'], null, 'id')['4'];
+$pA = array_column(socBilanCalculer('annee')['lignes'], null, 'id')['4'];
+check('régularité lue chez Meta : publications de la Page sur la période (dont Business Suite), pas celles d’avant',
+    $pS['postsSource'] === 'meta' && $pS['posts'] >= 2 && $pM['posts'] - $pS['posts'] === 1 && $pA['posts'] === $pM['posts'], json_encode([$pS['posts'], $pM['posts'], $pA['posts']]));
+$GLOBALS['META_PUBLIES'] = $publiesAvant;
 sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
 [$cS, $sem] = $fr('GET', '/franchise/semaine');
 check('franchisé : sa ligne, la moyenne des autres boutiques, son rang ; jamais la ligne d’une autre boutique', $cS === 200 && ($sem['ligne']['id'] ?? '') === '4' && isset($sem['moyenne']['posts'])
@@ -2083,6 +2096,11 @@ $regB = sfRegles(); sfReglesPut(array_merge($regB, ['voirClassement' => false]))
 [, $sem2] = $fr('GET', '/franchise/semaine');
 check('franchisé : classement masqué si le réseau ne le partage pas', !isset($sem2['ligne']['rang']) && !isset($sem2['ligne']['rangs']) && $sem2['classement'] === false);
 sfReglesPut($regB); unset($_COOKIE[SF_COOKIE]);
+// Réactivité : sans rien de traité, une boutique en retard passe derrière celle qui n'a rien à traiter (plus devant).
+Db::exec("DELETE FROM social_commentaire WHERE id IN ('bc1','bc3')");
+$R = array_column(socBilanCalculer()['lignes'], null, 'id');
+check('réactivité : rien à traiter passe devant des retards sans rien de traité', $R['4']['dansDelaiPct'] === null && $R['4']['enRetard'] === 1 && $R['5']['enRetard'] === 0
+    && $R['5']['rangs']['reactivite'] === 1 && $R['4']['rangs']['reactivite'] > 1, json_encode([$R['4']['rangs'], $R['5']['rangs']]));
 Db::exec("DELETE FROM social_content WHERE id IN ('bil1','bil2','bil3','bil4','bil5')"); Db::exec("DELETE FROM social_commentaire WHERE id IN ('bc1','bc2','bc3')"); socSettingPut('bilan_cache', null, false);
 
 echo "Kit du mois : les posts que le réseau demande à chaque boutique ce mois-ci\n";

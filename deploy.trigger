@@ -136,3 +136,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-10-22T07:25:49Z clics retires de l'espace franchise
 2026-10-22T12:24:21Z clics du lien d'avis retires de l'espace franchise
 2026-10-22T12:39:54Z bilan des boutiques : semaine, mois, trimestre, annee
+2026-10-22T17:11:51Z bilan : regularite lue chez Meta, reactivite corrigee

@@ -895,7 +895,7 @@
     const p = periode || 'semaine';
     if (LIVE) return api('GET', '/bilan?periode=' + encodeURIComponent(p) + (forcer ? '&forcer=1' : ''));
     const jours = { semaine: 7, mois: 30, trimestre: 90, annee: 365 }[p] || 7;
-    const l = (id, nom, posts, pb, q, rouges, oranges, retard, pct, med, note, gagnes, a5, net, abo, dep, rangs, rang) => ({ id, nom, posts, postsBoutique: pb, postsReseau: posts - pb, quotaUtilise: pb, quota: 3,
+    const l = (id, nom, posts, pb, q, rouges, oranges, retard, pct, med, note, gagnes, a5, net, abo, dep, rangs, rang) => ({ id, nom, posts, postsSource: 'meta', postsBoutique: pb, postsReseau: posts - pb, quotaUtilise: pb, quota: 3,
       aTraiter: rouges + oranges, rouges, oranges, enRetard: retard, dansDelaiPct: pct, traites30: 6, delaiMedianH: med, note, avisGagnes: gagnes, avis5Requis: a5, abonnesNet: net, abonnes: abo, depense: dep,
       rangs: { regularite: rangs[0], reactivite: rangs[1], avis: rangs[2] }, rang });
     return Promise.resolve({ periode: p, du: addDays(TODAY, 1 - jours), au: TODAY, jours, semaines: Math.max(1, Math.round(jours / 7)), reactJours: Math.max(30, jours), avisDepuis: null,
