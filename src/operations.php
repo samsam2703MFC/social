@@ -149,8 +149,19 @@ function socOperation(array $c, array $mshops, array $nos, string $bo): array
         'channels' => array_values(array_map(static fn ($x) => is_array($x) ? (string) ($x['label'] ?? $x['name'] ?? '') : (string) $x, (array) ($c['channels'] ?? []))),
         'description' => trim((string) ($offre['title'] ?? '') . ((string) ($offre['mechanic_text'] ?? '') !== '' ? ' — ' . $offre['mechanic_text'] : '')),
         'image' => $img !== '' ? $img : null, 'scope' => (string) ($c['scope'] ?? ''), 'client' => (string) ($c['client_target'] ?? ''),
-        'lien' => $bo . 'assistant/?id=' . $id,
+        // La campagne s'ouvre dans le Marketing (son suivi, et de là son assistant) : tout y est regroupé.
+        'lien' => socMarketingLien('campagne=' . $id),
     ];
+}
+
+/**
+ * Une adresse du Marketing, où vivent les campagnes et leur assistant : `?campagne=19` ouvre le suivi
+ * d'une campagne, `?nouvelle=1` l'assistant sur une campagne neuve. Paramètre `url_marketing`
+ * (défaut `/marketing/`, même serveur).
+ */
+function socMarketingLien(string $requete): string
+{
+    return rtrim((string) (socSetting('url_marketing') ?: '/marketing/'), '/') . '/?' . $requete;
 }
 
 /** Une opération par identifiant (`bo-12`). */

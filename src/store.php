@@ -190,7 +190,7 @@ function socStateGet(): array
         'tfbAudit' => ['resume' => socSetting('tfb_audit')],
         // Les opérations sont les campagnes commerciales du Marketing du BO (lecture seule, src/operations.php).
         'posts' => socItems('posts'), 'ads' => socItems('ads'), 'campaigns' => socOperations(),
-        'operations' => ['erreur' => socOperationsErreur(), 'api' => BoMarketing::base(), 'lien' => rtrim((string) (socSetting('url_bo') ?? '/consulant_bo/'), '/') . '/assistant/'],
+        'operations' => ['erreur' => socOperationsErreur(), 'api' => BoMarketing::base(), 'lien' => socMarketingLien('nouvelle=1')],
         'leadforms' => socItems('leadforms'), 'groups' => socItems('groups'), 'templates' => socItems('templates'),
         'leads' => socLeads(),
         'darkPosts' => socDarkPosts(),

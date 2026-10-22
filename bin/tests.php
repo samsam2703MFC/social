@@ -549,7 +549,7 @@ check('opérations = campagnes du Marketing du BO, lues par son API', count($ops
     && (bool) array_filter($boAppels, static fn ($u) => str_ends_with($u, '/api/v1/marketing/campaigns/1')), json_encode($o1));
 check('boutiques du Marketing (erp-N) → boutiques du module, budget par boutique, produits de l’offre, objectif', $o1['shops'] === ['4', '5'] && $o1['split'] === ['4' => 200.0, '5' => 200.0]
     && $o1['products'] === ['Brioche croustillante'] && $o1['goal'] === ['metric' => 'CA additionnel', 'value' => 1000.0, 'unit' => 'EUR'] && $o1['budget'] == 400
-    && str_ends_with((string) $o1['image'], '/consulant_bo/assistant/uploads/a.png') && str_ends_with((string) $o1['lien'], '/assistant/?id=1'), json_encode($o1));
+    && str_ends_with((string) $o1['image'], '/consulant_bo/assistant/uploads/a.png') && str_ends_with((string) $o1['lien'], '/marketing/?campagne=1'), json_encode($o1));
 check('campagne réseau sans boutique choisie : tout le réseau ; sans date : à venir', count($ops['bo-2']['shops']) === count(socShops()) && $ops['bo-2']['status'] === 'à venir');
 $r = socStateSave(['changes' => ['campaigns' => ['upsert' => [['id' => 'c9', 'name' => 'Locale']]]]]);
 check('une opération ne se crée pas ici : refus, rien en base', str_contains((string) ($r['errors'][0]['error'] ?? ''), 'Marketing du BO') && Db::row("SELECT COUNT(*) n FROM social_campagne")['n'] == 0);

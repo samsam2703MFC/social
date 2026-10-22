@@ -71,7 +71,7 @@
   let MARGIN = 0.62;
 
   // Démo : les opérations sont les campagnes commerciales du Marketing du BO (en réel : GET /operations, lecture seule).
-  const BO_OP = (id, typeLabel, boStatus, boStatusCode) => ({ boId: id, source: 'bo', typeLabel, boStatus, boStatusCode, lien: '/consulant_bo/assistant/?id=' + id });
+  const BO_OP = (id, typeLabel, boStatus, boStatusCode) => ({ boId: id, source: 'bo', typeLabel, boStatus, boStatusCode, lien: '/marketing/?campagne=' + id });
   const CAMPAIGNS = [
     { id: 'bo-12', ...BO_OP(12, 'Saisonnalité', 'En cours', 'running'), name: 'Gamme Automne 2026', type: 'saison', start: '2026-09-28', end: '2026-10-25', status: 'en cours',
       shops: SHOPS.map(s => s.id), products: ['Brioche croustillante', 'Tarte aux pommes', 'Tartelette poire-amande'],
@@ -971,7 +971,7 @@
     comptesMeta: () => LIVE ? api('GET', '/meta/comptes').then(r => { META.comptes = (r && r.comptes) || META.comptes; return META.comptes; }) : Promise.resolve(META.comptes), calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, charte, relire, ia: () => (LIVE && LIVE.ia) || { configure: false, modele: '' }, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.
     // Opérations = campagnes du Marketing du BO : lien vers l'assistant, erreur de lecture de l'API.
-    ctype, rattacher, webshopUrl, plan, planProposer, planCreer, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/consulant_bo/assistant/', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
+    ctype, rattacher, webshopUrl, plan, planProposer, planCreer, opsLink: () => LIVE && LIVE.operations ? LIVE.operations.lien : '/marketing/?nouvelle=1', opsErreur: () => LIVE && LIVE.operations ? LIVE.operations.erreur : null,
     igUnique: () => LIVE ? !!LIVE.instagramUnique : true, reseau, marque, saved: () => queue, DARK, who: () => LIVE ? LIVE.user.name : 'Sarah Lambert (Franchiseur)', boUrl: LIVE ? LIVE.boUrl : null, metaStatus: LIVE ? LIVE.metaStatus : null,
     TODAY, LANGS, VDEF, langsOf, pname, META, LF_Q, LEADFORMS, LEADS, cents, SHOPS, TEST_SHOPS, GROUPS, LEVERS, CTYPES, POST_TYPES, CATALOGUE, MARGIN, RESULTS, TEMPLATES, ROLES, STATUS, AD_STATUS, CONN, RAG,
     byId, fmt, eur, argent, devSym, pct, d2, iso, addDays, daysBetween, MONTHS, DAYS, dLabel, dShort, shopLabel, roi, ragOf, state, save, reset, log, alerts, fill, href, param, embed };
