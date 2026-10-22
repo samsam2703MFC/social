@@ -205,6 +205,8 @@ function socRoute(string $method, string $path): array
     // Ce qui marche (publications des 90 derniers jours, lues chez Meta, gardées 12 h) et idées de posts (src/recommandations.php).
     if ($method === 'GET' && $path === '/recommandations') { return [200, ['reco' => socRecommandations(!empty($_GET['cache']), !empty($_GET['forcer']))]]; }
     if ($method === 'GET' && $path === '/idees') { return [200, socIdees()]; }
+    // Ce qui est rattaché à une campagne du Marketing (assistant de campagne : colonne « Rattaché », canaux, récap).
+    if ($method === 'GET' && preg_match('#^/operations/(bo-\d{1,9})/rattache$#', $path, $m)) { return [200, socOperationRattache($m[1])]; }
     // Le plan de posts d'une campagne (src/plan.php) : se relit d'abord, puis s'ajoute au calendrier en brouillons.
     if ($method === 'GET' && $path === '/campagnes/plan') {
         $c = socPlanCreneaux(socRecommandations(true));

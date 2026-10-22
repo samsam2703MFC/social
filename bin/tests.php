@@ -1350,6 +1350,12 @@ $opF = array_column($b['operations'] ?? [], null, 'id')['bo-1'] ?? null;
 check('opération du Marketing où figure la boutique : posts et pub rattachés, publication de sa Page (lecture seule)', $code === 200 && $opF
     && in_array('p1', array_column($opF['posts'], 'id'), true) && in_array('mfb-111_9001', array_column($opF['metaPosts'], 'id'), true) && count($opF['ads']) >= 1 && $opF['budget'] == 200, json_encode($opF));
 check('métriques de la boutique (Meta + ventes) et objectif à sa part du budget', is_array($opF['result']) && array_key_exists('spend', $opF['result']) && $opF['goalShop'] == 500, json_encode([$opF['result'] ?? null, $opF['goalShop'] ?? null]));
+[$code, $b] = socRoute('GET', '/operations/bo-1/rattache');
+check('assistant du Marketing : ce qui est rattaché à la campagne (posts par statut, publications Meta, publicités et leurs chiffres, webshop)',
+    $code === 200 && $b['posts']['total'] >= 1 && array_sum($b['posts']['parStatut']) === $b['posts']['total'] && $b['publicationsMeta'] >= 1
+    && count($b['publicites']) >= 1 && array_key_exists('depense', $b['totaux']) && str_starts_with($b['webshop'], 'https://') && str_ends_with($b['webshop'], '/'), json_encode($b));
+[$code] = (static function () { try { return socRoute('GET', '/operations/19/rattache'); } catch (HttpError $e) { return [$e->status]; } })();
+check('rattaché : identifiant hors format (pas bo-N) → route inconnue', $code === 404);
 // Publicités en cours, rattachées ou non à une opération : celles du réseau et celles de la boutique seule.
 $jP = static fn (int $n) => date('Y-m-d', strtotime(($n >= 0 ? '+' : '') . $n . ' days'));
 $pubs = [['id' => 'pubR', 'name' => 'Réseau automne', 'scope' => 'reseau', 'shops' => ['4', '5'], 'status' => 'Active', 'start' => $jP(-3), 'end' => $jP(10), 'budget' => 40, 'spent' => 12,

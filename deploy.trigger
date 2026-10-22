@@ -132,3 +132,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-10-21T22:06:23Z plan de posts de campagne
 2026-10-21T22:08:25Z campagnes ouvertes sur le plan depuis le Marketing
 2026-10-22T05:55:27Z operations ouvertes dans le Marketing
+2026-10-22T06:03:18Z rattache d'une campagne pour l'assistant du Marketing

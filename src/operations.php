@@ -164,6 +164,46 @@ function socMarketingLien(string $requete): string
     return rtrim((string) (socSetting('url_marketing') ?: '/marketing/'), '/') . '/?' . $requete;
 }
 
+/**
+ * Ce qui est rattaché à une opération, pour l'assistant de campagne du Marketing (colonne « Rattaché »,
+ * étapes « Canaux » et « Récap ») : posts du module par statut, publications lues chez Meta et rattachées,
+ * publicités (statut, clics, affichages, dépense dans la devise du compte) et l'adresse du webshop, d'où
+ * partent les liens suivis. Lecture seule : rien n'est demandé à Meta, ce sont les chiffres gardés par le module.
+ */
+function socOperationRattache(string $id): array
+{
+    $parStatut = [];
+    $posts = 0;
+    foreach (socItems('posts') as $p) {
+        if (($p['campaign'] ?? null) !== $id || !empty($p['dark'])) { continue; }
+        $statut = (string) (($p['status'] ?? '') ?: 'Brouillon');
+        $parStatut[$statut] = ($parStatut[$statut] ?? 0) + 1;
+        $posts++;
+    }
+    $meta = (int) (Db::row('SELECT COUNT(*) n FROM social_rattachement WHERE operation_id = ?', [$id])['n'] ?? 0);
+    $pubs = [];
+    foreach (socItems('ads') as $a) {
+        if (($a['campaign'] ?? null) !== $id) { continue; }
+        $pubs[] = ['id' => (string) $a['id'], 'nom' => (string) ($a['name'] ?? ''), 'statut' => (string) ($a['status'] ?? ''),
+            'origine' => ($a['origin'] ?? '') === 'meta' ? 'meta' : 'module', 'debut' => $a['start'] ?? null, 'fin' => $a['end'] ?? null,
+            'clics' => isset($a['clicks']) ? (int) $a['clicks'] : null, 'affichages' => isset($a['impressions']) ? (int) $a['impressions'] : null,
+            'depense' => round((float) ($a['spent'] ?? 0), 2), 'devise' => strtoupper((string) (($a['devise'] ?? '') ?: 'EUR'))];
+    }
+    $devises = array_values(array_unique(array_column($pubs, 'devise')));
+    return [
+        'operation' => $id,
+        'posts' => ['total' => $posts, 'parStatut' => $parStatut],
+        'publicationsMeta' => $meta,
+        'publicites' => $pubs,
+        'totaux' => ['clics' => array_sum(array_map(static fn ($x) => (int) $x['clics'], $pubs)),
+            'affichages' => array_sum(array_map(static fn ($x) => (int) $x['affichages'], $pubs)),
+            'depense' => round(array_sum(array_column($pubs, 'depense')), 2),
+            // Une seule devise : la somme a un sens ; plusieurs : elle n'en a pas, l'écran montre le détail.
+            'devise' => count($devises) === 1 ? $devises[0] : null],
+        'webshop' => rtrim((string) (socSetting('webshop_url') ?: 'https://webshop.atelierby.be/'), '/') . '/',
+    ];
+}
+
 /** Une opération par identifiant (`bo-12`). */
 function socOperationParId(string $id): ?array
 {
