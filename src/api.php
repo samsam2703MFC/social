@@ -148,7 +148,7 @@ function socRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/commentaires/traiter') { $b = body(); return [200, socCommentaireTraiter((string) ($b['id'] ?? ''), !empty($b['traite']))]; }
     // Les avis Google : la Réputation digitale du BO (ses tables, lues) et les avis classés (src/google.php).
     if ($method === 'GET' && $path === '/google') { return [200, socGoogleEcran($_GET)]; }
-    // Le bilan de la semaine, boutique par boutique (src/bilan.php).
+    // Le bilan des boutiques sur la semaine, le mois, le trimestre ou l'année (?periode=, src/bilan.php).
     // Le kit du mois de l'espace franchisé (src/kit.php).
     if ($method === 'GET' && $path === '/kit') { return [200, socKitVue()]; }
     if ($method === 'POST' && $path === '/kit') { return [200, socKitPut((array) (body()['items'] ?? []))]; }
@@ -165,7 +165,7 @@ function socRoute(string $method, string $path): array
     if ($method === 'GET' && $path === '/pub/meilleurs') { return [200, socBoostMeilleurs(!empty($_GET['forcer']))]; }
     if ($method === 'GET' && $path === '/pub/demandes') { return [200, socBoostDemandes()]; }
     if ($method === 'POST' && $path === '/pub/demandes/refuser') { $b = body(); return [200, socBoostRefuser((int) ($b['id'] ?? 0), (string) ($b['reponse'] ?? ''))]; }
-    if ($method === 'GET' && $path === '/bilan') { return [200, socBilan(!empty($_GET['forcer']))]; }
+    if ($method === 'GET' && $path === '/bilan') { return [200, socBilan(!empty($_GET['forcer']), (string) ($_GET['periode'] ?? 'semaine'))]; }
     if ($method === 'POST' && $path === '/google/reglages') { return [200, ['reglages' => socGoogleReglagesPut(body())]]; }
     if ($method === 'POST' && $path === '/google/relire') {
         $b = body();

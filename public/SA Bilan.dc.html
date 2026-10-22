@@ -29,11 +29,17 @@
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <span style="font-size:11px;color:#666666;">{{ calcule }}</span>
+        <!-- La période : un bouton à bascule, ses quatre choix répartis à parts égales. -->
+        <div role="group" aria-label="Période du bilan" style="display:grid;grid-template-columns:repeat(4,1fr);width:380px;max-width:100%;height:34px;padding:3px;box-sizing:border-box;border-radius:8px;background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.14);">
+          <sc-for list="{{ periodes }}" as="p" hint-placeholder-count="4">
+            <button onClick="{{ p.choisir }}" aria-pressed="{{ p.on }}" style="border:none;border-radius:6px;font-size:12.5px;font-weight:500;cursor:pointer;background:{{ p.bg }};color:{{ p.fg }};">{{ p.label }}</button>
+          </sc-for>
+        </div>
         <button onClick="{{ recalculer }}" style="height:34px;padding:0 14px;border-radius:8px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ busyOp }};">{{ recalcLabel }}</button>
       </div>
     </header>
 
-    <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">Calcul du bilan…</div></sc-if>
+    <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div style="background:#FFFFFF;border-radius:10px;padding:18px;font-size:13px;color:#666666;">{{ loadingTxt }}</div></sc-if>
     <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><div style="background:#F6DCDF;color:#8D1D2C;border-radius:10px;padding:14px 16px;font-size:13px;">{{ err }}</div></sc-if>
     <sc-if value="{{ hasAlertes }}" hint-placeholder-val="{{ false }}"><div style="background:#FCE7C8;color:#6b3d0a;border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.5;">{{ alertes }}</div></sc-if>
 
@@ -91,16 +97,22 @@
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
-// Le bilan de la semaine, boutique par boutique (src/bilan.php) : régularité, réactivité, avis Google, Meta, et le
-// classement. Calculé par le cron toutes les heures ; « Recalculer » relit Meta tout de suite.
+// Le bilan des boutiques (src/bilan.php) sur la semaine, le mois, le trimestre ou l'année : régularité, réactivité, avis
+// Google, Meta, et le classement. Calculé par le cron ; « Recalculer » relit Meta tout de suite pour la période affichée.
+const PERIODES = [['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']];
 class Component extends DCLogic {
-  state = { data: null, loading: true, err: '', busy: false };
+  state = { periode: 'semaine', data: null, loading: true, err: '', busy: false };
   componentDidMount() { this.load(false); }
-  load(forcer) {
+  load(forcer, periode) {
     const SA = window.SA; if (!SA) return;
+    const p = periode || this.state.periode;
     this.setState({ busy: forcer, err: '' });
-    Promise.resolve().then(() => SA.bilan(forcer)).then(d => this.setState({ data: d, loading: false, busy: false }))
-      .catch(e => this.setState({ loading: false, busy: false, err: e.message || 'erreur' }));
+    Promise.resolve().then(() => SA.bilan(forcer, p)).then(d => { if (p === this.state.periode) this.setState({ data: d, loading: false, busy: false }); })
+      .catch(e => { if (p === this.state.periode) this.setState({ loading: false, busy: false, err: e.message || 'erreur' }); });
+  }
+  choisir(p) {
+    if (p === this.state.periode) return;
+    this.setState({ periode: p, data: null, loading: true, busy: false, err: '' }, () => this.load(false, p));
   }
   renderVals() {
     const SA = window.SA, s = this.state, d = s.data;
@@ -111,39 +123,44 @@ class Component extends DCLogic {
     const pill = (rang) => rang === 1 ? ['#E2F0E8', '#0F6B4A'] : rang && rang === n && n > 1 ? ['#F6DCDF', '#8D1D2C'] : ['#F4EFE8', '#555555'];
     const rTxt = (rang, quoi) => rang == null ? quoi + ' : —' : (rang === 1 ? '1er' : rang + 'e') + ' · ' + quoi;
     const res = (d && d.reseau) || {};
+    const semaine = !d || d.periode === 'semaine' || !d.periode, surPeriode = semaine ? 'cette semaine' : 'sur la période';
+    const dS = (j) => SA ? SA.dShort(j) : j;
     const rows = ((d && d.lignes) || []).map(l => {
       const [rgBg, rgFg] = pill(l.rangs && l.rangs.regularite), [rrBg, rrFg] = pill(l.rangs && l.rangs.reactivite), [raBg, raFg] = pill(l.rangs && l.rangs.avis);
       // Le conseil de la semaine : ce qui pèse le plus, dans l'ordre (retards, rien publié, note sous la cible, sinon bravo).
       const conseil = l.enRetard > 0 ? l.enRetard + ' commentaire' + (l.enRetard > 1 ? 's' : '') + ' ou avis en retard : à traiter aujourd’hui.'
-        : l.quotaUtilise === 0 ? 'Aucun post de la boutique cette semaine : proposer un modèle du réseau.'
+        : l.quotaUtilise === 0 ? 'Aucun post de la boutique ' + surPeriode + ' : proposer un modèle du réseau.'
         : l.avis5Requis > 0 ? 'Note sous la cible : ' + l.avis5Requis + ' avis 5★ à obtenir — affiche « Laissez-nous un avis ».'
         : 'Rien à signaler : bravo.';
       return { nom: l.nom, rang: String(l.rang), rangBg: l.rang === 1 ? '#8D1D2C' : '#EAE4DC', rangFg: l.rang === 1 ? '#FFFFFF' : '#444444',
-        posts: fI(l.posts) + ' publié' + (l.posts > 1 ? 's' : ''), postsSub: l.postsBoutique + ' par la boutique · ' + l.postsReseau + ' par le réseau · quota ' + l.quotaUtilise + ' / ' + l.quota,
+        posts: fI(l.posts) + ' publié' + (l.posts > 1 ? 's' : ''), postsSub: l.postsBoutique + ' par la boutique · ' + l.postsReseau + ' par le réseau · quota ' + (semaine ? '' : 'de la période ') + l.quotaUtilise + ' / ' + l.quota,
         rgTxt: rTxt(l.rangs && l.rangs.regularite, 'régularité'), rgBg, rgFg,
         aTraiter: l.aTraiter ? l.aTraiter + ' à traiter' + (l.enRetard ? ' · ' + l.enRetard + ' en retard' : '') : 'Rien à traiter', aTraiterFg: l.enRetard ? '#8D1D2C' : '#222222',
-        reactSub: (l.dansDelaiPct == null ? 'aucun traité sur 30 j' : l.dansDelaiPct + ' % traités dans le délai') + (l.delaiMedianH != null ? ' · médiane ' + String(l.delaiMedianH).replace('.', ',') + ' h' : ''),
+        reactSub: (l.dansDelaiPct == null ? 'aucun traité sur ' + ((d && d.reactJours) || 30) + ' j' : l.dansDelaiPct + ' % traités dans le délai (' + ((d && d.reactJours) || 30) + ' j)') + (l.delaiMedianH != null ? ' · médiane ' + String(l.delaiMedianH).replace('.', ',') + ' h' : ''),
         rrTxt: rTxt(l.rangs && l.rangs.reactivite, 'réactivité'), rrBg, rrFg,
         note: l.note == null ? '—' : fN(l.note) + ' ★', noteFg: l.note == null ? '#8A847C' : (d.cible && l.note >= d.cible ? '#2d7a3e' : '#8D1D2C'),
-        avisSub: (l.avisGagnes == null ? 'avis gagnés : suivi en cours' : (l.avisGagnes > 0 ? '+' : '') + l.avisGagnes + ' avis en ' + d.jours + ' j') + (l.avis5Requis ? ' · objectif ' + l.avis5Requis + ' avis 5★' : ''),
+        avisSub: (l.avisGagnes == null ? 'avis gagnés : suivi en cours' : (l.avisGagnes > 0 ? '+' : '') + l.avisGagnes + ' avis ' + (d.avisDepuis ? 'depuis le ' + dS(d.avisDepuis) : 'en ' + d.jours + ' j')) + (l.avis5Requis ? ' · objectif ' + l.avis5Requis + ' avis 5★' : ''),
         raTxt: rTxt(l.rangs && l.rangs.avis, 'avis gagnés'), raBg, raFg,
         abonnes: l.abonnesNet == null ? '—' : (l.abonnesNet > 0 ? '+' : '') + fI(l.abonnesNet) + ' abonnés',
         metaSub: (l.abonnes != null ? fI(l.abonnes) + ' sur la Page · ' : '') + 'pub : ' + argent(l.depense),
         conseil, voir: (((SA && SA.state && (SA.state().franchise || {}).url) || '../social_franchisee/').replace(/\/?$/, '/')) + 'calendrier?shop=' + encodeURIComponent(l.id) };
     });
     return {
-      periode: d ? 'Semaine du ' + (SA ? SA.dShort(d.du) : d.du) + ' au ' + (SA ? SA.dShort(d.au) : d.au) + ' · régularité, réactivité, avis Google, Meta' : 'Régularité, réactivité, avis Google, Meta',
+      periode: d ? ({ semaine: 'Semaine', mois: '30 derniers jours', trimestre: '90 derniers jours', annee: '12 derniers mois' }[d.periode || 'semaine'] || 'Période') + ' · du ' + dS(d.du) + ' au ' + dS(d.au) + ' · régularité, réactivité, avis Google, Meta' : 'Régularité, réactivité, avis Google, Meta',
+      periodes: PERIODES.map(([cle, label]) => ({ label, on: cle === s.periode ? 'true' : 'false', bg: cle === s.periode ? '#8D1D2C' : 'transparent', fg: cle === s.periode ? '#FFFFFF' : '#444444', choisir: () => this.choisir(cle) })),
       calcule: d ? 'Calculé le ' + (SA ? SA.dShort(d.le.slice(0, 10)) : '') + ' à ' + d.le.slice(11, 16) : '',
       recalculer: () => !s.busy && this.load(true), recalcLabel: s.busy ? 'Calcul…' : 'Recalculer', busyOp: s.busy ? 0.6 : 1,
       loading: s.loading && !d, hasErr: !!s.err, err: s.err, ready: !!d,
       hasAlertes: !!(d && d.erreurs && d.erreurs.length), alertes: d && d.erreurs ? 'Lu en partie chez Meta : ' + d.erreurs.join(' · ') : '',
+      // Une période longue se calcule une fois (puis le cron la garde) : la première lecture chez Meta peut être longue.
+      loadingTxt: s.periode === 'semaine' ? 'Calcul du bilan…' : 'Calcul du bilan sur la période… la première lecture chez Meta peut prendre une minute.',
       kpis: [['Posts publiés', fI(res.posts), 'sur ' + ((d && d.jours) || 7) + ' jours, ' + fI(res.boutiques) + ' boutiques', '#222222'],
         ['À traiter', fI(res.aTraiter), fI(res.enRetard) + ' en retard (> ' + ((d && d.delaiReponseHeures) || 24) + ' h)', res.enRetard ? '#8D1D2C' : '#222222'],
-        ['Avis Google gagnés', (res.avisGagnes > 0 ? '+' : '') + fI(res.avisGagnes), 'sur la période', res.avisGagnes > 0 ? '#2d7a3e' : '#222222'],
-        ['Abonnés nets', (res.abonnesNet > 0 ? '+' : '') + fI(res.abonnesNet), 'Pages Facebook et Instagram', '#222222'],
+        ['Avis Google gagnés', (res.avisGagnes > 0 ? '+' : '') + fI(res.avisGagnes), d && d.avisDepuis ? 'suivis depuis le ' + dS(d.avisDepuis) : 'sur la période', res.avisGagnes > 0 ? '#2d7a3e' : '#222222'],
+        ['Abonnés nets', (res.abonnesNet > 0 ? '+' : '') + fI(res.abonnesNet), d && d.instagramPartiel ? 'Facebook ; Instagram sur 30 jours (limite de Meta)' : 'Pages Facebook et Instagram', '#222222'],
         ['Pub dépensée', argent(res.depense), 'toutes boutiques', '#222222']].map(([label, value, sub, fg]) => ({ label, value, sub, fg })),
-      head: ['Boutique', 'Régularité', 'Réactivité', 'Avis Google', 'Meta', 'Cette semaine'], rows, noRows: !!d && !rows.length,
-      legende: 'Classement : trois critères — régularité (posts de la boutique rapportés à son quota), réactivité (part des commentaires et avis traités dans le délai, moins les retards), avis Google gagnés ; le rang général additionne les trois. Chaque boutique voit son rang dans « Ma semaine » (règle « Voir son classement » de l’espace franchisé).',
+      head: ['Boutique', 'Régularité', 'Réactivité', 'Avis Google', 'Meta', semaine ? 'Cette semaine' : 'À faire'], rows, noRows: !!d && !rows.length,
+      legende: 'Classement sur la période choisie : trois critères — régularité (posts de la boutique rapportés à son quota' + (semaine ? '' : ', quota de la semaine × ' + ((d && d.semaines) || 1) + ' semaines') + '), réactivité (part des commentaires et avis traités dans le délai, moins les retards), avis Google gagnés ; le rang général additionne les trois. Chaque boutique voit son rang dans « Ma semaine » (règle « Voir son classement » de l’espace franchisé).',
     };
   }
 }

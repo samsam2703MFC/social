@@ -890,13 +890,16 @@
     if (LIVE) return;
     DEMO_DEMANDES = (DEMO_DEMANDES || []).map(d => d.id === id ? Object.assign({}, d, { statut: 'boostee', adId, traiteLe: TODAY + ' 10:00', traitePar: 'Sarah Lambert' }) : d);
   }
-  /** Le bilan de la semaine, boutique par boutique (src/bilan.php). En démonstration : quatre boutiques d'exemple. */
-  function bilan(forcer) {
-    if (LIVE) return api('GET', '/bilan' + (forcer ? '?forcer=1' : ''));
+  /** Le bilan des boutiques sur la période (semaine, mois, trimestre, annee — src/bilan.php). En démonstration : quatre boutiques d'exemple. */
+  function bilan(forcer, periode) {
+    const p = periode || 'semaine';
+    if (LIVE) return api('GET', '/bilan?periode=' + encodeURIComponent(p) + (forcer ? '&forcer=1' : ''));
+    const jours = { semaine: 7, mois: 30, trimestre: 90, annee: 365 }[p] || 7;
     const l = (id, nom, posts, pb, q, rouges, oranges, retard, pct, med, note, gagnes, a5, net, abo, dep, rangs, rang) => ({ id, nom, posts, postsBoutique: pb, postsReseau: posts - pb, quotaUtilise: pb, quota: 3,
       aTraiter: rouges + oranges, rouges, oranges, enRetard: retard, dansDelaiPct: pct, traites30: 6, delaiMedianH: med, note, avisGagnes: gagnes, avis5Requis: a5, abonnesNet: net, abonnes: abo, depense: dep,
       rangs: { regularite: rangs[0], reactivite: rangs[1], avis: rangs[2] }, rang });
-    return Promise.resolve({ du: addDays(TODAY, -6), au: TODAY, jours: 7, le: TODAY + ' 08:07', devise: 'EUR', cible: 4.6, delaiReponseHeures: 24, erreurs: [],
+    return Promise.resolve({ periode: p, du: addDays(TODAY, 1 - jours), au: TODAY, jours, semaines: Math.max(1, Math.round(jours / 7)), reactJours: Math.max(30, jours), avisDepuis: null,
+      instagramPartiel: jours > 30, le: TODAY + ' 08:07', devise: 'EUR', cible: 4.6, delaiReponseHeures: 24, erreurs: [],
       reseau: { posts: 19, aTraiter: 6, enRetard: 2, avisGagnes: 9, abonnesNet: 212, depense: 320, boutiques: 4 },
       lignes: [l('5', 'Sombreffe', 6, 3, 3, 0, 1, 0, 100, 2.5, 4.7, 4, 0, 71, 2310, 60, [1, 1, 1], 1), l('4', 'Halle', 5, 2, 3, 1, 1, 0, 80, 6, 4.4, 3, 25, 64, 4780, 107, [2, 2, 2], 2),
         l('3', 'Gosselies', 5, 3, 3, 1, 0, 1, 50, 20, 4.5, 2, 38, 48, 1900, 83, [1, 3, 3], 3), l('2', 'Corbais', 3, 0, 3, 1, 1, 1, 33, 31, 4.1, 0, 943, 29, 8100, 70, [4, 4, 4], 4)] });

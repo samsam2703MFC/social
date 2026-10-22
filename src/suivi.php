@@ -20,6 +20,26 @@ declare(strict_types=1);
 
 const SOC_SUIVI_PERIODES = [7, 28, 90];
 
+/**
+ * Les insights quotidiens d'un objet Meta sur [du, au], par tranches de 90 jours : Meta refuse plus de 93 jours
+ * entre `since` et `until`. Rend la forme d'une réponse de Meta, les valeurs des tranches mises bout à bout.
+ */
+function socSuiviInsightsJour(string $objet, array $metriques, string $du, string $au, ?string $token): array
+{
+    $parNom = [];
+    for ($d = $du; $d <= $au; $d = date('Y-m-d', strtotime($fin . ' +1 day'))) {
+        $fin = min($au, date('Y-m-d', strtotime($d . ' +89 days')));
+        $r = Meta::call('GET', $objet . '/insights', ['metric' => implode(',', $metriques), 'period' => 'day', 'since' => $d,
+            'until' => date('Y-m-d', strtotime($fin . ' +1 day'))], $token);
+        foreach ((array) ($r['data'] ?? []) as $m) {
+            $nom = (string) ($m['name'] ?? '');
+            $parNom[$nom] ??= array_merge($m, ['values' => []]);
+            $parNom[$nom]['values'] = array_merge($parNom[$nom]['values'], (array) ($m['values'] ?? []));
+        }
+    }
+    return ['data' => array_values($parNom)];
+}
+
 /** Série d'insights Meta → [jour => valeur] (le jour qui se termine à `end_time`). */
 function socSuiviSerie(array $metric): array
 {
@@ -55,7 +75,6 @@ function socSuiviPage(array $c, string $du, string $au): array
         $out['name'] = (string) ($pr['name'] ?? $c['name']); $out['username'] = (string) ($pr['username'] ?? '');
         $out['picture'] = (string) ($pr['picture']['data']['url'] ?? '') ?: null; $out['link'] = (string) ($pr['link'] ?? '') ?: null;
     } catch (MetaError $e) { $out['motif'] = 'Page illisible : ' . $e->getMessage(); return $out; }
-    $periode = ['period' => 'day', 'since' => $du, 'until' => date('Y-m-d', strtotime($au . ' +1 day'))];
     // Meta a changé plusieurs fois ces métriques : on essaie dans l'ordre ; une réponse vide compte comme un échec.
     $essais = [
         ['page_follows'],                                     // total d'abonnés du jour → variation
@@ -66,7 +85,7 @@ function socSuiviPage(array $c, string $du, string $au): array
     $refus = []; $permission = null;
     foreach ($essais as $metriques) {
         try {
-            $r = Meta::call('GET', $c['id'] . '/insights', ['metric' => implode(',', $metriques)] + $periode, $c['token']);
+            $r = socSuiviInsightsJour($c['id'], $metriques, $du, $au, $c['token']);
         } catch (MetaError $e) {
             if (socSuiviPermission($e)) { $permission ??= $e; }
             $refus[] = implode('+', $metriques) . ' : ' . $e->getMessage();
@@ -123,7 +142,7 @@ function socSuiviInstagram(array $c, string $du, string $au): array
  * Page qui la porte (créa), sinon à la boutique connue du module.
  * Rend [page_id|'' => ['total' => x, 'jours' => [jour => x]], 'devise' => …, 'erreurs' => […]].
  */
-function socSuiviDepenses(string $du, string $au): array
+function socSuiviDepenses(string $du, string $au, bool $parJour = true): array
 {
     $parPage = []; $devises = []; $erreurs = [];
     $pageDeBoutique = [];
@@ -136,7 +155,9 @@ function socSuiviDepenses(string $du, string $au): array
         try {
             $info = Meta::call('GET', $act, ['fields' => 'currency']);
             if (!empty($info['currency'])) { $devises[(string) $info['currency']] = true; }
-            $lignes = socGraphTout($act . '/insights', ['level' => 'ad', 'fields' => 'ad_id,spend', 'time_range' => ['since' => $du, 'until' => $au], 'time_increment' => 1, 'limit' => 500], 5000);
+            // Sans le détail par jour : une ligne par pub sur toute la période (un an jour par jour dépasserait la limite de lecture).
+            $lignes = socGraphTout($act . '/insights', ['level' => 'ad', 'fields' => 'ad_id,spend', 'time_range' => ['since' => $du, 'until' => $au], 'limit' => 500]
+                + ($parJour ? ['time_increment' => 1] : []), 5000);
             if (!$lignes) { continue; }
             $pageDePub = [];
             foreach (socGraphTout($act . '/ads', ['fields' => 'id,creative{actor_id,effective_object_story_id}', 'limit' => 200,
@@ -151,7 +172,7 @@ function socSuiviDepenses(string $du, string $au): array
                 $j = substr((string) ($l['date_start'] ?? ''), 0, 10);
                 $v = (float) ($l['spend'] ?? 0);
                 if ($j === '' || $v <= 0) { continue; }
-                $parPage[$page]['jours'][$j] = round(($parPage[$page]['jours'][$j] ?? 0) + $v, 2);
+                if ($parJour) { $parPage[$page]['jours'][$j] = round(($parPage[$page]['jours'][$j] ?? 0) + $v, 2); }
                 $parPage[$page]['total'] = round(($parPage[$page]['total'] ?? 0) + $v, 2);
             }
         } catch (MetaError $e) { $erreurs[] = $act . ' : ' . $e->getMessage(); }
@@ -160,15 +181,16 @@ function socSuiviDepenses(string $du, string $au): array
 }
 
 /** Le rapport complet pour l'écran « Suivi des boutiques ». */
-function socSuiviAbonnes(int $jours, ?string $seulePage = null): array
+function socSuiviAbonnes(int $jours, ?string $seulePage = null, bool $parJour = true): array
 {
     if (!Meta::configured()) { throw new HttpError(409, 'token Meta absent : saisissez-le dans Paramètres → API Meta → Clés d’accès Meta'); }
-    $jours = in_array($jours, SOC_SUIVI_PERIODES, true) ? $jours : 28;
+    // Sans le détail par jour (le bilan des boutiques n'a besoin que des totaux), toute période jusqu'à un an.
+    $jours = in_array($jours, SOC_SUIVI_PERIODES, true) || !$parJour ? max(1, min(366, $jours)) : 28;
     $au = date('Y-m-d', strtotime('-1 day'));  // les insights d'un jour sont complets le lendemain
     $du = date('Y-m-d', strtotime($au . ' -' . ($jours - 1) . ' days'));
     $erreurs = [];
     try { $comptes = socCalComptes(); } catch (MetaError $e) { $comptes = []; $erreurs[] = 'Pages du System User : ' . $e->getMessage(); }
-    $dep = socSuiviDepenses($du, $au);
+    $dep = socSuiviDepenses($du, $au, $parJour);
     $erreurs = array_merge($erreurs, $dep['erreurs']);
     $noms = array_column(socShops(), 'name', 'id');
     $tests = array_column(array_filter(socShops(), static fn ($s) => !empty($s['test'])), 'id');

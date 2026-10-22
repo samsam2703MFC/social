@@ -22,7 +22,9 @@ try {
     socInstall();
     $r = match ($tache) {
         'queue' => ['publies' => count(socRunQueue())],
-        'sync'  => ['campagnes' => Meta::configured() ? socCampagnesMetaImporter(false)['total'] : 0, 'ads' => socAdsSync(), 'leads' => socLeadsSync(), 'results' => socResultsSync(), 'instagram' => socIgMediaSync(), 'commentaires' => socDarkCommentsSync(), 'pages' => socCommentairesSync()['lus'], 'messages' => socMessagesSync()['lus'], 'googleAuto' => socGoogleSynchroAuto(), 'google' => socGoogleAvisSync()['lus'], 'classes' => socCommentairesAnalyser()['classes'], 'bilan' => count(socBilan(true)['lignes'])],
+        'sync'  => ['campagnes' => Meta::configured() ? socCampagnesMetaImporter(false)['total'] : 0, 'ads' => socAdsSync(), 'leads' => socLeadsSync(), 'results' => socResultsSync(), 'instagram' => socIgMediaSync(), 'commentaires' => socDarkCommentsSync(), 'pages' => socCommentairesSync()['lus'], 'messages' => socMessagesSync()['lus'], 'googleAuto' => socGoogleSynchroAuto(), 'google' => socGoogleAvisSync()['lus'], 'classes' => socCommentairesAnalyser()['classes'], 'bilan' => count(socBilan(true)['lignes']),
+            // Le mois, le trimestre et l'année : recalculés seulement quand leur garde est passée.
+            'bilans' => array_map(static fn ($p) => count(socBilan(false, $p)['lignes']), ['mois' => 'mois', 'trimestre' => 'trimestre', 'annee' => 'annee'])],
         'conn'  => ['boutiques' => count(socTestConnexions())],
         'ids'   => socIdsAuto(),
         'audit' => socAuditRun(),

@@ -2,8 +2,8 @@
 declare(strict_types=1);
 
 /**
- * Le bilan de la semaine, boutique par boutique : l'écran « Bilan des boutiques » de la marque, et « Ma semaine » de
- * l'espace franchisé (sa ligne, la moyenne du réseau et son rang).
+ * Le bilan des boutiques, boutique par boutique : l'écran « Bilan des boutiques » de la marque — sur la semaine, le
+ * mois, le trimestre ou l'année —, et « Ma semaine » de l'espace franchisé (sa ligne, la moyenne du réseau et son rang).
  *
  *  - régularité : posts publiés sur la période (ceux du module : réseau et boutique) et quota de la boutique cette
  *    semaine ;
@@ -17,11 +17,19 @@ declare(strict_types=1);
  * (part traitée dans le délai), avis gagnés — et le rang général est la somme des trois rangs.
  */
 
-const SOC_BILAN_JOURS = 7;
-const SOC_BILAN_CACHE_S = 7200;
+/**
+ * Les périodes du bilan, glissantes jusqu'à aujourd'hui : la semaine (celle de « Ma semaine »), le mois, le trimestre,
+ * l'année. Chacune est gardée à part, d'autant plus longtemps qu'elle est longue : un an de Meta se relit en plusieurs
+ * appels par Page. Sur une période plus longue que la semaine, le quota est celui de la semaine × le nombre de semaines,
+ * et la réactivité se lit sur la période (30 jours au moins).
+ */
+const SOC_BILAN_PERIODES = ['semaine' => ['jours' => 7, 'garde' => 7200], 'mois' => ['jours' => 30, 'garde' => 7200],
+    'trimestre' => ['jours' => 90, 'garde' => 21600], 'annee' => ['jours' => 365, 'garde' => 43200]];
 
-function socBilanCalculer(int $jours = SOC_BILAN_JOURS): array
+function socBilanCalculer(string $periode = 'semaine'): array
 {
+    $jours = SOC_BILAN_PERIODES[$periode]['jours'] ?? throw new HttpError(400, 'période inconnue : semaine, mois, trimestre ou annee');
+    $semaine = $periode === 'semaine'; $semaines = max(1, (int) round($jours / 7));
     $du = date('Y-m-d', strtotime('-' . ($jours - 1) . ' days')); $au = date('Y-m-d');
     $regles = sfRegles(); $delai = (int) $regles['delaiReponseHeures'];
     $shops = array_values(array_filter(socReseau(), static fn ($s) => empty($s['horsCaisse'])));
@@ -38,8 +46,9 @@ function socBilanCalculer(int $jours = SOC_BILAN_JOURS): array
         }
     }
 
-    // Réactivité : ce qui attend, ce qui est en retard, ce qui a été traité dans le délai (30 jours).
-    $lim = date('Y-m-d H:i:s', strtotime('-' . $delai . ' hours')); $d30 = date('Y-m-d H:i:s', strtotime('-30 days'));
+    // Réactivité : ce qui attend, ce qui est en retard, ce qui a été traité dans le délai (sur la période, 30 jours au moins).
+    $fenetre = max(30, $jours);
+    $lim = date('Y-m-d H:i:s', strtotime('-' . $delai . ' hours')); $d30 = date('Y-m-d H:i:s', strtotime('-' . $fenetre . ' days'));
     $vu = SOC_COM_VU;
     $com = [];
     foreach (Db::rows("SELECT c.shop_id,
@@ -59,10 +68,11 @@ function socBilanCalculer(int $jours = SOC_BILAN_JOURS): array
         foreach ($rep['magasins'] ?? [] as $m) { $gg[(string) $m['id']] = $m; }
         $cible = $rep['cible'] ?? null;
     } catch (Throwable $e) { $cible = null; }
+    $gagnes = socGoogleGagnes($jours);
     $meta = []; $devise = 'EUR'; $erreurs = [];
     if (Meta::configured()) {
         try {
-            $s = socSuiviAbonnes($jours);
+            $s = socSuiviAbonnes($jours, null, false);
             $devise = (string) ($s['devise'] ?? 'EUR');
             foreach ($s['lignes'] ?? [] as $l) {
                 $sid = (string) ($l['shop'] ?? '');
@@ -78,14 +88,15 @@ function socBilanCalculer(int $jours = SOC_BILAN_JOURS): array
     foreach ($shops as $s) {
         $id = (string) $s['id']; $c = $com[$id] ?? ['rouges' => 0, 'oranges' => 0, 'enRetard' => 0, 'traites30' => 0, 'dansDelai30' => 0];
         $g = $gg[$id] ?? null; $m = $meta[$id] ?? null;
-        $quota = (int) $regles['quotaSemaine'];
+        // Le quota : celui de la semaine en cours ; sur une période plus longue, les posts publiés par la boutique face au quota × semaines.
+        $quota = (int) $regles['quotaSemaine'] * ($semaine ? 1 : $semaines);
         $lignes[] = ['id' => $id, 'nom' => (string) $s['name'],
             'posts' => $posts[$id]['reseau'] + $posts[$id]['boutique'], 'postsReseau' => $posts[$id]['reseau'], 'postsBoutique' => $posts[$id]['boutique'],
-            'quotaUtilise' => sfQuotaUtilise($id, $au), 'quota' => $quota,
+            'quotaUtilise' => $semaine ? sfQuotaUtilise($id, $au) : $posts[$id]['boutique'], 'quota' => $quota,
             'aTraiter' => $c['rouges'] + $c['oranges'], 'rouges' => $c['rouges'], 'oranges' => $c['oranges'], 'enRetard' => $c['enRetard'],
             'dansDelaiPct' => $c['traites30'] > 0 ? (int) round(100 * $c['dansDelai30'] / $c['traites30']) : null, 'traites30' => $c['traites30'],
             'delaiMedianH' => socComDelaiMedian('c.shop_id = ?', [$id, $d30]),
-            'note' => $g['note'] ?? null, 'avisGagnes' => $g['gagnes7'] ?? null, 'avis5Requis' => $g['avis5Requis'] ?? null,
+            'note' => $g['note'] ?? null, 'avisGagnes' => $gagnes['shops'][$id] ?? null, 'avis5Requis' => $g['avis5Requis'] ?? null,
             'abonnesNet' => $m['abonnesNet'] ?? null, 'abonnes' => $m['abonnes'] ?? null, 'depense' => $m['depense'] ?? null];
     }
 
@@ -110,19 +121,24 @@ function socBilanCalculer(int $jours = SOC_BILAN_JOURS): array
     usort($lignes, static fn ($a, $b) => ($a['rang'] <=> $b['rang']) ?: strcmp($a['nom'], $b['nom']));
 
     $tot = static fn (string $k) => array_sum(array_map(static fn ($l) => (float) ($l[$k] ?? 0), $lignes));
-    return ['du' => $du, 'au' => $au, 'jours' => $jours, 'le' => date('Y-m-d H:i'), 'devise' => $devise, 'cible' => $cible, 'delaiReponseHeures' => $delai,
+    // avisDepuis : le suivi des avis a commencé après le début de la période ; instagramPartiel : Meta ne donne que 30 jours d'Instagram.
+    return ['periode' => $periode, 'du' => $du, 'au' => $au, 'jours' => $jours, 'semaines' => $semaines, 'reactJours' => $fenetre, 'avisDepuis' => $gagnes['depuis'],
+        'instagramPartiel' => $jours > 30, 'le' => date('Y-m-d H:i'), 'devise' => $devise, 'cible' => $cible, 'delaiReponseHeures' => $delai,
         'reseau' => ['posts' => (int) $tot('posts'), 'aTraiter' => (int) $tot('aTraiter'), 'enRetard' => (int) $tot('enRetard'), 'avisGagnes' => (int) $tot('avisGagnes'),
             'abonnesNet' => (int) $tot('abonnesNet'), 'depense' => round($tot('depense'), 2), 'boutiques' => $n],
         'lignes' => $lignes, 'erreurs' => $erreurs];
 }
 
-/** Le bilan gardé (calculé par le cron) ; recalculé s'il a plus de deux heures, ou sur demande. */
-function socBilan(bool $forcer = false): array
+/** Le bilan d'une période, gardé (calculé par le cron) ; recalculé quand sa garde est passée, ou sur demande. */
+function socBilan(bool $forcer = false, string $periode = 'semaine'): array
 {
-    $c = socSetting('bilan_cache');
-    if (!$forcer && is_array($c) && isset($c['t'], $c['data']) && time() - (int) $c['t'] < SOC_BILAN_CACHE_S) { return $c['data']; }
-    $data = socBilanCalculer();
-    socSettingPut('bilan_cache', ['t' => time(), 'data' => $data], false);
+    $p = SOC_BILAN_PERIODES[$periode] ?? throw new HttpError(400, 'période inconnue : semaine, mois, trimestre ou annee');
+    $cle = $periode === 'semaine' ? 'bilan_cache' : 'bilan_cache_' . $periode;
+    $c = socSetting($cle);
+    if (!$forcer && is_array($c) && isset($c['t'], $c['data']) && time() - (int) $c['t'] < $p['garde']) { return $c['data']; }
+    if ($periode !== 'semaine') { @set_time_limit(300); }  // un an de Meta : plusieurs appels par Page
+    $data = socBilanCalculer($periode);
+    socSettingPut($cle, ['t' => time(), 'data' => $data], false);
     return $data;
 }
 

@@ -1198,6 +1198,20 @@ check('Instagram de la Page : abonnés actuels et nouveaux abonnés', $h['instag
 check('budget rapporté à la Page de chaque pub, jour par jour ; coût par abonné', $h['depense'] == 10 && $w['depense'] == 5.5 && $b['nonAttribue'] == 3 && $h['abonnesNet'] === 11 && $h['coutParAbonne'] == 0.91
     && ($h['depenseJours'][date('Y-m-d', strtotime('-2 days'))] ?? null) == 10, json_encode([$h['depense'], $w['depense'], $b['nonAttribue'], $h['abonnesNet'], $h['coutParAbonne']]));
 check('permission d’insights manquante : motif clair, le total et le budget restent', $w['facebook']['followers'] === 800 && str_contains((string) $w['facebook']['motif'], 'read_insights') && $w['abonnesNet'] === null);
+// Un an : les insights de la Page par tranches de 90 jours au plus (Meta refuse plus de 93 jours), sans trou ni recouvrement ;
+// la dépense en une ligne par pub (sans le détail par jour).
+$appels = [];
+$an = socSuiviAbonnes(365, '111', false);
+$tr = array_values(array_filter($appels, static fn ($a) => $a[1] === '111/insights' && ($a[2]['metric'] ?? '') === 'page_daily_follows_unique,page_daily_unfollows_unique'));
+$fen = array_map(static fn ($a) => [$a[2]['since'], $a[2]['until']], $tr);
+$suite = true;
+foreach ($fen as $i => [$du, $au]) {
+    $suite = $suite && round((strtotime($au) - strtotime($du)) / 86400) <= 90 && ($i === 0 || $du === $fen[$i - 1][1]);  // round : heure d'été
+}
+$dep = array_values(array_filter($appels, static fn ($a) => $a[1] === 'act_2001/insights'));
+check('un an : insights de la Page en tranches de 90 jours au plus, bout à bout ; dépense sans détail par jour',
+    $an['jours'] === 365 && count($fen) === 5 && $suite && $fen[0][0] === $an['du'] && end($fen)[1] === date('Y-m-d', strtotime($an['au'] . ' +1 day'))
+    && $dep && !array_key_exists('time_increment', $dep[0][2]) && ($an['lignes'][0]['facebook']['net'] ?? null) === 7, json_encode([$fen, $an['lignes'][0]['facebook']['net'] ?? null]));
 check('suivi : rien n’est écrit en base', (int) Db::row("SELECT COUNT(*) n FROM social_parametre WHERE cle LIKE '%suivi%'")['n'] === 0);
 
 echo "Espace franchisé : suivi de sa boutique\n";
@@ -2026,6 +2040,7 @@ Db::hasTable('ceo_shop_reputation', true); Db::hasTable('ceo_shop_review', true)
 echo "Bilan de la semaine : régularité, réactivité, avis, classement ; « Ma semaine » du franchisé\n";
 $hier = date('Y-m-d', strtotime('-1 day'));
 $base = array_column(socBilanCalculer()['lignes'], null, 'id');
+$baseM = array_column(socBilanCalculer('mois')['lignes'], null, 'id');
 socItemPut('posts', ['id' => 'bil1', 'date' => $hier, 'time' => '10:00', 'title' => 'B1', 'status' => 'Publié', 'origin' => 'franchise', 'shops' => ['4'], 'fb' => true, 'ig' => false]);
 socItemPut('posts', ['id' => 'bil2', 'date' => $hier, 'time' => '11:00', 'title' => 'B2', 'status' => 'Publié', 'shops' => ['4', '5'], 'fb' => true, 'ig' => false]);
 socItemPut('posts', ['id' => 'bil3', 'date' => date('Y-m-d', strtotime('-10 days')), 'time' => '11:00', 'title' => 'B3', 'status' => 'Publié', 'shops' => ['5'], 'fb' => true, 'ig' => false]);
@@ -2047,6 +2062,19 @@ socItemPut('posts', ['id' => 'bil5', 'date' => $hier, 'time' => '13:00', 'title'
 [$cB, $bB] = socRoute('GET', '/bilan');
 $_GET = ['forcer' => '1']; [, $bF] = socRoute('GET', '/bilan'); $_GET = [];
 check('gardé par le cron (deux heures) ; « Recalculer » le refait', $cB === 200 && array_column($bB['lignes'], null, 'id')['5']['posts'] === $L['5']['posts'] && array_column($bF['lignes'], null, 'id')['5']['posts'] === $L['5']['posts'] + 1);
+// Les périodes : mois, trimestre, année, chacune gardée à part.
+$_GET = ['periode' => 'mois', 'forcer' => '1']; [$cM, $bM] = socRoute('GET', '/bilan'); $_GET = [];
+$M = array_column($bM['lignes'], null, 'id');
+check('bilan du mois : posts publiés sur 30 jours (celui d’il y a 10 jours compris), quota de la semaine × 4, réactivité sur 30 jours',
+    $cM === 200 && $bM['periode'] === 'mois' && $bM['jours'] === 30 && $bM['reactJours'] === 30 && $M['5']['posts'] - $baseM['5']['posts'] === 3
+    && $M['4']['postsBoutique'] - $baseM['4']['postsBoutique'] === 1 && $M['4']['quota'] === 4 * sfRegles()['quotaSemaine'] && $M['4']['quotaUtilise'] === $M['4']['postsBoutique']
+    && is_array(socSetting('bilan_cache_mois')), json_encode([$bM['periode'] ?? null, $M['5']['posts'] ?? null, $baseM['5']['posts'] ?? null, $M['4']['quota'] ?? null]));
+$bT = socBilan(true, 'trimestre'); $bA = socBilan(true, 'annee');
+check('trimestre et année : 90 et 365 jours, réactivité sur la période, Instagram signalé partiel (30 jours chez Meta)',
+    $bT['jours'] === 90 && $bT['reactJours'] === 90 && $bA['jours'] === 365 && $bA['semaines'] === 52 && $bA['instagramPartiel'] === true
+    && $bil['instagramPartiel'] === false && count($bA['lignes']) === count($bil['lignes']), json_encode([$bT['jours'], $bA['jours'], $bA['semaines']]));
+[$cX] = (static function () { $_GET = ['periode' => 'decennie']; try { return socRoute('GET', '/bilan'); } catch (HttpError $e) { return [$e->status]; } finally { $_GET = []; } })();
+check('période inconnue : 400', $cX === 400);
 sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
 [$cS, $sem] = $fr('GET', '/franchise/semaine');
 check('franchisé : sa ligne, la moyenne des autres boutiques, son rang ; jamais la ligne d’une autre boutique', $cS === 200 && ($sem['ligne']['id'] ?? '') === '4' && isset($sem['moyenne']['posts'])
