@@ -2015,8 +2015,8 @@ BoCockpit::$transport = null; socSettingPut('google_synchro_auto', null, false);
 sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
 [, $b] = $fr('GET', '/franchise/google');
 $mF = $b['reputation']['magasins'][0] ?? [];
-check('franchisé : son lien court et son lien d’avis, ses avis gagnés et ses scans ; pas les réglages du réseau', str_ends_with((string) ($mF['lienCourt'] ?? ''), '/avis/4') && $mF['gagnes7'] === 5 && $mF['scans7'] === 1
-    && !isset($b['reglages']), json_encode($mF));
+check('franchisé : son lien court et son lien d’avis, ses avis gagnés ; ni les clics sur son lien, ni les réglages du réseau', str_ends_with((string) ($mF['lienCourt'] ?? ''), '/avis/4') && $mF['gagnes7'] === 5
+    && !array_key_exists('scans7', $mF) && !array_key_exists('scans30', $mF) && !isset($b['reglages']), json_encode($mF));
 unset($_COOKIE[SF_COOKIE]);
 Db::exec('DELETE FROM social_google_suivi'); Db::exec('DELETE FROM social_avis_scan');
 Db::exec("DELETE FROM social_commentaire WHERE canal = 'gg'");

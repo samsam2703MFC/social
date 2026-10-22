@@ -277,7 +277,7 @@ class Component extends DCLogic {
         const suivi = m.lienCourt ? m.lienCourt + '?s=lien' : m.lienAvis;
         return { hasQr: true, qrImg: img, lienCourt: suivi, copierLien: () => this.copierLien(suivi), afficheA5: aff('a5'), afficheA6: aff('a6'),
           objectifTxt: m.avis5Requis ? 'Objectif : ' + m.avis5Requis + ' avis 5★ pour atteindre ' + fN(cible) : 'Votre note est à la cible : gardez le rythme des avis.',
-          gagnesTxt: m.gagnes7 == null ? 'Avis gagnés : suivi à partir d’aujourd’hui.' : 'Avis gagnés : ' + (m.gagnes7 > 0 ? '+' : '') + m.gagnes7 + ' en 7 jours · ' + (m.gagnes30 > 0 ? '+' : '') + m.gagnes30 + ' en 30 jours' + (m.scans30 ? ' · ' + m.scans30 + ' clic' + (m.scans30 > 1 ? 's' : '') + ' sur votre lien en 30 jours' : ''),
+          gagnesTxt: m.gagnes7 == null ? 'Avis gagnés : suivi à partir d’aujourd’hui.' : 'Avis gagnés : ' + (m.gagnes7 > 0 ? '+' : '') + m.gagnes7 + ' en 7 jours · ' + (m.gagnes30 > 0 ? '+' : '') + m.gagnes30 + ' en 30 jours',
           gagnesCol: (m.gagnes7 || 0) > 0 ? '#2d7a3e' : '#666666' };
       })(),
       showAvis: !!d && !masque, kpis, filtres,

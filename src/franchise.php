@@ -454,6 +454,8 @@ function sfGoogle(string $shop, array $q): array
     $r = $e['reputation'];
     if (!empty($r['indispo'])) { $r = ['indispo' => true, 'cible' => $r['cible']]; }  // pas le détail technique
     else { unset($r['connecteur']['configure']); $r['reseau'] = ['moyenne' => $r['reseau']['moyenne'], 'avis' => $r['reseau']['avis'], 'notes' => $r['reseau']['notes']]; }
+    // Les clics sur le lien d'avis (scans du QR code, de l'affiche, du lien) ne sont pas montrés dans l'espace boutique.
+    foreach (array_keys($r['magasins'] ?? []) as $k) { unset($r['magasins'][$k]['scans7'], $r['magasins'][$k]['scans30']); }
     $relu = is_array($e['relu']) ? ['le' => $e['relu']['le'] ?? null] : null;
     return ['hidden' => false, 'reputation' => $r, 'jours' => $e['jours'], 'avis' => $e['avis'], 'totaux' => $e['totaux'], 'relu' => $relu,
         'ia' => ['configure' => (bool) ($e['ia']['configure'] ?? false)]];

@@ -430,7 +430,8 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   impressions, interactions, vues vidéo, ventes et CA additionnel estimés,
   tickets, quantités, coût par ticket gagné, objectif à sa part du budget). Les clics
   ne sont pas montrés dans l'espace boutique : ni ici, ni dans les publicités en cours,
-  ni dans la fiche d'une publication (l'API franchisé ne les envoie pas). Les modèles franchisés
+  ni dans la fiche d'une publication, ni dans les avis Google (clics sur le lien d'avis) —
+  l'API franchisé ne les envoie pas. Les modèles franchisés
   portent une opération et un lien (webshop de la boutique, produit, catégorie) : le
   post de la boutique en hérite ; dans « Publier », la boutique garde ou retire ce lien,
   ou choisit son webshop — jamais un lien libre. Le calendrier franchisé montre
