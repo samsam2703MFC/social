@@ -426,9 +426,11 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
 - **Espace franchisé aligné** — « Opérations du réseau » (`GET /franchise/operations`) :
   chaque campagne du Marketing où figure la boutique, avec ce qui y est rattaché en
   lecture seule (posts du module, publications de sa Page et de l'Instagram du réseau
-  relues chez Meta, publicités) et toutes ses métriques (budget dépensé, portée,
-  impressions, clics, interactions, vues vidéo, ventes et CA additionnel estimés,
-  tickets, quantités, coûts, objectif à sa part du budget). Les modèles franchisés
+  relues chez Meta, publicités) et ses métriques (budget dépensé, portée,
+  impressions, interactions, vues vidéo, ventes et CA additionnel estimés,
+  tickets, quantités, coût par ticket gagné, objectif à sa part du budget). Les clics
+  ne sont pas montrés dans l'espace boutique : ni ici, ni dans les publicités en cours,
+  ni dans la fiche d'une publication (l'API franchisé ne les envoie pas). Les modèles franchisés
   portent une opération et un lien (webshop de la boutique, produit, catégorie) : le
   post de la boutique en hérite ; dans « Publier », la boutique garde ou retire ce lien,
   ou choisit son webshop — jamais un lien libre. Le calendrier franchisé montre
@@ -566,7 +568,7 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
   à côté de ses posts et de ceux du réseau. Vues Mois / Semaine / Liste, une pastille par
   source avec la photo de profil (filtre), indicateurs (publications et réactions de sa
   Page), fiche avec réactions, commentaires, partages et — à l'ouverture — vues,
-  personnes touchées et clics (`GET /franchise/calendrier/stats`, refusé pour une
+  personnes touchées, sans les clics (`GET /franchise/calendrier/stats`, refusé pour une
   publication qui n'est pas à ses comptes). Rien des autres boutiques, ni le détail
   technique des erreurs Meta ; rien n'est copié en base.
 - **Grille Instagram** (`instagram`, fichier `Instagram.dc.html`, `GET /franchise/instagram?shop=`) : comme

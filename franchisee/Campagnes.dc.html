@@ -146,14 +146,12 @@ class Component extends DCLogic {
         { label: 'Budget dépensé', value: SF.eur(r.spend), sub: 'publicités pour votre boutique', color: '#222222' },
         { label: 'Personnes touchées', value: fmt(r.reach), sub: 'par les publicités', color: '#222222' },
         { label: 'Impressions', value: fmt(r.impr), sub: 'affichages des publicités', color: '#222222' },
-        { label: 'Clics', value: fmt(r.clicks), sub: r.impr ? 'taux de clic ' + (r.clicks / r.impr * 100).toFixed(1).replace('.', ',') + ' %' : '', color: '#222222' },
         { label: 'Interactions', value: fmt(r.eng), sub: 'réactions, commentaires, partages', color: '#222222' },
         { label: 'Vues vidéo', value: fmt(r.vv), sub: 'vidéos des publicités', color: '#222222' },
         { label: 'Ventes des produits', value: r.caCamp != null ? SF.eur(r.caCamp) : '—', sub: vs(r.caCamp, r.caRef), color: r.caCamp != null && r.caRef != null && r.caCamp >= r.caRef ? '#0F6B4A' : '#222222' },
         { label: 'CA additionnel (estimation)', value: caAdd != null ? (caAdd >= 0 ? '+' : '') + SF.eur(caAdd) : '—', sub: c.goalShop ? 'objectif ' + SF.eur(c.goalShop) + (caAdd != null ? ' · ' + Math.round(caAdd / c.goalShop * 100) + ' % atteint' : '') : 'vs mêmes jours des 6 semaines avant', color: caAdd != null && caAdd >= 0 ? '#0F6B4A' : '#8A4B00' },
         { label: 'Tickets', value: fmt(r.tCamp), sub: vs(r.tCamp, r.tRef), color: '#222222' },
         { label: 'Quantités vendues', value: fmt(r.qCamp), sub: vs(r.qCamp, r.qRef), color: '#222222' },
-        { label: 'Coût par clic', value: r.clicks ? (r.spend / r.clicks).toFixed(2).replace('.', ',') + ' €' : '—', sub: 'budget ÷ clics', color: '#222222' },
         { label: 'Coût par ticket gagné', value: r.tCamp != null && r.tRef != null && r.tCamp > r.tRef && r.spend ? (r.spend / (r.tCamp - r.tRef)).toFixed(2).replace('.', ',') + ' €' : '—', sub: 'budget ÷ tickets en plus', color: '#222222' },
       ] : [];
       const items = (c.posts || []).map(p => ({ img: p.img || 'img/illus/decorative/circle-01.png', title: p.title, meta: SF.dLabel(p.date) + (p.time ? ' · ' + p.time : '') + ' · ' + [p.fb ? 'Facebook' : '', p.ig ? 'Instagram' : ''].filter(Boolean).join(' + ') + ' · ' + p.status,
@@ -180,7 +178,7 @@ class Component extends DCLogic {
         meta: [p.objective, p.start ? (p.end ? 'du ' + SF.dLabel(p.start) + ' au ' + SF.dLabel(p.end) : 'depuis le ' + SF.dLabel(p.start)) : '',
           p.radius ? p.radius + ' km autour ' + (p.reseau ? 'de chaque boutique' : 'de la boutique') : '', p.operation ? 'opération « ' + p.operation + ' »' : ''].filter(Boolean).join(' · '),
         hasShops: !!(p.reseau && p.shops && p.shops.length), shops: p.shops && p.shops.length ? 'Boutiques : ' + p.shops.join(', ') : '',
-        hasStats: !!(x && (x.impressions || x.reach || x.clicks)), stats: x ? [x.reach ? fmt(x.reach) + ' personnes touchées' : '', x.impressions ? fmt(x.impressions) + ' affichages' : '', x.clicks ? fmt(x.clicks) + ' clics' : ''].filter(Boolean).join(' · ') : '',
+        hasStats: !!(x && (x.impressions || x.reach)), stats: x ? [x.reach ? fmt(x.reach) + ' personnes touchées' : '', x.impressions ? fmt(x.impressions) + ' affichages' : ''].filter(Boolean).join(' · ') : '',
         hasBudget: p.budget != null, budget: p.budget != null ? 'Budget ' + argent(p.budget, p.devise) + (p.budgetType === 'quotidien' ? ' par jour' : ' au total') + ' · dépensé ' + argent(p.spent, p.devise) + ' · payé par le réseau' : '' }; };
     const pubCols = [['Pour tout le réseau', P ? P.reseau || [] : [], 'Aucune publicité du réseau ne passe en ce moment autour de votre boutique.'],
       ['Pour votre boutique', P ? P.boutique || [] : [], 'Aucune publicité propre à votre boutique pour le moment.']]

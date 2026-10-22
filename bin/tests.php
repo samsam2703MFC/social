@@ -1093,6 +1093,7 @@ check('franchisé : le calendrier d’une autre boutique est refusé', $code ===
 [$c2] = $fr('GET', '/franchise/calendrier/stats', [], ['id' => 'mfb-222_7001', 'compte' => 'fb:222']);
 [$c3] = $fr('GET', '/franchise/calendrier/stats', [], ['id' => 'mfb-222_7001', 'compte' => 'fb:111']);
 check('franchisé : les vues d’une publication de sa Page ; celles d’une autre Page refusées', $code === 200 && $fs['vues'] === 1234 && $c2 === 404 && $c3 === 404, json_encode([$code, $fs['vues'] ?? null, $c2, $c3]));
+check('franchisé : pas de clics dans les chiffres d’une publication', !array_key_exists('clics', $fs), json_encode($fs));
 [$code] = $fr('GET', '/franchise/calendrier', [], ['du' => '2026-01-01', 'au' => '2026-12-31']);
 check('franchisé : période trop longue refusée', $code === 400);
 unset($_COOKIE[SF_COOKIE]);
@@ -1350,6 +1351,7 @@ $opF = array_column($b['operations'] ?? [], null, 'id')['bo-1'] ?? null;
 check('opération du Marketing où figure la boutique : posts et pub rattachés, publication de sa Page (lecture seule)', $code === 200 && $opF
     && in_array('p1', array_column($opF['posts'], 'id'), true) && in_array('mfb-111_9001', array_column($opF['metaPosts'], 'id'), true) && count($opF['ads']) >= 1 && $opF['budget'] == 200, json_encode($opF));
 check('métriques de la boutique (Meta + ventes) et objectif à sa part du budget', is_array($opF['result']) && array_key_exists('spend', $opF['result']) && $opF['goalShop'] == 500, json_encode([$opF['result'] ?? null, $opF['goalShop'] ?? null]));
+check('métriques de la boutique : sans les clics', !array_key_exists('clicks', $opF['result']), json_encode($opF['result']));
 [$code, $b] = socRoute('GET', '/operations/bo-1/rattache');
 check('assistant du Marketing : ce qui est rattaché à la campagne (posts par statut, publications Meta, publicités et leurs chiffres, webshop)',
     $code === 200 && $b['posts']['total'] >= 1 && array_sum($b['posts']['parStatut']) === $b['posts']['total'] && $b['publicationsMeta'] >= 1
@@ -1374,6 +1376,7 @@ $pR = array_column($b['reseau'] ?? [], null, 'id')['pubR'] ?? [];
 check('publicités en cours : réseau et boutique seule, hors opération comprises ; ni celles d’une autre boutique, ni refusées, ni anciennes',
     $code === 200 && in_array('pubR', $idsR, true) && in_array('pubB', $idsB, true) && !array_intersect(['pubX', 'pubRef', 'pubOld'], array_merge($idsR, $idsB))
     && $pR['status'] === 'Diffusée' && ($pR['stats']['reach'] ?? null) === 600 && in_array('Halle', $pR['shops'], true), json_encode($b));
+check('publicités : portée et affichages, sans les clics', ($pR['stats']['impressions'] ?? null) === 1000 && !array_key_exists('clicks', $pR['stats'] ?? []), json_encode($pR['stats'] ?? null));
 check('publicités : rangées selon les boutiques visées (Halle seule par le compte réseau → boutique) ; pauses anciennes écartées',
     in_array('pubS', $idsB, true) && !in_array('pubP', array_merge($idsR, $idsB), true), json_encode([$idsR, $idsB]));
 check('publicités : budget et dépense cachés par défaut', !array_key_exists('budget', $pR) && $b['budget'] === false);

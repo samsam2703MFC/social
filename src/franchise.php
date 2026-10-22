@@ -327,7 +327,7 @@ function sfPostVue(array $p, string $shop): array
 /**
  * Les opérations du réseau (campagnes commerciales du Marketing du BO) où figure la boutique, en lecture
  * seule : ce qui y est rattaché (posts du module, publications de sa Page ou de l'Instagram du réseau lues
- * chez Meta, publicités) et toutes ses métriques (Meta + ventes, estimation).
+ * chez Meta, publicités) et ses métriques (Meta + ventes, estimation), sans les clics.
  */
 function sfOperations(string $shop): array
 {
@@ -365,10 +365,12 @@ function sfOperations(string $shop): array
                 'start' => $a['start'] ?? null, 'end' => $a['end'] ?? null, 'reseau' => count($aShops) !== 1, 'meta' => ($a['origin'] ?? '') === 'meta'];
         }
         $split = (float) ($o['split'][$shop] ?? 0);
+        $resultat = $res[$o['id']][$shop] ?? null;
+        if (is_array($resultat)) { unset($resultat['clicks']); }  // les clics ne sont pas montrés dans l'espace boutique
         $out[] = ['id' => $o['id'], 'name' => $o['name'], 'type' => $o['typeLabel'] ?: $o['type'], 'status' => $o['status'], 'boStatus' => $o['boStatus'],
             'start' => $o['start'], 'end' => $o['end'], 'description' => $o['description'], 'products' => $o['products'], 'levers' => $o['levers'], 'channels' => $o['channels'],
             'goal' => $o['goal'], 'goalShop' => $o['goal'] && $split > 0 && $o['budget'] > 0 ? round($o['goal']['value'] * $split / $o['budget'], 2) : null,
-            'budget' => $split > 0 ? $split : null, 'image' => $o['image'], 'result' => $res[$o['id']][$shop] ?? null,
+            'budget' => $split > 0 ? $split : null, 'image' => $o['image'], 'result' => $resultat,
             'posts' => $posts, 'metaPosts' => $meta, 'ads' => $ads];
     }
     return ['hidden' => false, 'operations' => $out];
@@ -410,8 +412,9 @@ function sfPublicites(string $shop): array
         if ($r['voirResultats']) {
             $ins = (array) ($a['insights'] ?? []);
             $st = array_filter((array) ($a['stats'] ?? []), 'is_array');
-            $item['stats'] = $ins ? ['impressions' => $ins['impressions'] ?? null, 'reach' => $ins['reach'] ?? null, 'clicks' => $ins['clicks'] ?? null]
-                : ($st ? ['impressions' => array_sum(array_column($st, 'impressions')), 'reach' => null, 'clicks' => array_sum(array_column($st, 'clicks'))] : null);
+            // Portée et affichages ; les clics ne sont pas montrés dans l'espace boutique.
+            $item['stats'] = $ins ? ['impressions' => $ins['impressions'] ?? null, 'reach' => $ins['reach'] ?? null]
+                : ($st ? ['impressions' => array_sum(array_column($st, 'impressions')), 'reach' => null] : null);
         }
         if ($r['voirBudgetPub']) {
             $item += ['budget' => (float) ($a['budget'] ?? 0), 'budgetType' => (string) ($a['budgetType'] ?? ''), 'spent' => (float) ($a['spent'] ?? 0),
@@ -1010,6 +1013,7 @@ function sfCalStats(string $shop, string $id, string $compte): array
 {
     if (!isset(sfCalComptes($shop)[$compte])) { throw new HttpError(404, 'Cette publication n’est pas à votre boutique.'); }
     $r = socCalStats($id, $compte);
+    unset($r['clics']);  // les clics ne sont pas montrés dans l'espace boutique
     if ($r['motif'] !== null) { $r['motif'] = 'Les chiffres détaillés ne sont pas partagés par Meta pour cette publication.'; }
     return $r;
 }

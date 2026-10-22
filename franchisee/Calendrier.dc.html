@@ -759,7 +759,7 @@ class Component extends DCLogic {
         { value: fmt(r.comments), label: 'Commentaires', tip: '', bg: '#F4EFE8', fg: '#232220' }]
         .concat(sp.channel === 'Facebook' ? [{ value: fmt(r.shares), label: 'Partages', tip: '', bg: '#F4EFE8', fg: '#232220' }] : [])
         .concat(ps && !ps.loading && !ps.err ? [{ value: fmt(ps.vues), label: 'Vues', tip: 'Lu chez Meta à l’ouverture de la fiche', bg: '#E8F0FD', fg: '#1F4FA8' },
-          { value: fmt(ps.personnes), label: 'Personnes touchées', tip: '', bg: '#E8F0FD', fg: '#1F4FA8' }].concat(ps.clics != null ? [{ value: fmt(ps.clics), label: 'Clics', tip: '', bg: '#E8F0FD', fg: '#1F4FA8' }] : []) : []);
+          { value: fmt(ps.personnes), label: 'Personnes touchées', tip: '', bg: '#E8F0FD', fg: '#1F4FA8' }] : []);
       const op = sp.campaign ? (st.campaigns || []).find(x => x.id === sp.campaign) : null;
       sel = { isMeta: true, title: sp.title || '(sans texte)', status: sp.status === 'Programmé' ? 'Programmé chez Meta' : 'En ligne', stBg: c.bg, stFg: c.fg, hasImg: !!sp.img, img: sp.img || '', fit: 'cover',
         accPic: (acc && acc.picture) || ini(sp.channel === 'Instagram' ? 'IG' : 'f', sp.channel === 'Instagram' ? '#C13584' : '#1877F2'), accName: (acc ? (acc.type === 'instagram' ? '@' + (acc.username || acc.name) : acc.name) : sp.accountName) + (acc && acc.reseau ? ' · compte du réseau' : ''),
