@@ -358,6 +358,41 @@ socSettingPut('meta_system_token', 'TOK-DB', true);
 check('changer la clé en base change la clé utilisée', Meta::config()['systemToken'] === 'TOK-DB');
 check('les clés secrètes ne partent pas au navigateur', !str_contains(json_encode(socParams()), 'TOK-DB'));
 
+echo "Connexion Meta partagée avec le CRM (meta_connexion)\n";
+check('table du CRM absente : rien ne casse, rien d’inscrit', socMetaConnexion('system_token') === '' && socMetaRelaisInscrire() === null);
+// La table telle que le CRM la crée (meta_connexion_schema) : c'est lui qui la tient.
+$pdo->exec("CREATE TABLE meta_connexion (cle VARCHAR(48) NOT NULL PRIMARY KEY, valeur TEXT NOT NULL, secret TINYINT(1) NOT NULL DEFAULT 0,
+    source VARCHAR(32) NOT NULL DEFAULT '', maj_le DATETIME NOT NULL, par VARCHAR(120) NULL)");
+$pdo->exec("INSERT INTO meta_connexion (cle, valeur, secret, source, maj_le) VALUES ('system_token', 'TOK-CRM', 1, 'crm', NOW()),
+    ('app_secret', 'SEC-CRM', 1, 'crm', NOW()), ('app_id', '4242', 0, 'crm', NOW())");
+Meta::reset();
+check('un champ rempli ici l’emporte sur le CRM', Meta::config()['systemToken'] === 'TOK-DB' && Meta::sources()['systemToken'] === 'social');
+$avant = ['id' => socSetting('meta_app_id'), 'url' => socSetting('url_publique'), 'secret' => socSetting('meta_app_secret'), 'verify' => socSetting('meta_verify_token')];
+socSettingPut('meta_system_token', '', true);
+Db::exec("DELETE FROM social_parametre WHERE cle = 'meta_app_id'");
+Meta::reset();
+check('champ vide : le token du CRM est repris', Meta::config()['systemToken'] === 'TOK-CRM' && Meta::sources()['systemToken'] === 'crm');
+check('App ID repris du CRM, source dite à l’écran', Meta::config()['appId'] === '4242' && Meta::statut()['sources']['appId'] === 'crm');
+check('le token du CRM ne part pas au navigateur', !str_contains(json_encode(socParams()) . json_encode(Meta::statut()), 'TOK-CRM'));
+socSettingPut('url_publique', 'https://social.test/social/', false);
+check('adresse du webhook inscrite pour le relais de l’API franchise', socMetaRelaisInscrire() === 'https://social.test/social/api/v1/social/webhook'
+    && Db::row("SELECT valeur, source FROM meta_connexion WHERE cle = 'relais_social'") == ['valeur' => 'https://social.test/social/api/v1/social/webhook', 'source' => 'social']);
+socSettingPut('meta_system_token', 'TOK-ICI', true);
+Meta::reset();
+[$code, $b] = socRoute('POST', '/parametres/cles/crm');
+check('« Reprendre la connexion du CRM » : clés d’ici vidées, celles du CRM utilisées', $code === 200
+    && Meta::config()['systemToken'] === 'TOK-CRM' && Meta::config()['appSecret'] === 'SEC-CRM' && ($b['metaStatus']['sources']['systemToken'] ?? '') === 'crm'
+    && ($b['metaStatus']['crm']['dispo'] ?? false) === true && !str_contains(json_encode($b), 'TOK-CRM'));
+socSettingPut('meta_system_token', 'TOK-DB', true);
+socSettingPut('meta_app_secret', $avant['secret'] ?? '', true);
+socSettingPut('meta_verify_token', $avant['verify'] ?? '', true);
+if ($avant['id'] !== null) { socSettingPut('meta_app_id', $avant['id'], false); }
+socSettingPut('url_publique', $avant['url'] ?? '', false);
+$pdo->exec('DROP TABLE meta_connexion');
+Meta::reset();
+try { socRoute('POST', '/parametres/cles/crm'); $refus = 0; } catch (HttpError $e) { $refus = $e->status; }
+check('sans connexion partagée : la reprise est refusée, rien n’est vidé', $refus === 409 && Meta::config()['systemToken'] === 'TOK-DB');
+
 echo "Boutiques (API TFBuddy + BO)\n";
 $shops = socShops();
 check('boutiques = celles de l’API, identifiant de caisse', array_column($shops, 'id') === ['4', '5'], json_encode(array_column($shops, 'id')));
@@ -860,6 +895,13 @@ socLeadsSync();
 $leads = socLeads();
 check('leads relus, champs normalisés', ($leads[0]['field_data']['FULL_NAME'] ?? '') === 'Marie Claes' && ($leads[0]['field_data']['nb_personnes'] ?? '') === '16 à 30');
 check('lead stocké une fois (idempotent)', count($leads) === 1);
+// Application Meta partagée avec le CRM : l'API franchise relaie le corps
+// signé TEL QUEL — une candidature du CRM peut y voisiner avec nos leads.
+$corps = (string) json_encode(['object' => 'page', 'entry' => [['id' => '999', 'changes' => [['field' => 'leadgen', 'value' => ['leadgen_id' => 'CRM-L1', 'form_id' => 'FORM-CRM']]]]]]);
+$appels = [];
+$r = socWebhook($corps, 'sha256=' . hash_hmac('sha256', $corps, Meta::config()['appSecret']));
+check('webhook : lead d’un formulaire qui n’est pas le nôtre ignoré, Meta pas appelé', $r['leads'] === 0
+    && !array_filter($appels, static fn ($a) => $a[1] === 'CRM-L1') && count(socLeads()) === 1);
 $appels = [];
 $lf['status'] = 'Archivé';
 socStateSave(['changes' => ['leadforms' => ['upsert' => [$lf]]]]);

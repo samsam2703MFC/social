@@ -23,11 +23,35 @@ partage **tous les accès** du BO consultant :
 | Adresse, position GPS | caisse du panel (`shops`, via `ceo_shop.pwa_shop_id`) |
 | Ventes (retour sur campagne) | caisse du panel (`transaction`, `transaction_product`, `product`) |
 | Opérations | les campagnes commerciales du **Marketing du BO**, lues par son API (`GET /api/v1/marketing/campaigns`, `/campaigns/{id}`, `/shops`) — jamais créées ni modifiées ici |
-| Clés Meta | celles de Brand Guard, **recopiées une fois** dans `social_parametre` au premier lancement |
+| Clés Meta | celles de Brand Guard, **recopiées une fois** dans `social_parametre` au premier lancement ; un champ resté **vide** reprend la **connexion partagée du CRM candidat** (table `meta_connexion`, voir plus bas) |
 | Journal | chaque geste s'écrit aussi dans `ceo_journal_entry` (écran Journal du cockpit, type « Social & Ads ») |
 
 Le module n'écrit **jamais** dans les tables `ceo_*`, `brand_guard_*` ni dans
 celles du panel (à part la ligne de journal).
+
+## Connexion Meta partagée avec le CRM candidat (`meta_connexion`)
+
+Choix du client (oct. 2026) : **la même application Meta** que les formulaires de
+candidature du CRM, ses clés dans **une table commune** de la base partagée.
+
+- La table `meta_connexion` (une ligne par clé : `app_id`, `app_secret`,
+  `system_token`, `verify_token`, `page_id`, `page_token`, `graph_version`…) est
+  **créée et tenue par le CRM** (à chaque « Connecter et tester » de ses
+  Paramètres → Intégrations). Le module la **lit** : `Meta::config()` prend la
+  clé de `social_parametre`, et seulement si elle est vide celle du CRM
+  (`socMetaConnexion`). L'écran l'indique (« · repris du CRM ») et
+  **« ↺ Reprendre la connexion du CRM »** (`POST /parametres/cles/crm`) vide les
+  clés saisies ici. Les secrets ne partent jamais au navigateur.
+- **Webhook** : une application Meta n'a qu'UNE adresse de rappel pour les
+  Pages — celle de l'API de la page franchise. Elle relaie ici, corps et
+  signature de Meta tels quels, les leads de **nos** formulaires
+  (`social_meta_objet`). Le module y inscrit l'adresse de son webhook
+  (`relais_social` = `url_publique` + `api/v1/social/webhook`,
+  `socMetaRelaisInscrire`, à chaque démarrage du module — `socInstall`) — c'est la seule
+  écriture du module dans une table qui n'est pas `social_*`. Son webhook
+  ignore un lead d'un formulaire qui n'est pas le sien (une candidature du
+  CRM peut voisiner avec les nôtres dans le même envoi). Le cron continue de
+  relire nos formulaires (`socLeadsSync`).
 
 ## Tout est en base : tables `social_*`
 
