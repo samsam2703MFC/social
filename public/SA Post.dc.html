@@ -726,6 +726,13 @@
               <span style="padding:8px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">Instagram</span>
               <span style="padding:8px 12px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;">État</span>
             </div>
+            <!-- La Page de la marque, cochée comme une boutique : le post part chez elle à l'heure dite, puis le repost automatique le reprend -->
+            <div style="display:grid;grid-template-columns:minmax(130px,1.4fr) 84px 92px minmax(120px,1fr);border-top:0.5px solid rgba(34,34,34,0.08);align-items:center;background:{{ mq.bg }};">
+              <label style="padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer;"><input type="checkbox" checked="{{ mq.on }}" onChange="{{ mq.toggle }}" disabled="{{ mq.lock }}" style="accent-color:#8D1D2C;margin:0;width:15px;height:15px;">{{ mq.name }}</label>
+              <label style="padding:8px 12px;display:flex;align-items:center;gap:6px;font-size:12px;color:#444444;cursor:pointer;"><input type="checkbox" checked="{{ mq.fb }}" onChange="{{ mq.toggleFb }}" disabled="{{ mq.fbDis }}" style="accent-color:#8D1D2C;margin:0;">Page</label>
+              <label style="padding:8px 12px;display:flex;align-items:center;gap:6px;font-size:12px;color:{{ mq.igColor }};cursor:pointer;"><input type="checkbox" checked="{{ mq.ig }}" onChange="{{ mq.toggleIg }}" disabled="{{ mq.igDis }}" style="accent-color:#8D1D2C;margin:0;">Compte</label>
+              <span style="padding:8px 12px;font-size:11px;color:{{ mq.noteFg }};">{{ mq.note }}</span>
+            </div>
             <sc-for list="{{ shopRows }}" as="r" hint-placeholder-count="6">
               <div style="display:grid;grid-template-columns:minmax(130px,1.4fr) 84px 92px minmax(120px,1fr);border-top:0.5px solid rgba(34,34,34,0.08);align-items:center;background:{{ r.bg }};">
                 <label style="padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer;"><input type="checkbox" checked="{{ r.on }}" onChange="{{ r.toggle }}" disabled="{{ r.lockShop }}" style="accent-color:#8D1D2C;margin:0;width:15px;height:15px;">{{ r.name }}</label>
@@ -1252,7 +1259,7 @@ class Component extends DCLogic {
     const v = { style: 'epure', format: 'carre', textes: [], fondu: 60, logo: 'auto', cutMode: 'auto', showLogo: true, showEyebrow: true, showTitle: true, showPhrase: true, showPrice: true, showPromo: false, showSite: true,
       nl: { eyebrow: 'Seizoenseditie · Herfst 2026', title: '', phrase: '', unit: 'Per stuk', promoSub: 'de 5de gratis' },
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
-    const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', linkText: { fr: '', nl: '' }, campaign: '',
+    const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], marque: false, ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', linkText: { fr: '', nl: '' }, campaign: '',
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
       txtSel: null, txtTplNom: '', etqLocal: null, qc: [], visNom: '', visLocal: null, kitBusy: false, offre: null, mentionAuto: true, iaBusy: false, iaRes: null, iaErr: '', iaConsigne: '', cor: null,
       objectif: '', inspi: (() => { try { const x = localStorage.getItem('sa.inspi'); return x === null ? null : x === '1'; } catch (e) { return null; } })(),
@@ -1263,12 +1270,15 @@ class Component extends DCLogic {
     SA.SHOPS.forEach(s => { base.ch[s.id] = { fb: s.fb === 'connected', ig: s.igs === 'connected' }; });
     // Magasins test : hors du réseau, jamais cochés d'office ; jamais sur l'Instagram du réseau.
     (SA.TEST_SHOPS || []).forEach(s => { base.ch[s.id] = { fb: s.fb === 'connected', ig: false }; });
+    // La Page de la marque : sa Page Facebook d'office, son Instagram (en Instagram unique, celui du réseau) à cocher.
+    const br = SA.state().brand || {};
+    base.ch.marque = { fb: !SA.live || br.fb === 'connected', ig: false };
     const id = SA.param('id'), p = id && SA.state().posts.find(x => x.id === id);
     if (p) {
       const shops = p.shops === 'all' ? SA.SHOPS.map(s => s.id) : p.shops.slice();
       Object.assign(base, { id: p.id, type: p.type, text: p.text || '', textNl: p.textNl || '', link: p.link || '', linkText: Object.assign({ fr: '', nl: '' }, p.linkText || {}), campaign: p.campaign || '', date: p.date, time: p.time, sel: shops,
-        scope: shops.length === SA.SHOPS.length ? 'all' : 'shop', status: p.status, spread: p.spread || 10, product: p.product || null, dark: !!p.dark });
-      if (p.ch) base.ch = p.ch;
+        scope: shops.length === SA.SHOPS.length ? 'all' : 'shop', status: p.status, spread: p.spread || 10, product: p.product || null, dark: !!p.dark, marque: !!p.marque });
+      if (p.ch) base.ch = Object.assign({ marque: base.ch.marque }, p.ch);
       if (p.catalogue) base.navSel = p.catalogue;
       if (p.offre) base.offre = p.offre;
       if (p.montage) { base.mode = ['collage', 'frise'].includes(p.montage.kind) ? p.montage.kind : 'pano'; base.m = Object.assign(this.MONTAGE(), p.montage.m); base.photos = p.montage.photos || []; }
@@ -1278,6 +1288,8 @@ class Component extends DCLogic {
         const vd = (p.media || []).find(m => m.kind === 'video'); if (vd) base.video = { src: vd.src, name: vd.name || 'Vidéo' }; }
     }
     const shop = SA.param('shop'); if (shop && !p) { base.scope = 'shop'; base.sel = [shop]; }
+    // `?marque=1` (Repost automatique → À venir) : un post de la marque seule, sur sa Page.
+    if (SA.param('marque') === '1' && !p) { base.marque = true; base.scope = 'shop'; base.sel = []; }
     const date = SA.param('date'); if (date && !p) base.date = date;
     // Opération présélectionnée (`?op=bo-19`, ou `?op=19` : l'identifiant de la campagne dans le Marketing).
     const op = SA.param('op'); if (op && !p) base.campaign = /^\d+$/.test(op) ? 'bo-' + op : op;
@@ -1777,15 +1789,16 @@ class Component extends DCLogic {
       if (!s.text.trim() && !s.textNl.trim() && !(s.v.title || '').trim() && !(s.m.title || '').trim()) errs.push('Donnez au moins un texte ou un titre : il pré-remplit le texte de la publicité.');
       return errs;
     }
-    if (!t.length) errs.push('Choisissez au moins une boutique.');
-    if (t.length && !t.some(id => s.ch[id] && (s.ch[id].fb || s.ch[id].ig))) errs.push('Cochez au moins un canal (Facebook ou Instagram).');
+    const cm = s.marque ? (s.ch.marque || {}) : {};
+    if (!t.length && !s.marque) errs.push('Choisissez au moins une boutique, ou la Page de la marque.');
+    if ((t.length || s.marque) && !t.some(id => s.ch[id] && (s.ch[id].fb || s.ch[id].ig)) && !cm.fb && !cm.ig) errs.push('Cochez au moins un canal (Facebook ou Instagram).');
     if (final && !s.text.trim() && s.mode === 'brut' && !s.photos.length && !s.video) errs.push('Ajoutez un texte ou un média.');
     const nlShops = t.filter(id => SA.langsOf(id).includes('nl')).map(id => SA.byId(SA.SHOPS, id).name), frShops = t.filter(id => SA.langsOf(id).includes('fr')).map(id => SA.byId(SA.SHOPS, id).name);
     if (final && nlShops.length && !s.textNl.trim() && s.text.trim()) errs.push('Texte néerlandais manquant pour ' + nlShops.join(', ') + '.');
     if (final && frShops.length && !s.text.trim() && s.textNl.trim()) errs.push('Texte français manquant pour ' + frShops.join(', ') + '.');
     if (final && s.mode === 'studio' && nlShops.length && s.v.showTitle && s.v.title.trim() && !(s.v.nl.title || '').trim()) errs.push('Nom du produit en néerlandais manquant sur le visuel (' + nlShops.join(', ') + ').');
     if (final && s.when === 'later') { const m = this.schedMinutes(); if (m < 10) errs.push('Meta exige une programmation au moins 10 minutes à l\u2019avance (scheduled_publish_time).'); else if (m > 30 * 24 * 60) errs.push('Meta n\u2019accepte pas de programmation au-delà de 30 jours (scheduled_publish_time).'); }
-    if (final && s.mode === 'brut' && t.some(id => s.ch[id] && s.ch[id].ig) && !s.photos.length && !s.video) errs.push('Instagram exige au moins une image ou une vidéo.');
+    if (final && s.mode === 'brut' && (t.some(id => s.ch[id] && s.ch[id].ig) || cm.ig) && !s.photos.length && !s.video) errs.push('Instagram exige au moins une image ou une vidéo.');
     if (final && this.isMontage() && !s.photos.length) errs.push('Ajoutez au moins une photo pour le montage.');
     if (final && s.mode === 'frise' && !t.some(id => s.ch[id] && s.ch[id].ig)) errs.push('Une frise se publie sur Instagram : cochez Instagram pour au moins une boutique.');
     if (final && status !== 'Brouillon') { const lock = this.friseLock(); if (lock) errs.push(lock); }
@@ -1910,7 +1923,8 @@ class Component extends DCLogic {
       visual: s.mode === 'studio' ? { v: s.v, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
       frise: friseTiles ? { tiles: friseTiles } : null,
       montage: this.isMontage() ? { kind: s.mode, m: s.m, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
-      shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, linkText: (s.linkText.fr || s.linkText.nl) ? s.linkText : null, offre: s.offre || null, spread: s.spread, product: s.product, catalogue: s.navSel || null,
+      shops: t, ch: s.ch, marque: !!s.marque, fb: t.some(id => s.ch[id].fb) || (!!s.marque && !!(s.ch.marque || {}).fb), ig: t.some(id => s.ch[id].ig) || (!!s.marque && !!(s.ch.marque || {}).ig),
+      status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)).concat(s.marque ? ['fr', 'nl'] : []))], link: s.link, linkText: (s.linkText.fr || s.linkText.nl) ? s.linkText : null, offre: s.offre || null, spread: s.spread, product: s.product, catalogue: s.navSel || null,
       prixParBoutique, parBoutique: parBoutique || null };
     if (s.dark) { post.dark = true; post.fb = false; post.ig = false; if (!s.id) { post.date = SA.TODAY; post.time = nowT; } }
     if (status === 'Publié') {
@@ -1963,6 +1977,17 @@ class Component extends DCLogic {
           : !fbOk ? 'Page non connectée' : !igOk ? 'Instagram : ' + SA.CONN[live.igs].label.toLowerCase() : 'Connecté',
         noteFg: test ? '#8A4B00' : fbOk && igOk ? '#0F6B4A' : '#8A4B00' };
     });
+    // La Page de la marque, cochée comme une boutique : le post part aussi chez elle, à l'heure dite, et le
+    // repost automatique le reprend ensuite chez les boutiques. Meta ne donne pas à l'API les posts programmés
+    // dans Business Suite : programmés ici, ils sont connus d'avance (Repost automatique → À venir).
+    const br = st.brand || {}, cm = s.ch.marque || {}, brFbOk = !SA.live || br.fb === 'connected', brIgOk = !SA.live || br.igs === 'connected';
+    const mq = { name: 'Page de la marque · ' + (br.name || 'L’Atelier By'), on: !!s.marque, bg: s.marque ? '#FBF7F2' : '#FCFAF7', lock: locked,
+      toggle: () => { if (!locked) this.setState({ marque: !s.marque }); },
+      fb: !!s.marque && !!cm.fb, ig: !!s.marque && !!cm.ig && brIgOk, fbDis: locked || !s.marque || !brFbOk, igDis: locked || !s.marque || !brIgOk, igColor: brIgOk ? '#444444' : '#B8B2A8',
+      toggleFb: () => this.setState({ ch: Object.assign({}, s.ch, { marque: Object.assign({}, cm, { fb: !cm.fb }) }) }),
+      toggleIg: () => this.setState({ ch: Object.assign({}, s.ch, { marque: Object.assign({}, cm, { ig: !cm.ig }) }) }),
+      note: !brFbOk ? 'Page de la marque non connectée' : igUnique ? 'Puis repris par les boutiques · Compte = Instagram du réseau' : 'Puis repris par les boutiques (repost automatique)',
+      noteFg: brFbOk ? '#0F6B4A' : '#8A4B00' };
     // ===== Catalogue : catégorie → sous-catégorie → produit, ou gamme =====
     // Prix d'UNE boutique du réseau ; plusieurs boutiques (ou aucune) : pas de prix.
     const prixShop = tRes.length === 1 ? tRes[0] : '';
@@ -2418,7 +2443,7 @@ class Component extends DCLogic {
       shopCountLabel: tRes.length + ' / ' + SA.SHOPS.length + ' boutique' + (SA.SHOPS.length > 1 ? 's' : '') + (tTest.length ? ' + ' + tTest.length + ' magasin' + (tTest.length > 1 ? 's' : '') + ' test' : ''),
       scopeAll: () => setScope('all'), scopeGroup: () => setScope('group'), scopeShop: () => setScope('shop'), saBg, saFg, sgBg, sgFg, ssBg, ssFg,
       isGroup: s.scope === 'group', groups: (st.groups || SA.GROUPS).map(g => Object.assign(chip(s.group === g.id), { name: g.name, count: g.shops.length, pick: () => this.setState({ group: g.id, sel: g.shops.slice() }) })),
-      shopRows, igUnique, igUniqueNote: 'Instagram : un seul compte pour tout le réseau (' + igHandle + '). Cocher Instagram pour une ou plusieurs boutiques publie le post une seule fois sur ce compte ; {ville} y devient la liste des boutiques visées.',
+      shopRows, mq, igUnique, igUniqueNote: 'Instagram : un seul compte pour tout le réseau (' + igHandle + '). Cocher Instagram pour une ou plusieurs boutiques publie le post une seule fois sur ce compte ; {ville} y devient la liste des boutiques visées.',
       // texte
       vars: [['{lien}', 'Le lien du post, précédé de son texte (« Commandez ici 👉 https://… »)'], ['{webshop}', 'Lien du webshop de la boutique'], ['{webshop_produit}', 'Lien du produit dans le webshop de la boutique'], ['{ville}', 'Nom de la boutique'], ['{adresse}', 'Adresse de la boutique'], ['{horaires}', "Horaires d'ouverture"], ['{prix}', 'Prix du produit choisi'], ['{produit_du_jour}', 'Produit du jour (catalogue)']].map(([code, tip]) => ({ code, tip, insert: () => !locked && this.insertVar(code) })),
       // Assistant de rédaction (Claude, côté serveur) et relecture selon la charte de la marque.

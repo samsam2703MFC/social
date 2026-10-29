@@ -504,7 +504,9 @@ class Component extends DCLogic {
     const sc = (p) => { const k = statusOf(p); const c = SA.STATUS[k]; return { k, bg: c.bg, fg: c.fg }; };
     const dotOf = { 'Brouillon': '#B8B2A8', 'À valider': '#E3B155', 'Programmé': '#D97B29', 'Publié': '#1F8A60', 'Échec': '#8D1D2C', 'Partiel': '#C96A6E', 'Dark post': '#232220' };
     const shortShops = (p) => { if (p.origin === 'meta') return String(p.accountName || '').replace(/^l[’']atelier\s*by\s*[-–·]?\s*/i, '') || 'Marque'; const ids = shopsOf(p); return ids.length === SA.SHOPS.length ? 'Réseau' : ids.length > 1 ? ids.length + ' boutiques' : (SA.byId(SA.SHOPS, ids[0]) || {}).name; };
-    const shopsLabel = (p) => p.origin === 'meta' && !(p.shops || []).length ? (p.marque ? 'Marque' : '—') : SA.shopLabel(shopsOf(p));
+    // Un post du module peut viser la Page de la marque (seule, ou avec des boutiques).
+    const shopsLabel = (p) => p.origin === 'meta' && !(p.shops || []).length ? (p.marque ? 'Marque' : '—')
+      : p.marque ? ['Marque'].concat((p.shops || []).length ? [SA.shopLabel(shopsOf(p))] : []).join(' + ') : SA.shopLabel(shopsOf(p));
     const card = (p) => {
       // Un dark post n'a pas de date de publication : il ne se déplace pas dans le calendrier.
       const st = sc(p), meta = p.origin === 'meta', locked = p.status === 'Publié' || !!p.dark || meta;
@@ -586,7 +588,7 @@ class Component extends DCLogic {
     // Suppression : publication Meta (hors module), post publié (choix : aussi chez Meta ou non), ou post pas encore en ligne.
     const delKind = !sp ? '' : sp.origin === 'meta' ? 'meta' : sp.status === 'Publié' ? 'publie' : 'local';
     const delWhere = !sp || delKind === 'local' ? '' : delKind === 'meta' ? sp.channel + ' · ' + (sp.accountName || '')
-      : (sp.partial && sp.partial.ok ? sp.partial.ok : shopsOf(sp)).map(id => id === 'marque' ? 'Instagram du réseau' : (SA.byId(SA.SHOPS, id) || { name: id }).name).join(', ')
+      : (sp.partial && sp.partial.ok ? sp.partial.ok : shopsOf(sp).concat(sp.marque ? ['marque'] : [])).map(id => id === 'marque' ? (sp.marque ? 'Marque' : 'Instagram du réseau') : (SA.byId(SA.SHOPS, id) || { name: id }).name).join(', ')
         + ' · ' + [sp.fb ? 'Facebook' : '', sp.ig ? 'Instagram' : ''].filter(Boolean).join(' + ');
     const delAds = !sp ? [] : (SA.state().ads || []).filter(a => a.post === sp.id && ['Terminée', 'Refusée', 'Budget épuisé'].indexOf(a.status) < 0).map(a => ({ name: a.name, status: a.status }));
     if (sp) {
@@ -598,7 +600,7 @@ class Component extends DCLogic {
         hasAuthor: !!sp.author, author: sp.author || '', hasText: !!sp.text, textPreview: SA.fill(sp.text, shopsOf(sp)[0], SA.CATALOGUE.find(x => sp.title.indexOf(x.name) >= 0)),
         isFail: sp.status === 'Échec', error: sp.error || '', isPartial: st.k === 'Partiel',
         partialTitle: st.k === 'Partiel' ? 'Publié sur ' + sp.partial.ok.length + ' Pages sur ' + (sp.partial.ok.length + sp.partial.ko.length) : '',
-        ko: st.k === 'Partiel' ? sp.partial.ko.map(k => Object.assign({ shopName: k.shop === 'marque' ? 'Instagram du réseau' : (SA.byId(SA.SHOPS, k.shop) || { name: k.shop }).name }, k)) : [],
+        ko: st.k === 'Partiel' ? sp.partial.ko.map(k => Object.assign({ shopName: k.shop === 'marque' ? (sp.marque ? 'Marque' : 'Instagram du réseau') : (SA.byId(SA.SHOPS, k.shop) || { name: k.shop }).name }, k)) : [],
         canRetry: (sp.status === 'Échec' || st.k === 'Partiel') && !s.retrying, canValidate: sp.status === 'À valider',
         editHref: SA.href('post', 'id=' + sp.id), editLabel: sp.status === 'Publié' ? 'Voir' : 'Modifier', target: '_self', canDup: true, isMeta: false, hasStats: false,
         campaign: sp.campaign || '',

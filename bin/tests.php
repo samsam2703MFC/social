@@ -2739,6 +2739,13 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
         if (($p['access_token'] ?? '') !== 'PT999') { return [400, ['error' => ['code' => 190, 'message' => 'mauvais token']]]; }
         return [200, ['data' => array_values(array_filter($GLOBALS['RP_POSTS'], static fn ($x) => strtotime($x['created_time']) >= (int) ($p['since'] ?? 0)))]];
     }
+    if ($m === 'POST' && preg_match('#^999/(photos|feed)$#', $path, $mm)) {
+        $appels[] = [$m, $path, $p];
+        if (($p['access_token'] ?? '') !== 'PT999') { return [400, ['error' => ['code' => 190, 'message' => 'mauvais token']]]; }
+        $GLOBALS['RP_PM'] = ($GLOBALS['RP_PM'] ?? 0) + 1;
+        $pmId = '999_pm' . $GLOBALS['RP_PM'];
+        return [200, $mm[1] === 'photos' ? ['id' => 'ph' . $GLOBALS['RP_PM'], 'post_id' => $pmId] : ['id' => $pmId]];
+    }
     if ($m === 'GET' && $path === '999/scheduled_posts') {
         $appels[] = [$m, $path, $p];
         if (($p['access_token'] ?? '') !== 'PT999') { return [400, ['error' => ['code' => 190, 'message' => 'mauvais token']]]; }
@@ -2842,6 +2849,60 @@ check('posts programmés illisibles : l’écran s’affiche quand même, avec l
     && count($v['lignes']) === 3, json_encode($v['aVenir'] ?? null));
 $GLOBALS['RP_PROG_ERR'] = false; $GLOBALS['RP_PROG'] = [];
 socSettingPut('repost_avenir', null, false);
+
+// Meta ne donne pas à l'API les posts du planificateur de Business Suite : la marque programme dans le module
+// (« Créer un post », Page de la marque cochée). Connu d'avance, publié sur sa Page à l'heure dite.
+$pmQuand = time() + 7200;
+$pm = ['id' => 'pm-marque', 'title' => 'Bûches de Noël', 'type' => 'Photo', 'date' => date('Y-m-d', $pmQuand), 'time' => date('H:i', $pmQuand), 'status' => 'Programmé',
+    'shops' => [], 'marque' => true, 'ch' => ['marque' => ['fb' => true, 'ig' => false]], 'fb' => true, 'ig' => false,
+    'text' => 'Nos bûches de Noël, en précommande', 'textNl' => 'Onze kerststronken, nu te bestellen', 'img' => 'uploads/buche.jpg', 'media' => [['src' => 'uploads/buche.jpg']]];
+socPostHook(null, $pm);
+$pmLigne = Db::row("SELECT shop_id, canal, prevue_le, statut FROM social_publication WHERE content_id = 'pm-marque'");
+check('post de la marque programmé dans le module : une ligne de file pour sa Page Facebook, à l’heure dite',
+    $pmLigne === ['shop_id' => 'marque', 'canal' => 'fb', 'prevue_le' => date('Y-m-d H:i:00', $pmQuand), 'statut' => 'attente'], json_encode($pmLigne));
+$GLOBALS['RP_PROG_ERR'] = true;
+[, $v] = $fr('POST', '/repost/relire', []);
+$avm = $v['aVenir']['posts'][0] ?? [];
+check('« À venir » : ce post, connu par la file même si Meta refuse la lecture, avec son texte (FR et NL) et le repost prévu', ($avm['source'] ?? '') === 'pm-marque' && ($avm['origine'] ?? '') === 'module'
+    && ($avm['prevuLe'] ?? '') === date('Y-m-d H:i:00', $pmQuand) && str_contains((string) ($avm['texte'] ?? ''), 'Nos bûches de Noël') && str_contains((string) ($avm['texte'] ?? ''), 'Onze kerststronken')
+    && ($avm['cases']['4']['statut'] ?? '') === 'prog' && ($avm['cases']['5']['statut'] ?? '') === 'val' && ($v['aVenir']['erreur'] ?? '') !== '', json_encode($v['aVenir']));
+$GLOBALS['RP_PROG_ERR'] = false;
+socSettingPut('repost_avenir', null, false);
+Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'pm-marque'");
+$appels = [];
+socRunQueue('pm-marque');
+$pmPub = $appelsVers('#^999/photos$#');
+check('à l’heure : publié sur la Page de la marque, avec son token, en français et en néerlandais', count($pmPub) === 1 && ($pmPub[0][2]['access_token'] ?? '') === 'PT999'
+    && str_contains((string) ($pmPub[0][2]['caption'] ?? ''), 'Nos bûches') && str_contains((string) ($pmPub[0][2]['caption'] ?? ''), 'Onze kerststronken')
+    && (socItem('posts', 'pm-marque')['status'] ?? '') === 'Publié' && !$appelsVers('#^(111|222)/#'), json_encode($pmPub));
+[, $v] = $fr('GET', '/repost');
+check('publié : il quitte « À venir » (le guet le reprendra à sa lecture de la Page)', !in_array('pm-marque', array_column($v['aVenir']['posts'], 'source'), true));
+$pm2 = array_replace($pm, ['id' => 'pm-marque-2', 'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => true], 'marque' => ['fb' => true, 'ig' => true]]]);
+socQueue($pm2);
+$pmLignes = array_map(static fn ($r) => $r['shop_id'] . '|' . $r['canal'], Db::rows("SELECT shop_id, canal FROM social_publication WHERE content_id = 'pm-marque-2' ORDER BY shop_id, canal"));
+check('marque et boutique ensemble : la Page de Halle, la Page de la marque, et une seule fois l’Instagram du réseau', $pmLignes === ['4|fb', 'marque|fb', 'marque|ig'], json_encode($pmLignes));
+// Un post de la marque qui vise aussi Halle : Halle le reçoit du module ; le repost ne le lui republie pas.
+$pm3 = array_replace($pm, ['id' => 'pm-marque-3', 'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => false], 'marque' => ['fb' => true, 'ig' => false]]]);
+socPostHook(null, $pm3);
+[, $v] = $fr('GET', '/repost');
+$av3 = array_column($v['aVenir']['posts'], 'cases', 'source')['pm-marque-3'] ?? [];
+check('à venir : Halle, visée par le post lui-même, n’attend pas de repost ; Wavre le validera', ($av3['4']['statut'] ?? '') === 'direct' && ($av3['5']['statut'] ?? '') === 'val', json_encode($av3));
+Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'pm-marque-3'");
+socRunQueue('pm-marque-3');
+$pm3Meta = (string) (Db::row("SELECT meta_id FROM social_publication WHERE content_id = 'pm-marque-3' AND shop_id = 'marque'")['meta_id'] ?? '');
+$GLOBALS['RP_POSTS'][] = $rpPost(substr($pm3Meta, 4), 0, 'Nos bûches de Noël, en précommande');
+$appels = [];
+socRepostGuet(true);
+check('à sa sortie, le guet le reprend : Wavre à valider, Halle pas repostée (elle l’a déjà)', $pm3Meta !== '' && (socRepostLigne($pm3Meta)['statut'] ?? '') === 'reposte'
+    && array_column(Db::rows('SELECT shop_id FROM social_repost_cible WHERE source_id = ?', [$pm3Meta]), 'shop_id') === ['5'] && !$appelsVers('#^111/#'), $pm3Meta);
+[, $v] = $fr('GET', '/repost');
+$c3 = array_column($v['lignes'], 'cases', 'source')[$pm3Meta] ?? [];
+check('écran : la case de Halle dit « par le post »', ($c3['4']['statut'] ?? '') === 'direct' && ($c3['5']['statut'] ?? '') === 'val', json_encode($c3));
+$GLOBALS['RP_POSTS'] = array_values(array_filter($GLOBALS['RP_POSTS'], static fn ($x) => $x['id'] !== $pm3Meta));
+$rp3 = socRepostLigne($pm3Meta);
+Db::exec('DELETE FROM social_repost_cible WHERE source_id = ?', [$pm3Meta]); Db::exec('DELETE FROM social_repost WHERE source_id = ?', [$pm3Meta]);
+if ($rp3 !== null) { Db::exec('DELETE FROM social_publication WHERE content_id = ?', [$rp3['content_id']]); socItemDelete('posts', (string) $rp3['content_id']); }
+foreach (['pm-marque', 'pm-marque-2', 'pm-marque-3'] as $x) { Db::exec('DELETE FROM social_publication WHERE content_id = ?', [$x]); socItemDelete('posts', $x); }
 
 // Échec chez Meta, alerte, relance.
 $restreinte['111'] = true;
