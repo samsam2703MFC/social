@@ -98,6 +98,7 @@
             </sc-for>
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button onClick="{{ saveKeys }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Enregistrer les clés</button>
+            <sc-if value="{{ crmReprise }}" hint-placeholder-val="{{ false }}"><button onClick="{{ reprendreCrm }}" title="{{ crmRepriseTitre }}" style="background:#FFFFFF;color:#8D1D2C;border:0.5px solid rgba(141,29,44,0.45);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">↺ Reprendre la connexion du CRM</button></sc-if>
             <label style="font-size:12px;color:#444444;display:flex;gap:6px;align-items:center;">URL publique du module (Meta y télécharge les visuels) <input value="{{ publicUrl }}" onChange="{{ setPublicUrl }}" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 8px;width:260px;"></label>
             <label style="font-size:12px;color:#444444;display:flex;gap:6px;align-items:center;">API Marketing du BO (les opérations) <input value="{{ marketingApi }}" onChange="{{ setMarketingApi }}" title="Adresse appelée par le serveur pour lire les campagnes commerciales (GET …/campaigns)" style="font-family:ui-monospace,monospace;font-size:12px;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:6px 8px;width:260px;"></label></div>
         </section>
@@ -622,14 +623,20 @@ class Component extends DCLogic {
           auditEmpty: rows.length === 0, auditEmptyText: (A.routes || []).length ? 'Aucune route pour ce filtre.' : 'Aucun audit encore.',
         };
       })(),
-      keyFields: (() => { const ms = SA.metaStatus || {}, J = ms.jeton || null;
+      keyFields: (() => { const ms = SA.metaStatus || {}, J = ms.jeton || null, src = ms.sources || {};
         // Le token : son état réel chez Meta (debug_token) quand l'App ID et la clé secrète sont connus.
         const etatJeton = !ms.tokenDefini ? 'absent' : !J ? 'enregistré · non vérifié (App ID + clé secrète requis)' : J.valide && !J.erreur ? 'valide · expire : ' + J.expire : 'invalide : ' + (J.erreur || 'refusé par Meta');
         return [['appId', "Identifiant de l'application (App ID)", 'appId', ms.appId || '1234567890', 'text'], ['systemToken', 'Token du System User', 'tokenDefini', 'EAAG…'], ['appSecret', "Clé secrète de l'app", 'secretDefini', 'app secret'], ['verifyToken', 'Jeton du webhook', 'verifyDefini', 'chaîne libre']]
         .map(([k, label, flag, ph, type]) => ({ label, ph, type: type || 'password', value: s.keys[k],
-          state: k === 'systemToken' ? etatJeton : k === 'appId' ? (ms.appId ? ms.appId : 'absent') : (ms[flag] ? 'enregistré' : 'absent'),
+          // Un champ vide ici reprend la connexion partagée du CRM candidat (table meta_connexion).
+          state: (k === 'systemToken' ? etatJeton : k === 'appId' ? (ms.appId ? ms.appId : 'absent') : (ms[flag] ? 'enregistré' : 'absent')) + (src[k] === 'crm' ? ' · repris du CRM' : ''),
           stFg: (k === 'systemToken' ? (J && J.valide && !J.erreur) : ms[flag]) ? '#0F6B4A' : '#8D1D2C',
           set: (e) => this.setState({ keys: Object.assign({}, this.state.keys, { [k]: e.target.value }) }) })); })(),
+      // Connexion partagée du CRM candidat (table meta_connexion) : proposée quand le CRM en a une et qu'une clé saisie ici la masque.
+      crmReprise: (() => { const ms = SA.metaStatus || {}, src = ms.sources || {}; return !!(ms.crm && ms.crm.dispo) && Object.values(src).includes('social'); })(),
+      crmRepriseTitre: (() => { const ms = SA.metaStatus || {}; return "Vide les clés saisies ici : celles du CRM candidat (application " + ((ms.crm && ms.crm.appId) || '?') + ') sont utilisées — la même application que ses formulaires de candidature.'; })(),
+      reprendreCrm: () => { if (!window.confirm('Retirer les clés Meta saisies ici et reprendre la connexion du CRM candidat ?')) return;
+        SA.api('POST', '/parametres/cles/crm', {}).then(r => { SA.metaStatus = r.metaStatus; this.toast('Connexion du CRM reprise.'); SA.refresh(); }).catch(e => this.toast('Impossible : ' + e.message)); },
       saveKeys: () => { SA.api('POST', '/parametres/cles', s.keys).then(r => { SA.metaStatus = r.metaStatus; this.setState({ keys: { appId: '', systemToken: '', appSecret: '', verifyToken: '' } }); const ids = r.ids && r.ids.ok ? (r.ids.appliques.length ? ' Identifiants des boutiques relus dans le portefeuille : ' + r.ids.appliques.join(' · ') + '.' : ' Portefeuille relu : identifiants déjà à jour.') : '';
         if (r.ids) this.setState({ idsAuto: Object.assign({}, s.idsAuto, { dernier: r.ids }), pf: null }); this._pfLoading = false;
         this.toast((r.maj.length ? r.maj.length + ' clé(s) enregistrée(s) en base.' : 'Aucune clé saisie.') + ids); SA.refresh(); }).catch(e => this.toast('Enregistrement impossible : ' + e.message)); },

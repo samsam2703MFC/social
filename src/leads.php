@@ -187,7 +187,11 @@ function socWebhook(string $corps, ?string $signature): array
             if (($c['field'] ?? '') !== 'leadgen') { continue; }
             $v = (array) ($c['value'] ?? []);
             $o = Db::row("SELECT * FROM social_meta_objet WHERE kind = 'leadform' AND form_id = ?", [(string) ($v['form_id'] ?? '')]);
-            $tok = $o ? socPageTokenDuForm((string) $o['local_id'], (string) $o['form_id']) : null;
+            // Pas un de NOS formulaires (ex. une candidature du CRM, dans le même
+            // envoi relayé par l'API franchise — application Meta partagée) : ce
+            // lead ne nous regarde pas. Comme socLeadsSync, qui ne lit que les nôtres.
+            if ($o === null) { continue; }
+            $tok = socPageTokenDuForm((string) $o['local_id'], (string) $o['form_id']);
             try {
                 $l = Meta::call('GET', (string) $v['leadgen_id'], ['fields' => 'id,created_time,field_data,ad_id,ad_name,form_id'], $tok);
                 if (socLeadSave($l, $o['local_id'] ?? null, $o['shop_id'] ?? null)) { $n++; }

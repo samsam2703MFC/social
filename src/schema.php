@@ -167,6 +167,8 @@ function socInstall(): void
         . 'motif VARCHAR(500) NULL, PRIMARY KEY (source_id, shop_id), KEY idx_etat (etat, limite_le), KEY idx_shop (shop_id, etat))' . $t);
 
     socParamsInit();
+    // L'API franchise du CRM (seule adresse de rappel de l'application Meta partagée) relaie ici nos leads.
+    socMetaRelaisInscrire();
     socTfbInit();
 }
 

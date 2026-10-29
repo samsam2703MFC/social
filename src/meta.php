@@ -10,7 +10,9 @@ declare(strict_types=1);
  *     clé secrète de l'app et le jeton du webhook sont stockés et LUS dans
  *     `social_parametre` (clés meta_system_token, meta_app_secret,
  *     meta_verify_token, marquées secrètes : jamais renvoyées au navigateur).
- *     Au premier lancement, ceux de Brand Guard (BO) y sont recopiés ;
+ *     Au premier lancement, ceux de Brand Guard (BO) y sont recopiés ; un
+ *     champ resté VIDE reprend la connexion partagée du CRM candidat (table
+ *     `meta_connexion`, même base, même application Meta — voir plus bas) ;
  *  2. les tokens de Page se demandent à Meta (`/me/accounts`) au moment de
  *     publier, et ne quittent pas le processus ;
  *  3. tout appel passe par `call()` : la version d'API est un réglage, les
@@ -37,17 +39,31 @@ final class Meta
     public static $sleep = null;
     private static ?array $pageTokens = null;
 
-    /** Les réglages Meta, lus dans social_parametre (et seulement là). */
+    /** Clé de l'écran → [clé de social_parametre, clé de la connexion partagée du CRM]. */
+    private const CLES = ['systemToken' => ['meta_system_token', 'system_token'], 'appSecret' => ['meta_app_secret', 'app_secret'],
+        'verifyToken' => ['meta_verify_token', 'verify_token'], 'appId' => ['meta_app_id', 'app_id']];
+
+    /**
+     * Les réglages Meta : social_parametre d'abord ; un champ vide reprend la
+     * connexion partagée du CRM (`meta_connexion`, client oct. 2026 : « copier
+     * les connexions Meta du CRM — ou une table spécifique dans la base »).
+     */
     public static function config(): array
     {
         $s = static fn (string $k) => trim((string) (socSetting($k) ?? ''));
-        return [
-            'version'     => $s('meta_version') ?: 'v25.0',
-            'systemToken' => $s('meta_system_token'),
-            'appSecret'   => $s('meta_app_secret'),
-            'verifyToken' => $s('meta_verify_token'),
-            'appId'       => $s('meta_app_id'),
-        ];
+        $c = ['version' => $s('meta_version') ?: 'v25.0'];
+        foreach (self::CLES as $k => [$local, $crm]) { $c[$k] = $s($local) ?: socMetaConnexion($crm); }
+        return $c;
+    }
+
+    /** D'où vient chaque clé : 'social' (social_parametre), 'crm' (connexion partagée) ou '' (absente). */
+    public static function sources(): array
+    {
+        $out = [];
+        foreach (self::CLES as $k => [$local, $crm]) {
+            $out[$k] = trim((string) (socSetting($local) ?? '')) !== '' ? 'social' : (socMetaConnexion($crm) !== '' ? 'crm' : '');
+        }
+        return $out;
     }
 
     public static function configured(): bool { return self::config()['systemToken'] !== ''; }
@@ -58,7 +74,9 @@ final class Meta
         $c = self::config();
         return ['version' => $c['version'], 'tokenDefini' => $c['systemToken'] !== '',
             'secretDefini' => $c['appSecret'] !== '', 'verifyDefini' => $c['verifyToken'] !== '', 'configure' => self::configured(),
-            'appId' => $c['appId'], 'jeton' => socSetting('meta_jeton_info')];
+            'appId' => $c['appId'], 'jeton' => socSetting('meta_jeton_info'), 'sources' => self::sources(),
+            // La connexion partagée du CRM : disponible ou non, et son application — jamais un secret.
+            'crm' => ['dispo' => socMetaConnexion('system_token') !== '', 'appId' => socMetaConnexion('app_id')]];
     }
 
     /**
@@ -180,5 +198,53 @@ final class Meta
     }
 
     /** Pour les tests : oublier les tokens mémorisés. */
-    public static function reset(): void { self::$pageTokens = null; }
+    public static function reset(): void { self::$pageTokens = null; socMetaConnexion(null); }
+}
+
+/* --- Connexion Meta partagée avec le CRM candidat --------------------------------------
+ *
+ * Le CRM candidat, sa page franchise, le BO et ce module partagent la base
+ * (atelierby_db). Le CRM y tient la table `meta_connexion` (une ligne par
+ * clé : app_id, app_secret, system_token, verify_token, page_id, page_token,
+ * graph_version…) et la met à jour à chaque « Connecter et tester ». Choix du
+ * client (oct. 2026) : la MÊME application Meta pour les deux. Or une
+ * application n'a qu'UNE adresse de rappel pour les Pages : celle de l'API de
+ * la page franchise, qui relaie ici (corps et signature de Meta tels quels)
+ * les leads de NOS formulaires — d'où l'adresse que ce module y inscrit
+ * (`relais_social`). Le module lit cette table ; il n'y écrit que cette
+ * adresse, et ne la crée pas (c'est le CRM qui la tient).
+ */
+
+/** Une valeur de la connexion partagée ('' si absente) ; `null` vide le cache du processus. */
+function socMetaConnexion(?string $cle): string
+{
+    static $cache = null;
+    if ($cle === null) { $cache = null; return ''; }
+    if ($cache === null) {
+        $cache = [];
+        try {
+            foreach (Db::rows('SELECT cle, valeur FROM meta_connexion') as $r) { $cache[(string) $r['cle']] = trim((string) $r['valeur']); }
+        } catch (Throwable $e) { /* table absente : le CRM ne l'a pas encore créée */ }
+    }
+    return $cache[$cle] ?? '';
+}
+
+/**
+ * Inscrit l'adresse du webhook du module dans la connexion partagée, pour que
+ * l'API franchise du CRM lui relaie ce qui le concerne. Écrit seulement si
+ * elle change ; rien si la table n'existe pas. Rend l'adresse inscrite.
+ */
+function socMetaRelaisInscrire(): ?string
+{
+    $base = rtrim(trim((string) (socSetting('url_publique') ?? '')), '/');
+    if (!preg_match('#^https?://#i', $base)) { return null; }
+    $url = $base . '/api/v1/social/webhook';
+    try {
+        $r = Db::row("SELECT valeur FROM meta_connexion WHERE cle = 'relais_social'");
+        if ($r !== null && (string) $r['valeur'] === $url) { return $url; }
+        Db::exec("INSERT INTO meta_connexion (cle, valeur, secret, source, maj_le) VALUES ('relais_social', ?, 0, 'social', ?)
+                  ON DUPLICATE KEY UPDATE valeur = VALUES(valeur), source = VALUES(source), maj_le = VALUES(maj_le)", [$url, date('Y-m-d H:i:s')]);
+        socMetaConnexion(null);
+        return $url;
+    } catch (Throwable $e) { return null; }
 }

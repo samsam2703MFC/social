@@ -87,6 +87,17 @@ function socRoute(string $method, string $path): array
         if ($p === null) { throw new HttpError(404, 'post introuvable'); }
         return [200, ['post' => $p]];
     }
+    if ($method === 'POST' && $path === '/parametres/cles/crm') {
+        // « Reprendre la connexion du CRM » : les clés Meta saisies ici sont
+        // vidées — un champ vide reprend la connexion partagée (meta_connexion).
+        if (socMetaConnexion('system_token') === '') { throw new HttpError(409, 'le CRM ne partage pas encore de connexion Meta (jeton de l’utilisateur système absent)'); }
+        foreach (['meta_system_token' => true, 'meta_app_secret' => true, 'meta_verify_token' => true, 'meta_app_id' => false] as $cle => $secret) { socSettingPut($cle, '', $secret); }
+        Meta::reset();
+        Meta::verifierJeton();
+        socLog(socUser(), 'Connexion', 'Clés Meta : connexion partagée du CRM reprise');
+        // Les identifiants des boutiques suivront au prochain passage horaire (cron « ids »).
+        return [200, ['ok' => true, 'metaStatus' => Meta::statut()]];
+    }
     if ($method === 'POST' && $path === '/parametres/cles') {
         // Les clés Meta, écrites en base (social_parametre). Un champ vide n'efface rien.
         $map = ['systemToken' => 'meta_system_token', 'appSecret' => 'meta_app_secret', 'verifyToken' => 'meta_verify_token', 'anthropicKey' => 'anthropic_api_key', 'removebgKey' => 'removebg_api_key'];
