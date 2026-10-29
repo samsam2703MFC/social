@@ -239,7 +239,7 @@ function socRepostNouveau(array $x, array $c): ?string
     $mode = $c['mode'] === 'copie' && $copiable ? 'copie' : 'partage';
     // Le réglage du moment est figé avec la publication : une validation tardive suit ce qui a été proposé.
     $data = ['images' => $imgs, 'delaiMin' => $c['delaiMin'], 'texte' => $c['texte'], 'sansReponse' => $c['sansReponse'],
-        'instagram' => $c['instagram'], 'modeDemande' => $c['mode']];
+        'instagram' => $c['instagram'], 'modeDemande' => $c['mode'], 'direct' => socRepostDirect($src)];
     $n = Db::exec('INSERT IGNORE INTO social_repost (source_id, publie_le, type, texte, image, permalink, statut, motif, mode, content_id, vu_le, maj_le, data) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$src, $publie, $type, (string) ($x['message'] ?? ''), mb_substr((string) (($imgs[0] ?? '') ?: ($x['full_picture'] ?? '')), 0, 1000) ?: null,
             mb_substr((string) ($x['permalink_url'] ?? ''), 0, 500) ?: null, $motif === null ? 'reposte' : 'exclu', $motif, $mode, socRepostPostId($src),
@@ -260,6 +260,25 @@ function socRepostNouveau(array $x, array $c): ?string
     return 'reposte';
 }
 
+/**
+ * Les boutiques qu'un post de la marque publié PAR LE MODULE visait déjà (« Créer un post », Page de la
+ * marque et boutiques cochées) : elles l'ont reçu directement, le repost ne le leur republie pas.
+ */
+function socRepostDirect(string $src): array
+{
+    // L'id rendu par Meta est celui du post (`{page}_{post}`), sauf pour une vidéo : celui de la vidéo,
+    // que le post de la Page reprend après le `_`.
+    $rows = Db::rows("SELECT content_id, meta_id FROM social_publication WHERE shop_id = 'marque' AND canal = 'fb' AND statut = 'publie' AND meta_id <> '' AND maj_le >= ?",
+        [date('Y-m-d H:i:s', time() - (SOC_REPOST_FENETRE_J + 1) * 86400)]);
+    foreach ($rows as $r) {
+        $m = (string) $r['meta_id'];
+        if ($m !== $src && !str_ends_with($src, '_' . $m)) { continue; }
+        $post = socItem('posts', (string) $r['content_id']);
+        return $post !== null ? array_values(array_map('strval', (array) ($post['shops'] ?? []))) : [];
+    }
+    return [];
+}
+
 /** Propose une publication reprise à chaque boutique cochée : automatique, ou à valider par le franchisé. */
 function socRepostCibler(string $src, array $c, ?array $seules = null): void
 {
@@ -271,7 +290,7 @@ function socRepostCibler(string $src, array $c, ?array $seules = null): void
     foreach (socShops() as $s) {
         $sid = (string) $s['id'];
         $b = $c['boutiques'][$sid] ?? ['on' => false, 'validation' => false];
-        if ($seules !== null ? !in_array($sid, $seules, true) : !$b['on']) { continue; }
+        if ($seules !== null ? !in_array($sid, $seules, true) : (!$b['on'] || in_array($sid, (array) ($rp['data']['direct'] ?? []), true))) { continue; }
         $valider = $b['validation'] && $seules === null;
         Db::exec('INSERT IGNORE INTO social_repost_cible (source_id, shop_id, etat, propose_le, limite_le, prevue_le) VALUES (?,?,?,?,?,?)',
             [$src, $sid, $valider ? 'a_valider' : 'auto', $now, $valider ? $limite : null, $valider ? null : max($slot, $now)]);
@@ -450,9 +469,11 @@ function socRepostRetirer(string $src): array
 const SOC_REPOST_AVENIR_S = 120;  // les posts programmés de la marque relus au plus toutes les 2 minutes
 
 /**
- * Les posts programmés sur la Page de la marque (Meta Business Suite, ou l'API) : ce qu'elle publiera,
- * et que le guet reprendra à sa sortie. Lus chez Meta et gardés 2 minutes (`repost_avenir`) : chaque
- * geste de l'écran rend la vue entière, il ne relit pas Meta à chaque fois. `$forcer` : « Relire ».
+ * Les posts programmés sur la Page de la marque par l'API (`scheduled_posts`) : ce qu'elle publiera, et
+ * que le guet reprendra à sa sortie. Ceux du planificateur de Meta Business Suite n'y sont PAS : Meta ne
+ * les donne à aucun accès de l'API (sonde du 29/10/2026, Page « L'Atelier by »). Lus chez Meta et gardés
+ * 2 minutes (`repost_avenir`) : chaque geste de l'écran rend la vue entière, il ne relit pas Meta à
+ * chaque fois. `$forcer` : « Relire ».
  * Rend ['le', 'posts' => publications telles que Meta les donne, 'erreur'].
  */
 function socRepostProgrammes(bool $forcer = false): array
@@ -483,6 +504,29 @@ function socRepostProgrammes(bool $forcer = false): array
 }
 
 /**
+ * Les posts de la marque programmés DANS LE MODULE (« Créer un post », Page de la marque cochée) : la
+ * file les connaît d'avance, Meta n'est pas lu — c'est la seule façon de les voir avant leur sortie,
+ * Meta ne donnant pas à l'API ceux du planificateur de Business Suite. Rendus comme une publication
+ * Meta (texte tel qu'il partira, visuel, heure), avec `module` pour l'écran.
+ */
+function socRepostProgrammesModule(): array
+{
+    $out = [];
+    $sql = "SELECT content_id, MIN(prevue_le) prevue FROM social_publication WHERE shop_id = 'marque' AND canal = 'fb' AND statut = 'attente' GROUP BY content_id";
+    foreach (Db::rows($sql) as $r) {
+        $post = socItem('posts', (string) $r['content_id']);
+        if ($post === null) { continue; }
+        [$imgs, $video] = socMedias($post, 'marque');
+        $att = $video !== null ? ['media_type' => 'VIDEO']
+            : (count($imgs) > 1 ? ['subattachments' => ['data' => array_map(static fn ($u) => ['media_type' => 'PHOTO', 'media' => ['image' => ['src' => $u]]], $imgs)]] : []);
+        $out[] = ['id' => (string) $post['id'], 'module' => true, 'direct' => array_values(array_map('strval', (array) ($post['shops'] ?? []))), 'message' => socMessage($post, socBrand(), 'fb'),
+            'scheduled_publish_time' => (int) strtotime((string) $r['prevue']), 'full_picture' => (string) (($post['img'] ?? '') ?: ($imgs[0] ?? '')),
+            'status_type' => $video !== null ? 'added_video' : '', 'attachments' => ['data' => [$att]]];
+    }
+    return $out;
+}
+
+/**
  * Ce que le repost fera des posts programmés de la marque, avec le réglage d'aujourd'hui : exclu (et
  * pourquoi), ou repris — à quelle heure dans chaque boutique automatique, jusqu'à quand le franchisé
  * peut valider dans les autres. Une prévision : le réglage du moment où le post sortira décidera.
@@ -491,7 +535,7 @@ function socRepostAVenir(array $c, array $shops, bool $forcer = false): array
 {
     $p = socRepostProgrammes($forcer);
     $posts = [];
-    foreach ($p['posts'] as $x) {
+    foreach (array_merge(socRepostProgrammesModule(), $p['posts']) as $x) {
         $t = (int) ($x['scheduled_publish_time'] ?? 0);
         if ((string) ($x['id'] ?? '') === '' || $t <= time()) { continue; }
         [$type, , $copiable] = socRepostMedias($x);
@@ -500,6 +544,7 @@ function socRepostAVenir(array $c, array $shops, bool $forcer = false): array
         $cases = [];
         foreach ($shops as $s) {
             $b = $c['boutiques'][$s['id']] ?? ['on' => false, 'validation' => false];
+            if (in_array($s['id'], (array) ($x['direct'] ?? []), true)) { $cases[$s['id']] = ['statut' => 'direct']; continue; }
             $cases[$s['id']] = !$b['on'] ? ['statut' => 'hors'] : ($b['validation']
                 ? ['statut' => 'val', 'limite' => date('Y-m-d H:i:s', $t + 3600 * (int) $c['delaiValidationH'])]
                 : ['statut' => 'prog', 'le' => date('Y-m-d H:i:s', $repost)]);
@@ -507,7 +552,7 @@ function socRepostAVenir(array $c, array $shops, bool $forcer = false): array
         $posts[] = ['source' => (string) $x['id'], 'prevuLe' => date('Y-m-d H:i:s', $t), 'type' => $type,
             'titre' => socCalTitre((string) ($x['message'] ?? ''), $type . ' de la marque'), 'texte' => (string) ($x['message'] ?? ''),
             'img' => (string) ($x['full_picture'] ?? '') ?: null, 'exclu' => $motif, 'repostLe' => $motif === null ? date('Y-m-d H:i:s', $repost) : null,
-            'mode' => $c['mode'] === 'copie' && $copiable ? 'copie' : 'partage', 'cases' => $cases];
+            'mode' => $c['mode'] === 'copie' && $copiable ? 'copie' : 'partage', 'cases' => $cases, 'origine' => !empty($x['module']) ? 'module' : 'meta'];
     }
     usort($posts, static fn ($a, $b) => strcmp($a['prevuLe'], $b['prevuLe']));
     return ['le' => $p['le'], 'erreur' => $p['erreur'], 'posts' => $posts];
@@ -526,12 +571,16 @@ function socRepostEtatNom(string $etat): string
 /**
  * Une case du tableau : ce que la boutique a fait de la publication de la marque.
  * statut : ok (publié), prog (programmé), val (à valider), ref (refusé), err (échec), exp (sans réponse, rien),
- * excl (publication exclue), ret (retiré), hors (boutique pas visée).
+ * excl (publication exclue), ret (retiré), hors (boutique pas visée), direct (visée par le post de la marque
+ * lui-même, programmé dans le module : publié chez elle, pas reposté).
  */
-function socRepostCase(array $rp, ?array $cb, array $pubs): array
+function socRepostCase(array $rp, ?array $cb, array $pubs, ?string $shop = null): array
 {
     if ($rp['statut'] === 'exclu') { return ['statut' => 'excl', 'detail' => (string) $rp['motif']]; }
     if ($rp['statut'] === 'retire') { return ['statut' => 'ret', 'detail' => 'retiré des Pages des boutiques']; }
+    if ($cb === null && $shop !== null && in_array($shop, (array) ($rp['data']['direct'] ?? []), true)) {
+        return ['statut' => 'direct', 'detail' => 'le post de la marque visait déjà la boutique : publié chez elle par le module, pas reposté'];
+    }
     if ($cb === null) { return ['statut' => 'hors', 'detail' => 'boutique pas visée à ce moment-là']; }
     $etat = (string) $cb['etat'];
     $base = ['etat' => $etat, 'etatNom' => socRepostEtatNom($etat), 'par' => (string) ($cb['par'] ?? ''), 'reponduLe' => $cb['repondu_le'], 'motif' => (string) ($cb['motif'] ?? '')];
@@ -595,9 +644,9 @@ function socRepostVue(int $jours = 14, bool $relire = false): array
         if ($rp['statut'] === 'exclu') { $chiffres['exclus']++; }
         $cases = [];
         foreach ($shops as $s) {
-            $k = socRepostCase($rp, $cibles[$src][$s['id']] ?? null, $pubs[(string) $rp['content_id']][$s['id']] ?? []);
+            $k = socRepostCase($rp, $cibles[$src][$s['id']] ?? null, $pubs[(string) $rp['content_id']][$s['id']] ?? [], $s['id']);
             $cases[$s['id']] = $k;
-            if (in_array($k['statut'], ['excl', 'hors', 'ret'], true)) { continue; }
+            if (in_array($k['statut'], ['excl', 'hors', 'ret', 'direct'], true)) { continue; }
             $chiffres['attendus']++;
             $parShop[$s['id']]['attendus'] = ($parShop[$s['id']]['attendus'] ?? 0) + 1;
             match ($k['statut']) {

@@ -185,11 +185,23 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   motif de Meta et « Relancer » ; un clic sur une case donne le détail et « Reposter quand même »
   (refus, sans réponse, boutique pas visée), « Publier sans attendre » (à valider) ; « Retirer »
   supprime le repost des Pages des boutiques. Le réglage du moment est figé avec chaque publication.
-  En tête du tableau, **À venir** : les posts programmés sur la Page de la marque (Meta Business
-  Suite ou l'API, `scheduled_posts`, gardés 2 minutes, relus par « Relire la Page de la marque »),
-  avec ce que le repost en fera selon le réglage d'aujourd'hui — l'heure prévue dans chaque boutique
-  automatique, « à valider » jusqu'à quand dans les autres, ou exclu (et pourquoi), ou rien tant que
-  le repost est en pause. Une prévision : c'est à sa sortie que le guet reprend le post.
+  En tête du tableau, **À venir** : les posts de la marque pas encore sortis, avec ce que le repost
+  en fera selon le réglage d'aujourd'hui — l'heure prévue dans chaque boutique automatique, « à
+  valider » jusqu'à quand dans les autres, « par le post » pour les boutiques que le post vise déjà,
+  exclu (et pourquoi), ou rien tant que le repost est en pause. Une prévision : c'est à sa sortie que
+  le guet reprend le post. Deux sources : les posts programmés **dans le module** (« Créer un post »,
+  ligne **Page de la marque** cochée — la file les connaît d'avance, bouton « Programmer un post de
+  la marque », `?marque=1`), et ceux programmés par l'API sur sa Page (`scheduled_posts`, gardés
+  2 minutes, relus par « Relire la Page de la marque »). **Meta ne donne à aucun accès de l'API les
+  posts du planificateur de Business Suite** (sonde du 29/10/2026 sur la Page « L'Atelier by » :
+  `scheduled_posts` vide, `promotable_posts` retiré, `feed` et `ads_posts` sans eux) : ceux-là
+  n'apparaissent qu'à leur sortie.
+- **Page de la marque dans « Créer un post »** — une ligne en tête du tableau des boutiques : le post
+  (`marque: true`, canaux dans `ch.marque`) part aussi sur la Page Facebook de la marque, à l'heure
+  dite, par la file (`social_publication`, boutique `marque`, canal `fb`), au nom de la marque et dans
+  ses deux langues ; son Instagram, en Instagram unique, est le compte du réseau (une seule
+  publication avec celle des boutiques). Le repost le reprend ensuite chez les boutiques, sauf chez
+  celles que le post visait déjà (`data.direct` du repost, case « par le post »).
   Routes : `GET /repost?jours=`, `POST /repost/reglage`, `/repost/relire`, `/repost/relancer`
   `{source?, shop?}`, `/repost/forcer {source, shop?}`, `/repost/retirer {source}` ; espace
   franchisé : `GET /franchise/reposts`, `POST /franchise/reposts/repondre {source, accepter, motif}`.

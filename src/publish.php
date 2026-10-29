@@ -241,6 +241,18 @@ function socQueue(array $post, bool $maintenant = false): int
             $k++;
         }
     }
+    // La marque cochée comme une boutique (`marque`, canaux dans `ch.marque`) : le post part aussi sur
+    // sa Page Facebook, à l'heure dite — et le repost automatique le reprend ensuite chez les boutiques.
+    // Son Instagram, en Instagram unique, est le compte du réseau : une seule publication avec les boutiques.
+    if (!empty($post['marque'])) {
+        foreach (socCanauxPost($post, 'marque') as $c) {
+            if (str_starts_with($c, 'ig') && $unique) { $igReseau[$c] = true; continue; }
+            if (isset($deja['marque|' . $c])) { continue; }
+            Db::exec('INSERT INTO social_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
+                [$id, 'marque', $c, date('Y-m-d H:i:s', $t0), 'attente', date('Y-m-d H:i:s')]);
+            $k++;
+        }
+    }
     foreach (array_keys($igReseau) as $c) {
         if (isset($deja['marque|' . $c])) { continue; }
         Db::exec('INSERT INTO social_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
@@ -401,7 +413,10 @@ function socRunQueue(?string $postId = null, int $max = 60): array
         // Réservation : deux crons simultanés ne publient pas deux fois.
         if (Db::exec("UPDATE social_publication SET statut = 'en_cours', essais = essais + 1, maj_le = ? WHERE id = ? AND statut = 'attente'", [$now, $r['id']]) === 0) { continue; }
         $post = socItem('posts', (string) $r['content_id']);
-        $shop = (string) $r['shop_id'] === 'marque' && $post !== null ? socIgCompteReseau($post) : ($shops[(string) $r['shop_id']] ?? null);
+        // `marque` : sa Page Facebook parle pour toute la marque (son nom, ses deux langues) ; son Instagram
+        // est le compte du réseau, qui cite les boutiques visées.
+        $shop = (string) $r['shop_id'] === 'marque' && $post !== null
+            ? (str_starts_with((string) $r['canal'], 'fb') ? socBrand() : socIgCompteReseau($post)) : ($shops[(string) $r['shop_id']] ?? null);
         try {
             if ($post === null) { throw new MetaError('post supprimé', 0); }
             if ($shop === null) { throw new MetaError('boutique inconnue ou fermée', 0); }
@@ -524,8 +539,8 @@ function socPostSupprimer(string $id, bool $chezMeta): array
         foreach ($lignes as $r) {
             $sid = (string) $r['shop_id'];
             $ig = str_starts_with((string) $r['canal'], 'ig');
-            $shop = $sid === 'marque' ? socIgCompteReseau($post) : ($shops[$sid] ?? null);
-            $quoi = ['shop' => $sid, 'shopName' => $sid === 'marque' ? 'Instagram du réseau' : (string) ($shop['name'] ?? $sid), 'channel' => socCanalNom((string) $r['canal'])];
+            $shop = $sid === 'marque' ? ($ig ? socIgCompteReseau($post) : socBrand()) : ($shops[$sid] ?? null);
+            $quoi = ['shop' => $sid, 'shopName' => $sid === 'marque' ? ($ig ? 'Instagram du réseau' : 'Page de la marque') : (string) ($shop['name'] ?? $sid), 'channel' => socCanalNom((string) $r['canal'])];
             try {
                 if ($shop === null) { throw new MetaError('boutique inconnue ou fermée', 0); }
                 $tok = $ig ? socIgToken((string) $shop['ids']['instagram_user_id'], (string) $shop['ids']['page_id']) : Meta::pageToken((string) $shop['ids']['page_id']);

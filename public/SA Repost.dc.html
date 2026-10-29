@@ -117,10 +117,13 @@
                 <span style="font-size:10.5px;color:#8A847C;padding-left:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">{{ c.sub }}</span>
               </span>
             </sc-for>
-            <span style="border-bottom:0.5px solid rgba(34,34,34,0.06);background:#FFFFFF;"></span>
+            <span style="padding:10px 14px 10px 6px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:#FFFFFF;display:flex;align-items:center;justify-content:flex-end;">
+              <sc-if value="{{ v.hasEdit }}" hint-placeholder-val="{{ false }}"><a href="{{ v.edit }}" style="font-size:12px;font-weight:500;background:#FFFFFF;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:5px 10px;text-decoration:none;white-space:nowrap;">Modifier</a></sc-if>
+            </span>
           </div>
         </sc-for>
-        <sc-if value="{{ avVide }}" hint-placeholder-val="{{ true }}"><div style="grid-column:1 / -1;padding:14px 16px;font-size:12.5px;color:{{ avVideFg }};line-height:1.5;border-bottom:0.5px solid rgba(34,34,34,0.08);">{{ avVideTxt }}</div></sc-if>
+        <sc-if value="{{ avVide }}" hint-placeholder-val="{{ true }}"><div style="grid-column:1 / -1;padding:14px 16px;font-size:12.5px;color:{{ avVideFg }};line-height:1.5;border-bottom:0.5px solid rgba(34,34,34,0.08);display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><span style="flex:1 1 420px;">{{ avVideTxt }}</span><a href="{{ avNouveau }}" style="font-size:12px;font-weight:500;background:#8D1D2C;color:#FFFFFF;border-radius:8px;padding:7px 12px;text-decoration:none;white-space:nowrap;">Programmer un post de la marque</a></div></sc-if>
+        <sc-if value="{{ avPlus }}" hint-placeholder-val="{{ false }}"><div style="grid-column:1 / -1;padding:8px 16px;font-size:11.5px;color:#666666;line-height:1.5;border-bottom:0.5px solid rgba(34,34,34,0.08);display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><span style="flex:1 1 420px;">{{ avPlusTxt }}</span><a href="{{ avNouveau }}" style="font-size:12px;font-weight:500;color:#8D1D2C;text-decoration:none;white-space:nowrap;">+ Programmer un post de la marque</a></div></sc-if>
 
         <!-- publiées : les publications de la marque sur la période, et leur sort dans chaque boutique -->
         <div style="grid-column:1 / -1;padding:9px 14px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;background:#FBF9F5;border-bottom:0.5px solid rgba(34,34,34,0.08);">{{ pubTitre }}</div>
@@ -297,6 +300,8 @@
 const ST = {
   ok: ['#E6F2EC', '#0F6B4A', '✓'], prog: ['#E7EEF6', '#2F5D8A', '🕒'], val: ['#FBEDE4', '#8A4B00', '⏳'], ref: ['#F6E3E5', '#8D1D2C', '✗'],
   err: ['#FDE4E1', '#B3261E', '⚠'], exp: ['#F1ECE5', '#8A847C', '—'], ret: ['#F1ECE5', '#8A847C', '—'], hors: ['transparent', '#B8B2A8', '·'], excl: ['#F1ECE5', '#8A847C', '—'],
+  // La boutique était visée par le post de la marque lui-même (programmé dans le module) : pas de repost.
+  direct: ['#EEF3EA', '#4A6B3A', '✓'],
 };
 class Component extends DCLogic {
   state = { data: null, loading: true, err: '', busy: false, jours: 14, onglet: 'suivi', draft: null, sel: null, retrait: null, toast: '' };
@@ -358,9 +363,9 @@ class Component extends DCLogic {
       const exclu = l.statut === 'exclu', retire = l.statut === 'retire';
       const cases = exclu ? [] : shops.map(x => {
         const k = l.cases[x.id] || { statut: 'hors' }, [bg, fg, ic] = ST[k.statut] || ST.hors;
-        const label = ic + ' ' + ({ ok: heure(k.le, l.publieLe), prog: heure(k.le, l.publieLe), val: 'à valider', ref: 'refusé', err: 'échec', exp: 'sans réponse', ret: 'retiré', hors: 'pas visée' }[k.statut] || '');
+        const label = ic + ' ' + ({ ok: heure(k.le, l.publieLe), prog: heure(k.le, l.publieLe), val: 'à valider', ref: 'refusé', err: 'échec', exp: 'sans réponse', ret: 'retiré', hors: 'pas visée', direct: 'par le post' }[k.statut] || '');
         const sub = { ok: k.etat === 'auto' ? 'publié' : k.etatNom, prog: 'programmé', val: k.limite ? 'jusqu’à ' + heure(k.limite, l.publieLe) : '', ref: k.motif || 'sans motif',
-          err: (k.canaux || []).filter(z => z.statut === 'echec').map(z => z.canal).join(', '), exp: 'rien publié', ret: '', hors: '' }[k.statut] || '';
+          err: (k.canaux || []).filter(z => z.statut === 'echec').map(z => z.canal).join(', '), exp: 'rien publié', ret: '', hors: '', direct: 'pas reposté' }[k.statut] || '';
         const choisie = s.sel && s.sel.src === l.source && s.sel.shop === x.id;
         return { label, sub, bg, fg, tip: x.name + ' : ' + (k.detail || ''), fond: choisie ? '#FBF7F2' : (retire ? '#FBF9F5' : '#FFFFFF'), ring: choisie ? 'inset 0 0 0 2px #8D1D2C' : 'none',
           ouvrir: () => this.setState({ sel: choisie ? null : { src: l.source, shop: x.id } }) };
@@ -386,19 +391,25 @@ class Component extends DCLogic {
       const pause = !r.actif, bandeau = pause || !!v.exclu;
       const cases = bandeau ? [] : shops.map(x => {
         const k = v.cases[x.id] || { statut: 'hors' }, [bg, fg, ic] = ST[k.statut] || ST.hors;
-        const label = ic + ' ' + ({ prog: heure(k.le, v.prevuLe), val: 'à valider', hors: 'pas visée' }[k.statut] || '');
-        const sub = { prog: 'repost prévu', val: 'jusqu’à ' + heure(k.limite, v.prevuLe), hors: '' }[k.statut] || '';
-        const tip = x.name + ' : ' + ({ prog: 'repost prévu le ' + dt(k.le), val: 'proposé au franchisé à la sortie du post, réponse attendue avant le ' + dt(k.limite), hors: 'boutique pas visée' }[k.statut] || '');
+        const label = ic + ' ' + ({ prog: heure(k.le, v.prevuLe), val: 'à valider', hors: 'pas visée', direct: 'par le post' }[k.statut] || '');
+        const sub = { prog: 'repost prévu', val: 'jusqu’à ' + heure(k.limite, v.prevuLe), hors: '', direct: 'visée par le post' }[k.statut] || '';
+        const tip = x.name + ' : ' + ({ prog: 'repost prévu le ' + dt(k.le), val: 'proposé au franchisé à la sortie du post, réponse attendue avant le ' + dt(k.limite), hors: 'boutique pas visée',
+          direct: 'le post de la marque vise déjà la boutique : publié chez elle à la même heure, pas reposté' }[k.statut] || '');
         return { label, sub, bg: bg === 'transparent' ? '#FFFFFF' : bg, fg, tip };
       });
-      return { quand: 'Sort le ' + dt(v.prevuLe), type: v.type, mode: v.exclu ? 'exclu' : v.mode === 'copie' ? 'sera copié' : 'sera partagé', modeFg: bandeau ? '#8A847C' : '#2F5D8A',
+      const module = v.origine === 'module';
+      return { quand: 'Sort le ' + dt(v.prevuLe) + (module ? ' · programmé dans le module' : ''), type: v.type, hasEdit: module, edit: module ? SA.href('post', 'id=' + encodeURIComponent(v.source)) : '#', mode: v.exclu ? 'exclu' : v.mode === 'copie' ? 'sera copié' : 'sera partagé', modeFg: bandeau ? '#8A847C' : '#2F5D8A',
         titre: v.titre, texte: v.texte, extrait: String(v.texte || '').replace(/\s+/g, ' ').slice(0, 140), img: v.img || '', hasImg: !!v.img, noImg: !v.img, op: bandeau ? 0.55 : 1,
         bandeau, bandeauTxt: pause ? '— Repost en pause : ne sera pas repris' : '— Sera exclu : ' + v.exclu, span: '2 / span ' + Math.max(1, n), cases };
     });
     const nAv = av.posts.length, nAvRepris = av.posts.filter(v => !v.exclu).length;
-    const avVideTxt = !d ? '' : av.erreur ? 'Posts programmés de la Page de la marque illisibles chez Meta : ' + av.erreur
-      : !d.metaConfigure || !d.marque.pageId ? 'Les posts programmés de la marque s’afficheront ici dès que le token Meta et la Page de la marque seront renseignés.'
-      : 'Aucun post programmé sur la Page de la marque. Programmez-les dans Meta Business Suite : ils s’affichent ici avec l’heure de leur repost dans chaque boutique.';
+    // Meta ne donne pas à l'API les posts du planificateur de Business Suite : seuls ceux programmés dans le module
+    // (« Créer un post », Page de la marque cochée) ou par l'API sont connus avant leur sortie.
+    const bs = 'Meta ne transmet pas les posts programmés dans Business Suite : ils n’apparaissent qu’à leur sortie.';
+    const avVideTxt = !d ? '' : (av.erreur ? 'Posts programmés par l’API illisibles chez Meta (' + av.erreur + '). ' : '')
+      + (!d.metaConfigure || !d.marque.pageId ? 'Renseignez le token Meta et la Page de la marque pour publier sur sa Page. '
+        : 'Aucun post de la marque programmé. Programmez-le ici, Page de la marque cochée : il s’affiche aussitôt avec l’heure de son repost dans chaque boutique. ')
+      + bs;
 
     // --- la case ouverte ---
     let sel = null;
@@ -407,14 +418,14 @@ class Component extends DCLogic {
       const k = l && x ? (l.cases[x.id] || { statut: 'hors' }) : null;
       if (k) {
         const [bg, fg] = ST[k.statut] || ST.hors;
-        const lab = { ok: 'Publié', prog: 'Programmé', val: 'À valider par le franchisé', ref: 'Refusé par le franchisé', err: 'Échec chez Meta', exp: 'Sans réponse : rien publié', ret: 'Retiré', hors: 'Boutique pas visée' }[k.statut] || '';
+        const lab = { ok: 'Publié', prog: 'Programmé', val: 'À valider par le franchisé', ref: 'Refusé par le franchisé', err: 'Échec chez Meta', exp: 'Sans réponse : rien publié', ret: 'Retiré', hors: 'Boutique pas visée', direct: 'Visée par le post de la marque' }[k.statut] || '';
         const lignesSel = [];
         if (k.statut === 'ok') lignesSel.push('Publié le ' + dt(k.le) + (k.etat && k.etat !== 'auto' ? ' · ' + k.etatNom + (k.par ? ' par ' + k.par : '') : ''));
         if (k.statut === 'prog') lignesSel.push('Part le ' + dt(k.le) + ' (' + k.etatNom + ')');
         if (k.statut === 'val') lignesSel.push('Proposé à la boutique · réponse attendue avant le ' + dt(k.limite) + ' ; ' + (r.sansReponse === 'publier' ? 'sans réponse, il part quand même.' : 'sans réponse, rien ne part.'));
         if (k.statut === 'ref' && k.reponduLe) lignesSel.push('Refusé le ' + dt(k.reponduLe) + (k.par ? ' par ' + k.par : ''));
         (k.canaux || []).filter(z => z.statut === 'echec').forEach(z => lignesSel.push(z.canal + ' : ' + z.erreur));
-        if (k.statut === 'hors' || k.statut === 'exp' || k.statut === 'ret') lignesSel.push(k.detail || '');
+        if (k.statut === 'hors' || k.statut === 'exp' || k.statut === 'ret' || k.statut === 'direct') lignesSel.push(k.detail || '');
         const act = k.statut === 'err' ? ['Relancer ' + x.name, () => this.agir(SA.repostRelancer, { source: l.source, shop: x.id }, (y) => y.relances ? 'Relancé' : 'Rien à relancer')]
           : ['ref', 'exp', 'hors'].indexOf(k.statut) >= 0 && l.statut === 'reposte' ? ['Reposter quand même', () => this.agir(SA.repostForcer, { source: l.source, shop: x.id }, 'Reposté sur la Page de ' + x.name)]
           : k.statut === 'val' ? ['Publier sans attendre', () => this.agir(SA.repostForcer, { source: l.source, shop: x.id }, 'Publié sur la Page de ' + x.name)] : null;
@@ -467,7 +478,8 @@ class Component extends DCLogic {
       cols: 'minmax(320px,2.6fr) repeat(' + Math.max(1, n) + ', minmax(112px,1fr)) 150px', minW: (320 + 112 * Math.max(1, n) + 150) + 'px',
       entetes, lignes, vide: !!d && !lignes.length,
       avTitre: 'À venir · ' + (nAv ? nAv + ' post' + (nAv > 1 ? 's' : '') + ' programmé' + (nAv > 1 ? 's' : '') : 'posts programmés') + ' sur la Page de la marque',
-      avLignes, avVide: !!d && !nAv, avVideTxt, avVideFg: av.erreur ? '#8D1D2C' : '#666666',
+      avLignes, avVide: !!d && !nAv, avVideTxt, avVideFg: av.erreur ? '#8D1D2C' : '#666666', avNouveau: SA.href('post', 'marque=1'),
+      avPlus: !!d && nAv > 0, avPlusTxt: (av.erreur ? 'Posts programmés par l’API illisibles chez Meta (' + av.erreur + '). ' : '') + bs,
       pubTitre: 'Publiées · ' + s.jours + ' derniers jours',
       videTxt: !d ? '' : r.actif ? 'Aucune publication de la Page de la marque sur les ' + s.jours + ' derniers jours depuis l’activation.' : 'Le repost est en pause. Activez-le (en haut à droite) : les prochaines publications de la Page de la marque seront reprises.',
       legende: [['ok', '✓ publié'], ['prog', '🕒 programmé'], ['val', '⏳ à valider'], ['ref', '✗ refusé'], ['err', '⚠ échec'], ['exp', '— sans réponse']].map(([k, label]) => ({ label, bg: ST[k][0], fg: ST[k][1] })),

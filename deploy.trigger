@@ -141,3 +141,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-10-29T10:32:09Z repost automatique : posts programmes de la marque (a venir)
 2026-10-29T11:01:11Z sonde : posts programmes de la Page de la marque
 2026-10-29T11:03:40Z connexion Meta partagee avec le CRM (meta_connexion) et relais des webhooks
+2026-10-29T11:39:30Z posts de la marque programmes dans le module (Page de la marque), a venir du repost
