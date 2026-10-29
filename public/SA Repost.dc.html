@@ -91,6 +91,39 @@
         </sc-for>
         <span style="background:#FBF9F5;border-bottom:0.5px solid rgba(34,34,34,0.10);"></span>
 
+        <!-- à venir : les posts programmés sur la Page de la marque, et le repost prévu dans chaque boutique -->
+        <div style="grid-column:1 / -1;padding:9px 14px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#2F5D8A;background:#F3F6FA;border-bottom:0.5px solid rgba(34,34,34,0.08);">{{ avTitre }}</div>
+        <sc-for list="{{ avLignes }}" as="v" hint-placeholder-count="0">
+          <div style="display:contents;">
+            <span style="padding:10px 14px;border-bottom:0.5px solid rgba(34,34,34,0.06);display:flex;gap:10px;align-items:center;min-width:0;background:#FFFFFF;">
+              <span style="width:52px;height:52px;border-radius:8px;flex:0 0 auto;background:#F2C9A0;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;font-size:10px;color:#6b4420;">
+                <sc-if value="{{ v.hasImg }}" hint-placeholder-val="{{ false }}"><img src="{{ v.img }}" alt="" style="width:100%;height:100%;object-fit:cover;opacity:{{ v.op }};"></sc-if>
+                <sc-if value="{{ v.noImg }}" hint-placeholder-val="{{ true }}">{{ v.type }}</sc-if>
+              </span>
+              <span style="display:flex;flex-direction:column;gap:2px;min-width:0;">
+                <span style="font-size:11px;color:#666666;">{{ v.quand }} · {{ v.type }} · <span style="color:{{ v.modeFg }};">{{ v.mode }}</span></span>
+                <span title="{{ v.texte }}" style="font-size:13px;font-weight:500;color:#222222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;">{{ v.titre }}</span>
+                <span style="font-size:11.5px;color:#666666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;">{{ v.extrait }}</span>
+              </span>
+            </span>
+            <sc-if value="{{ v.bandeau }}" hint-placeholder-val="{{ false }}">
+              <span style="grid-column:{{ v.span }};padding:10px 8px;border-bottom:0.5px solid rgba(34,34,34,0.06);background:#FFFFFF;display:flex;align-items:center;">
+                <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 9px;background:#F1ECE5;color:#8A847C;">{{ v.bandeauTxt }}</span>
+              </span>
+            </sc-if>
+            <sc-for list="{{ v.cases }}" as="c" hint-placeholder-count="0">
+              <span title="{{ c.tip }}" style="border-bottom:0.5px solid rgba(34,34,34,0.06);background:#FFFFFF;padding:10px 8px;display:flex;flex-direction:column;gap:3px;align-items:flex-start;min-width:0;">
+                <span style="font-size:11px;font-weight:500;border-radius:999px;padding:3px 8px;background:{{ c.bg }};color:{{ c.fg }};white-space:nowrap;">{{ c.label }}</span>
+                <span style="font-size:10.5px;color:#8A847C;padding-left:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">{{ c.sub }}</span>
+              </span>
+            </sc-for>
+            <span style="border-bottom:0.5px solid rgba(34,34,34,0.06);background:#FFFFFF;"></span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ avVide }}" hint-placeholder-val="{{ true }}"><div style="grid-column:1 / -1;padding:14px 16px;font-size:12.5px;color:{{ avVideFg }};line-height:1.5;border-bottom:0.5px solid rgba(34,34,34,0.08);">{{ avVideTxt }}</div></sc-if>
+
+        <!-- publiées : les publications de la marque sur la période, et leur sort dans chaque boutique -->
+        <div style="grid-column:1 / -1;padding:9px 14px;font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#666666;background:#FBF9F5;border-bottom:0.5px solid rgba(34,34,34,0.08);">{{ pubTitre }}</div>
         <sc-for list="{{ lignes }}" as="l" hint-placeholder-count="0">
           <div style="display:contents;">
             <span style="padding:10px 14px;border-bottom:0.5px solid rgba(34,34,34,0.06);display:flex;gap:10px;align-items:center;min-width:0;background:{{ l.bg }};">
@@ -259,7 +292,8 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
 // Le repost automatique (src/repost.php) : chaque nouveau post de la Page de la marque repris sur les Pages des boutiques.
-// Suivi : une ligne par publication de la marque, une colonne par boutique ; Réglage ; Côté franchisé (ce qui attend sa réponse).
+// Suivi : en tête, les posts programmés de la marque (à venir) et leur repost prévu ; puis une ligne par publication de la marque,
+// une colonne par boutique ; Réglage ; Côté franchisé (ce qui attend sa réponse).
 const ST = {
   ok: ['#E6F2EC', '#0F6B4A', '✓'], prog: ['#E7EEF6', '#2F5D8A', '🕒'], val: ['#FBEDE4', '#8A4B00', '⏳'], ref: ['#F6E3E5', '#8D1D2C', '✗'],
   err: ['#FDE4E1', '#B3261E', '⚠'], exp: ['#F1ECE5', '#8A847C', '—'], ret: ['#F1ECE5', '#8A847C', '—'], hors: ['transparent', '#B8B2A8', '·'], excl: ['#F1ECE5', '#8A847C', '—'],
@@ -346,6 +380,26 @@ class Component extends DCLogic {
         hasAction: !!act, actionLabel: act ? act[0] : '', action: act ? act[1] : () => {}, actBg: confirmer ? '#8D1D2C' : '#FFFFFF', actFg: confirmer ? '#FFFFFF' : '#222222' };
     });
 
+    // --- à venir : les posts programmés de la marque, et leur repost prévu avec le réglage d'aujourd'hui ---
+    const av = (d && d.aVenir) || { posts: [], erreur: null };
+    const avLignes = av.posts.map(v => {
+      const pause = !r.actif, bandeau = pause || !!v.exclu;
+      const cases = bandeau ? [] : shops.map(x => {
+        const k = v.cases[x.id] || { statut: 'hors' }, [bg, fg, ic] = ST[k.statut] || ST.hors;
+        const label = ic + ' ' + ({ prog: heure(k.le, v.prevuLe), val: 'à valider', hors: 'pas visée' }[k.statut] || '');
+        const sub = { prog: 'repost prévu', val: 'jusqu’à ' + heure(k.limite, v.prevuLe), hors: '' }[k.statut] || '';
+        const tip = x.name + ' : ' + ({ prog: 'repost prévu le ' + dt(k.le), val: 'proposé au franchisé à la sortie du post, réponse attendue avant le ' + dt(k.limite), hors: 'boutique pas visée' }[k.statut] || '');
+        return { label, sub, bg: bg === 'transparent' ? '#FFFFFF' : bg, fg, tip };
+      });
+      return { quand: 'Sort le ' + dt(v.prevuLe), type: v.type, mode: v.exclu ? 'exclu' : v.mode === 'copie' ? 'sera copié' : 'sera partagé', modeFg: bandeau ? '#8A847C' : '#2F5D8A',
+        titre: v.titre, texte: v.texte, extrait: String(v.texte || '').replace(/\s+/g, ' ').slice(0, 140), img: v.img || '', hasImg: !!v.img, noImg: !v.img, op: bandeau ? 0.55 : 1,
+        bandeau, bandeauTxt: pause ? '— Repost en pause : ne sera pas repris' : '— Sera exclu : ' + v.exclu, span: '2 / span ' + Math.max(1, n), cases };
+    });
+    const nAv = av.posts.length, nAvRepris = av.posts.filter(v => !v.exclu).length;
+    const avVideTxt = !d ? '' : av.erreur ? 'Posts programmés de la Page de la marque illisibles chez Meta : ' + av.erreur
+      : !d.metaConfigure || !d.marque.pageId ? 'Les posts programmés de la marque s’afficheront ici dès que le token Meta et la Page de la marque seront renseignés.'
+      : 'Aucun post programmé sur la Page de la marque. Programmez-les dans Meta Business Suite : ils s’affichent ici avec l’heure de leur repost dans chaque boutique.';
+
     // --- la case ouverte ---
     let sel = null;
     if (d && s.sel) {
@@ -402,7 +456,8 @@ class Component extends DCLogic {
       onglets: [['suivi', 'Suivi'], ['reglage', 'Réglage'], ['franchise', 'Côté franchisé' + (nAtt ? ' · ' + nAtt : '')]].map(([k, label]) => ({ label, on: s.onglet === k ? 'true' : 'false',
         bar: s.onglet === k ? '#8D1D2C' : 'transparent', fg: s.onglet === k ? '#8D1D2C' : '#666666', w: s.onglet === k ? 500 : 400, pick: () => this.setState({ onglet: k, sel: null }) })),
       isSuivi: s.onglet === 'suivi', isReglage: s.onglet === 'reglage', isFranchise: s.onglet === 'franchise',
-      tuiles: [['Publications de la marque', fI(c.posts), c.exclus ? c.exclus + ' exclue' + (c.exclus > 1 ? 's' : '') + ' par le réglage' : 'sur ' + s.jours + ' jours', '#222222'],
+      tuiles: [['Posts à venir', fI(nAv), nAv ? 'prochain le ' + dt(av.posts[0].prevuLe) + (nAvRepris < nAv ? ' · ' + (nAv - nAvRepris) + ' exclu' + (nAv - nAvRepris > 1 ? 's' : '') : '') : 'rien de programmé', '#2F5D8A'],
+        ['Publications de la marque', fI(c.posts), c.exclus ? c.exclus + ' exclue' + (c.exclus > 1 ? 's' : '') + ' par le réglage' : 'sur ' + s.jours + ' jours', '#222222'],
         ['Reposts publiés', fI(c.publies) + (c.attendus ? ' / ' + fI(c.attendus) : ''), c.attendus ? Math.round(100 * c.publies / c.attendus) + ' % des reposts attendus' : 'rien d’attendu', '#0F6B4A'],
         ['Programmés', fI(c.programmes), 'partent à leur heure', '#2F5D8A'],
         ['À valider', fI(c.aValider), 'en attente du franchisé', c.aValider ? '#8A4B00' : '#222222'],
@@ -411,6 +466,9 @@ class Component extends DCLogic {
       alertes,
       cols: 'minmax(320px,2.6fr) repeat(' + Math.max(1, n) + ', minmax(112px,1fr)) 150px', minW: (320 + 112 * Math.max(1, n) + 150) + 'px',
       entetes, lignes, vide: !!d && !lignes.length,
+      avTitre: 'À venir · ' + (nAv ? nAv + ' post' + (nAv > 1 ? 's' : '') + ' programmé' + (nAv > 1 ? 's' : '') : 'posts programmés') + ' sur la Page de la marque',
+      avLignes, avVide: !!d && !nAv, avVideTxt, avVideFg: av.erreur ? '#8D1D2C' : '#666666',
+      pubTitre: 'Publiées · ' + s.jours + ' derniers jours',
       videTxt: !d ? '' : r.actif ? 'Aucune publication de la Page de la marque sur les ' + s.jours + ' derniers jours depuis l’activation.' : 'Le repost est en pause. Activez-le (en haut à droite) : les prochaines publications de la Page de la marque seront reprises.',
       legende: [['ok', '✓ publié'], ['prog', '🕒 programmé'], ['val', '⏳ à valider'], ['ref', '✗ refusé'], ['err', '⚠ échec'], ['exp', '— sans réponse']].map(([k, label]) => ({ label, bg: ST[k][0], fg: ST[k][1] })),
       legendeTxt: 'Un clic sur une case : le détail, et ce que le réseau peut y faire. L’en-tête d’une colonne passe la boutique en automatique ou en validation. « Retirer » supprime le repost des Pages des boutiques.',

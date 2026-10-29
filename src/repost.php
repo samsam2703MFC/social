@@ -445,6 +445,74 @@ function socRepostRetirer(string $src): array
     return $r;
 }
 
+/* --- les publications à venir ------------------------------------------------------------------- */
+
+const SOC_REPOST_AVENIR_S = 120;  // les posts programmés de la marque relus au plus toutes les 2 minutes
+
+/**
+ * Les posts programmés sur la Page de la marque (Meta Business Suite, ou l'API) : ce qu'elle publiera,
+ * et que le guet reprendra à sa sortie. Lus chez Meta et gardés 2 minutes (`repost_avenir`) : chaque
+ * geste de l'écran rend la vue entière, il ne relit pas Meta à chaque fois. `$forcer` : « Relire ».
+ * Rend ['le', 'posts' => publications telles que Meta les donne, 'erreur'].
+ */
+function socRepostProgrammes(bool $forcer = false): array
+{
+    $avant = socSetting('repost_avenir');
+    if (!$forcer && is_array($avant) && time() - (int) strtotime((string) ($avant['le'] ?? '')) < SOC_REPOST_AVENIR_S) { return $avant; }
+    $r = ['le' => date('Y-m-d H:i:s'), 'posts' => [], 'erreur' => null];
+    $page = (string) (socBrand()['ids']['page_id'] ?? '');
+    // Sans token ni Page de la marque, le bandeau du guet dit déjà ce qui manque.
+    if (!Meta::configured() || $page === '') { return $r; }
+    try {
+        $tok = Meta::pageToken($page);
+        // Les médias d'abord (le type, la copie possible) ; l'essentiel seulement si Meta les refuse.
+        $echec = null;
+        foreach ([SOC_REPOST_CHAMPS . ',scheduled_publish_time', 'id,message,scheduled_publish_time,full_picture,permalink_url'] as $champs) {
+            try { $r['posts'] = socGraphTout($page . '/scheduled_posts', ['fields' => $champs, 'limit' => 100], 200, $tok); $echec = null; break; }
+            catch (MetaError $e) {
+                $echec = $e;
+                if (!in_array($e->metaCode, [10, 100, 200], true)) { throw $e; }
+            }
+        }
+        if ($echec !== null) { throw $echec; }
+    } catch (MetaError $e) {
+        $r['erreur'] = $e->getMessage();
+    }
+    socSettingPut('repost_avenir', $r, false);
+    return $r;
+}
+
+/**
+ * Ce que le repost fera des posts programmés de la marque, avec le réglage d'aujourd'hui : exclu (et
+ * pourquoi), ou repris — à quelle heure dans chaque boutique automatique, jusqu'à quand le franchisé
+ * peut valider dans les autres. Une prévision : le réglage du moment où le post sortira décidera.
+ */
+function socRepostAVenir(array $c, array $shops, bool $forcer = false): array
+{
+    $p = socRepostProgrammes($forcer);
+    $posts = [];
+    foreach ($p['posts'] as $x) {
+        $t = (int) ($x['scheduled_publish_time'] ?? 0);
+        if ((string) ($x['id'] ?? '') === '' || $t <= time()) { continue; }
+        [$type, , $copiable] = socRepostMedias($x);
+        $motif = socRepostExclu($x, $c);
+        $repost = socRepostCreneau($t + 60 * (int) $c['delaiMin'], $c);
+        $cases = [];
+        foreach ($shops as $s) {
+            $b = $c['boutiques'][$s['id']] ?? ['on' => false, 'validation' => false];
+            $cases[$s['id']] = !$b['on'] ? ['statut' => 'hors'] : ($b['validation']
+                ? ['statut' => 'val', 'limite' => date('Y-m-d H:i:s', $t + 3600 * (int) $c['delaiValidationH'])]
+                : ['statut' => 'prog', 'le' => date('Y-m-d H:i:s', $repost)]);
+        }
+        $posts[] = ['source' => (string) $x['id'], 'prevuLe' => date('Y-m-d H:i:s', $t), 'type' => $type,
+            'titre' => socCalTitre((string) ($x['message'] ?? ''), $type . ' de la marque'), 'texte' => (string) ($x['message'] ?? ''),
+            'img' => (string) ($x['full_picture'] ?? '') ?: null, 'exclu' => $motif, 'repostLe' => $motif === null ? date('Y-m-d H:i:s', $repost) : null,
+            'mode' => $c['mode'] === 'copie' && $copiable ? 'copie' : 'partage', 'cases' => $cases];
+    }
+    usort($posts, static fn ($a, $b) => strcmp($a['prevuLe'], $b['prevuLe']));
+    return ['le' => $p['le'], 'erreur' => $p['erreur'], 'posts' => $posts];
+}
+
 /* --- ce que les écrans lisent ------------------------------------------------------------------- */
 
 function socRepostEtatNom(string $etat): string
@@ -488,8 +556,11 @@ function socRepostCase(array $rp, ?array $cb, array $pubs): array
     return $base + ['statut' => 'prog', 'le' => min(array_column(array_filter($canaux, static fn ($x) => $x['statut'] !== 'publie'), 'prevue')), 'detail' => socRepostEtatNom($etat), 'canaux' => $canaux];
 }
 
-/** L'écran « Repost automatique » : le réglage, les publications de la marque sur la période et leur sort dans chaque boutique. */
-function socRepostVue(int $jours = 14): array
+/**
+ * L'écran « Repost automatique » : le réglage, les publications de la marque sur la période et leur sort
+ * dans chaque boutique, et ses posts programmés avec le repost prévu. `$relire` : relit les programmés.
+ */
+function socRepostVue(int $jours = 14, bool $relire = false): array
 {
     $jours = in_array($jours, [7, 14, 30, 90], true) ? $jours : 14;
     $c = socRepostConfig();
@@ -558,6 +629,7 @@ function socRepostVue(int $jours = 14): array
     $b = socBrand();
     return [
         'reglage' => $c, 'jours' => $jours, 'shops' => $shops, 'lignes' => $lignes, 'chiffres' => $chiffres, 'alertes' => array_values($alertes), 'attente' => $attente,
+        'aVenir' => socRepostAVenir($c, $shops, $relire),
         'guet' => socSetting('repost_guet'), 'marque' => ['name' => $b['name'], 'pageId' => (string) ($b['ids']['page_id'] ?? ''), 'fb' => (string) $b['fb']],
         'instagramUnique' => socIgUnique(), 'metaConfigure' => Meta::configured(), 'franchiseUrl' => (string) (socSetting('url_franchise') ?? '/social_franchisee/'),
     ];

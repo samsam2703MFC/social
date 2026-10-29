@@ -2721,7 +2721,8 @@ $rpRegAvant = sfRegles();
 socShopPut('marque', ['ids' => array_merge($rpMarqueAvant, ['page_id' => '999'])]);
 socSettingPut('instagram_unique', true, false);
 sfReglesPut(array_merge($rpRegAvant, ['actif' => true]));
-$GLOBALS['RP_POSTS'] = [];
+$GLOBALS['RP_POSTS'] = []; $GLOBALS['RP_PROG'] = []; $GLOBALS['RP_PROG_ERR'] = false;
+socSettingPut('repost_avenir', null, false);
 $rpIso = static fn (int $minutes) => gmdate('Y-m-d\TH:i:s+0000', time() - 60 * $minutes);
 $rpPost = static fn (string $id, int $avant, string $texte, string $type = 'PHOTO', array $extra = []) => array_merge(['id' => '999_' . $id, 'message' => $texte, 'created_time' => $rpIso($avant),
     'permalink_url' => 'https://www.facebook.com/999/posts/' . $id, 'full_picture' => 'https://scontent.fb/' . $id . '.jpg', 'status_type' => $type === 'VIDEO' ? 'added_video' : 'added_photos',
@@ -2737,6 +2738,12 @@ Meta::$transport = static function (string $m, string $url, array $p) use (&$app
         $appels[] = [$m, $path, $p];
         if (($p['access_token'] ?? '') !== 'PT999') { return [400, ['error' => ['code' => 190, 'message' => 'mauvais token']]]; }
         return [200, ['data' => array_values(array_filter($GLOBALS['RP_POSTS'], static fn ($x) => strtotime($x['created_time']) >= (int) ($p['since'] ?? 0)))]];
+    }
+    if ($m === 'GET' && $path === '999/scheduled_posts') {
+        $appels[] = [$m, $path, $p];
+        if (($p['access_token'] ?? '') !== 'PT999') { return [400, ['error' => ['code' => 190, 'message' => 'mauvais token']]]; }
+        if ($GLOBALS['RP_PROG_ERR']) { return [400, ['error' => ['code' => 368, 'message' => 'Page restreinte']]]; }
+        return [200, ['data' => $GLOBALS['RP_PROG']]];
     }
     return ($rpTransportAvant)($m, $url, $p);
 };
@@ -2805,6 +2812,37 @@ check('écran : une case par boutique (publié avec lien, refusé avec motif, ex
     && ($cases['999_p3']['5']['statut'] ?? '') === 'ref' && ($cases['999_p3']['5']['motif'] ?? '') === 'Plus de levain ce week-end' && ($cases['999_p2']['4']['statut'] ?? '') === 'excl', json_encode($cases));
 check('écran : taux de reprise par boutique, Wavre en validation', array_column($v['shops'], 'repris', 'id') === ['4' => 100, '5' => 50] && array_column($v['shops'], 'validation', 'id') === ['4' => false, '5' => true]);
 
+// Les posts programmés de la marque : ce qui sera repris, à quelle heure, et par qui.
+$rpProg = static fn (string $id, int $dans, string $texte) => $rpPost($id, -$dans, $texte, 'PHOTO', ['scheduled_publish_time' => time() + 60 * $dans]);
+$GLOBALS['RP_PROG'] = [
+    $rpProg('q2', 180, 'Nos bûches de Noël arrivent'),
+    $rpProg('q1', 60, 'Le chausson aux pommes revient demain'),
+    $rpProg('q3', 120, 'On recrute à Wavre : vendeuse le samedi'),
+    $rpProg('q0', -10, 'Déjà sorti, pas encore relu'),
+];
+socSettingPut('repost_avenir', null, false);
+$appels = [];
+[$code, $v] = $fr('GET', '/repost', [], ['jours' => '7']);
+$av = $v['aVenir'] ?? [];
+$avCases = array_column($av['posts'] ?? [], 'cases', 'source');
+$avPrevu = date('Y-m-d H:i:s', socRepostCreneau((int) $GLOBALS['RP_PROG'][1]['scheduled_publish_time'], socRepostConfig()));
+check('à venir : les posts programmés de la marque, lus avec le token de sa Page, dans l’ordre, sans ceux déjà sortis', $code === 200 && $av['erreur'] === null
+    && array_column($av['posts'] ?? [], 'source') === ['999_q1', '999_q3', '999_q2'] && count($appelsVers('#^999/scheduled_posts$#')) === 1, json_encode($av));
+check('à venir : repris à l’heure prévue chez Halle (automatique), à valider chez Wavre', ($avCases['999_q1']['4'] ?? null) === ['statut' => 'prog', 'le' => $avPrevu]
+    && ($avCases['999_q1']['5']['statut'] ?? '') === 'val' && ($av['posts'][0]['repostLe'] ?? '') === $avPrevu, json_encode($avCases));
+check('à venir : un mot exclu est annoncé avant la sortie, avec le motif', ($av['posts'][1]['exclu'] ?? '') === 'contient « recrute »' && $av['posts'][1]['repostLe'] === null);
+$appels = [];
+$fr('GET', '/repost');
+check('à venir : gardés 2 minutes, Meta pas relu à chaque geste', !$appelsVers('#^999/scheduled_posts$#'));
+$fr('POST', '/repost/relire', []);
+check('« Relire la Page de la marque » relit aussi les posts programmés', count($appelsVers('#^999/scheduled_posts$#')) === 1);
+$GLOBALS['RP_PROG_ERR'] = true;
+[$code, $v] = $fr('POST', '/repost/relire', []);
+check('posts programmés illisibles : l’écran s’affiche quand même, avec le motif de Meta', $code === 200 && ($v['aVenir']['erreur'] ?? '') !== '' && ($v['aVenir']['posts'] ?? null) === []
+    && count($v['lignes']) === 3, json_encode($v['aVenir'] ?? null));
+$GLOBALS['RP_PROG_ERR'] = false; $GLOBALS['RP_PROG'] = [];
+socSettingPut('repost_avenir', null, false);
+
 // Échec chez Meta, alerte, relance.
 $restreinte['111'] = true;
 $GLOBALS['RP_POSTS'][] = $rpPost('p4', 5, 'Biscuits d’Halloween');
@@ -2860,7 +2898,7 @@ socSettingPut('instagram_unique', $rpIgAvant, false);
 sfReglesPut($rpRegAvant);
 foreach (Db::rows('SELECT content_id FROM social_repost') as $r) { Db::exec('DELETE FROM social_publication WHERE content_id = ?', [$r['content_id']]); socItemDelete('posts', (string) $r['content_id']); }
 Db::exec('DELETE FROM social_repost'); Db::exec('DELETE FROM social_repost_cible');
-socSettingPut('repost', null, false); socSettingPut('repost_guet', null, false);
+socSettingPut('repost', null, false); socSettingPut('repost_guet', null, false); socSettingPut('repost_avenir', null, false);
 
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');
