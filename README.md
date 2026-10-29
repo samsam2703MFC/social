@@ -161,10 +161,16 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   motif de Meta et « Relancer » ; un clic sur une case donne le détail et « Reposter quand même »
   (refus, sans réponse, boutique pas visée), « Publier sans attendre » (à valider) ; « Retirer »
   supprime le repost des Pages des boutiques. Le réglage du moment est figé avec chaque publication.
+  En tête du tableau, **À venir** : les posts programmés sur la Page de la marque (Meta Business
+  Suite ou l'API, `scheduled_posts`, gardés 2 minutes, relus par « Relire la Page de la marque »),
+  avec ce que le repost en fera selon le réglage d'aujourd'hui — l'heure prévue dans chaque boutique
+  automatique, « à valider » jusqu'à quand dans les autres, ou exclu (et pourquoi), ou rien tant que
+  le repost est en pause. Une prévision : c'est à sa sortie que le guet reprend le post.
   Routes : `GET /repost?jours=`, `POST /repost/reglage`, `/repost/relire`, `/repost/relancer`
   `{source?, shop?}`, `/repost/forcer {source, shop?}`, `/repost/retirer {source}` ; espace
   franchisé : `GET /franchise/reposts`, `POST /franchise/reposts/repondre {source, accepter, motif}`.
-  Réglage : `social_parametre.repost` ; dernier passage : `repost_guet`.
+  Réglage : `social_parametre.repost` ; dernier passage : `repost_guet` ; posts programmés lus :
+  `repost_avenir`.
 - **Posts** — file tenue par le backend (`social_publication`) : « Programmé » =
   en file à l'heure dite, étalée de `X / (n−1)` minutes par Page ; « Publier
   maintenant » = publié dans la requête. Variables `{ville}`, `{adresse}`,

@@ -169,7 +169,7 @@ function socRoute(string $method, string $path): array
     // Le repost automatique (src/repost.php) : réglage, suivi des publications de la marque reprises, gestes du réseau.
     if ($method === 'GET' && $path === '/repost') { return [200, socRepostVue((int) ($_GET['jours'] ?? 14))]; }
     if ($method === 'POST' && $path === '/repost/reglage') { socRepostConfigPut(body()); return [200, socRepostVue((int) (body()['jours'] ?? 14))]; }
-    if ($method === 'POST' && $path === '/repost/relire') { $g = socRepostGuet(true); return [200, ['guet' => $g] + socRepostVue((int) (body()['jours'] ?? 14))]; }
+    if ($method === 'POST' && $path === '/repost/relire') { $g = socRepostGuet(true); return [200, ['guet' => $g] + socRepostVue((int) (body()['jours'] ?? 14), true)]; }
     if ($method === 'POST' && $path === '/repost/relancer') {
         $b = body();
         $n = socRepostRelancer(isset($b['source']) ? (string) $b['source'] : null, isset($b['shop']) ? (string) $b['shop'] : null);
