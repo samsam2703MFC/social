@@ -51,6 +51,38 @@ try {
     }
 } catch (Throwable $e) { echo "  Meta : " . $e->getMessage() . "\n"; }
 
+// Meta (lecture seule) : les posts programmés de la Page de la marque. Le repost les montre « À venir »
+// (scheduled_posts), mais ceux de Meta Business Suite n'y apparaissent pas : quel accès les rend ?
+try {
+    $bp = (string) (socBrand()['ids']['page_id'] ?? '');
+    echo "== Meta : posts programmés de la Page de la marque ($bp) ==\n";
+    if ($bp !== '') {
+        $bt = Meta::pageToken($bp);
+        try {
+            $i = Meta::call('GET', $bp, ['fields' => 'name,link,has_transitioned_to_new_page_experience'], $bt);
+            echo '  Page : ' . ($i['name'] ?? '?') . ' · ' . ($i['link'] ?? '') . ' · nouvelle expérience des Pages : ' . json_encode($i['has_transitioned_to_new_page_experience'] ?? null) . "\n";
+        } catch (MetaError $e) { echo '  Page : refus (' . $e->metaCode . ') ' . mb_substr($e->getMessage(), 0, 140) . "\n"; }
+        $quand = static fn ($t) => date('d/m H:i', is_numeric($t) ? (int) $t : (int) strtotime((string) $t));
+        $court = static fn (array $x) => ($x['id'] ?? '?') . ' · ' . (isset($x['scheduled_publish_time']) ? 'prévu ' . $quand($x['scheduled_publish_time']) : 'créé ' . $quand($x['created_time'] ?? 'now'))
+            . ' · publié ' . json_encode($x['is_published'] ?? null) . ' · « ' . mb_substr((string) preg_replace('/\s+/', ' ', (string) ($x['message'] ?? '')), 0, 30) . ' »';
+        $champs = 'id,message,scheduled_publish_time,created_time,is_published';
+        foreach ([
+            ['scheduled_posts', 'scheduled_posts', ['fields' => $champs, 'limit' => 25]],
+            ['promotable_posts, non publiés', 'promotable_posts', ['fields' => $champs, 'is_published' => 'false', 'limit' => 25]],
+            ['promotable_posts, masqués compris', 'promotable_posts', ['fields' => $champs, 'include_hidden' => 'true', 'limit' => 10]],
+            ['feed, masqués compris', 'feed', ['fields' => $champs, 'include_hidden' => 'true', 'limit' => 10]],
+            ['ads_posts', 'ads_posts', ['fields' => $champs, 'include_inline_create' => 'true', 'limit' => 10]],
+            ['published_posts (témoin)', 'published_posts', ['fields' => 'id,message,created_time,is_published', 'limit' => 3]],
+        ] as [$nom, $edge, $p]) {
+            try {
+                $l = (array) (Meta::call('GET', $bp . '/' . $edge, $p, $bt)['data'] ?? []);
+                echo "  $nom : OK, " . count($l) . " publication(s)\n";
+                foreach (array_slice($l, 0, 8) as $x) { echo '    ' . $court((array) $x) . "\n"; }
+            } catch (MetaError $e) { echo "  $nom : refus (" . $e->metaCode . ') ' . mb_substr($e->getMessage(), 0, 140) . "\n"; }
+        }
+    }
+} catch (Throwable $e) { echo '  Meta : ' . $e->getMessage() . "\n"; }
+
 // Marketing du BO (lecture seule) : les opérations sont-elles lisibles par son API ?
 try {
     echo "== Marketing du BO : opérations ==\n";
