@@ -157,6 +157,25 @@ final class SocBlocage extends RuntimeException {}
  *    valable dans la boutique publiée (`$shopId` ; vide : toutes celles du post).
  * Si TFBuddy ne répond pas, rien n'est affirmé : la liste reste vide et `$injoignable` le dit.
  */
+/**
+ * Le prix d'un produit du webshop dans chaque boutique (« Prix de chaque boutique » du générateur) :
+ * shopId → prix de vente de la boutique (TFBuddy, son catalogue en cache 30 min), ou null (produit absent,
+ * prix non renseigné, magasin test sans caisse, TFBuddy injoignable).
+ */
+function socPrixParBoutique(int $produit, array $shops): array
+{
+    $out = [];
+    foreach (array_slice(array_values(array_unique(array_map('strval', $shops))), 0, 60) as $sid) {
+        $s = socShop($sid);
+        if ($s === null || !empty($s['test']) || !ctype_digit($sid)) { $out[$sid] = null; continue; }
+        try { $nav = socNavCatalogue($sid); } catch (Throwable $e) { $out[$sid] = null; continue; }
+        $p = null;
+        foreach ((array) ($nav['produits'] ?? []) as $x) { if ((int) $x['id'] === $produit) { $p = $x; break; } }
+        $out[$sid] = !empty($nav['prix']) && $p !== null && $p['prix'] !== null ? (float) $p['prix'] : null;
+    }
+    return $out;
+}
+
 function socVerifierOffres(array $post, ?string $shopId = null, ?bool &$injoignable = null): array
 {
     $injoignable = false;
@@ -172,6 +191,20 @@ function socVerifierOffres(array $post, ?string $shopId = null, ?bool &$injoigna
             if ($p === null) { $ecarts[] = '« ' . $nom . ' » n’est plus en vente sur le webshop de ' . ($noms[$shop] ?? $shop); }
             elseif ($p['prix'] === null || abs((float) $p['prix'] - (float) $cat['prix']) > 0.004) {
                 $ecarts[] = 'prix de « ' . $nom . ' » changé dans TFBuddy : ' . socEur($cat['prix']) . ' → ' . ($p['prix'] !== null ? socEur($p['prix']) : 'non renseigné');
+            }
+        }
+        // Un prix par boutique : celui de chaque boutique visée (ou de la seule boutique qui publie), relu dans TFBuddy.
+        $pb = is_array($post['prixParBoutique'] ?? null) ? $post['prixParBoutique'] : [];
+        if ($cat && ($cat['kind'] ?? '') === 'produit' && $pb) {
+            $nom = (string) ($cat['name'] ?? 'le produit');
+            foreach ($shopId !== null && $shopId !== '' ? [$shopId] : array_map('strval', array_keys($pb)) as $sid) {
+                if (!is_numeric($pb[$sid] ?? null)) { continue; }
+                $nav = socNavCatalogue($sid);
+                $p = null; foreach ((array) ($nav['produits'] ?? []) as $x) { if ((int) $x['id'] === (int) ($cat['id'] ?? 0)) { $p = $x; break; } }
+                if ($p === null) { $ecarts[] = '« ' . $nom . ' » n’est plus en vente sur le webshop de ' . ($noms[$sid] ?? $sid); }
+                elseif ($p['prix'] === null || abs((float) $p['prix'] - (float) $pb[$sid]) > 0.004) {
+                    $ecarts[] = 'prix de « ' . $nom . ' » à ' . ($noms[$sid] ?? $sid) . ' changé dans TFBuddy : ' . socEur($pb[$sid]) . ' → ' . ($p['prix'] !== null ? socEur($p['prix']) : 'non renseigné');
+                }
             }
         }
         $of = is_array($post['offre'] ?? null) ? $post['offre'] : null;

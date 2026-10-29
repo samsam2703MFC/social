@@ -131,6 +131,9 @@ function socLienTexte(array $post, string $lang): string
 function socMessage(array $post, array $shop, string $canal = 'fb'): string
 {
     $product = socPostProduit($post);
+    // Un prix par boutique (lu dans TFBuddy) : {prix} est celui de la boutique qui publie.
+    $pb = $post['prixParBoutique'][(string) ($shop['id'] ?? '')] ?? null;
+    if (is_numeric($pb)) { $product = array_replace($product ?? [], ['price' => number_format((float) $pb, 2, ',', '')]); }
     $langs = (array) ($shop['langs'] ?: ['fr']);
     $url = socFill(trim((string) ($post['link'] ?? '')), $shop, $product, $langs[0] ?? 'fr');
     $lien = static fn (string $L) => $canal === 'ig' || $url === '' ? '' : socLienTexte($post, $L) . ' ' . $url;
@@ -162,11 +165,15 @@ function socPublicUrl(string $src): string
     return $base . ltrim(implode('/', array_map('rawurlencode', explode('/', ltrim($src, './')))), '/');
 }
 
-/** Les médias d'un post : [images[], video|null]. */
-function socMedias(array $post): array
+/**
+ * Les médias d'un post : [images[], video|null]. Avec un prix par boutique, chaque boutique a son visuel
+ * (`parBoutique[shop].media`, le même visuel à son prix) ; sinon, celui du post.
+ */
+function socMedias(array $post, ?string $shopId = null): array
 {
     $imgs = []; $video = null;
-    foreach ((array) ($post['media'] ?? []) as $m) {
+    $propre = $shopId !== null ? ($post['parBoutique'][$shopId]['media'] ?? null) : null;
+    foreach (is_array($propre) && $propre ? $propre : (array) ($post['media'] ?? []) as $m) {
         $src = (string) ($m['src'] ?? '');
         if ($src === '' || str_starts_with($src, 'data:')) { continue; }
         if (($m['kind'] ?? 'img') === 'video') { $video = $video ?? $src; } else { $imgs[] = $src; }
@@ -257,7 +264,7 @@ function socPublishFb(array $post, array $shop, string $message): string
     $tok = Meta::pageToken($pid);
     // Repost automatique en partage : un lien vers le post de la marque (src/repost.php).
     if (($post['repost']['mode'] ?? '') === 'partage') { return socRepostPartager($post, $shop, $pid, $tok); }
-    [$imgs, $video] = socMedias($post);
+    [$imgs, $video] = socMedias($post, (string) $shop['id']);
     // Le lien peut citer le webshop de la boutique ou la page du produit : résolu boutique par boutique.
     $link = socFill(trim((string) ($post['link'] ?? '')), $shop, socPostProduit($post), $shop['langs'][0] ?? 'fr');
     if ($video !== null) {
@@ -291,7 +298,7 @@ function socPublishIg(array $post, array $shop, string $message): string
     $tok = socIgToken($ig, (string) $shop['ids']['page_id']);
     // Frise de grille : 3 posts à la suite (Facebook, lui, reçoit le visuel entier — `media`).
     if (socEstFrise($post)) { return socPublishFrise($post, $shop, $ig, $tok, $message); }
-    [$imgs, $video] = socMedias($post);
+    [$imgs, $video] = socMedias($post, (string) $shop['id']);
     if ($video !== null) {
         $c = Meta::call('POST', $ig . '/media', ['media_type' => 'REELS', 'video_url' => socPublicUrl($video), 'caption' => $message], $tok);
         $cid = (string) ($c['id'] ?? '');

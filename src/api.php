@@ -216,6 +216,12 @@ function socRoute(string $method, string $path): array
     // et les promotions, bundles et formules liés à la sélection (src/catalogue.php).
     if ($method === 'GET' && $path === '/catalogue/nav') { return [200, socNavCatalogue((string) ($_GET['shop'] ?? ''), !empty($_GET['forcer']))]; }
     if ($method === 'GET' && $path === '/catalogue/offres') { return [200, socNavOffres($_GET)]; }
+    // Le prix d'un produit dans chaque boutique visée (plusieurs boutiques : un visuel par prix).
+    if ($method === 'GET' && $path === '/catalogue/prix') {
+        $produit = (int) ($_GET['produit'] ?? 0);
+        if ($produit <= 0) { throw new HttpError(400, 'produit invalide'); }
+        return [200, ['produit' => $produit, 'prix' => socPrixParBoutique($produit, array_filter(explode(',', (string) ($_GET['shops'] ?? ''))))]];
+    }
     if ($method === 'POST' && $path === '/catalogue/verifier') {
         // Avant de publier : le prix et la promotion du post sont-ils encore ceux de TFBuddy ?
         $ecarts = socVerifierOffres((array) body(), null, $injoignable);

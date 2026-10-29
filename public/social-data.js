@@ -895,6 +895,9 @@
    * chaque boutique, gestes du réseau. Tout se passe sur le serveur (Meta, file, espace franchisé) : rien en démonstration.
    */
   const SANS_REPOST = () => Promise.reject(new Error('le repost automatique lit la Page de la marque chez Meta : il ne fonctionne que sur le serveur'));
+  /** Le prix d'un produit dans chaque boutique visée (TFBuddy) : { prix: { shopId: prix|null } }. Sur le serveur seulement. */
+  const prixBoutiques = (produit, shops) => LIVE ? api('GET', '/catalogue/prix?produit=' + encodeURIComponent(produit) + '&shops=' + shops.map(encodeURIComponent).join(','))
+    : Promise.reject(new Error('les prix des boutiques se lisent dans TFBuddy, sur le serveur'));
   const repost = (jours) => LIVE ? api('GET', '/repost?jours=' + (+jours || 14)) : SANS_REPOST();
   const repostAction = (quoi) => (body) => LIVE ? api('POST', '/repost/' + quoi, body || {}).then(r => { refresh(); return r; }) : SANS_REPOST();
   const repostReglage = repostAction('reglage'), repostRelire = repostAction('relire'), repostRelancer = repostAction('relancer'), repostForcer = repostAction('forcer'), repostRetirer = repostAction('retirer');
@@ -977,7 +980,7 @@
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
     api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT,
-    repost, repostReglage, repostRelire, repostRelancer, repostForcer, repostRetirer,
+    prixBoutiques, repost, repostReglage, repostRelire, repostRelancer, repostForcer, repostRetirer,
     commentaires, commentairesRelire, commentaireTraiter, commentaireRepondre, bilan, kit, kitSave, google, googleRelire, googleSynchroniser, googleReglages,
     pubRegles, pubReglesSave, pubMeilleurs, pubDemandes, pubRefuser, pubDemandeBoostee,
     comptesMeta: () => LIVE ? api('GET', '/meta/comptes').then(r => { META.comptes = (r && r.comptes) || META.comptes; return META.comptes; }) : Promise.resolve(META.comptes), calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, charte, relire, ia: () => (LIVE && LIVE.ia) || { configure: false, modele: '' }, suivi, avatar,

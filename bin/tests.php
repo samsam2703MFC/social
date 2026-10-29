@@ -1562,6 +1562,30 @@ $e = socVerifierOffres(['shops' => ['4'], 'catalogue' => $cookie, 'offre' => ['g
 check('TFBuddy injoignable : rien n’est affirmé (pas de blocage), l’écran le sait', $e === [] && $inj === true);
 Tfb::$transport = $tfbAvant; socSettingPut('tfb_cache_nav', $navAvant, false);
 
+echo "Prix de chaque boutique : un visuel par prix, {prix} de la boutique\n";
+check('prix d’un produit dans chaque boutique (TFBuddy), null hors caisse', socPrixParBoutique(11, ['4', '5', 'pg999']) === ['4' => 2.8, '5' => 3.0, 'pg999' => null], json_encode(socPrixParBoutique(11, ['4', '5', 'pg999'])));
+$_GET = ['produit' => '11', 'shops' => '4,5']; [$code, $b] = socRoute('GET', '/catalogue/prix'); $_GET = [];
+check('GET /catalogue/prix', $code === 200 && $b['prix'] === ['4' => 2.8, '5' => 3.0]);
+check('{prix} : le prix de la boutique qui publie', socMessage(['text' => 'Cookie : {prix} €', 'prixParBoutique' => ['4' => 2.8, '5' => 3.0]], socShop('5')) === 'Cookie : 3,00 €'
+    && socMessage(['text' => 'Cookie : {prix} €', 'prixParBoutique' => ['4' => 2.8, '5' => 3.0]], socShop('4')) === 'Cookie : 2,80 €');
+$pbPost = ['media' => [['src' => 'uploads/a.png', 'kind' => 'img']], 'parBoutique' => ['5' => ['media' => [['src' => 'uploads/b.png', 'kind' => 'img']]]]];
+check('visuel : celui de la boutique, sinon celui du post', socMedias($pbPost, '5')[0] === ['uploads/b.png'] && socMedias($pbPost, '4')[0] === ['uploads/a.png'] && socMedias($pbPost)[0] === ['uploads/a.png']);
+$cookieMulti = ['kind' => 'produit', 'id' => 11, 'name' => 'Cookie chocolat', 'prix' => null, 'shop' => null];
+check('vérification : le prix de chaque boutique, relu dans TFBuddy', socVerifierOffres(['catalogue' => $cookieMulti, 'prixParBoutique' => ['4' => 2.8, '5' => 2.9]]) === ['prix de « Cookie chocolat » à Wavre changé dans TFBuddy : 2,90 € → 3,00 €']
+    && socVerifierOffres(['catalogue' => $cookieMulti, 'prixParBoutique' => ['4' => 2.8, '5' => 2.9]], '4') === []);
+$rAvant = $restreinte; $restreinte = [];
+$visPb = static fn (string $t) => 'data:image/png;base64,' . base64_encode(str_repeat("\x89PNG" . $t, 80));
+$pp = ['id' => 'pp1', 'date' => date('Y-m-d'), 'time' => '09:00', 'type' => 'Produit', 'title' => 'Cookie', 'img' => $visPb('halle'), 'media' => [['src' => $visPb('halle'), 'kind' => 'img']],
+    'shops' => ['4', '5'], 'ch' => ['4' => ['fb' => true, 'ig' => false], '5' => ['fb' => true, 'ig' => false]], 'fb' => true, 'ig' => false, 'status' => 'Publié', 'text' => 'Cookie : {prix} € à {ville}',
+    'catalogue' => $cookieMulti, 'prixParBoutique' => ['4' => 2.8, '5' => 3.0],
+    'parBoutique' => ['4' => ['img' => $visPb('halle'), 'media' => [['src' => $visPb('halle'), 'kind' => 'img']]], '5' => ['img' => $visPb('wavre'), 'media' => [['src' => $visPb('wavre'), 'kind' => 'img']]]]];
+$appels = [];
+socStateSave(['changes' => ['posts' => ['upsert' => [$pp]]]]);
+$ph4 = $appelsVers('#^111/photos$#')[0][2] ?? []; $ph5 = $appelsVers('#^222/photos$#')[0][2] ?? [];
+check('publication : chaque Page reçoit son visuel (fichiers distincts) et son prix', ($ph4['caption'] ?? '') === 'Cookie : 2,80 € à Halle' && ($ph5['caption'] ?? '') === 'Cookie : 3,00 € à Wavre'
+    && str_contains((string) ($ph4['url'] ?? ''), '/uploads/') && ($ph4['url'] ?? '') !== ($ph5['url'] ?? ''), json_encode([$ph4['caption'] ?? null, $ph5['caption'] ?? null, $ph4['url'] ?? null, $ph5['url'] ?? null]));
+$restreinte = $rAvant;
+
 echo "Rédaction assistée (API Anthropic simulée)\n";
 $iaAppels = []; $iaMode = 'ok';
 SocIa::$transport = static function (string $m, string $url, array $h, ?string $body) use (&$iaAppels, &$iaMode): array {

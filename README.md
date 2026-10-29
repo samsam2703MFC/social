@@ -81,7 +81,13 @@ catégorie, sous-catégorie ou gamme. Source : l'appel du webshop
 `GET /shops/{id}/products/available?webshop_active=1&alias_type=webshop&include=webshop,portions,availability_periods,webshop_availability`
 (photo du produit, illustrations des catégories et sous-catégories, gammes, `portion_price` = prix de
 vente de la boutique) et `GET /product-availability-periods` (photo des gammes) — mis en cache 30 min.
-Le **prix** n'est donné que si **une seule** boutique est ciblée ; plusieurs : pas de prix. Les
+Le **prix** d'une boutique ciblée seule est son prix de vente ; **plusieurs boutiques** : le prix de
+chacune est lu dans TFBuddy (`GET /catalogue/prix?produit=&shops=`, `socPrixParBoutique`) et montré sous
+la ligne « Prix » du générateur. Même prix partout : un seul visuel. Prix différents : un visuel par prix,
+exporté à l'enregistrement (`parBoutique[shop].media`) ; chaque Page publie le sien (`socMedias($post,
+$shop)`), `{prix}` du texte est le prix de la boutique (`prixParBoutique`), et le prix de chaque
+boutique est revérifié avant publication. Un clic sur une boutique (sous « Prix » ou dans l'aperçu)
+montre son visuel. Instagram unique : le compte du réseau reçoit le visuel de la première boutique. Les
 **promotions et bundles** actifs (`GET /admin/promotions/{bundles|buy-x-get-y|quantity|scheduled-product-discount}/{id}`,
 cache 15 min) sont liés quand ils visent le produit, sa sous-catégorie ou l'un des produits de la
 sélection, avec leur portée (toutes les boutiques ou lesquelles) ; les **formules** d'un produit viennent
