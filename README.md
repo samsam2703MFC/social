@@ -365,6 +365,12 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   (Models API, relu chaque jour), sortie JSON imposée par schéma, effort moyen, repli serveur
   (`fallbacks: default`). Le prompt ne donne que les vraies données de l'écran et interdit d'en
   inventer. Pas de SDK : le module n'a pas de dépendance (curl, comme Meta et TFBuddy).
+  **Relecteur** (« ✓ Corriger » sous le texte du post, « ✓ Corriger les textes » d'un formulaire de leads
+  en brouillon ; `POST /redaction/corriger {textes: [{cle, langue, texte}], contexte}`) : orthographe,
+  grammaire, typographie française, néerlandais de Belgique, et la charte (vouvoiement, emojis, mots à
+  éviter), **sans réécrire** ; chaque correction est montrée avec sa raison et rien n'est remplacé avant
+  « Appliquer » (un texte retouché entre-temps est gardé). Les variables `{…}` sont protégées : une
+  correction qui en perd une est refusée pour ce texte.
 - **Charte éditoriale et relecture** — réglage `charte_editoriale` (ton, vouvoiement, emojis au
   plus, mots à éviter, hashtags, accroche, signature) suivi par l'assistant et vérifié en direct
   sous le texte (emojis, mots à éviter, tutoiement, accroche trop longue, points d'exclamation,

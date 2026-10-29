@@ -1595,6 +1595,12 @@ SocIa::$transport = static function (string $m, string $url, array $h, ?string $
     if ($iaMode === 'cle') { return [401, json_encode(['type' => 'error', 'error' => ['type' => 'authentication_error', 'message' => 'invalid x-api-key']])]; }
     if ($iaMode === 'panne') { return [529, json_encode(['type' => 'error', 'error' => ['type' => 'overloaded_error', 'message' => 'Overloaded']])]; }
     $req = $body !== null ? json_decode($body, true) : [];
+    // Le relecteur (POST /redaction/corriger) : « fr » corrigé, « nl » qui perd une variable, une clé inventée.
+    if (isset($req['output_config']['format']['schema']['properties']['corrections'])) {
+        return [200, json_encode(['stop_reason' => 'end_turn', 'content' => [['type' => 'text', 'text' => json_encode([
+            'textes' => [['cle' => 'fr', 'texte' => 'Le cookie vous attend à {ville} ! Seulement {prix} €.'], ['cle' => 'nl', 'texte' => 'De koek wacht op u in Halle.'], ['cle' => 'invente', 'texte' => 'x']],
+            'corrections' => [['cle' => 'fr', 'avant' => 'te attend', 'apres' => 'vous attend', 'raison' => 'vouvoiement'], ['cle' => 'nl', 'avant' => '{ville}', 'apres' => 'Halle', 'raison' => 'x'], ['cle' => 'invente', 'avant' => 'a', 'apres' => 'b', 'raison' => 'c']]])]]])];
+    }
     if (isset($req['output_config']['format']['schema']['properties']['resultats'])) {
         $in = json_decode((string) ($req['messages'][0]['content'] ?? ''), true);
         $res = array_map(static fn ($x) => ['id' => $x['id'], 'couleur' => str_contains($x['commentaire'], 'cheveu') ? 'rouge' : (str_contains($x['commentaire'], '?') ? 'orange' : 'vert'),
@@ -1626,6 +1632,16 @@ check('clé secrète : ni dans les paramètres ni dans l’état', socParams()['
 $iaMode = 'refus'; [$code] = $proposer(['produit' => 'X']);
 $iaMode = 'cle'; [$code2, $msg2] = $proposer(['produit' => 'X']);
 check('refus du modèle : 422 ; clé refusée : 409 lisible', $code === 422 && $code2 === 409 && str_contains((string) $msg2, 'clé API Anthropic refusée'));
+$iaMode = 'ok'; $iaAppels = [];
+$GLOBALS['SOC_BODY'] = ['contexte' => 'un post', 'textes' => [['cle' => 'fr', 'langue' => 'fr', 'texte' => 'Le cookie te attend a {ville}!!! Seulement {prix}€.'], ['cle' => 'nl', 'langue' => 'nl', 'texte' => 'De koek wacht op u in {ville}.'], ['cle' => 'vide', 'texte' => ' ']]];
+[$code, $cr] = socRoute('POST', '/redaction/corriger'); unset($GLOBALS['SOC_BODY']);
+$reqC = array_values(array_filter($iaAppels, static fn ($a) => str_ends_with($a[1], '/v1/messages')))[0][3] ?? [];
+check('corriger : sans réécrire, la charte et les variables protégées dans la consigne', $code === 200 && str_contains((string) $reqC['system'], 'tu ne réécris pas') && str_contains((string) $reqC['system'], 'Vouvoiement')
+    && str_contains((string) $reqC['system'], 'restent exactement telles quelles') && !str_contains((string) $reqC['messages'][0]['content'], '"vide"'), json_encode($reqC['system'] ?? null));
+check('corriger : texte corrigé et ses corrections ; une variable perdue → texte gardé tel quel, dit', array_column($cr['textes'], 'texte', 'cle') === ['fr' => 'Le cookie vous attend à {ville} ! Seulement {prix} €.', 'nl' => 'De koek wacht op u in {ville}.']
+    && $cr['textes'][0]['change'] === true && $cr['textes'][1]['change'] === false && array_column($cr['corrections'], 'cle') === ['fr'] && count($cr['remarques']) === 1 && str_contains($cr['remarques'][0], 'nl'), json_encode($cr));
+$GLOBALS['SOC_BODY'] = ['textes' => []]; [$code] = (static function () { try { return socRoute('POST', '/redaction/corriger'); } catch (HttpError $e) { return [$e->status]; } })(); unset($GLOBALS['SOC_BODY']);
+check('corriger : rien à corriger → 400', $code === 400);
 $iaMode = 'ok';
 $GLOBALS['SOC_BODY'] = ['charte_editoriale' => ['ton' => str_repeat('a', 900), 'vouvoiement' => false, 'emojisMax' => 99, 'motsInterdits' => 'pas cher, discount', 'hashtags' => ['latelierby', '#Halle'], 'pirate' => 1]];
 socRoute('POST', '/parametres'); unset($GLOBALS['SOC_BODY']);

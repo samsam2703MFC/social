@@ -228,6 +228,8 @@ function socRoute(string $method, string $path): array
         return [200, ['ecarts' => $ecarts, 'injoignable' => $injoignable]];
     }
     if ($method === 'POST' && $path === '/redaction/proposer') { return [200, socRedactionProposer(body())]; }
+    // Le relecteur : orthographe, grammaire, typographie et charte, sans réécrire (Créer un post, formulaires de leads).
+    if ($method === 'POST' && $path === '/redaction/corriger') { return [200, socRedactionCorriger(body())]; }
     // Ce qui marche (publications des 90 derniers jours, lues chez Meta, gardées 12 h) et idées de posts (src/recommandations.php).
     if ($method === 'GET' && $path === '/recommandations') { return [200, ['reco' => socRecommandations(!empty($_GET['cache']), !empty($_GET['forcer']))]]; }
     if ($method === 'GET' && $path === '/idees') { return [200, socIdees()]; }

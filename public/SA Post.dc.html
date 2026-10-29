@@ -761,6 +761,7 @@
               <button onClick="{{ iaCourt }}" disabled="{{ iaRwOff }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ iaRwOp }};">Plus court</button>
               <button onClick="{{ iaGourmand }}" disabled="{{ iaRwOff }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ iaRwOp }};">Plus gourmand</button>
               <button onClick="{{ iaUrgent }}" disabled="{{ iaRwOff }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ iaRwOp }};">Plus urgent</button>
+              <button onClick="{{ iaCorriger }}" disabled="{{ iaRwOff }}" title="Orthographe, grammaire, typographie et charte, sans réécrire le texte (FR et NL)" style="border:0.5px solid #8D1D2C;background:#FFFFFF;color:#8D1D2C;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ iaRwOp }};">✓ Corriger</button>
               <sc-if value="{{ hasIaTags }}" hint-placeholder-val="{{ true }}"><button onClick="{{ iaAjouterTags }}" title="{{ iaTags }}" disabled="{{ locked }}" style="border:0.5px dashed rgba(34,34,34,0.3);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;"># Hashtags</button></sc-if>
               <sc-if value="{{ iaBusy }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">{{ iaLabel }}</span></sc-if>
             </div>
@@ -768,6 +769,20 @@
             <sc-if value="{{ iaNonConfig }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8A4B00;">La rédaction assistée demande une clé API Anthropic : <a href="{{ iaParamHref }}" style="color:#8D1D2C;">Paramètres → Rédaction IA</a>.</span></sc-if>
             <sc-if value="{{ iaDemo }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Démonstration : la rédaction assistée fonctionne en ligne seulement.</span></sc-if>
             <sc-if value="{{ hasIaErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8D1D2C;">{{ iaErr }}</span></sc-if>
+            <!-- Le relecteur : les corrections une à une, appliquées seulement sur demande. -->
+            <sc-if value="{{ hasCor }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;">
+                <span style="font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#8D1D2C;">{{ corTitre }}</span>
+                <sc-for list="{{ corListe }}" as="cr" hint-placeholder-count="0">
+                  <span style="font-size:12px;line-height:1.45;color:#222222;"><b style="font-weight:500;color:#8A847C;">{{ cr.L }}</b> <span style="text-decoration:line-through;color:#8D1D2C;">{{ cr.avant }}</span> → <span style="color:#0F6B4A;font-weight:500;">{{ cr.apres }}</span> <span style="color:#666666;">· {{ cr.raison }}</span></span>
+                </sc-for>
+                <sc-for list="{{ corRemarques }}" as="rq" hint-placeholder-count="0"><span style="font-size:11px;color:#8A4B00;">{{ rq }}</span></sc-for>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <sc-if value="{{ corChange }}" hint-placeholder-val="{{ true }}"><button onClick="{{ corAppliquer }}" disabled="{{ locked }}" style="border:none;background:#232220;color:#FFFFFF;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;">Appliquer les corrections</button></sc-if>
+                  <button onClick="{{ corFermer }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;">{{ corFermerLabel }}</button>
+                </div>
+              </div>
+            </sc-if>
             <sc-if value="{{ hasIaRes }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:8px;">
                 <sc-for list="{{ iaVariantes }}" as="iv" hint-placeholder-count="3">
@@ -1239,7 +1254,7 @@ class Component extends DCLogic {
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', linkText: { fr: '', nl: '' }, campaign: '',
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
-      txtSel: null, txtTplNom: '', etqLocal: null, qc: [], visNom: '', visLocal: null, kitBusy: false, offre: null, mentionAuto: true, iaBusy: false, iaRes: null, iaErr: '', iaConsigne: '',
+      txtSel: null, txtTplNom: '', etqLocal: null, qc: [], visNom: '', visLocal: null, kitBusy: false, offre: null, mentionAuto: true, iaBusy: false, iaRes: null, iaErr: '', iaConsigne: '', cor: null,
       objectif: '', inspi: (() => { try { const x = localStorage.getItem('sa.inspi'); return x === null ? null : x === '1'; } catch (e) { return null; } })(),
       cutBusy: null, couleurRole: null, couleurNom: '', pvVue: 'post', tel: false, grilleData: {}, grilleSnap: null, vidBusy: false, vidAnim: null, idees: null, ideesTout: false, ideesBusy: false, ideesErr: '', reco: null, recoLu: false, recoBusy: false, recoErr: '', ideeId: '', ideeCat: null, ideeOffre: null,
       nav: null, navKey: null, navLoading: false, navErr: '', navMode: 'cat', navG: null, navC: null, navGam: null, navQ: '', navSel: null, offres: null, offresKey: '', offresLoading: false, offreUsed: '',
@@ -1619,6 +1634,16 @@ class Component extends DCLogic {
       operation: (() => { const o = s.campaign ? (SA.state().campaigns || []).find(c => c.id === s.campaign) : null; return o ? o.name + (o.description ? ' — ' + o.description : '') : ''; })() };
     this.setState({ iaBusy: true, iaErr: '', iaConsigne: consigne || '' });
     try { const r = await SA.api('POST', '/redaction/proposer', b); this.setState({ iaBusy: false, iaRes: r }); }
+    catch (e) { this.setState({ iaBusy: false, iaErr: e.message || String(e) }); }
+  }
+  /** Le relecteur (Claude, côté serveur) : corrige le texte FR et NL sans le réécrire ; rien n'est remplacé avant « Appliquer ». */
+  async iaCorriger() {
+    const SA = window.SA, s = this.state;
+    if (!SA.live) { this.setState({ iaErr: 'Le relecteur fonctionne en ligne seulement.' }); return; }
+    const textes = [['fr', s.text], ['nl', s.textNl]].filter(([, t]) => String(t || '').trim()).map(([L, t]) => ({ cle: L, langue: L, texte: t }));
+    if (!textes.length) return;
+    this.setState({ iaBusy: true, iaErr: '', iaConsigne: 'corriger', cor: null });
+    try { const r = await SA.api('POST', '/redaction/corriger', { contexte: 'un post Facebook et Instagram (' + (s.type || 'post') + ')', textes }); this.setState({ iaBusy: false, cor: Object.assign({ avant: { fr: s.text, nl: s.textNl } }, r) }); }
     catch (e) { this.setState({ iaBusy: false, iaErr: e.message || String(e) }); }
   }
   /** Efface un texte posé sur le visuel. */
@@ -2406,7 +2431,16 @@ class Component extends DCLogic {
         const COL = { erreur: ['#FDECEC', '#8D1D2C'], attention: ['#FFF4E5', '#8A4B00'], conseil: ['#F4EFE8', '#444444'] };
         const tags = (R && R.hashtags && R.hashtags.length ? R.hashtags : ch.hashtags || []).concat(ch.hashtagVille ? ['{hashtag_ville}'] : []);
         const off = locked || s.iaBusy || !ia.configure || !SA.live, vide = !String(s.text || s.textNl || '').trim();
-        return { iaBusy: s.iaBusy, iaLabel: s.iaBusy ? (s.iaConsigne ? 'Réécriture ' + LBL[s.iaConsigne] + '…' : 'Rédaction de 3 propositions…') : '',
+        // Le relecteur : ce qu'il a corrigé ; « Appliquer » ne remplace un texte que s'il n'a pas bougé depuis la demande.
+        const C = s.cor, corChange = !!(C && (C.textes || []).some(x => x.change));
+        const corVals = { hasCor: !!C, corTitre: !C ? '' : corChange ? 'Relecture · ' + (C.corrections || []).length + ' correction' + ((C.corrections || []).length > 1 ? 's' : '') : 'Relecture · rien à corriger',
+          corListe: (C && C.corrections || []).map(x => ({ L: x.cle.toUpperCase(), avant: x.avant, apres: x.apres, raison: x.raison })), corRemarques: (C && C.remarques) || [], corChange,
+          corFermerLabel: corChange ? 'Ignorer' : 'Fermer', corFermer: () => this.setState({ cor: null }),
+          corAppliquer: () => { if (locked || !C) return; const st = { cor: null }, cur = { fr: s.text, nl: s.textNl }, garde = [];
+            (C.textes || []).forEach(x => { if (!x.change) return; if (cur[x.cle] !== C.avant[x.cle]) { garde.push(x.cle.toUpperCase()); return; } st[x.cle === 'nl' ? 'textNl' : 'text'] = x.texte; });
+            this._autoFr = null; this._autoNl = null; this.setState(st);
+            this.toast(garde.length ? 'Texte ' + garde.join(' et ') + ' modifié depuis la relecture : relancez « Corriger ».' : 'Corrections appliquées.'); } };
+        return Object.assign(corVals, { iaCorriger: () => !(off || vide) && this.iaCorriger(), iaBusy: s.iaBusy, iaLabel: s.iaBusy ? (s.iaConsigne === 'corriger' ? 'Relecture du texte…' : s.iaConsigne ? 'Réécriture ' + LBL[s.iaConsigne] + '…' : 'Rédaction de 3 propositions…') : '',
           iaNonConfig: SA.live && !ia.configure, iaDemo: !SA.live, iaOff: off, iaOp: off ? 0.5 : 1, iaRwOff: off || vide, iaRwOp: off || vide ? 0.45 : 1,
           iaProposer: () => !off && this.iaDemander(''), iaCourt: () => !(off || vide) && this.iaDemander('court'),
           iaGourmand: () => !(off || vide) && this.iaDemander('gourmand'), iaUrgent: () => !(off || vide) && this.iaDemander('urgent'),
@@ -2421,7 +2455,7 @@ class Component extends DCLogic {
           iaAjouterTags: () => { if (locked) return; const k = isNlEd ? 'textNl' : 'text', cur = String(s[k] || ''), manque = tags.filter(h => !cur.includes(h));
             if (manque.length) this.setState({ [k]: (cur.trim() ? cur.replace(/\s+$/, '') + '\n\n' : '') + manque.join(' ') }); },
           relecture: remarques.map(r => ({ txt: r.L + ' · ' + r.msg, bg: COL[r.niveau][0], fg: COL[r.niveau][1] })), hasRelecture: remarques.length > 0,
-          relectureOk: !remarques.length && !vide };
+          relectureOk: !remarques.length && !vide });
       })(),
       taRef: (el) => { this._ta = el; }, text: isNlEd ? s.textNl : s.text, setText: (e) => this.setState({ [isNlEd ? 'textNl' : 'text']: e.target.value }),
       templates: (st.templates || SA.TEMPLATES).map(tp => ({ name: tp.name, use: () => !locked && this.setState({ text: tp.text, textNl: tp.textNl || s.textNl, type: tp.type }) })),
