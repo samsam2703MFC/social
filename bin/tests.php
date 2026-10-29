@@ -850,6 +850,11 @@ $lf = ['id' => 'lf1', 'family' => 'b2b', 'version' => 1, 'status' => 'Actif', 'n
     'thanks' => ['title' => 'Merci', 'body' => 'À bientôt', 'button_type' => 'VIEW_WEBSITE', 'button_text' => 'Site', 'website_url' => 'https://www.latelierby.be'], 'quality' => true];
 socStateSave(['changes' => ['leadforms' => ['upsert' => [$lf]]]]);
 check('formulaire publié sur 2 Pages', count(socLeadformMetaIds('lf1')) === 2);
+$qb = socLeadformBody(['name' => 'Libre', 'questions' => [['type' => 'FULL_NAME'], ['type' => 'CUSTOM', 'key' => 'Question 1', 'label' => ' Votre entreprise ? ', 'options' => []],
+    ['type' => 'CUSTOM', 'key' => '', 'label' => 'Combien ?', 'options' => [['key' => '', 'value' => '8 à 15'], ['key' => '', 'value' => '8-15'], ['key' => '', 'value' => '8 15'], ['key' => 'x', 'value' => ' ']]]]])['questions'];
+check('question personnalisée sans option : réponse libre, sans « options » (Meta refuse un tableau vide)', $qb[1] === ['type' => 'CUSTOM', 'key' => 'question_1', 'label' => 'Votre entreprise ?'], json_encode($qb[1]));
+check('question personnalisée : clés en a-z0-9_, uniques, options vides écartées', $qb[2]['key'] === 'question_3' && array_column($qb[2]['options'], 'key') === ['8_a_15', '8_15', '8_15_3']
+    && array_column($qb[2]['options'], 'value') === ['8 à 15', '8-15', '8 15'], json_encode($qb[2]));
 check('formulaire dans social_formulaire', Db::row("SELECT nom, version FROM social_formulaire WHERE id = 'lf1'") == ['nom' => 'Plateaux', 'version' => 1]);
 socLeadsSync();
 $leads = socLeads();

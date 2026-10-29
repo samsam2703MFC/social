@@ -66,6 +66,8 @@
         </div>
         <sc-if value="{{ f.readOnly }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:#666666;">Lecture seule : créez une nouvelle version pour modifier ce formulaire.</span></sc-if>
         <sc-if value="{{ hasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8D1D2C;background:#F6DCDF;border-radius:6px;padding:7px 10px;">{{ err }}</span></sc-if>
+        <!-- Ce que Meta a répondu à la publication (refus d'une Page, d'une question…) : jamais caché derrière « publié ». -->
+        <sc-if value="{{ hasMetaErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;line-height:1.5;color:#8D1D2C;background:#F6DCDF;border-radius:6px;padding:7px 10px;">{{ metaErr }}</span></sc-if>
 
         <div style="display:flex;gap:12px;flex-wrap:wrap;">
           <label style="flex:2 1 240px;display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">Nom interne <span style="font-family:ui-monospace,monospace;font-size:10px;color:#8A847C;">name *</span><input type="text" value="{{ d.name }}" onChange="{{ setName }}" disabled="{{ f.readOnly }}" style="font-size:13px;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:8px 10px;"></label>
@@ -87,8 +89,12 @@
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                 <sc-for list="{{ cq.options }}" as="op" hint-placeholder-count="0"><span style="display:inline-flex;align-items:center;gap:6px;background:#FFFFFF;border-radius:999px;padding:4px 6px 4px 10px;font-size:12px;">{{ op.value }}<sc-if value="{{ f.editable }}" hint-placeholder-val="{{ false }}"><button onClick="{{ op.remove }}" style="width:16px;height:16px;border-radius:50%;border:none;background:#232220;color:#FFFFFF;font-size:9px;cursor:pointer;padding:0;">×</button></sc-if></span></sc-for>
-                <sc-if value="{{ f.editable }}" hint-placeholder-val="{{ false }}"><input type="text" placeholder="+ option (Entrée)" onKeyDown="{{ cq.addOpt }}" style="font-size:12px;border:0.5px dashed rgba(34,34,34,0.3);border-radius:999px;padding:4px 10px;width:130px;"></sc-if>
+                <sc-if value="{{ f.editable }}" hint-placeholder-val="{{ false }}">
+                  <input type="text" placeholder="Nouvelle option" value="{{ cq.optVal }}" onChange="{{ cq.setOpt }}" onKeyDown="{{ cq.optKey }}" onBlur="{{ cq.addOpt }}" aria-label="Nouvelle option" style="font-size:12px;border:0.5px dashed rgba(34,34,34,0.3);border-radius:999px;padding:4px 10px;width:150px;">
+                  <button onClick="{{ cq.addOpt }}" style="font-size:12px;font-weight:500;border:0.5px solid rgba(141,29,44,0.35);background:#FFFFFF;color:#8D1D2C;border-radius:999px;padding:4px 10px;cursor:pointer;">+ Ajouter</button>
+                </sc-if>
               </div>
+              <span style="font-size:11px;color:#8A847C;">{{ cq.aide }}</span>
             </div>
           </sc-for>
           <sc-if value="{{ f.editable }}" hint-placeholder-val="{{ false }}"><button onClick="{{ addCustom }}" style="align-self:flex-start;border:0.5px dashed rgba(34,34,34,0.3);background:#FFFFFF;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;">+ Question personnalisée</button></sc-if>
@@ -198,7 +204,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { selId: 'lf-b2b-2', draft: null, pv: 'intro', leadScope: 'version', err: '', toast: '', tick: 0 };
+  state = { selId: 'lf-b2b-2', draft: null, pv: 'intro', leadScope: 'version', err: '', toast: '', tick: 0, opt: {} };
   componentDidMount() { this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sa-change', this._h); }
   blankDraft() {
     const SA = window.SA;
@@ -208,6 +214,20 @@ class Component extends DCLogic {
   componentWillUnmount() { window.removeEventListener('sa-change', this._h); clearTimeout(this._tt); }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 2800); }
   D(patch) { this.setState({ draft: Object.assign({}, this.state.draft, patch), err: '' }); }
+  /** Ajoute l'option tapée à la question personnalisée n° i du brouillon (sans doublon). */
+  ajouterOption(i) {
+    const s = this.state, v = String(s.opt[i] || '').trim();
+    if (!s.draft || !v) return;
+    const qs = s.draft.questions.slice(), q = qs[i];
+    if (!q || q.type !== 'CUSTOM') return;
+    const opts = q.options || [];
+    if (!opts.some(o => o.value.toLowerCase() === v.toLowerCase())) {
+      const base = v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'option';
+      let key = base, n = 2; while (opts.some(o => o.key === key)) { key = base + '_' + n++; }
+      qs[i] = Object.assign({}, q, { options: opts.concat({ key, value: v }) });
+    }
+    this.setState({ draft: Object.assign({}, s.draft, { questions: qs }), opt: Object.assign({}, s.opt, { [i]: '' }), err: '' });
+  }
   renderVals() {
     const SA = window.SA, s = this.state;
     if (!SA) return { families: [], d: { context: {}, thanks: {}, privacy: {} }, f: {} };
@@ -245,9 +265,10 @@ class Component extends DCLogic {
         canVersion: !editable && d.status !== 'Archivé', isDraft: editable, readOnly: !editable, editable, nextN },
       d: Object.assign({}, d, { context: ctx, thanks: ty, privacy: d.privacy || {} }),
       hasErr: !!s.err, err: s.err,
-      newVersion: () => this.setState({ draft: JSON.parse(JSON.stringify(Object.assign({}, sel, { status: 'Brouillon' }))), err: '' }),
-      newForm: () => this.setState({ draft: this.blankDraft(), err: '' }),
-      cancelDraft: () => this.setState({ draft: null, err: '' }),
+      hasMetaErr: !editable && !!d.metaError, metaErr: d.metaError || '',
+      newVersion: () => this.setState({ draft: JSON.parse(JSON.stringify(Object.assign({}, sel, { status: 'Brouillon', metaError: null }))), err: '', opt: {} }),
+      newForm: () => this.setState({ draft: this.blankDraft(), err: '', opt: {} }),
+      cancelDraft: () => this.setState({ draft: null, err: '', opt: {} }),
       publishDraft: () => {
         const dr = s.draft;
         if (!dr.name.trim()) { this.setState({ err: 'Le nom est obligatoire (name).' }); return; }
@@ -258,14 +279,18 @@ class Component extends DCLogic {
         const list = forms.map(x => x.family === nf.family && x.status === 'Actif' ? Object.assign({}, x, { status: 'Archivé' }) : x).concat(nf);
         const ads = SA.state().ads.map(a => a.leadForm && famIds.includes(a.leadForm) ? Object.assign({}, a, { leadForm: id }) : a);
         SA.save({ leadforms: list, ads }); SA.log('Sarah Lambert (Franchiseur)', 'Formulaire', '« ' + nf.name + ' » v' + nf.version + ' publié' + (nf.version > 1 ? ', v' + (nf.version - 1) + ' archivée' : ''));
-        this.setState({ draft: null, selId: id }); this.toast('Version ' + nf.version + ' publiée sur Meta' + (nf.version > 1 ? ' · la précédente est archivée.' : '.'));
+        this.setState({ draft: null, selId: id, opt: {} }); this.toast('Version ' + nf.version + ' envoyée à Meta' + (nf.version > 1 ? ' · la précédente est archivée.' : '.') + ' Un refus de Meta s’affiche sous le titre.');
       },
       setName: (e) => this.D({ name: e.target.value }), setLocale: (e) => this.D({ locale: e.target.value }),
       stdQ: Object.keys(SA.LF_Q).map(t => Object.assign(chip(qTypes.includes(t)), { label: SA.LF_Q[t], type: t, toggle: () => { if (!editable) return; this.D({ questions: qTypes.includes(t) ? d.questions.filter(q => q.type !== t) : d.questions.filter(q => q.type !== 'CUSTOM').concat({ type: t }).concat(d.questions.filter(q => q.type === 'CUSTOM')) }); } })),
       customQ: custom.map(({ q, i }) => ({ label: q.label, key: q.key, setLabel: (e) => setQ(i, { label: e.target.value }), setKey: (e) => setQ(i, { key: e.target.value.replace(/[^a-z0-9_]/gi, '_').toLowerCase() }),
         remove: () => this.D({ questions: d.questions.filter((_, j) => j !== i) }),
         options: (q.options || []).map((op, k) => ({ value: op.value, remove: () => setQ(i, { options: q.options.filter((_, j) => j !== k) }) })),
-        addOpt: (e) => { if (e.key !== 'Enter') return; const v = e.target.value.trim(); if (!v) return; e.target.value = ''; setQ(i, { options: (q.options || []).concat({ key: v.toLowerCase().replace(/[^a-z0-9]+/g, '_'), value: v }) }); } })),
+        // L'option tapée s'ajoute par Entrée, par « + Ajouter » ou en quittant le champ : rien de ce qui est écrit ne se perd.
+        optVal: s.opt[i] || '', setOpt: (e) => { const v = e.target.value; this.setState(st => ({ opt: Object.assign({}, st.opt, { [i]: v }) })); },
+        optKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); this.ajouterOption(i); } },
+        addOpt: () => this.ajouterOption(i),
+        aide: (q.options || []).length ? 'Choix multiple : la personne choisit une option.' : 'Sans option : réponse libre. Ajoutez des options pour un choix multiple.' })),
       addCustom: () => this.D({ questions: d.questions.concat({ type: 'CUSTOM', key: 'question_' + (custom.length + 1), label: '', options: [] }) }),
       setCtxTitle: (e) => this.D({ context: Object.assign({}, ctx, { title: e.target.value }) }), setCtxStyle: (e) => this.D({ context: Object.assign({}, ctx, { style: e.target.value }) }),
       setCtxBtn: (e) => this.D({ context: Object.assign({}, ctx, { button_text: e.target.value }) }), ctxContent: (ctx.content || []).join('\n'),
