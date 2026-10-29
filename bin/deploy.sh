@@ -107,6 +107,7 @@ cat > /etc/cron.d/social <<CRON
 # Module Social & Ads — posé par bin/deploy.sh
 SHELL=/bin/bash
 * * * * *   www-data php ${TARGET_DIR}/bin/cron.php queue >> /var/log/social-cron.log 2>&1
+0-59/5 * * * * www-data php ${TARGET_DIR}/bin/cron.php repost >> /var/log/social-cron.log 2>&1
 7 * * * *   www-data php ${TARGET_DIR}/bin/cron.php sync  >> /var/log/social-cron.log 2>&1
 40 6 * * *  www-data php ${TARGET_DIR}/bin/cron.php conn  >> /var/log/social-cron.log 2>&1
 37 * * * *  www-data php ${TARGET_DIR}/bin/cron.php ids   >> /var/log/social-cron.log 2>&1

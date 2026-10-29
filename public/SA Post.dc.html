@@ -213,15 +213,14 @@
               </sc-if>
               <sc-if value="{{ notLocked }}" hint-placeholder-val="{{ true }}">
                 <button onClick="{{ openLib }}" style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">Médiathèque<span style="font-size:10px;color:#666666;font-weight:400;">{{ libCount }} visuels</span></button>
-                <label style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Importer<span style="font-size:10px;color:#666666;font-weight:400;">photos</span>
-                  <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ onFiles }}" style="display:none;">
+                <label style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Importer<span style="font-size:10px;color:#666666;font-weight:400;">photos ou vidéo</span>
+                  <input type="file" accept="image/*,video/*" multiple="{{ true }}" onChange="{{ onFiles }}" style="display:none;">
                 </label>
                 <button onClick="{{ clearPhotos }}" title="Retirer toutes les photos du post" style="height:68px;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;">Vider</button>
-                <sc-if value="{{ isBrut }}" hint-placeholder-val="{{ false }}">
-                  <label style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Vidéo<span style="font-size:10px;color:#666666;font-weight:400;">MP4 · 60 s</span>
-                    <input type="file" accept="video/*" onChange="{{ onVideo }}" style="display:none;">
-                  </label>
-                </sc-if>
+                <!-- Une vidéo s'ajoute dans tous les modes : le post passe alors en « Photos telles quelles ». -->
+                <label title="{{ videoTip }}" style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Vidéo<span style="font-size:10px;color:#666666;font-weight:400;">MP4 · 60 s</span>
+                  <input type="file" accept="video/*" onChange="{{ onVideo }}" style="display:none;">
+                </label>
               </sc-if>
             </div>
           </div>
@@ -290,6 +289,7 @@
           <sc-for list="{{ results }}" as="r" hint-placeholder-count="0">
             <button onClick="{{ r.toggle }}" title="{{ r.tip }}" style="position:relative;aspect-ratio:1/1;border-radius:8px;background:#F4EFE8;border:2px solid {{ r.ring }};box-sizing:border-box;cursor:pointer;overflow:hidden;padding:0;">
               <img src="{{ r.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;">
+              <sc-if value="{{ r.isVideo }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:3px;bottom:3px;border-radius:4px;background:rgba(35,34,32,0.8);color:#FFFFFF;font-size:9px;font-weight:600;padding:1px 4px;display:block;">▶ vidéo</span></sc-if>
               <sc-if value="{{ r.inPost }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:#8D1D2C;color:#FFFFFF;font-size:10px;line-height:16px;text-align:center;display:block;">✓</span></sc-if>
             </button>
           </sc-for>
@@ -633,6 +633,14 @@
                     <sc-if value="{{ f.c2.hasDot }}" hint-placeholder-val="{{ false }}"><button onClick="{{ f.c2.dotPick }}" disabled="{{ locked }}" title="{{ f.c2.dotTip }}" style="flex:0 0 auto;width:22px;height:22px;border-radius:50%;cursor:pointer;padding:0;font-size:9px;font-weight:600;color:#666666;background:{{ f.c2.dotBg }};border:2px solid {{ f.c2.dotRing }};box-shadow:inset 0 0 0 1px rgba(34,34,34,0.15);">{{ f.c2.dotTxt }}</button></sc-if>
                   </div>
                 </sc-for>
+                <!-- Plusieurs boutiques : le prix de chacune, lu dans TFBuddy ; un visuel par prix à la publication. -->
+                <sc-if value="{{ pbShow }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:6px;background:#FCFAF7;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:8px 10px;">
+                    <span style="font-size:12px;color:#444444;">{{ pbTitre }}</span>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ pbItems }}" as="pi" hint-placeholder-count="0"><button onClick="{{ pi.pick }}" title="{{ pi.tip }}" style="border-radius:999px;padding:4px 10px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid {{ pi.border }};background:{{ pi.bg }};color:{{ pi.fg }};">{{ pi.label }}</button></sc-for></div>
+                    <span style="font-size:11px;line-height:1.45;color:#666666;">{{ pbNote }}</span>
+                  </div>
+                </sc-if>
               </div>
               <sc-if value="{{ hasCouleurPal }}" hint-placeholder-val="{{ false }}">
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#FCFAF7;border:0.5px solid rgba(34,34,34,0.10);border-radius:8px;padding:8px 10px;">
@@ -753,6 +761,7 @@
               <button onClick="{{ iaCourt }}" disabled="{{ iaRwOff }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ iaRwOp }};">Plus court</button>
               <button onClick="{{ iaGourmand }}" disabled="{{ iaRwOff }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ iaRwOp }};">Plus gourmand</button>
               <button onClick="{{ iaUrgent }}" disabled="{{ iaRwOff }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ iaRwOp }};">Plus urgent</button>
+              <button onClick="{{ iaCorriger }}" disabled="{{ iaRwOff }}" title="Orthographe, grammaire, typographie et charte, sans réécrire le texte (FR et NL)" style="border:0.5px solid #8D1D2C;background:#FFFFFF;color:#8D1D2C;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;opacity:{{ iaRwOp }};">✓ Corriger</button>
               <sc-if value="{{ hasIaTags }}" hint-placeholder-val="{{ true }}"><button onClick="{{ iaAjouterTags }}" title="{{ iaTags }}" disabled="{{ locked }}" style="border:0.5px dashed rgba(34,34,34,0.3);background:#FFFFFF;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;"># Hashtags</button></sc-if>
               <sc-if value="{{ iaBusy }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">{{ iaLabel }}</span></sc-if>
             </div>
@@ -760,6 +769,20 @@
             <sc-if value="{{ iaNonConfig }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8A4B00;">La rédaction assistée demande une clé API Anthropic : <a href="{{ iaParamHref }}" style="color:#8D1D2C;">Paramètres → Rédaction IA</a>.</span></sc-if>
             <sc-if value="{{ iaDemo }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Démonstration : la rédaction assistée fonctionne en ligne seulement.</span></sc-if>
             <sc-if value="{{ hasIaErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#8D1D2C;">{{ iaErr }}</span></sc-if>
+            <!-- Le relecteur : les corrections une à une, appliquées seulement sur demande. -->
+            <sc-if value="{{ hasCor }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.12);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;">
+                <span style="font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#8D1D2C;">{{ corTitre }}</span>
+                <sc-for list="{{ corListe }}" as="cr" hint-placeholder-count="0">
+                  <span style="font-size:12px;line-height:1.45;color:#222222;"><b style="font-weight:500;color:#8A847C;">{{ cr.L }}</b> <span style="text-decoration:line-through;color:#8D1D2C;">{{ cr.avant }}</span> → <span style="color:#0F6B4A;font-weight:500;">{{ cr.apres }}</span> <span style="color:#666666;">· {{ cr.raison }}</span></span>
+                </sc-for>
+                <sc-for list="{{ corRemarques }}" as="rq" hint-placeholder-count="0"><span style="font-size:11px;color:#8A4B00;">{{ rq }}</span></sc-for>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <sc-if value="{{ corChange }}" hint-placeholder-val="{{ true }}"><button onClick="{{ corAppliquer }}" disabled="{{ locked }}" style="border:none;background:#232220;color:#FFFFFF;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;">Appliquer les corrections</button></sc-if>
+                  <button onClick="{{ corFermer }}" style="border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;">{{ corFermerLabel }}</button>
+                </div>
+              </div>
+            </sc-if>
             <sc-if value="{{ hasIaRes }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:8px;">
                 <sc-for list="{{ iaVariantes }}" as="iv" hint-placeholder-count="3">
@@ -1074,8 +1097,8 @@
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
             <label style="background:transparent;border:0.5px solid rgba(34,34,34,0.18);color:#222222;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;" style-hover="border-color:#222222;">
-              Importer des photos
-              <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ onFileLib }}" style="display:none;">
+              Importer photos ou vidéos
+              <input type="file" accept="image/*,video/*" multiple="{{ true }}" onChange="{{ onFileLib }}" style="display:none;">
             </label>
             <button onClick="{{ closeLib }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Terminer</button>
           </div>
@@ -1124,6 +1147,7 @@
                 <div onClick="{{ m.select }}" style="display:block;border:2px solid {{ m.ring }};border-radius:10px;background:#FFFFFF;cursor:pointer;overflow:clip;box-sizing:border-box;">
                   <div style="position:relative;width:100%;height:0;padding-bottom:100%;background:#F4EFE8;">
                     <img src="{{ m.src }}" alt="" style="position:absolute;left:10px;top:10px;width:calc(100% - 20px);height:calc(100% - 20px);object-fit:contain;display:block;">
+                    <sc-if value="{{ m.isVideo }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:8px;bottom:8px;height:20px;padding:0 8px;border-radius:999px;background:#232220;color:#FFFFFF;font-size:11px;font-weight:500;line-height:20px;display:block;">▶ Vidéo</span></sc-if>
                     <sc-if value="{{ m.inPost }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:8px;left:8px;height:20px;padding:0 8px;border-radius:999px;background:#8D1D2C;color:#FFFFFF;font-size:11px;font-weight:500;line-height:20px;display:block;">Dans le post</span></sc-if>
                     <button onClick="{{ m.toggle }}" style="position:absolute;bottom:8px;right:8px;border:none;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ m.btnBg }};color:{{ m.btnFg }};">{{ m.btn }}</button>
                   </div>
@@ -1165,6 +1189,7 @@
               <label style="display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Saisonnalité
                 <select value="{{ editSeason }}" onChange="{{ setEditSeason }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;text-transform:none;letter-spacing:0;font-weight:400;"><option value="Toute l'année">Toute l'année</option><option value="Printemps">Printemps</option><option value="Été">Été</option><option value="Automne">Automne</option><option value="Hiver">Hiver</option><option value="Noël &amp; Nouvel An">Noël &amp; Nouvel An</option><option value="Épiphanie">Épiphanie</option><option value="Saint-Valentin">Saint-Valentin</option><option value="Pâques">Pâques</option><option value="Fête des mères">Fête des mères</option><option value="Saint-Nicolas">Saint-Nicolas</option></select>
               </label>
+              <sc-if value="{{ editIsPhoto }}" hint-placeholder-val="{{ true }}">
               <div style="display:flex;flex-direction:column;gap:6px;">
                 <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Rendu</span>
                 <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;">
@@ -1172,6 +1197,8 @@
                   <button onClick="{{ editCutOff }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ efBg }};color:{{ efFg }};">Pleine</button>
                 </div>
               </div>
+              </sc-if>
+              <sc-if value="{{ editIsVideo }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;line-height:1.45;">Vidéo : elle part telle quelle (« Photos telles quelles »), en vidéo ou en reel. Une photo du post sert de couverture.</span></sc-if>
               <button onClick="{{ editToggle }}" style="margin-top:6px;background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:11px 16px;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">{{ editToggleLabel }}</button>
               <button onClick="{{ editDelete }}" style="background:transparent;border:none;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;padding:8px 0;">Supprimer de la médiathèque</button>
             </div>
@@ -1227,7 +1254,7 @@ class Component extends DCLogic {
       eyebrow: 'Édition saisonnière · Automne 2026', title: '', phrase: '', price: '', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be', phraseFont: 'script', phraseColor: 'auto' };
     const base = { id: null, type: 'Produit', product: null, scope: 'all', group: null, sel: SA ? SA.SHOPS.map(s => s.id) : [], ch: {}, text: '', textNl: '', edLang: 'fr', pvLang: null, link: '', linkText: { fr: '', nl: '' }, campaign: '',
       mode: 'studio', photos: [], video: null, videoFormat: 'video', v, m: this.MONTAGE(), mPrev: { key: '', slices: [] }, mIdx: 0, dark: false, when: 'later', date: SA ? SA.addDays(SA.TODAY, 1) : '2026-10-11', time: '08:00', spread: 10, pv: 'fb', pvShop: null, status: null,
-      txtSel: null, txtTplNom: '', etqLocal: null, qc: [], visNom: '', visLocal: null, kitBusy: false, offre: null, mentionAuto: true, iaBusy: false, iaRes: null, iaErr: '', iaConsigne: '',
+      txtSel: null, txtTplNom: '', etqLocal: null, qc: [], visNom: '', visLocal: null, kitBusy: false, offre: null, mentionAuto: true, iaBusy: false, iaRes: null, iaErr: '', iaConsigne: '', cor: null,
       objectif: '', inspi: (() => { try { const x = localStorage.getItem('sa.inspi'); return x === null ? null : x === '1'; } catch (e) { return null; } })(),
       cutBusy: null, couleurRole: null, couleurNom: '', pvVue: 'post', tel: false, grilleData: {}, grilleSnap: null, vidBusy: false, vidAnim: null, idees: null, ideesTout: false, ideesBusy: false, ideesErr: '', reco: null, recoLu: false, recoBusy: false, recoErr: '', ideeId: '', ideeCat: null, ideeOffre: null,
       nav: null, navKey: null, navLoading: false, navErr: '', navMode: 'cat', navG: null, navC: null, navGam: null, navQ: '', navSel: null, offres: null, offresKey: '', offresLoading: false, offreUsed: '',
@@ -1246,7 +1273,9 @@ class Component extends DCLogic {
       if (p.offre) base.offre = p.offre;
       if (p.montage) { base.mode = ['collage', 'frise'].includes(p.montage.kind) ? p.montage.kind : 'pano'; base.m = Object.assign(this.MONTAGE(), p.montage.m); base.photos = p.montage.photos || []; }
       else if (p.visual) { base.mode = 'studio'; base.v = Object.assign({}, v, p.visual.v, { nl: Object.assign({}, v.nl, (p.visual.v || {}).nl) }); base.photos = p.visual.photos || []; }
-      else { base.mode = 'brut'; base.photos = (p.media || [{ src: p.img, kind: 'img', cut: true }]).filter(m => m.kind !== 'video').map(m => ({ src: m.src, cut: m.cut !== false, name: m.name || '' })); base.v.title = p.title; }
+      else { base.mode = 'brut'; base.photos = (p.media || [{ src: p.img, kind: 'img', cut: true }]).filter(m => m.kind !== 'video').map(m => ({ src: m.src, cut: m.cut !== false, name: m.name || '' })); base.v.title = p.title;
+        // La vidéo du post revient avec lui (elle repartait sinon sans vidéo à la réouverture).
+        const vd = (p.media || []).find(m => m.kind === 'video'); if (vd) base.video = { src: vd.src, name: vd.name || 'Vidéo' }; }
     }
     const shop = SA.param('shop'); if (shop && !p) { base.scope = 'shop'; base.sel = [shop]; }
     const date = SA.param('date'); if (date && !p) base.date = date;
@@ -1298,14 +1327,47 @@ class Component extends DCLogic {
     if (q) { const hay = this.norm([it.name, it.cat, it.sub, it.season].join(' ')); for (const w of this.norm(q).split(/\s+/).filter(Boolean)) if (!hay.includes(w)) return false; }
     return true;
   }
-  /** Des fichiers → la médiathèque (et le post, si demandé). */
+  /**
+   * Une vidéo du téléphone ou de l'ordinateur : lue en data: (le serveur l'écrit sous uploads/, Meta la télécharge ;
+   * 45 Mo au plus), avec une vignette tirée de sa première seconde pour la médiathèque.
+   */
+  lireVideo(file) {
+    if (!file || !/^video\//.test(file.type)) return Promise.resolve(null);
+    if (file.size > 45 * 1048576) { this.toast('Vidéo trop lourde : 45 Mo au plus.'); return Promise.resolve(null); }
+    const nom = String(file.name || 'Vidéo').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+    const vignette = () => new Promise(ok => {
+      const url = URL.createObjectURL(file), vd = document.createElement('video'), fin = (x) => { try { URL.revokeObjectURL(url); } catch (e) {} ok(x); };
+      vd.muted = true; vd.preload = 'metadata'; vd.playsInline = true;
+      vd.onloadeddata = () => { try { vd.currentTime = Math.min(0.5, (vd.duration || 1) / 2); } catch (e) { fin(null); } };
+      vd.onseeked = () => { try { const k = Math.min(1, 480 / Math.max(vd.videoWidth || 1, vd.videoHeight || 1)), c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round((vd.videoWidth || 480) * k)); c.height = Math.max(1, Math.round((vd.videoHeight || 480) * k));
+        c.getContext('2d').drawImage(vd, 0, 0, c.width, c.height); fin(c.toDataURL('image/jpeg', 0.8)); } catch (e) { fin(null); } };
+      vd.onerror = () => fin(null); setTimeout(() => fin(null), 5000); vd.src = url;
+    });
+    return Promise.all([new Promise(ok => { const rd = new FileReader(); rd.onload = () => ok(rd.result); rd.onerror = () => ok(null); rd.readAsDataURL(file); }), vignette()])
+      .then(([src, poster]) => { if (!src) { this.toast('Vidéo illisible.'); return null; } return { src, poster, name: nom }; });
+  }
+  /** Met la vidéo dans le post. Une vidéo ne se compose pas dans un visuel : le post passe en « Photos telles quelles ». */
+  choisirVideo(vd) {
+    if (!vd || this.state.status === 'Publié') return;
+    const s = this.state, versBrut = s.mode !== 'brut';
+    this.setState({ video: { src: vd.src, name: String(vd.name || 'Vidéo').slice(0, 40), poster: vd.poster || null }, mode: 'brut', type: s.type === 'Libre' ? 'Vidéo / film' : s.type });
+    if (versBrut) this.toast('Vidéo ajoutée : le post passe en « Photos telles quelles » (une vidéo ne se compose pas dans un visuel). Une photo ajoutée sert de couverture.');
+  }
+  /** Des fichiers → la médiathèque (et le post, si demandé) : photos et vidéos. */
   async addFilesLib(files, toPost) {
-    const arr = Array.from(files || []).filter(f => /^image\//.test(f.type)).slice(0, 30); if (!arr.length) return;
+    const tous = Array.from(files || []), arr = tous.filter(f => /^image\//.test(f.type)).slice(0, 30), vids = tous.filter(f => /^video\//.test(f.type)).slice(0, 3);
+    if (!arr.length && !vids.length) return;
     const read = (await Promise.all(arr.map(f => this.readFile(f)))).filter(Boolean);
-    const added = read.map((x, i) => ({ id: 'u' + Date.now() + '-' + i + Math.random().toString(36).slice(2, 6), src: x.src, name: String(x.name || 'Photo').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '), cat: '', sub: '', season: "Toute l'année", cut: !!x.cut }));
+    const lus = (await Promise.all(vids.map(f => this.lireVideo(f)))).filter(Boolean);
+    const id = (i) => 'u' + Date.now() + '-' + i + Math.random().toString(36).slice(2, 6);
+    const added = read.map((x, i) => ({ id: id(i), src: x.src, name: String(x.name || 'Photo').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '), cat: '', sub: '', season: "Toute l'année", cut: !!x.cut }))
+      .concat(lus.map((x, i) => ({ id: id('v' + i), kind: 'video', src: x.src, poster: x.poster, name: x.name, cat: '', sub: '', season: "Toute l'année", cut: false })));
     if (!added.length) return;
     const lib = this.state.lib.concat(added); this.saveLib(lib);
-    this.setState(st => ({ lib, photos: toPost ? st.photos.concat(added.map(x => ({ src: x.src, cut: x.cut, name: x.name }))) : st.photos, editId: toPost ? st.editId : added[0].id }));
+    const photos = added.filter(x => x.kind !== 'video');
+    this.setState(st => ({ lib, photos: toPost ? st.photos.concat(photos.map(x => ({ src: x.src, cut: x.cut, name: x.name }))) : st.photos, editId: toPost ? st.editId : added[0].id }));
+    if (toPost && lus.length) this.choisirVideo(lus[0]);
   }
   componentDidUpdate() { this.montagePreview(); }
   componentWillUnmount() { clearTimeout(this._tt); clearTimeout(this._mT); this._dead = true; }
@@ -1574,6 +1636,16 @@ class Component extends DCLogic {
     try { const r = await SA.api('POST', '/redaction/proposer', b); this.setState({ iaBusy: false, iaRes: r }); }
     catch (e) { this.setState({ iaBusy: false, iaErr: e.message || String(e) }); }
   }
+  /** Le relecteur (Claude, côté serveur) : corrige le texte FR et NL sans le réécrire ; rien n'est remplacé avant « Appliquer ». */
+  async iaCorriger() {
+    const SA = window.SA, s = this.state;
+    if (!SA.live) { this.setState({ iaErr: 'Le relecteur fonctionne en ligne seulement.' }); return; }
+    const textes = [['fr', s.text], ['nl', s.textNl]].filter(([, t]) => String(t || '').trim()).map(([L, t]) => ({ cle: L, langue: L, texte: t }));
+    if (!textes.length) return;
+    this.setState({ iaBusy: true, iaErr: '', iaConsigne: 'corriger', cor: null });
+    try { const r = await SA.api('POST', '/redaction/corriger', { contexte: 'un post Facebook et Instagram (' + (s.type || 'post') + ')', textes }); this.setState({ iaBusy: false, cor: Object.assign({ avant: { fr: s.text, nl: s.textNl } }, r) }); }
+    catch (e) { this.setState({ iaBusy: false, iaErr: e.message || String(e) }); }
+  }
   /** Efface un texte posé sur le visuel. */
   effacerTexte(id) {
     const v = this.state.v;
@@ -1597,13 +1669,59 @@ class Component extends DCLogic {
       if (this.state.navKey !== shop) return;
       const st = { nav, navLoading: false }, sel = this.state.navSel;
       // Un produit choisi suit la boutique : son prix, ou plus de prix si plusieurs boutiques.
-      if (sel && sel.kind === 'produit') {
+      // Plusieurs boutiques dont les prix sont déjà lus (loadPrix) : le visuel les garde.
+      const pbLu = !nav.prix && this.state.pb && this.state.pb.prix && sel && String(this.state.pb.key).split('|')[0] === String(sel.id);
+      if (sel && sel.kind === 'produit' && !pbLu) {
         const p = nav.produits.find(x => x.id === sel.id), prix = nav.prix && p && p.prix != null ? p.prix : null;
         st.navSel = Object.assign({}, sel, { prix, shop: nav.prix ? shop : null });
         st.v = Object.assign({}, this.state.v, { price: prix != null ? String(prix.toFixed(2)).replace('.', ',') : '', showPrice: prix != null });
       }
       this.setState(st);
     }).catch(e => this.setState({ navLoading: false, navErr: 'Catalogue illisible : ' + (e.message || e) }));
+  }
+  /**
+   * Plusieurs boutiques et un produit : le prix de vente de chacune (TFBuddy, GET /catalogue/prix). Le même prix partout :
+   * le visuel le porte, comme pour une boutique. Des prix différents : un visuel par prix à la publication (groupesPrix).
+   */
+  loadPrix(key) {
+    const SA = window.SA, s = this.state;
+    if (!key) { if (s.pb) this.setState({ pb: null, pbApercu: null }); return; }
+    if (s.pb && s.pb.key === key) return;
+    const [pid, liste] = key.split('|'), shops = liste.split(',');
+    this.setState({ pb: { key, loading: true, prix: null, err: '' } });
+    SA.prixBoutiques(pid, shops).then(r => {
+      const st0 = this.state;
+      if (!st0.pb || st0.pb.key !== key) return;
+      const prix = (r && r.prix) || {}, connus = shops.map(id => prix[id]).filter(x => x != null);
+      const f2 = (n) => String(Number(n).toFixed(2)).replace('.', ',');
+      const memes = connus.length === shops.length && new Set(connus.map(f2)).size === 1;
+      const st = { pb: { key, loading: false, prix, err: '' }, pbApercu: shops.find(id => prix[id] != null) || shops[0] };
+      if (connus.length) st.v = Object.assign({}, st0.v, { price: memes ? f2(connus[0]) : st0.v.price, showPrice: true });
+      // Le texte proposé (pas retouché à la main) cite le prix de chaque boutique : {prix}, rempli boutique par boutique.
+      const sel = st0.navSel;
+      if (connus.length === shops.length && sel && sel.kind === 'produit') {
+        if (st0.text && st0.text === this._autoFr && !/\{prix\}/.test(st0.text)) { st.text = st0.text.replace(sel.name + ' chez', sel.name + ' : {prix} € chez'); this._autoFr = st.text; }
+        const nomNl = sel.nameNl || sel.name;
+        if (st0.textNl && st0.textNl === this._autoNl && !/\{prix\}/.test(st0.textNl)) { st.textNl = st0.textNl.replace(nomNl + ' bij', nomNl + ': {prix} € bij'); this._autoNl = st.textNl; }
+      }
+      this.setState(st);
+    }).catch(e => { if (this.state.pb && this.state.pb.key === key) this.setState({ pb: { key, loading: false, prix: null, err: e.message || String(e) } }); });
+  }
+  /** Le prix de chaque boutique visée (lu dans TFBuddy) pour le post : {prix} du texte, vérification à la publication. */
+  prixParBoutique() {
+    const s = this.state, prix = s.pb && !s.pb.loading && s.pb.prix, t = this.targets();
+    if (!prix || t.length < 2 || !s.navSel || s.navSel.kind !== 'produit') return null;
+    const out = {}; t.forEach(id => { if (prix[id] != null) out[id] = Number(prix[id]); });
+    return Object.keys(out).length ? out : null;
+  }
+  /** Les boutiques visées regroupées par prix (visuel composé, prix affiché) ; vide si un seul visuel suffit. */
+  groupesPrix() {
+    const s = this.state, prix = s.pb && s.pb.prix;
+    if (!prix || s.mode !== 'studio' || !s.v.showPrice) return [];
+    const g = {};
+    this.targets().forEach(id => { const p = prix[id], k = p == null ? '-' : Number(p).toFixed(2); (g[k] = g[k] || { prix: p == null ? null : Number(p), shops: [] }).shops.push(id); });
+    const l = Object.values(g);
+    return l.length > 1 ? l : [];
   }
   /** Les promotions, bundles et formules liés à la sélection. */
   loadOffres(key, q) {
@@ -1695,7 +1813,7 @@ class Component extends DCLogic {
     try { await this.photosLocales(); }
     catch (e) { console.error(e); this.setState({ saving: false, errors: ['La photo du webshop n\u2019a pas pu être préparée (' + (e && e.message ? e.message : e) + '). Rien n\u2019a été enregistré : réessayez.'] }); return null; }
     const s = this.state;
-    let img = null, media, friseTiles = null;
+    let img = null, media, friseTiles = null, parBoutique = null;
     if (s.mode === 'studio') {
       // En ligne, le visuel part chez Meta : pleine définition (1080 × 1080). En démo, il reste dans le navigateur : demi-définition.
       let err = null;
@@ -1704,6 +1822,24 @@ class Component extends DCLogic {
       if (!img && SA.live) { this.setState({ saving: false, errors: ['Le visuel composé n\u2019a pas pu être exporté' + (err && err.message ? ' (' + err.message + ')' : '') + '. Rien n\u2019a été enregistré : réessayez, ou passez en mode « Photos telles quelles ».'] }); return null; }
       if (!img) img = s.photos[0] ? s.photos[0].src : 'img/illus/decorative/bubble.png';
       media = [{ src: img, kind: 'img', cut: false, name: 'Visuel composé' }];
+      // Un prix par boutique : le même visuel, exporté une fois par prix ; chaque boutique publie le sien.
+      const groupes = this.groupesPrix();
+      if (groupes.length && this._api) {
+        parBoutique = {};
+        const avant = this.state.pbApercu;
+        try {
+          for (const g of groupes) {
+            await new Promise(r => this.setState({ pbApercu: g.shops[0] }, r));
+            await new Promise(r => setTimeout(r, 200));
+            const im = await this._api.toImage({ jpeg: true, pixelRatio: SA.live ? 1 : 0.5, quality: SA.live ? 0.9 : 0.82 });
+            const nom = 'Visuel composé · ' + (g.prix == null ? 'sans prix' : String(g.prix.toFixed(2)).replace('.', ',') + ' €');
+            g.shops.forEach(id => { parBoutique[id] = { img: im, media: [{ src: im, kind: 'img', cut: false, name: nom }] }; });
+          }
+        } catch (e) { console.error(e); this.setState({ saving: false, pbApercu: avant, errors: ['Les visuels par boutique n\u2019ont pas pu être exportés (' + (e && e.message ? e.message : e) + '). Rien n\u2019a été enregistré : réessayez.'] }); return null; }
+        await new Promise(r => this.setState({ pbApercu: avant }, r));
+        const premier = parBoutique[this.targets()[0]];
+        if (premier) { img = premier.img; media = premier.media.slice(); }
+      }
       if (s.vidAnim && s.vidAnim.publier && s.vidAnim.h264) media.push({ src: s.vidAnim.src, kind: 'video', name: 'Vidéo animée' });
     } else if (this.isMontage()) {
       // Montage rendu en pleine définition (1080 × 1350 par image) ; en démo, à moitié pour ne pas saturer le navigateur.
@@ -1718,7 +1854,7 @@ class Component extends DCLogic {
       media = s.photos.map(p => ({ src: p.src, kind: 'img', cut: p.cut, name: p.name })).concat(s.video ? [{ src: s.video.src, kind: 'video', name: s.video.name }] : []);
       img = s.photos[0] ? s.photos[0].src : 'img/illus/products/bread-2.png';
     }
-    return { img, media, friseTiles };
+    return { img, media, friseTiles, parBoutique };
   }
   /**
    * « Enregistrer comme modèle franchisé » : le visuel de ce post (figé) et son texte deviennent un
@@ -1757,23 +1893,25 @@ class Component extends DCLogic {
       if (bloquants.length) { this.setState({ errors: bloquants.map(q => 'Visuel : ' + q.msg + '.') }); return; } }
     this.setState({ saving: true, errors: [] });
     // Avant de publier ou programmer : le prix et la promotion du post sont-ils encore ceux de TFBuddy ?
-    if (SA.live && (status === 'Publié' || status === 'Programmé') && ((s.navSel && s.navSel.kind === 'produit' && s.navSel.prix != null) || (s.offre && s.offre.id))) {
+    const prixParBoutique = this.prixParBoutique();
+    if (SA.live && (status === 'Publié' || status === 'Programmé') && ((s.navSel && s.navSel.kind === 'produit' && (s.navSel.prix != null || prixParBoutique)) || (s.offre && s.offre.id))) {
       try {
-        const v = await SA.api('POST', '/catalogue/verifier', { catalogue: s.navSel, offre: s.offre, shops: this.targets(), date: s.when === 'now' ? SA.TODAY : s.date });
+        const v = await SA.api('POST', '/catalogue/verifier', { catalogue: s.navSel, offre: s.offre, shops: this.targets(), date: s.when === 'now' ? SA.TODAY : s.date, prixParBoutique });
         if (v && v.ecarts && v.ecarts.length) { this.setState({ saving: false, errors: v.ecarts.map(e => 'Offre à revoir : ' + e + '.').concat(['Rien n’a été publié : rechoisissez le produit ou l’offre pour reprendre les données actuelles de TFBuddy.']) }); return; }
       } catch (e) { console.error(e); }
     }
     const t = this.targets(), cat = s.product ? SA.CATALOGUE.find(x => x.id === s.product) : null;
     const rendu = await this.renderMedia();
     if (!rendu) return;
-    const { img, media, friseTiles } = rendu;
+    const { img, media, friseTiles, parBoutique } = rendu;
     const title = (this.isMontage() ? (s.m.title || '').trim() : '') || (s.v.title || '').trim() || (cat ? cat.name : (s.text.split(/[.\n]/)[0] || 'Post sans titre').slice(0, 60));
     const now = new Date(), nowT = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
     const post = { id: s.id || ('p' + Date.now()), date: s.when === 'now' ? SA.TODAY : s.date, time: s.when === 'now' ? nowT : s.time, type: s.type, title, img, media,
       visual: s.mode === 'studio' ? { v: s.v, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
       frise: friseTiles ? { tiles: friseTiles } : null,
       montage: this.isMontage() ? { kind: s.mode, m: s.m, photos: s.photos.filter(p => SA.live || !/^data:/.test(p.src) || p.src.length < 400000) } : null,
-      shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, linkText: (s.linkText.fr || s.linkText.nl) ? s.linkText : null, offre: s.offre || null, spread: s.spread, product: s.product, catalogue: s.navSel || null };
+      shops: t, ch: s.ch, fb: t.some(id => s.ch[id].fb), ig: t.some(id => s.ch[id].ig), status, campaign: s.campaign || null, text: s.text, textNl: s.textNl, langs: [...new Set(t.flatMap(id => SA.langsOf(id)))], link: s.link, linkText: (s.linkText.fr || s.linkText.nl) ? s.linkText : null, offre: s.offre || null, spread: s.spread, product: s.product, catalogue: s.navSel || null,
+      prixParBoutique, parBoutique: parBoutique || null };
     if (s.dark) { post.dark = true; post.fb = false; post.ig = false; if (!s.id) { post.date = SA.TODAY; post.time = nowT; } }
     if (status === 'Publié') {
       const ko = t.filter(id => s.ch[id] && s.ch[id].ig && (SA.byId(SA.state().shops, id) || SA.byId(SA.SHOPS, id) || {}).igs !== 'connected').map(id => ({ shop: id, channel: 'Instagram', reason: 'Token Instagram expiré (code 190)' }));
@@ -1836,6 +1974,9 @@ class Component extends DCLogic {
     const shopNom = prixShop ? (SA.byId(SA.SHOPS, prixShop) || { name: prixShop }).name : '';
     const illus = (p) => p.image || (catById[p.cat] || {}).image || (grpById[p.groupe] || {}).image || '';
     const sel = s.navSel;
+    // Plusieurs boutiques et un produit : le prix de chacune (TFBuddy).
+    const pbKey = tRes.length > 1 && sel && sel.kind === 'produit' ? sel.id + '|' + tRes.join(',') : '';
+    if ((s.pb ? s.pb.key : '') !== pbKey && !this._pbWait) { this._pbWait = true; setTimeout(() => { this._pbWait = false; this.loadPrix(pbKey); }, 0); }
     const choose = (it) => {
       if (locked) return;
       if (sel && sel.kind === it.kind && sel.id === it.id) { this.setState({ navSel: null }); return; }
@@ -1952,18 +2093,30 @@ class Component extends DCLogic {
       }
     }
     const KIND = { produit: 'Produit', categorie: 'Sous-catégorie', groupe: 'Catégorie', gamme: 'Gamme' };
+    // Le prix de chaque boutique (TFBuddy) : le panneau sous « Prix », l'aperçu d'une boutique, un visuel par prix.
+    const pbLus = pbKey && s.pb && s.pb.key === pbKey && !s.pb.loading ? s.pb.prix : null;
+    const gPrix = this.groupesPrix();
+    const pbVals = { pbShow: !!pbKey && !!(s.pb && s.pb.key === pbKey) && s.mode === 'studio',
+      pbTitre: !s.pb || s.pb.loading ? 'Prix de chaque boutique : lecture dans TFBuddy…' : s.pb.err ? 'Prix de chaque boutique illisible : ' + s.pb.err : gPrix.length ? 'Prix de chaque boutique (TFBuddy) · un clic montre son visuel' : 'Prix de chaque boutique (TFBuddy)',
+      pbItems: pbLus ? tRes.map(id => { const on = gPrix.length > 0 && s.pbApercu === id, nom = (SA.byId(SA.SHOPS, id) || { name: id }).name;
+        return { label: nom + ' · ' + (pbLus[id] != null ? eur(pbLus[id]) : 'sans prix'), tip: pbLus[id] != null ? 'Voir le visuel de ' + nom : 'Prix non renseigné dans TFBuddy : le visuel de ' + nom + ' part sans prix',
+          bg: on ? '#8D1D2C' : '#FFFFFF', fg: on ? '#FFFFFF' : pbLus[id] != null ? '#222222' : '#8A847C', border: on ? '#8D1D2C' : 'rgba(34,34,34,0.18)', pick: () => gPrix.length && this.setState({ pbApercu: id, pvShop: id }) }; }) : [],
+      pbNote: !pbLus ? '' : gPrix.length ? 'Prix différents : ' + gPrix.length + ' visuels à la publication, chaque boutique publie le sien. Dans le texte, {prix} est le prix de la boutique.'
+        : !s.v.showPrice ? 'Prix masqué sur le visuel (case « Prix »). Dans le texte, {prix} reste le prix de chaque boutique.'
+        : 'Même prix dans toutes les boutiques : un seul visuel. Dans le texte, {prix} est ce prix.' };
     const selView = sel ? { kind: KIND[sel.kind] || '', name: sel.name, image: sel.image || '', hasImg: !!sel.image,
       prix: sel.kind !== 'produit' ? 'Pas de prix : ' + (KIND[sel.kind] || '').toLowerCase() + ' entière' + (sel.kind === 'categorie' || sel.kind === 'groupe' ? ' · lien vers sa page du webshop' : '')
         : nav && nav.prix ? (sel.prix != null ? 'Prix de vente à ' + shopNom + ' : ' + eur(sel.prix) : 'Prix non renseigné à ' + shopNom)
-        : tRes.length > 1 ? 'Plusieurs boutiques : pas de prix (il dépend de la boutique)' : 'Choisissez une boutique pour afficher son prix de vente',
-      prixFg: sel.kind === 'produit' && nav && nav.prix && sel.prix != null ? '#8D1D2C' : '#666666' } : {};
+        : tRes.length > 1 ? (pbLus ? 'Prix de chaque boutique : ' + tRes.map(id => (SA.byId(SA.SHOPS, id) || { name: id }).name + ' ' + (pbLus[id] != null ? eur(pbLus[id]) : '—')).join(' · ') : s.pb && s.pb.loading ? 'Lecture du prix de chaque boutique…' : 'Plusieurs boutiques : le prix dépend de la boutique') : 'Choisissez une boutique pour afficher son prix de vente',
+      prixFg: sel.kind === 'produit' && ((nav && nav.prix && sel.prix != null) || pbLus) ? '#8D1D2C' : '#666666' } : {};
     const navVals = {
       navModeCat: () => this.setState({ navMode: 'cat', navQ: '' }), navModeGam: () => this.setState({ navMode: 'gamme', navQ: '' }),
       navCatBg: s.navMode === 'cat' ? '#8D1D2C' : 'transparent', navCatFg: s.navMode === 'cat' ? '#FFFFFF' : '#444444', navGamBg: s.navMode === 'gamme' ? '#8D1D2C' : 'transparent', navGamFg: s.navMode === 'gamme' ? '#FFFFFF' : '#444444',
       navQ: s.navQ, setNavQ: (e) => this.setState({ navQ: e.target.value }),
       navPh: nav ? 'Rechercher parmi ' + P.length + ' produits, ' + C.length + ' sous-catégories et ' + GA.length + ' gammes…' : 'Rechercher dans le catalogue…',
-      navPrixNote: prixShop ? 'Prix de vente : ' + shopNom : tRes.length > 1 ? 'Plusieurs boutiques : pas de prix' : 'Aucune boutique : pas de prix',
-      navPrixBg: prixShop ? '#FBF3F4' : '#F4EFE8', navPrixFg: prixShop ? '#8D1D2C' : '#666666',
+      navPrixNote: prixShop ? 'Prix de vente : ' + shopNom : tRes.length > 1 ? 'Plusieurs boutiques : le prix de chacune' : 'Aucune boutique : pas de prix',
+      navPrixBg: prixShop || pbLus ? '#FBF3F4' : '#F4EFE8', navPrixFg: prixShop || pbLus ? '#8D1D2C' : '#666666',
+      ...pbVals,
       navCrumbs: crumbs, hasNavPick: !!pick && !locked, navPickLabel: pick ? pick.label : '', navPick: () => pick && pick.fn(),
       navLoading: s.navLoading && !nav, hasNavErr: !!s.navErr, navErr: s.navErr, navTiles: tiles,
       hasNavSel: !!sel, navSel: selView, navUnsel: () => !locked && this.setState({ navSel: null }),
@@ -1982,12 +2135,14 @@ class Component extends DCLogic {
     // aperçu
     const pvId = t.includes(s.pvShop) ? s.pvShop : t[0], pvShop = pvId ? SA.byId(shopsState, pvId) : null;
     const shopLangs = pvShop ? SA.langsOf(pvShop) : ['fr'], pvLang = shopLangs.includes(s.pvLang) ? s.pvLang : shopLangs[0];
+    // {prix} de l'aperçu : le prix de la boutique montrée quand chaque boutique a le sien (TFBuddy).
+    const catPv = cat && pbLus && pvId && pbLus[pvId] != null ? Object.assign({}, cat, { price: String(Number(pbLus[pvId]).toFixed(2)).replace('.', ',') }) : cat;
     const txt = (L) => L === 'nl' ? s.textNl : s.text;
     // Le lien résolu pour la boutique de l'aperçu, précédé de son texte (« Commandez ici 👉 ») ; comme le serveur (socMessage).
     const lienUrl = s.link && pvShop ? SA.fill(s.link, pvShop, cat) : '', aMedia = s.photos.length > 0 || !!s.video;
     const lienDe = (L) => lienUrl ? SA.lienTexte(L, s) + ' ' + lienUrl : '';
     const avecLien = shopLangs.some(L => String(txt(L) || '').includes('{lien}'));
-    const remplir = (ig) => { const parts = pvShop ? shopLangs.map(L => SA.placerLien(SA.fill(txt(L), pvShop, cat, L), ig ? '' : lienDe(L))).filter(x => x.trim()) : [s.text];
+    const remplir = (ig) => { const parts = pvShop ? shopLangs.map(L => SA.placerLien(SA.fill(txt(L), pvShop, catPv, L), ig ? '' : lienDe(L))).filter(x => x.trim()) : [s.text];
       const out = parts.join('\n\n— — —\n\n'); return !ig && !avecLien && aMedia && lienUrl ? (out + '\n\n' + lienDe(shopLangs[0])).trim() : out; };
     const filled = remplir(false), filledIg = remplir(true);
     const LOC = ['eyebrow', 'title', 'phrase', 'unit', 'promoSub'];
@@ -1999,7 +2154,7 @@ class Component extends DCLogic {
     const pv = { page: pvShop ? pvShop.page : "L'Atelier By", city: pvShop ? pvShop.name : '—', handle: String(igUnique ? igHandle : (pvShop && pvShop.ig) || igHandle || 'latelierby').replace('@', ''),
       when: s.dark ? 'Sponsorisé' : s.when === 'now' ? "À l'instant" : SA.dLabel(s.date) + ' à ' + s.time, text: filled || 'Votre texte apparaîtra ici.', textIg: filledIg || 'Votre texte apparaîtra ici.', hasLink: !!lienUrl && !aMedia, link: lienUrl, hasLinkIg: !!lienUrl,
       hasMedia: shown.length > 0, noMedia: shown.length === 0, media: shown, cols: shown.length > 1 ? '1fr 1fr' : '1fr',
-      resolved: pvShop ? ['{ville} → ' + pvShop.name, '{horaires} → ' + pvShop.hours, '{prix} → ' + (cat ? cat.price + ' €' : 'non défini')].join(' · ') : '—' };
+      resolved: pvShop ? ['{ville} → ' + pvShop.name, '{horaires} → ' + pvShop.hours, '{prix} → ' + (catPv && catPv.price ? catPv.price + ' €' : 'non défini')].join(' · ') : '—' };
     const igBroken = t.filter(id => (SA.byId(shopsState, id) || SA.byId(SA.SHOPS, id) || {}).igs !== 'connected');
     const pages = t.filter(id => s.ch[id] && (s.ch[id].fb || s.ch[id].ig));
     const [hh, mm] = (s.when === 'now' ? '12:00' : s.time).split(':').map(Number);
@@ -2088,12 +2243,12 @@ class Component extends DCLogic {
         : s.mode === 'collage' ? 'Photos du collage · ' + s.photos.length + ' (la n°1 prend la plus grande case)'
         : s.mode === 'studio' ? 'Photos du visuel · ' + s.photos.length + (curSlots > 1 ? ' (ce montage a ' + curSlots + ' cases, les photos se répètent s\u2019il en manque)' : ' (la n°1 est utilisée)') : 'Photos publiées · ' + s.photos.length + ' (la n°1 apparaît en premier)',
       hasVideo: !!s.video, videoName: s.video ? s.video.name : '', removeVideo: () => this.setState({ video: null }),
-      onFiles: async (e) => { const fl = Array.from(e.target.files || []); e.target.value = ''; const add = (await Promise.all(fl.slice(0, 12).map(f => this.readFile(f)))).filter(Boolean); if (add.length) this.setState({ photos: this.state.photos.concat(add) }); },
-      onVideo: (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
-        // Lue en data: comme les photos : le serveur l'écrit sous uploads/ et Meta la télécharge (une adresse blob: ne quitte pas le navigateur).
-        if (f.size > 45 * 1048576) { this.toast('Vidéo trop lourde : 45 Mo au plus.'); return; }
-        const rd = new FileReader(); rd.onload = () => this.setState({ video: { src: rd.result, name: f.name.slice(0, 12) }, type: s.type === 'Libre' ? 'Vidéo / film' : s.type });
-        rd.onerror = () => this.toast('Vidéo illisible.'); rd.readAsDataURL(f); },
+      // Photos et vidéo du téléphone ou de l'ordinateur, ensemble : la vidéo (la première) entre dans le post comme avec « Vidéo ».
+      onFiles: async (e) => { const fl = Array.from(e.target.files || []); e.target.value = ''; const vid = fl.find(f => /^video\//.test(f.type));
+        const add = (await Promise.all(fl.filter(f => /^image\//.test(f.type)).slice(0, 12).map(f => this.readFile(f)))).filter(Boolean); if (add.length) this.setState({ photos: this.state.photos.concat(add) });
+        if (vid) this.choisirVideo(await this.lireVideo(vid)); },
+      onVideo: async (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) this.choisirVideo(await this.lireVideo(f)); },
+      videoTip: s.mode === 'brut' ? 'Ajouter une vidéo (MP4, 45 Mo au plus)' : 'Ajouter une vidéo : le post passera en « Photos telles quelles »',
       cutModes: [['auto', 'Auto'], ['cut', 'Détourées'], ['full', 'Pleines']].map(([k, label]) => { const [bg, fg] = seg(v.cutMode === k); return { label, bg, fg, pick: () => this.V({ cutMode: k }) }; }),
       // Recadrage : le format du visuel est fixé ici (l'image part déjà aux dimensions de Meta).
       vFormats: this.FORMATS.map(([k, label, tip]) => { const [bg, fg] = seg((v.format || 'carre') === k); return { label, tip, bg, fg, pick: () => !locked && this.V({ format: k }) }; }),
@@ -2237,7 +2392,11 @@ class Component extends DCLogic {
           couleurTous: () => { if (!locked) { this.V({ couleurs: {}, phraseColor: 'auto' }); this.toast('Couleurs des textes : celles du style.'); } },
           couleurFermer: () => this.setState({ couleurRole: null }) }; })(),
       fonts: [['script', 'Script', "'Playwrite DEVA'"], ['display', 'DISPLAY', "'Vank'"], ['sans', 'Sans', "'Gotham'"]].map(([k, label, family]) => { const [bg, fg] = seg(v.phraseFont === k); return { label, family, bg, fg, pick: () => this.V({ phraseFont: k }) }; }),
-      studioControl: Object.assign({}, vL, { txtSel: s.txtSel, texteSel: s.couleurRole || null, photos: s.photos, showPrice: v.showPrice && !!String(v.price || '').trim(), showPromo: v.showPromo && !!String(v.promo || '').trim(), showTitle: v.showTitle && !!String(v.title || '').trim(), showPhrase: v.showPhrase && !!String(v.phrase || '').trim() }),
+      // Prix différents selon la boutique : l'aperçu (et l'export) montre le prix de la boutique choisie.
+      ...(() => { const g = this.groupesPrix(), p = g.length && s.pb && s.pb.prix ? s.pb.prix[s.pbApercu] : undefined;
+        this._prixApercu = g.length ? (p == null ? '' : String(Number(p).toFixed(2)).replace('.', ',')) : null; return {}; })(),
+      studioControl: Object.assign({}, vL, this._prixApercu != null ? { price: this._prixApercu } : {}, { txtSel: s.txtSel, texteSel: s.couleurRole || null, photos: s.photos,
+        showPrice: v.showPrice && !!String(this._prixApercu != null ? this._prixApercu : v.price || '').trim(), showPromo: v.showPromo && !!String(v.promo || '').trim(), showTitle: v.showTitle && !!String(v.title || '').trim(), showPhrase: v.showPhrase && !!String(v.phrase || '').trim() }),
       onStudioApi: (api) => { this._api = api; },
       // Un texte posé glissé sur l'aperçu : sa nouvelle position ; un clic le sélectionne.
       onLabelMove: (id, x, y) => { if (!locked) this.setState(st => ({ v: Object.assign({}, st.v, { textes: (st.v.textes || []).map(t => t.id === id ? Object.assign({}, t, { x, y }) : t) }) })); },
@@ -2272,7 +2431,16 @@ class Component extends DCLogic {
         const COL = { erreur: ['#FDECEC', '#8D1D2C'], attention: ['#FFF4E5', '#8A4B00'], conseil: ['#F4EFE8', '#444444'] };
         const tags = (R && R.hashtags && R.hashtags.length ? R.hashtags : ch.hashtags || []).concat(ch.hashtagVille ? ['{hashtag_ville}'] : []);
         const off = locked || s.iaBusy || !ia.configure || !SA.live, vide = !String(s.text || s.textNl || '').trim();
-        return { iaBusy: s.iaBusy, iaLabel: s.iaBusy ? (s.iaConsigne ? 'Réécriture ' + LBL[s.iaConsigne] + '…' : 'Rédaction de 3 propositions…') : '',
+        // Le relecteur : ce qu'il a corrigé ; « Appliquer » ne remplace un texte que s'il n'a pas bougé depuis la demande.
+        const C = s.cor, corChange = !!(C && (C.textes || []).some(x => x.change));
+        const corVals = { hasCor: !!C, corTitre: !C ? '' : corChange ? 'Relecture · ' + (C.corrections || []).length + ' correction' + ((C.corrections || []).length > 1 ? 's' : '') : 'Relecture · rien à corriger',
+          corListe: (C && C.corrections || []).map(x => ({ L: x.cle.toUpperCase(), avant: x.avant, apres: x.apres, raison: x.raison })), corRemarques: (C && C.remarques) || [], corChange,
+          corFermerLabel: corChange ? 'Ignorer' : 'Fermer', corFermer: () => this.setState({ cor: null }),
+          corAppliquer: () => { if (locked || !C) return; const st = { cor: null }, cur = { fr: s.text, nl: s.textNl }, garde = [];
+            (C.textes || []).forEach(x => { if (!x.change) return; if (cur[x.cle] !== C.avant[x.cle]) { garde.push(x.cle.toUpperCase()); return; } st[x.cle === 'nl' ? 'textNl' : 'text'] = x.texte; });
+            this._autoFr = null; this._autoNl = null; this.setState(st);
+            this.toast(garde.length ? 'Texte ' + garde.join(' et ') + ' modifié depuis la relecture : relancez « Corriger ».' : 'Corrections appliquées.'); } };
+        return Object.assign(corVals, { iaCorriger: () => !(off || vide) && this.iaCorriger(), iaBusy: s.iaBusy, iaLabel: s.iaBusy ? (s.iaConsigne === 'corriger' ? 'Relecture du texte…' : s.iaConsigne ? 'Réécriture ' + LBL[s.iaConsigne] + '…' : 'Rédaction de 3 propositions…') : '',
           iaNonConfig: SA.live && !ia.configure, iaDemo: !SA.live, iaOff: off, iaOp: off ? 0.5 : 1, iaRwOff: off || vide, iaRwOp: off || vide ? 0.45 : 1,
           iaProposer: () => !off && this.iaDemander(''), iaCourt: () => !(off || vide) && this.iaDemander('court'),
           iaGourmand: () => !(off || vide) && this.iaDemander('gourmand'), iaUrgent: () => !(off || vide) && this.iaDemander('urgent'),
@@ -2287,7 +2455,7 @@ class Component extends DCLogic {
           iaAjouterTags: () => { if (locked) return; const k = isNlEd ? 'textNl' : 'text', cur = String(s[k] || ''), manque = tags.filter(h => !cur.includes(h));
             if (manque.length) this.setState({ [k]: (cur.trim() ? cur.replace(/\s+$/, '') + '\n\n' : '') + manque.join(' ') }); },
           relecture: remarques.map(r => ({ txt: r.L + ' · ' + r.msg, bg: COL[r.niveau][0], fg: COL[r.niveau][1] })), hasRelecture: remarques.length > 0,
-          relectureOk: !remarques.length && !vide };
+          relectureOk: !remarques.length && !vide });
       })(),
       taRef: (el) => { this._ta = el; }, text: isNlEd ? s.textNl : s.text, setText: (e) => this.setState({ [isNlEd ? 'textNl' : 'text']: e.target.value }),
       templates: (st.templates || SA.TEMPLATES).map(tp => ({ name: tp.name, use: () => !locked && this.setState({ text: tp.text, textNl: tp.textNl || s.textNl, type: tp.type }) })),
@@ -2345,8 +2513,13 @@ class Component extends DCLogic {
       campaign: s.campaign, setCampaign: (e) => this.setState({ campaign: e.target.value }), campOptions: st.campaigns.filter(c => c.status !== 'terminée' || c.id === s.campaign).map(c => ({ id: c.id, name: c.name })),
       // médiathèque (comme Posts Facebook) : recherche dans le formulaire, modale à catégories, fiche d'un visuel
       ...(() => {
-        const libAll = s.lib, inPost = (it) => s.photos.some(p => p.src === it.src);
-        const togglePost = (it) => { if (locked) return; this.setState(st => ({ photos: st.photos.some(p => p.src === it.src) ? st.photos.filter(p => p.src !== it.src) : st.photos.concat({ src: it.src, cut: it.cut !== false, name: it.name }) })); };
+        const estVid = (it) => it.kind === 'video';
+        const libAll = s.lib, inPost = (it) => estVid(it) ? !!s.video && s.video.src === it.src : s.photos.some(p => p.src === it.src);
+        // Une vidéo de la médiathèque devient LA vidéo du post (une seule par post) ; une photo s'ajoute ou se retire.
+        const togglePost = (it) => { if (locked) return;
+          if (estVid(it)) { if (inPost(it)) this.setState({ video: null }); else this.choisirVideo(it); return; }
+          this.setState(st => ({ photos: st.photos.some(p => p.src === it.src) ? st.photos.filter(p => p.src !== it.src) : st.photos.concat({ src: it.src, cut: it.cut !== false, name: it.name }) })); };
+        const vign = (it) => estVid(it) ? it.poster || 'img/illus/decorative/bubble.png' : it.src;
         const tags = (it) => [it.cat || 'Non classée', it.sub, it.season].filter(Boolean).join(' · ');
         const set = (k) => (e) => this.setState({ [k]: e.target.value });
         const found = libAll.filter(it => this.matches(it, s.query, s.fCat, '', s.fSeason));
@@ -2362,7 +2535,7 @@ class Component extends DCLogic {
         this.STYLES1.concat(this.STYLES2).forEach(([k]) => { const C = k.charAt(0).toUpperCase() + k.slice(1); cards['sel' + C] = v.style === k ? '#8D1D2C' : 'transparent'; cards['pick' + C] = () => !locked && this.V({ style: k }); });
         return Object.assign(cards, {
           query: s.query, fCat: s.fCat, fSeason: s.fSeason, setQuery: set('query'), setFCat: set('fCat'), setFSeason: set('fSeason'),
-          results: found.slice(0, 40).map(it => ({ src: it.src, inPost: inPost(it), ring: inPost(it) ? '#8D1D2C' : 'transparent', tip: it.name + ' · ' + tags(it), toggle: () => togglePost(it) })),
+          results: found.slice(0, 40).map(it => ({ src: vign(it), isVideo: estVid(it), inPost: inPost(it), ring: inPost(it) ? '#8D1D2C' : 'transparent', tip: (estVid(it) ? 'Vidéo · ' : '') + it.name + ' · ' + tags(it), toggle: () => togglePost(it) })),
           resultLabel: found.length + (found.length > 1 ? ' visuels' : ' visuel'),
           selCount: s.photos.length,
           onDragOver: (e) => e.preventDefault(), onDropLib: (e) => { e.preventDefault(); e.stopPropagation(); this.addFilesLib(e.dataTransfer.files, false); },
@@ -2379,11 +2552,11 @@ class Component extends DCLogic {
           hasFilter: !!(s.mQuery || s.mCat || s.mSub || s.mSeason || s.mOnlyPost), clearFilters: () => this.setState({ mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false }),
           mLabel: mFound.length + (mFound.length > 1 ? ' visuels ' : ' visuel ') + ctx, mCount: mFound.length, mEmpty: mFound.length === 0,
           mSelNotAll: !locked && mFound.some(x => !inPost(x)),
-          addResultsToPost: () => { if (locked) return; this.setState(st => ({ photos: st.photos.concat(mFound.filter(x => !st.photos.some(p => p.src === x.src)).map(x => ({ src: x.src, cut: x.cut !== false, name: x.name }))) })); },
-          mResults: mFound.slice(0, 160).map(it => ({ src: it.src, name: it.name, tags: tags(it), inPost: inPost(it), ring: s.editId === it.id ? '#8D1D2C' : 'transparent',
+          addResultsToPost: () => { if (locked) return; this.setState(st => ({ photos: st.photos.concat(mFound.filter(x => !estVid(x) && !st.photos.some(p => p.src === x.src)).map(x => ({ src: x.src, cut: x.cut !== false, name: x.name }))) })); },
+          mResults: mFound.slice(0, 160).map(it => ({ src: vign(it), isVideo: estVid(it), name: it.name, tags: (estVid(it) ? 'Vidéo · ' : '') + tags(it), inPost: inPost(it), ring: s.editId === it.id ? '#8D1D2C' : 'transparent',
             btn: inPost(it) ? 'Retirer' : '+ Post', btnBg: inPost(it) ? '#232220' : '#8D1D2C', btnFg: '#FFFFFF',
             select: () => this.setState({ editId: it.id }), toggle: (e) => { e.stopPropagation(); togglePost(it); } })),
-          hasEdit: !!ed, noEdit: !ed, editSrc: ed ? ed.src : '', editInPost: !!(ed && inPost(ed)), editName: ed ? ed.name : '', editCat: ed ? ed.cat : '', editSub: ed ? ed.sub : '', editSeason: ed ? ed.season : "Toute l'année",
+          hasEdit: !!ed, noEdit: !ed, editSrc: ed ? vign(ed) : '', editIsVideo: !!ed && estVid(ed), editIsPhoto: !ed || !estVid(ed), editInPost: !!(ed && inPost(ed)), editName: ed ? ed.name : '', editCat: ed ? ed.cat : '', editSub: ed ? ed.sub : '', editSeason: ed ? ed.season : "Toute l'année",
           editSubOptions: ed ? (this.CATS[ed.cat] || []) : [],
           setEditName: (e) => this.editItem({ name: e.target.value }), setEditCat: (e) => this.editItem({ cat: e.target.value, sub: '' }), setEditSub: (e) => this.editItem({ sub: e.target.value }), setEditSeason: (e) => this.editItem({ season: e.target.value }),
           ecBg, ecFg, efBg, efFg, editCutOn: () => this.editItem({ cut: true }), editCutOff: () => this.editItem({ cut: false }),
@@ -2403,7 +2576,8 @@ class Component extends DCLogic {
         });
       })(),
       libCount: s.lib.length, openLib: () => this.setState({ libOpen: true, libPick: [] }), closeLib: () => this.setState({ libOpen: false }),
-      confirmLib: () => { const add = s.libPick.map(id => s.lib.find(x => x.id === id)).filter(Boolean).map(x => ({ src: x.src, cut: x.cut !== false, name: x.name })); this.setState({ photos: s.photos.concat(add), libOpen: false }); },
+      confirmLib: () => { const pris = s.libPick.map(id => s.lib.find(x => x.id === id)).filter(Boolean), vid = pris.find(x => x.kind === 'video');
+        const add = pris.filter(x => x.kind !== 'video').map(x => ({ src: x.src, cut: x.cut !== false, name: x.name })); this.setState({ photos: s.photos.concat(add), libOpen: false }); if (vid) this.choisirVideo(vid); },
       libPickCount: s.libPick.length, lq: s.lq, setLq: (e) => this.setState({ lq: e.target.value }), lcat: s.lcat, setLcat: (e) => this.setState({ lcat: e.target.value }), libItems, libCats: [...new Set(s.lib.map(x => x.cat).filter(Boolean))], libOpen: s.libOpen,
       // publication
       whenNow: () => this.setState({ when: 'now' }), whenLater: () => this.setState({ when: 'later' }), isLater: s.when === 'later', wnBg, wnFg, wlBg, wlFg,
@@ -2424,7 +2598,7 @@ class Component extends DCLogic {
       pvStory: () => this.setState({ pv: 'ig', pvVue: 'story' }), pvGrille: () => this.setState({ pv: 'ig', pvVue: 'grille' }), psBg, psFg, pgBg, pgFg,
       isIgHead: s.pv === 'ig' && s.pvVue !== 'story',
       ...this.vuesApercu(t, pvId, igUnique, igHandle, locked),
-      pvShops: t.map(id => Object.assign(chip(id === pvId), { name: SA.byId(SA.SHOPS, id).name, pick: () => this.setState({ pvShop: id }) })), pv,
+      pvShops: t.map(id => Object.assign(chip(id === pvId), { name: SA.byId(SA.SHOPS, id).name, pick: () => this.setState({ pvShop: id, pbApercu: id }) })), pv,
       igWarn: igBroken.length > 0, igWarnText: 'Instagram indisponible pour ' + igBroken.map(id => SA.byId(SA.SHOPS, id).name).join(', ') + ' (token expiré) : seule la Page Facebook sera publiée.',
       vfVideo: () => this.setState({ videoFormat: 'video' }), vfReel: () => this.setState({ videoFormat: 'reel' }),
       vvBg: s.videoFormat === 'video' ? '#8D1D2C' : 'transparent', vvFg: s.videoFormat === 'video' ? '#FFFFFF' : '#444444', vrBg: s.videoFormat === 'reel' ? '#8D1D2C' : 'transparent', vrFg: s.videoFormat === 'reel' ? '#FFFFFF' : '#444444',

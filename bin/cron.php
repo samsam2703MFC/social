@@ -5,6 +5,7 @@ declare(strict_types=1);
  * Le cron du module (posé par bin/deploy.sh dans /etc/cron.d/social) :
  *
  *   * * * * *   php bin/cron.php queue      la file de publication (posts échus)
+ *   0-59/5 * * * * php bin/cron.php repost  repost automatique : nouvelles publications de la Page de la marque, validations échues
  *   7 * * * *   php bin/cron.php sync       pubs (statut, dépense, dark posts), leads, résultats, grille Instagram, commentaires des dark posts et des Pages, messages privés Instagram, avis Google (tables du BO ; synchro Google 1×/jour)
  *   40 6 * * *  php bin/cron.php conn       contrôle des connexions Meta
  *   37 * * * *  php bin/cron.php ids        identifiants Meta par boutique relus dans le portefeuille (selon la fréquence choisie)
@@ -22,15 +23,16 @@ try {
     socInstall();
     $r = match ($tache) {
         'queue' => ['publies' => count(socRunQueue())],
+        'repost' => socRepostGuet(),
         'sync'  => ['campagnes' => Meta::configured() ? socCampagnesMetaImporter(false)['total'] : 0, 'ads' => socAdsSync(), 'leads' => socLeadsSync(), 'results' => socResultsSync(), 'instagram' => socIgMediaSync(), 'commentaires' => socDarkCommentsSync(), 'pages' => socCommentairesSync()['lus'], 'messages' => socMessagesSync()['lus'], 'googleAuto' => socGoogleSynchroAuto(), 'google' => socGoogleAvisSync()['lus'], 'classes' => socCommentairesAnalyser()['classes'], 'bilan' => count(socBilan(true)['lignes']),
             // Le mois, le trimestre et l'année : recalculés seulement quand leur garde est passée.
             'bilans' => array_map(static fn ($p) => count(socBilan(false, $p)['lignes']), ['mois' => 'mois', 'trimestre' => 'trimestre', 'annee' => 'annee'])],
         'conn'  => ['boutiques' => count(socTestConnexions())],
         'ids'   => socIdsAuto(),
         'audit' => socAuditRun(),
-        default => throw new InvalidArgumentException('tâche inconnue : ' . $tache . ' (queue | sync | conn | ids | audit)'),
+        default => throw new InvalidArgumentException('tâche inconnue : ' . $tache . ' (queue | repost | sync | conn | ids | audit)'),
     };
-    if ($tache !== 'queue' || $r['publies'] > 0) {
+    if (!in_array($tache, ['queue', 'repost'], true) || ($r['publies'] ?? 0) > 0 || ($r['nouveaux'] ?? 0) > 0 || !empty($r['erreur'])) {
         echo date('Y-m-d H:i:s') . ' ' . $tache . ' ' . json_encode($r, JSON_UNESCAPED_UNICODE) . "\n";
     }
 } catch (Throwable $e) {

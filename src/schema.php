@@ -28,6 +28,8 @@ declare(strict_types=1);
  *  - social_modele_franchise : les modèles de post ouverts aux franchisés (espace /social_franchisee) ;
  *  - social_resultat   : résultats Meta + ventes par campagne et boutique ;
  *  - social_rattachement : publication Meta (lue en direct) → opération du Marketing du BO (le lien seul) ;
+ *  - social_repost, social_repost_cible : les publications de la Page de la marque reprises (ou
+ *                        exclues) par le repost automatique, et leur sort dans chaque boutique (src/repost.php) ;
  *  - social_instagram_media : les dernières publications de chaque compte
  *                        Instagram, relues chez Meta (grille du profil) ;
  *  - social_activite   : le journal d'activité.
@@ -153,6 +155,16 @@ function socInstall(): void
     // Le lien seul entre une publication lue chez Meta (mfb-…, mig-…) et une opération du Marketing du BO.
     Db::exec('CREATE TABLE IF NOT EXISTS social_rattachement (objet VARCHAR(80) PRIMARY KEY, operation_id VARCHAR(64) NOT NULL,'
         . 'par VARCHAR(120) NULL, le DATETIME NOT NULL, KEY idx_operation (operation_id))' . $t);
+
+    // Le repost automatique (src/repost.php) : une ligne par publication de la Page de la marque, puis
+    // une par boutique (automatique, à valider, validé, refusé, sans réponse, forcé, retiré).
+    Db::exec('CREATE TABLE IF NOT EXISTS social_repost (source_id VARCHAR(80) PRIMARY KEY, publie_le DATETIME NOT NULL, type VARCHAR(40) NULL,'
+        . 'texte TEXT NULL, image VARCHAR(1000) NULL, permalink VARCHAR(500) NULL, statut VARCHAR(12) NOT NULL, motif VARCHAR(300) NULL,'
+        . 'mode VARCHAR(10) NOT NULL, content_id VARCHAR(64) NOT NULL, vu_le DATETIME NOT NULL, ' . $maj . ', data LONGTEXT NOT NULL,'
+        . 'KEY idx_publie (publie_le), KEY idx_content (content_id))' . $t);
+    Db::exec('CREATE TABLE IF NOT EXISTS social_repost_cible (source_id VARCHAR(80) NOT NULL, shop_id VARCHAR(16) NOT NULL, etat VARCHAR(14) NOT NULL,'
+        . 'propose_le DATETIME NOT NULL, limite_le DATETIME NULL, prevue_le DATETIME NULL, repondu_le DATETIME NULL, par VARCHAR(120) NULL,'
+        . 'motif VARCHAR(500) NULL, PRIMARY KEY (source_id, shop_id), KEY idx_etat (etat, limite_le), KEY idx_shop (shop_id, etat))' . $t);
 
     socParamsInit();
     socTfbInit();

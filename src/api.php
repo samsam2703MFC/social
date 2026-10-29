@@ -40,6 +40,7 @@ require_once __DIR__ . '/kit.php';
 require_once __DIR__ . '/boost.php';
 require_once __DIR__ . '/messages.php';
 require_once __DIR__ . '/plan.php';
+require_once __DIR__ . '/repost.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -165,6 +166,25 @@ function socRoute(string $method, string $path): array
     if ($method === 'GET' && $path === '/pub/meilleurs') { return [200, socBoostMeilleurs(!empty($_GET['forcer']))]; }
     if ($method === 'GET' && $path === '/pub/demandes') { return [200, socBoostDemandes()]; }
     if ($method === 'POST' && $path === '/pub/demandes/refuser') { $b = body(); return [200, socBoostRefuser((int) ($b['id'] ?? 0), (string) ($b['reponse'] ?? ''))]; }
+    // Le repost automatique (src/repost.php) : réglage, suivi des publications de la marque reprises, gestes du réseau.
+    if ($method === 'GET' && $path === '/repost') { return [200, socRepostVue((int) ($_GET['jours'] ?? 14))]; }
+    if ($method === 'POST' && $path === '/repost/reglage') { socRepostConfigPut(body()); return [200, socRepostVue((int) (body()['jours'] ?? 14))]; }
+    if ($method === 'POST' && $path === '/repost/relire') { $g = socRepostGuet(true); return [200, ['guet' => $g] + socRepostVue((int) (body()['jours'] ?? 14))]; }
+    if ($method === 'POST' && $path === '/repost/relancer') {
+        $b = body();
+        $n = socRepostRelancer(isset($b['source']) ? (string) $b['source'] : null, isset($b['shop']) ? (string) $b['shop'] : null);
+        return [200, ['relances' => $n] + socRepostVue((int) ($b['jours'] ?? 14))];
+    }
+    if ($method === 'POST' && $path === '/repost/forcer') {
+        $b = body();
+        socRepostForcer((string) ($b['source'] ?? ''), isset($b['shop']) && $b['shop'] !== '' ? (string) $b['shop'] : null);
+        return [200, socRepostVue((int) ($b['jours'] ?? 14))];
+    }
+    if ($method === 'POST' && $path === '/repost/retirer') {
+        $b = body();
+        $r = socRepostRetirer((string) ($b['source'] ?? ''));
+        return [200, ['retrait' => $r] + socRepostVue((int) ($b['jours'] ?? 14))];
+    }
     if ($method === 'GET' && $path === '/bilan') { return [200, socBilan(!empty($_GET['forcer']), (string) ($_GET['periode'] ?? 'semaine'))]; }
     if ($method === 'POST' && $path === '/google/reglages') { return [200, ['reglages' => socGoogleReglagesPut(body())]]; }
     if ($method === 'POST' && $path === '/google/relire') {
@@ -196,12 +216,20 @@ function socRoute(string $method, string $path): array
     // et les promotions, bundles et formules liés à la sélection (src/catalogue.php).
     if ($method === 'GET' && $path === '/catalogue/nav') { return [200, socNavCatalogue((string) ($_GET['shop'] ?? ''), !empty($_GET['forcer']))]; }
     if ($method === 'GET' && $path === '/catalogue/offres') { return [200, socNavOffres($_GET)]; }
+    // Le prix d'un produit dans chaque boutique visée (plusieurs boutiques : un visuel par prix).
+    if ($method === 'GET' && $path === '/catalogue/prix') {
+        $produit = (int) ($_GET['produit'] ?? 0);
+        if ($produit <= 0) { throw new HttpError(400, 'produit invalide'); }
+        return [200, ['produit' => $produit, 'prix' => socPrixParBoutique($produit, array_filter(explode(',', (string) ($_GET['shops'] ?? ''))))]];
+    }
     if ($method === 'POST' && $path === '/catalogue/verifier') {
         // Avant de publier : le prix et la promotion du post sont-ils encore ceux de TFBuddy ?
         $ecarts = socVerifierOffres((array) body(), null, $injoignable);
         return [200, ['ecarts' => $ecarts, 'injoignable' => $injoignable]];
     }
     if ($method === 'POST' && $path === '/redaction/proposer') { return [200, socRedactionProposer(body())]; }
+    // Le relecteur : orthographe, grammaire, typographie et charte, sans réécrire (Créer un post, formulaires de leads).
+    if ($method === 'POST' && $path === '/redaction/corriger') { return [200, socRedactionCorriger(body())]; }
     // Ce qui marche (publications des 90 derniers jours, lues chez Meta, gardées 12 h) et idées de posts (src/recommandations.php).
     if ($method === 'GET' && $path === '/recommandations') { return [200, ['reco' => socRecommandations(!empty($_GET['cache']), !empty($_GET['forcer']))]]; }
     if ($method === 'GET' && $path === '/idees') { return [200, socIdees()]; }

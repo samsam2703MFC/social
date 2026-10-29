@@ -51,6 +51,8 @@ Toutes les données **et toutes les clés** sont stockées et lues dans la base
 | `social_instagram_media` | les 30 dernières publications de chaque compte Instagram (grille du profil) |
 | `social_commentaire` | les commentaires reçus sur les dark posts (Facebook et Instagram), masqués ou non |
 | `social_modele_franchise` | les modèles de post ouverts aux boutiques (espace franchisé) |
+| `social_repost` | les publications de la Page de la marque vues par le repost automatique : reprises, exclues (et pourquoi) ou retirées, avec le post du module qui les porte (`rp-…`) |
+| `social_repost_cible` | le sort de chaque publication dans chaque boutique : automatique, à valider, validé, refusé (motif), sans réponse, forcé par le réseau, retiré |
 | `social_activite` | le journal d'activité |
 
 Chaque table a des colonnes typées (lisibles en SQL) et une colonne `data` qui
@@ -79,7 +81,13 @@ catégorie, sous-catégorie ou gamme. Source : l'appel du webshop
 `GET /shops/{id}/products/available?webshop_active=1&alias_type=webshop&include=webshop,portions,availability_periods,webshop_availability`
 (photo du produit, illustrations des catégories et sous-catégories, gammes, `portion_price` = prix de
 vente de la boutique) et `GET /product-availability-periods` (photo des gammes) — mis en cache 30 min.
-Le **prix** n'est donné que si **une seule** boutique est ciblée ; plusieurs : pas de prix. Les
+Le **prix** d'une boutique ciblée seule est son prix de vente ; **plusieurs boutiques** : le prix de
+chacune est lu dans TFBuddy (`GET /catalogue/prix?produit=&shops=`, `socPrixParBoutique`) et montré sous
+la ligne « Prix » du générateur. Même prix partout : un seul visuel. Prix différents : un visuel par prix,
+exporté à l'enregistrement (`parBoutique[shop].media`) ; chaque Page publie le sien (`socMedias($post,
+$shop)`), `{prix}` du texte est le prix de la boutique (`prixParBoutique`), et le prix de chaque
+boutique est revérifié avant publication. Un clic sur une boutique (sous « Prix » ou dans l'aperçu)
+montre son visuel. Instagram unique : le compte du réseau reçoit le visuel de la première boutique. Les
 **promotions et bundles** actifs (`GET /admin/promotions/{bundles|buy-x-get-y|quantity|scheduled-product-discount}/{id}`,
 cache 15 min) sont liés quand ils visent le produit, sa sous-catégorie ou l'un des produits de la
 sélection, avec leur portée (toutes les boutiques ou lesquelles) ; les **formules** d'un produit viennent
@@ -132,6 +140,31 @@ Réglages en base : `social_parametre.meta_ids_auto` (dernier passage :
 Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
 `docs/meta-api-reference.md`.
 
+- **Repost automatique** (écran « Repost automatique », `public/SA Repost.dc.html`, `src/repost.php` ;
+  menu du Marketing : Réseaux sociaux › Repost automatique) — chaque nouvelle publication de la Page
+  Facebook de la **marque** est reprise sur les Pages des boutiques cochées. Le cron (`repost`, toutes
+  les 5 minutes, ou « Relire la Page de la marque ») lit `GET /{page de la marque}/published_posts`
+  depuis l'activation (jamais l'historique, 3 jours au plus) ; une publication qui contient un mot
+  exclu (`recrute`, `franchise`, `concours` par défaut, sans tenir compte des majuscules ni des
+  accents), qui partage une autre publication ou qui n'a ni texte ni visuel est **exclue**, avec son
+  motif. Une publication reprise devient un post du module (`rp-…`, type « Repost ») : même file,
+  même calendrier, mêmes échecs, même relance. Facebook : **partager** = `POST /{page}/feed` avec
+  `link` = le lien du post de la marque et le texte de la boutique au-dessus (`{ville}`,
+  `{adresse}`, `{horaires}`, `{webshop}`) ; **copier** = le même visuel (photo, album) et le même
+  texte, puis celui de la boutique ; une vidéo ou un lien ne se copient pas : ils sont partagés.
+  Instagram n'a pas de repost : copie sur le compte de la boutique, seulement si les boutiques ont le
+  leur (jamais en Instagram unique). Délai après la marque, plage horaire (hors plage : à
+  l'ouverture suivante). Boutique par boutique : **automatique**, ou **le franchisé valide** dans son
+  Calendrier (carte « Le réseau vous propose » : Publier sur ma Page / Refuser avec un motif) ; sans
+  réponse dans le délai (1 à 24 h) : publié quand même, ou rien. L'écran (onglet Suivi) met une
+  publication par ligne et une boutique par colonne, les chiffres, les échecs par boutique avec le
+  motif de Meta et « Relancer » ; un clic sur une case donne le détail et « Reposter quand même »
+  (refus, sans réponse, boutique pas visée), « Publier sans attendre » (à valider) ; « Retirer »
+  supprime le repost des Pages des boutiques. Le réglage du moment est figé avec chaque publication.
+  Routes : `GET /repost?jours=`, `POST /repost/reglage`, `/repost/relire`, `/repost/relancer`
+  `{source?, shop?}`, `/repost/forcer {source, shop?}`, `/repost/retirer {source}` ; espace
+  franchisé : `GET /franchise/reposts`, `POST /franchise/reposts/repondre {source, accepter, motif}`.
+  Réglage : `social_parametre.repost` ; dernier passage : `repost_guet`.
 - **Posts** — file tenue par le backend (`social_publication`) : « Programmé » =
   en file à l'heure dite, étalée de `X / (n−1)` minutes par Page ; « Publier
   maintenant » = publié dans la requête. Variables `{ville}`, `{adresse}`,
@@ -332,6 +365,12 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   (Models API, relu chaque jour), sortie JSON imposée par schéma, effort moyen, repli serveur
   (`fallbacks: default`). Le prompt ne donne que les vraies données de l'écran et interdit d'en
   inventer. Pas de SDK : le module n'a pas de dépendance (curl, comme Meta et TFBuddy).
+  **Relecteur** (« ✓ Corriger » sous le texte du post, « ✓ Corriger les textes » d'un formulaire de leads
+  en brouillon ; `POST /redaction/corriger {textes: [{cle, langue, texte}], contexte}`) : orthographe,
+  grammaire, typographie française, néerlandais de Belgique, et la charte (vouvoiement, emojis, mots à
+  éviter), **sans réécrire** ; chaque correction est montrée avec sa raison et rien n'est remplacé avant
+  « Appliquer » (un texte retouché entre-temps est gardé). Les variables `{…}` sont protégées : une
+  correction qui en perd une est refusée pour ce texte.
 - **Charte éditoriale et relecture** — réglage `charte_editoriale` (ton, vouvoiement, emojis au
   plus, mots à éviter, hashtags, accroche, signature) suivi par l'assistant et vérifié en direct
   sous le texte (emojis, mots à éviter, tutoiement, accroche trop longue, points d'exclamation,
@@ -374,7 +413,11 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   Facebook (l'image reste la vignette du calendrier). Sans H.264 (VP9, WebM : refusés par Meta
   pour un reel), elle se télécharge seulement.
 - **Vidéo importée** — lue en `data:` comme les photos (45 Mo au plus) : le serveur l'écrit
-  sous `uploads/` et Meta la télécharge. Auparavant gardée en adresse `blob:`, locale au
+  sous `uploads/` et Meta la télécharge. Elle s'ajoute dans tous les modes (bouton « Vidéo », ou
+  « Importer » avec les photos du téléphone ou de l'ordinateur) et depuis la **médiathèque**, qui range
+  aussi les vidéos (vignette tirée de la première seconde) : le post passe alors en « Photos telles
+  quelles » (une vidéo ne se compose pas dans un visuel), une photo sert de couverture. La vidéo d'un
+  post revient avec lui à la réouverture. Auparavant gardée en adresse `blob:`, locale au
   navigateur, elle ne pouvait pas être publiée.
 - **Détourage des photos** — bouton ✂ sur chaque photo du post (`POST /media/detourer`,
   `src/detourage.php`) : remove.bg retire le fond, la photo devient un PNG transparent posé
@@ -660,6 +703,7 @@ tables `social_*`, cron `/etc/cron.d/social` :
 
 ```
 * * * * *   php bin/cron.php queue   # posts échus
+0-59/5 * * * * php bin/cron.php repost  # repost automatique (Page de la marque, validations échues)
 7 * * * *   php bin/cron.php sync    # pubs, leads, résultats
 40 6 * * *  php bin/cron.php conn    # contrôle des connexions Meta
 ```

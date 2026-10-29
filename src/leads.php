@@ -30,8 +30,20 @@ function socLeadformBody(array $f): array
     $questions = [];
     foreach ((array) ($f['questions'] ?? []) as $q) {
         if (($q['type'] ?? '') === 'CUSTOM') {
-            $questions[] = ['type' => 'CUSTOM', 'key' => (string) $q['key'], 'label' => (string) $q['label'],
-                'options' => array_map(static fn ($o) => ['key' => (string) $o['key'], 'value' => (string) $o['value']], (array) ($q['options'] ?? []))];
+            // Sans option, une question à réponse libre : Meta refuse un `options` vide, il ne doit pas être envoyé.
+            // Clés en a-z, 0-9 et « _ », uniques dans la question (deux options « 8 à 15 » et « 8-15 » ne se confondent pas).
+            $cle = static fn (string $v, string $repli) => trim((string) preg_replace('/[^a-z0-9]+/', '_', strtolower(socNorm($v))), '_') ?: $repli;
+            $x = ['type' => 'CUSTOM', 'key' => $cle((string) ($q['key'] ?? ''), 'question_' . (count($questions) + 1)), 'label' => trim((string) ($q['label'] ?? ''))];
+            $vues = [];
+            foreach ((array) ($q['options'] ?? []) as $k => $o) {
+                $v = trim((string) ($o['value'] ?? ''));
+                if ($v === '') { continue; }
+                $ok = $cle((string) (($o['key'] ?? '') ?: $v), 'option_' . ($k + 1));
+                while (isset($vues[$ok])) { $ok .= '_' . ($k + 1); }
+                $vues[$ok] = true;
+                $x['options'][] = ['key' => $ok, 'value' => $v];
+            }
+            $questions[] = $x;
         } elseif (!empty($q['type'])) {
             $questions[] = ['type' => (string) $q['type']];
         }

@@ -205,6 +205,81 @@ function socRedactionProposer(array $b): array
     return ['variantes' => $variantes, 'hashtags' => array_values(array_unique(array_merge($ch['hashtags'], $tags))), 'hashtagVille' => $ch['hashtagVille'], 'modele' => SocIa::modele()];
 }
 
+/* --- correction ------------------------------------------------------------------------------ */
+
+/**
+ * Le relecteur marketing : corrige des textes SANS les réécrire — orthographe, grammaire, ponctuation,
+ * typographie, et ce que la charte éditoriale interdit (tutoiement, trop d'emojis, mot à éviter, accroche
+ * trop longue). Chaque correction est rendue avec sa raison, pour que l'écran la montre avant de l'appliquer.
+ * `$b['textes']` : [{cle, langue (fr | nl | en), texte}] ; `$b['contexte']` : où vivent ces textes.
+ * Les variables ({ville}, {prix}, {lien}…) restent telles quelles : une correction qui en perd une est refusée
+ * pour ce texte (gardé tel quel, et dit).
+ */
+function socRedactionCorriger(array $b): array
+{
+    $ch = socCharte();
+    $entrees = [];
+    foreach (array_slice((array) ($b['textes'] ?? []), 0, 20) as $t) {
+        if (!is_array($t)) { continue; }
+        $cle = trim(mb_substr((string) ($t['cle'] ?? ''), 0, 40));
+        $texte = mb_substr((string) ($t['texte'] ?? ''), 0, 2500);
+        if ($cle === '' || trim($texte) === '') { continue; }
+        $entrees[$cle] = ['cle' => $cle, 'langue' => in_array($t['langue'] ?? 'fr', ['fr', 'nl', 'en'], true) ? (string) $t['langue'] : 'fr', 'texte' => $texte];
+    }
+    if (!$entrees) { throw new HttpError(400, 'aucun texte à corriger'); }
+    $contexte = trim(mb_substr((string) ($b['contexte'] ?? 'un post Facebook et Instagram'), 0, 120));
+    $system = implode("\n", array_filter([
+        'Tu es le relecteur marketing de L’Atelier By, réseau belge de boulangeries-pâtisseries artisanales en franchise.',
+        'Tu CORRIGES, tu ne réécris pas : garde les phrases, l’ordre, le ton et la longueur ; ne change que ce qui est faux ou contraire à la charte.',
+        'Ce que tu corriges : orthographe, accords, conjugaison, ponctuation, majuscules ; typographie française (apostrophe ’, guillemets « », espace avant : ; ! ? et avant €, pas d’espace avant la virgule) ;',
+        'néerlandais de Belgique correct (spelling, dt-fouten) ; anglais correct.',
+        'Charte éditoriale :',
+        '- ' . ($ch['vouvoiement'] ? 'Vouvoiement : un tutoiement devient un vouvoiement.' : 'Tutoiement.'),
+        '- Au plus ' . $ch['emojisMax'] . ' emoji(s) par texte : retire les emojis en trop (garde les premiers).',
+        $ch['motsInterdits'] ? '- Mots à éviter, à remplacer par un équivalent neutre : ' . implode(', ', $ch['motsInterdits']) . '.' : '',
+        '- Pas de mots entiers en capitales pour crier, pas de « !!! ».',
+        'Règles strictes :',
+        '- Les variables entre accolades ({ville}, {horaires}, {prix}, {lien}, {adresse}, {webshop}, {produit}, {remise}…) restent exactement telles quelles, à leur place.',
+        '- N’ajoute aucun fait, prix, date, promesse ni hashtag ; ne retire aucune information.',
+        '- Un texte déjà correct est rendu à l’identique, sans correction listée.',
+        '- Pour chaque changement, une entrée dans « corrections » : le passage avant, le passage après (quelques mots de contexte), et la raison en quelques mots, en français.',
+    ]));
+    $user = 'Contexte : ' . $contexte . ".\nTextes à corriger (JSON) :\n"
+        . json_encode(array_values($entrees), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+    $schema = ['type' => 'object', 'additionalProperties' => false, 'required' => ['textes', 'corrections'], 'properties' => [
+        'textes' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['cle', 'texte'],
+            'properties' => ['cle' => ['type' => 'string'], 'texte' => ['type' => 'string']]]],
+        'corrections' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['cle', 'avant', 'apres', 'raison'],
+            'properties' => ['cle' => ['type' => 'string'], 'avant' => ['type' => 'string'], 'apres' => ['type' => 'string'], 'raison' => ['type' => 'string']]]]]];
+    try {
+        $j = SocIa::json($system, $user, $schema, 16000, 'medium');
+    } catch (SocIaError $e) {
+        throw new HttpError($e->http >= 400 && $e->http < 600 ? ($e->http === 401 || $e->http === 403 ? 409 : $e->http) : 502, $e->getMessage());
+    }
+    $vars = static function (string $t): array { preg_match_all('/\{[a-z_]+(?::[\w:]+)?\}/u', $t, $m); $v = $m[0]; sort($v); return $v; };
+    $sortie = []; $remarques = []; $refuses = [];
+    foreach ((array) ($j['textes'] ?? []) as $t) {
+        $cle = is_array($t) ? (string) ($t['cle'] ?? '') : '';
+        if (!isset($entrees[$cle])) { continue; }  // une clé inventée par le modèle est ignorée
+        $neuf = mb_substr((string) ($t['texte'] ?? ''), 0, 2500);
+        if (trim($neuf) === '') { continue; }
+        if ($vars($neuf) !== $vars($entrees[$cle]['texte'])) {
+            $refuses[$cle] = true;
+            $remarques[] = 'Texte « ' . $cle . ' » gardé tel quel : la correction touchait une variable entre accolades.';
+            continue;
+        }
+        $sortie[$cle] = $neuf;
+    }
+    $corrections = [];
+    foreach (array_slice((array) ($j['corrections'] ?? []), 0, 60) as $c) {
+        if (!is_array($c) || !isset($sortie[(string) ($c['cle'] ?? '')]) || isset($refuses[(string) $c['cle']])) { continue; }
+        $corrections[] = ['cle' => (string) $c['cle'], 'avant' => mb_substr((string) ($c['avant'] ?? ''), 0, 200), 'apres' => mb_substr((string) ($c['apres'] ?? ''), 0, 200), 'raison' => mb_substr((string) ($c['raison'] ?? ''), 0, 160)];
+    }
+    $textes = [];
+    foreach ($entrees as $cle => $e) { $textes[] = ['cle' => $cle, 'texte' => $sortie[$cle] ?? $e['texte'], 'change' => isset($sortie[$cle]) && $sortie[$cle] !== $e['texte']]; }
+    return ['textes' => $textes, 'corrections' => $corrections, 'remarques' => $remarques, 'modele' => SocIa::modele()];
+}
+
 /** L'état de la rédaction IA pour l'écran : clé présente, modèle retenu (sans appel). */
 function socIaStatut(): array
 {
