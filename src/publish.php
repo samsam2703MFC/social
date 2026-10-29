@@ -255,6 +255,8 @@ function socPublishFb(array $post, array $shop, string $message): string
     $pid = (string) $shop['ids']['page_id'];
     if ($pid === '') { throw new MetaError('page_id non renseigné pour ' . $shop['name'], 100); }
     $tok = Meta::pageToken($pid);
+    // Repost automatique en partage : un lien vers le post de la marque (src/repost.php).
+    if (($post['repost']['mode'] ?? '') === 'partage') { return socRepostPartager($post, $shop, $pid, $tok); }
     [$imgs, $video] = socMedias($post);
     // Le lien peut citer le webshop de la boutique ou la page du produit : résolu boutique par boutique.
     $link = socFill(trim((string) ($post['link'] ?? '')), $shop, socPostProduit($post), $shop['langs'][0] ?? 'fr');

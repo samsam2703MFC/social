@@ -76,6 +76,37 @@
       <span style="font-size:12px;line-height:1.45;color:#F4EFE8;">{{ msConseil }}</span>
     </section>
     </sc-if>
+    <!-- Repost automatique : les publications de la marque que le réseau propose à la boutique (src/repost.php). -->
+    <sc-if value="{{ rpShow }}" hint-placeholder-val="{{ false }}">
+    <section style="background:#FFFFFF;border-radius:12px;border:1px solid #F2C9A0;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:15px;font-weight:500;">Le réseau vous propose {{ rpN }}</span>
+        <span style="font-size:12px;color:#666666;">Reprendre sur votre Page Facebook ce que « {{ rpMarque }} » vient de publier</span>
+      </div>
+      <sc-for list="{{ rpItems }}" as="r" hint-placeholder-count="1">
+        <div style="display:flex;gap:12px;align-items:flex-start;border-top:0.5px solid rgba(34,34,34,0.08);padding-top:10px;flex-wrap:wrap;">
+          <sc-if value="{{ r.hasImg }}" hint-placeholder-val="{{ false }}"><img src="{{ r.img }}" alt="" style="width:72px;height:72px;border-radius:8px;object-fit:cover;flex:0 0 auto;background:#F4EFE8;"></sc-if>
+          <div style="flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:4px;">
+            <span style="font-size:11.5px;color:#666666;">{{ r.meta }}</span>
+            <span style="font-size:13px;line-height:1.45;color:#222222;white-space:pre-wrap;">{{ r.texte }}</span>
+            <sc-if value="{{ r.hasAjout }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#444444;">Ajouté pour votre boutique : <b style="font-weight:500;">{{ r.ajout }}</b></span></sc-if>
+            <a href="{{ r.permalink }}" target="_blank" rel="noopener" style="font-size:12px;font-weight:500;">Voir la publication de la marque ↗</a>
+            <span style="font-size:11.5px;color:#8A4B00;">{{ r.limite }}</span>
+            <sc-if value="{{ r.refusOuvert }}" hint-placeholder-val="{{ false }}">
+              <span style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-top:4px;">
+                <textarea value="{{ r.motif }}" onChange="{{ r.setMotif }}" rows="2" placeholder="Pourquoi ? (le réseau le lit)" aria-label="Motif du refus" style="flex:1 1 220px;font-size:13px;line-height:1.4;border:0.5px solid rgba(34,34,34,0.18);border-radius:6px;padding:6px 8px;resize:vertical;"></textarea>
+                <button onClick="{{ r.confirmerRefus }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:500;cursor:pointer;">Confirmer le refus</button>
+              </span>
+            </sc-if>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;">
+            <button onClick="{{ r.publier }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ r.op }};">Publier sur ma Page</button>
+            <button onClick="{{ r.refuser }}" style="background:#FFFFFF;color:#222222;border:0.5px solid rgba(34,34,34,0.18);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;">Refuser</button>
+          </div>
+        </div>
+      </sc-for>
+    </section>
+    </sc-if>
     <!-- Indicateurs -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
       <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="5">
@@ -429,7 +460,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { view: 'month', cursor: null, selId: null, toast: '', tick: 0, hide: [], mp: null, mpLoading: false, mpErr: '', ps: null, jours: 28, sv: null, svLoading: false, svErr: '', va: null, vaLoading: false, vaErr: '', hov: null, boostL: null, boostFor: null, boostMsg: '', boostSending: false, boostErr: '' };
+  state = { view: 'month', cursor: null, selId: null, toast: '', tick: 0, hide: [], mp: null, mpLoading: false, mpErr: '', ps: null, jours: 28, sv: null, svLoading: false, svErr: '', va: null, vaLoading: false, vaErr: '', hov: null, boostL: null, boostFor: null, boostMsg: '', boostSending: false, boostErr: '', rp: null, rpRefus: null, rpMotif: '', rpBusy: false };
   componentDidMount() {
     this._h = () => this.setState(s => ({ tick: s.tick + 1 })); window.addEventListener('sf-change', this._h);
     const SF = window.SF, st = SF && SF.state(); if (!st) return;
@@ -441,6 +472,7 @@ class Component extends DCLogic {
     this.setState(patch, () => this.loadMeta(false));
     if (SF.maSemaine) SF.maSemaine().then(ms => this.setState({ ms })).catch(() => {});
     if (SF.boost) SF.boost().then(boostL => this.setState({ boostL })).catch(() => {});
+    if (SF.reposts) SF.reposts().then(rp => this.setState({ rp })).catch(() => {});
     if (q.get('ok')) { const n = +q.get('n') || 1, f = { story: 'Story', post_story: 'Post + story' }[q.get('f')] || '';
       this.toast((f ? f + ' · ' : '') + (q.get('ok') === 'valider' ? 'Envoyé : le réseau valide ' + (n > 1 ? 'chacune des ' + n + ' dates' : 'votre post') + ' avant publication.'
         : 'Programmé' + (n > 1 ? ' : ' + n + ' dates, chacune à l’heure prévue.' : ' : il partira à l’heure prévue.'))); }
@@ -449,6 +481,30 @@ class Component extends DCLogic {
   componentWillUnmount() { clearTimeout(this._tt); window.removeEventListener('sf-change', this._h); }
   toast(m) { clearTimeout(this._tt); this.setState({ toast: m }); this._tt = setTimeout(() => this.setState({ toast: '' }), 5000); }
 
+  /** Répond à un repost proposé par le réseau : publié sur la Page de la boutique, ou refusé avec son motif. */
+  repondre(source, accepter) {
+    const SF = window.SF, s = this.state;
+    if (s.rpBusy) return;
+    this.setState({ rpBusy: true });
+    SF.repostRepondre(source, accepter, accepter ? '' : s.rpMotif).then(rp => {
+      this.setState({ rp, rpBusy: false, rpRefus: null, rpMotif: '' });
+      this.toast(accepter ? 'Publié sur votre Page : il apparaît dans votre calendrier.' : 'Refusé : le réseau voit votre motif.');
+      SF.emit();
+    }).catch(e => { this.setState({ rpBusy: false }); this.toast(e.message); });
+  }
+  /** La carte « Le réseau vous propose » (repost automatique). */
+  repostVals(SF) {
+    const s = this.state, rp = s.rp, l = (rp && rp.attente) || [];
+    if (!l.length) return { rpShow: false, rpItems: [] };
+    const dt = (x) => x ? SF.dShort(String(x).slice(0, 10)) + ' à ' + String(x).slice(11, 16) : '';
+    return { rpShow: true, rpN: l.length > 1 ? l.length + ' publications' : 'une publication', rpMarque: rp.marque,
+      rpItems: l.map(x => ({ hasImg: !!x.img, img: x.img || '', meta: dt(x.publieLe) + ' · ' + x.type + ' · ' + (x.mode === 'copie' ? 'copié sur votre Page' : 'partagé sur votre Page') + (x.instagram ? ' et votre Instagram' : ''),
+        texte: String(x.texte || '').length > 400 ? String(x.texte).slice(0, 400).trim() + '…' : String(x.texte || ''), hasAjout: !!x.texteBoutique, ajout: x.texteBoutique, permalink: x.permalink || '#',
+        limite: x.limite ? 'Répondez avant le ' + dt(x.limite) + (x.sansReponse === 'publier' ? ' : sans réponse, il sera publié quand même.' : ' : sans réponse, rien ne sera publié.') : '',
+        op: s.rpBusy ? 0.6 : 1, publier: () => this.repondre(x.source, true),
+        refuser: () => this.setState({ rpRefus: s.rpRefus === x.source ? null : x.source, rpMotif: '' }), refusOuvert: s.rpRefus === x.source,
+        motif: s.rpMotif, setMotif: (e) => this.setState({ rpMotif: e.target.value }), confirmerRefus: () => this.repondre(x.source, false) })) };
+  }
   /** La période affichée : le mois en semaines entières, ou la semaine. */
   period() {
     const SF = window.SF, s = this.state, cur = s.cursor || SF.state().today;
@@ -813,6 +869,7 @@ class Component extends DCLogic {
       ok: true, hasError: false, shopName: st.shop.name, periodTitle: analyse ? 'VUES ET ABONNÉS' : suivi ? 'SUIVI DE MA BOUTIQUE' : label,
       // Les onglets de « Mes réseaux » (et son menu) : calendrier, vues et abonnés, suivi changent sans recharger la page.
       onglet: analyse ? 'analyse' : suivi ? 'suivi' : 'cal', isCal: !horsCal, isSuivi: suivi, isAnalyse: analyse,
+      ...this.repostVals(SF),
       ...(() => {
         const ms = s.ms, l = ms && ms.ligne;
         if (!l) return { msShow: false };

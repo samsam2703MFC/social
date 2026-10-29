@@ -40,6 +40,7 @@ require_once __DIR__ . '/kit.php';
 require_once __DIR__ . '/boost.php';
 require_once __DIR__ . '/messages.php';
 require_once __DIR__ . '/plan.php';
+require_once __DIR__ . '/repost.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -165,6 +166,25 @@ function socRoute(string $method, string $path): array
     if ($method === 'GET' && $path === '/pub/meilleurs') { return [200, socBoostMeilleurs(!empty($_GET['forcer']))]; }
     if ($method === 'GET' && $path === '/pub/demandes') { return [200, socBoostDemandes()]; }
     if ($method === 'POST' && $path === '/pub/demandes/refuser') { $b = body(); return [200, socBoostRefuser((int) ($b['id'] ?? 0), (string) ($b['reponse'] ?? ''))]; }
+    // Le repost automatique (src/repost.php) : réglage, suivi des publications de la marque reprises, gestes du réseau.
+    if ($method === 'GET' && $path === '/repost') { return [200, socRepostVue((int) ($_GET['jours'] ?? 14))]; }
+    if ($method === 'POST' && $path === '/repost/reglage') { socRepostConfigPut(body()); return [200, socRepostVue((int) (body()['jours'] ?? 14))]; }
+    if ($method === 'POST' && $path === '/repost/relire') { $g = socRepostGuet(true); return [200, ['guet' => $g] + socRepostVue((int) (body()['jours'] ?? 14))]; }
+    if ($method === 'POST' && $path === '/repost/relancer') {
+        $b = body();
+        $n = socRepostRelancer(isset($b['source']) ? (string) $b['source'] : null, isset($b['shop']) ? (string) $b['shop'] : null);
+        return [200, ['relances' => $n] + socRepostVue((int) ($b['jours'] ?? 14))];
+    }
+    if ($method === 'POST' && $path === '/repost/forcer') {
+        $b = body();
+        socRepostForcer((string) ($b['source'] ?? ''), isset($b['shop']) && $b['shop'] !== '' ? (string) $b['shop'] : null);
+        return [200, socRepostVue((int) ($b['jours'] ?? 14))];
+    }
+    if ($method === 'POST' && $path === '/repost/retirer') {
+        $b = body();
+        $r = socRepostRetirer((string) ($b['source'] ?? ''));
+        return [200, ['retrait' => $r] + socRepostVue((int) ($b['jours'] ?? 14))];
+    }
     if ($method === 'GET' && $path === '/bilan') { return [200, socBilan(!empty($_GET['forcer']), (string) ($_GET['periode'] ?? 'semaine'))]; }
     if ($method === 'POST' && $path === '/google/reglages') { return [200, ['reglages' => socGoogleReglagesPut(body())]]; }
     if ($method === 'POST' && $path === '/google/relire') {

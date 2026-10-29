@@ -503,6 +503,18 @@
       datePost: p.date, message: message || '', par: 'Vous', statut: 'attente', reponse: '', adId: null, le: STATE.today + ' ' + new Date().toTimeString().slice(0, 5), traiteLe: null, traitePar: '' }].concat(l.filter(d => d.metaId !== meta));
     return Promise.resolve(boostDemo());
   }
+  /**
+   * Repost automatique (src/repost.php) : les publications de la Page de la marque que le réseau propose à la boutique,
+   * à publier sur sa Page ou à refuser (motif). Rien en démonstration : elles viennent de la Page de la marque, lue chez Meta.
+   */
+  function reposts() {
+    if (DEMO) return Promise.resolve({ attente: [], recents: [], marque: 'L’Atelier By' });
+    return api('GET', '/franchise/reposts?shop=' + encodeURIComponent(STATE.shop.id));
+  }
+  function repostRepondre(source, accepter, motif) {
+    if (DEMO) return Promise.reject(new Error('démonstration : rien n’est publié'));
+    return api('POST', '/franchise/reposts/repondre', { shop: STATE.shop.id, source, accepter: !!accepter, motif: motif || '' });
+  }
   /** « Ma semaine » : la ligne de la boutique dans le bilan du réseau, la moyenne des autres et son rang (src/bilan.php). */
   function maSemaine() {
     if (!DEMO) return api('GET', '/franchise/semaine?shop=' + encodeURIComponent(STATE.shop.id));
@@ -584,7 +596,7 @@
   }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, embed: EMBED, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, publicites, commentaires, commentaireTraiter, commentaireRepondre, maSemaine, kit, boost, boostProposer, messages, messageConversation, messageRepondre, messageTraiter, google, webshopUrl, photoLocale,
+  window.SF = { live: !DEMO, demo: DEMO, embed: EMBED, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, publicites, commentaires, commentaireTraiter, commentaireRepondre, maSemaine, reposts, repostRepondre, kit, boost, boostProposer, messages, messageConversation, messageRepondre, messageTraiter, google, webshopUrl, photoLocale,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();

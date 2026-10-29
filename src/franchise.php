@@ -1130,6 +1130,12 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/franchise/google') { return [200, sfGoogle($shop, $_GET)]; }
     if ($method === 'POST' && $path === '/franchise/commentaires/repondre') { $b = body(); return [200, sfCommentaireRepondre($shop, (string) ($b['id'] ?? ''), (string) ($b['message'] ?? ''), $session)]; }
     if ($method === 'POST' && $path === '/franchise/commentaires/traiter') { $b = body(); return [200, sfCommentaireTraiter($shop, (string) ($b['id'] ?? ''), !empty($b['traite']))]; }
+    // Les publications de la marque que le réseau propose à la boutique (repost automatique, src/repost.php).
+    if ($method === 'GET' && $path === '/franchise/reposts') { return [200, socRepostVueFranchise($shop)]; }
+    if ($method === 'POST' && $path === '/franchise/reposts/repondre') {
+        $b = body();
+        return [200, socRepostRepondre($shop, (string) ($b['source'] ?? ''), !empty($b['accepter']), (string) ($b['motif'] ?? ''), (string) ($session['name'] ?? '') ?: 'Franchisé')];
+    }
     if ($method === 'GET' && $path === '/franchise/catalogue/offres') { return [200, sfOffres($shop, (string) ($_GET['produit'] ?? ''))]; }
     // La photo d'un produit du webshop (R2, sans CORS) servie par le module : le visuel qui la dessine s'exporte.
     if ($method === 'GET' && $path === '/franchise/media/webshop') { return [200, socMediaWebshop((string) ($_GET['u'] ?? ''))]; }

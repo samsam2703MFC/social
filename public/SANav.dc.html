@@ -89,8 +89,8 @@ class Component extends DCLogic {
       ['cal', 'Calendrier', toValidate + failed],
       ['grid', 'Grille Instagram', 0],
       ['post', 'Créer un post', 0],
-      // Maquette : les posts de la Page de la marque repris automatiquement par les Pages des boutiques.
-      ['repost', 'Repost auto', 0],
+      // Les posts de la Page de la marque repris par les Pages des boutiques (src/repost.php).
+      ['repost', 'Repost automatique', 0],
       ['camp', 'Opérations', 0],
       // Les refusées à corriger, et les demandes de boost des boutiques à traiter.
       ['ads', 'Publicités Meta', refused + ((st.alertes || {}).boost || 0)],

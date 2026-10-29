@@ -2670,6 +2670,153 @@ foreach (['google_client_id', 'google_ads_mcc', 'google_decouverte', 'google_ids
 foreach (['google_client_secret', 'google_refresh_token', 'google_access_token'] as $k) { socSettingPut($k, '', true); }
 GoogleApi::$transport = null;
 
+echo "Repost automatique : publications de la Page de la marque reprises par les Pages des boutiques\n";
+$rpTransportAvant = Meta::$transport; $rpIgAvant = socSetting('instagram_unique'); $rpMarqueAvant = socBrand()['ids'];
+$rpRegAvant = sfRegles();
+socShopPut('marque', ['ids' => array_merge($rpMarqueAvant, ['page_id' => '999'])]);
+socSettingPut('instagram_unique', true, false);
+sfReglesPut(array_merge($rpRegAvant, ['actif' => true]));
+$GLOBALS['RP_POSTS'] = [];
+$rpIso = static fn (int $minutes) => gmdate('Y-m-d\TH:i:s+0000', time() - 60 * $minutes);
+$rpPost = static fn (string $id, int $avant, string $texte, string $type = 'PHOTO', array $extra = []) => array_merge(['id' => '999_' . $id, 'message' => $texte, 'created_time' => $rpIso($avant),
+    'permalink_url' => 'https://www.facebook.com/999/posts/' . $id, 'full_picture' => 'https://scontent.fb/' . $id . '.jpg', 'status_type' => $type === 'VIDEO' ? 'added_video' : 'added_photos',
+    'attachments' => ['data' => [['media_type' => $type, 'media' => ['image' => ['src' => 'https://scontent.fb/' . $id . '.jpg']]]]]], $extra);
+Meta::$transport = static function (string $m, string $url, array $p) use (&$appels, $rpTransportAvant): array {
+    $path = preg_replace('#^https://graph\.facebook\.com/v[\d.]+/#', '', $url);
+    if ($m === 'GET' && $path === 'me/accounts') {
+        [$code, $j] = ($rpTransportAvant)($m, $url, $p);
+        $j['data'][] = ['id' => '999', 'name' => 'L\'Atelier By', 'access_token' => 'PT999'];
+        return [$code, $j];
+    }
+    if ($m === 'GET' && $path === '999/published_posts') {
+        $appels[] = [$m, $path, $p];
+        if (($p['access_token'] ?? '') !== 'PT999') { return [400, ['error' => ['code' => 190, 'message' => 'mauvais token']]]; }
+        return [200, ['data' => array_values(array_filter($GLOBALS['RP_POSTS'], static fn ($x) => strtotime($x['created_time']) >= (int) ($p['since'] ?? 0)))]];
+    }
+    return ($rpTransportAvant)($m, $url, $p);
+};
+Meta::reset();
+$restreinte = [];
+
+$c = socRepostConfig();
+check('réglage par défaut : en pause, les boutiques du réseau en automatique, partage', !$c['actif'] && $c['mode'] === 'partage'
+    && $c['boutiques'] === ['4' => ['on' => true, 'validation' => false], '5' => ['on' => true, 'validation' => false]], json_encode($c['boutiques']));
+$appels = [];
+$g = socRepostGuet(true);
+check('en pause : la Page de la marque n’est pas lue', !empty($g['pause']) && !$appelsVers('#^999/#'));
+$rpErr = static function (array $in) { try { socRepostConfigPut($in); return 0; } catch (HttpError $e) { return $e->status; } };
+check('réglage contrôlé : mode, plage, Instagram unique', $rpErr(['mode' => 'tout']) === 400 && $rpErr(['de' => '22:00', 'a' => '08:00']) === 400 && $rpErr(['instagram' => true]) === 409);
+socRepostConfigPut(['actif' => true, 'delaiMin' => 0, 'de' => '00:00', 'a' => '23:59', 'texte' => 'Chez nous à {ville}', 'boutiques' => ['5' => ['validation' => true]]]);
+$c = socRepostConfig();
+check('activé : seulement à partir de maintenant', $c['actif'] && abs(strtotime((string) $c['depuis']) - time()) < 5);
+check('créneau : avant la plage, au début ; après, le lendemain', date('H:i', socRepostCreneau(strtotime('today 06:00'), ['de' => '07:00', 'a' => '21:00'])) === '07:00'
+    && date('Y-m-d H:i', socRepostCreneau(strtotime('today 22:30'), ['de' => '07:00', 'a' => '21:00'])) === date('Y-m-d', strtotime('+1 day')) . ' 07:00');
+socSettingPut('repost', array_replace(socSetting('repost'), ['depuis' => date('Y-m-d H:i:s', time() - 3600)]), false);
+$GLOBALS['RP_POSTS'] = [
+    $rpPost('p0', 120, 'Avant l’activation'),
+    $rpPost('p1', 40, 'Brioche croustillante, la nouveauté d’automne #nouveauté'),
+    $rpPost('p2', 30, 'Notre atelier RECRUTE un boulanger de nuit'),
+    $rpPost('p3', 20, 'Pain au levain, 48 h', 'VIDEO'),
+];
+$appels = [];
+$g = socRepostGuet(true);
+check('guet : publications lues avec le token de la Page de la marque, depuis l’activation', $g['lus'] === 3 && $g['nouveaux'] === 3 && $g['exclus'] === 1 && $g['erreur'] === null, json_encode($g));
+check('publication antérieure à l’activation : jamais reprise', socRepostLigne('999_p0') === null);
+check('mot exclu (sans tenir compte des majuscules) : exclue, avec le motif', (socRepostLigne('999_p2')['statut'] ?? '') === 'exclu' && (socRepostLigne('999_p2')['motif'] ?? '') === 'contient « recrute »');
+$f1 = $appelsVers('#^111/feed$#');
+check('Halle (automatique) : partage = lien vers le post de la marque, texte de la boutique au-dessus', count($f1) === 2 && ($f1[0][2]['link'] ?? '') === 'https://www.facebook.com/999/posts/p1'
+    && ($f1[0][2]['message'] ?? '') === 'Chez nous à Halle' && ($f1[0][2]['access_token'] ?? '') === 'PT111', json_encode($f1));
+check('Wavre (validation) : rien de publié, deux reposts à valider', !$appelsVers('#^222/#') && (int) Db::row("SELECT COUNT(*) n FROM social_repost_cible WHERE shop_id = '5' AND etat = 'a_valider'")['n'] === 2);
+$rp1 = socItem('posts', socRepostPostId('999_p1'));
+check('le repost est un post du module (calendrier, file) : publié sur la seule Page de Halle', ($rp1['status'] ?? '') === 'Publié' && $rp1['shops'] === ['4'] && $rp1['type'] === 'Repost' && $rp1['ig'] === false, json_encode($rp1));
+check('vidéo : partagée (elle ne se copie pas)', (socRepostLigne('999_p3')['mode'] ?? '') === 'partage' && (socRepostLigne('999_p3')['type'] ?? '') === 'Vidéo');
+$appels = [];
+$g = socRepostGuet(true);
+check('deuxième passage : rien de nouveau, rien republié', $g['nouveaux'] === 0 && !$appelsVers('#/feed$#'));
+$g2 = socRepostGuet();
+check('pas deux lectures dans la même minute (cron et bouton)', ($g2['le'] ?? '') === $g['le'] && count($appelsVers('#^999/published_posts$#')) === 1);
+
+sfSessionOuvrir(['5'], 'Julie (ERP)', 'code');
+[$code, $fv] = $fr('GET', '/franchise/reposts', [], ['shop' => '5']);
+check('espace franchisé : les deux publications à valider, texte de la boutique rempli', $code === 200 && count($fv['attente']) === 2 && $fv['attente'][0]['texteBoutique'] === 'Chez nous à Wavre'
+    && $fv['attente'][0]['sansReponse'] === 'publier', json_encode($fv));
+[$code] = $fr('GET', '/franchise/reposts', [], ['shop' => '4']);
+check('espace franchisé : une autre boutique → 403', $code === 403);
+$appels = [];
+[$code, $fv] = $fr('POST', '/franchise/reposts/repondre', ['shop' => '5', 'source' => '999_p1', 'accepter' => true]);
+check('Wavre valide : publié tout de suite sur sa Page, signé', $code === 200 && count($appelsVers('#^222/feed$#')) === 1 && count($fv['attente']) === 1
+    && Db::row("SELECT etat, par FROM social_repost_cible WHERE source_id = '999_p1' AND shop_id = '5'") === ['etat' => 'valide', 'par' => 'Julie (ERP)']);
+[$code, $fv] = $fr('POST', '/franchise/reposts/repondre', ['shop' => '5', 'source' => '999_p3', 'accepter' => false, 'motif' => 'Plus de levain ce week-end']);
+check('Wavre refuse, avec son motif', $code === 200 && !$fv['attente'] && Db::row("SELECT etat, motif FROM social_repost_cible WHERE source_id = '999_p3' AND shop_id = '5'") === ['etat' => 'refuse', 'motif' => 'Plus de levain ce week-end']);
+[$code] = $fr('POST', '/franchise/reposts/repondre', ['shop' => '5', 'source' => '999_p3', 'accepter' => true]);
+check('déjà traité : 409', $code === 409);
+unset($_COOKIE[SF_COOKIE]);
+
+[$code, $v] = $fr('GET', '/repost', [], ['jours' => '7']);
+$cases = array_column($v['lignes'], 'cases', 'source');
+check('écran : chiffres de la période (3 publications, 1 exclue, 3 publiés, 1 refusé)', $code === 200 && $v['chiffres']['posts'] === 3 && $v['chiffres']['exclus'] === 1
+    && $v['chiffres']['publies'] === 3 && $v['chiffres']['refuses'] === 1 && $v['chiffres']['attendus'] === 4, json_encode($v['chiffres']));
+check('écran : une case par boutique (publié avec lien, refusé avec motif, exclu)', ($cases['999_p1']['5']['statut'] ?? '') === 'ok' && str_starts_with((string) ($cases['999_p1']['4']['lien'] ?? ''), 'https://www.facebook.com/111_')
+    && ($cases['999_p3']['5']['statut'] ?? '') === 'ref' && ($cases['999_p3']['5']['motif'] ?? '') === 'Plus de levain ce week-end' && ($cases['999_p2']['4']['statut'] ?? '') === 'excl', json_encode($cases));
+check('écran : taux de reprise par boutique, Wavre en validation', array_column($v['shops'], 'repris', 'id') === ['4' => 100, '5' => 50] && array_column($v['shops'], 'validation', 'id') === ['4' => false, '5' => true]);
+
+// Échec chez Meta, alerte, relance.
+$restreinte['111'] = true;
+$GLOBALS['RP_POSTS'][] = $rpPost('p4', 5, 'Biscuits d’Halloween');
+socRepostGuet(true);
+[, $v] = $fr('GET', '/repost');
+check('Page restreinte : échec, alerte par boutique avec le motif de Meta', $v['chiffres']['echecs'] === 1 && ($v['alertes'][0]['shop'] ?? '') === '4' && str_contains((string) ($v['alertes'][0]['motif'] ?? ''), '368'), json_encode($v['alertes']));
+unset($restreinte['111']);
+$appels = [];
+[$code, $v] = $fr('POST', '/repost/relancer', []);
+check('« Relancer » : les échecs repartent, publiés', $code === 200 && $v['relances'] === 1 && $v['chiffres']['echecs'] === 0 && count($appelsVers('#^111/feed$#')) === 1);
+
+// Reposter malgré tout : un refus, une exclusion.
+$appels = [];
+[$code] = $fr('POST', '/repost/forcer', ['source' => '999_p3', 'shop' => '5']);
+check('reposter malgré le refus : publié sur la Page de Wavre', $code === 200 && count($appelsVers('#^222/feed$#')) === 1
+    && Db::row("SELECT etat FROM social_repost_cible WHERE source_id = '999_p3' AND shop_id = '5'")['etat'] === 'force');
+[$code] = $fr('POST', '/repost/forcer', ['source' => '999_p3', 'shop' => '5']);
+check('une boutique qui reprend déjà : 409', $code === 409);
+$appels = [];
+[$code] = $fr('POST', '/repost/forcer', ['source' => '999_p2']);
+check('publication exclue reprise : Halle tout de suite, Wavre à valider', $code === 200 && (socRepostLigne('999_p2')['statut'] ?? '') === 'reposte'
+    && count($appelsVers('#^111/feed$#')) === 1 && Db::row("SELECT etat FROM social_repost_cible WHERE source_id = '999_p2' AND shop_id = '5'")['etat'] === 'a_valider');
+
+// Validation échue : publiée quand même (réglage du moment).
+Db::exec("UPDATE social_repost_cible SET limite_le = NOW() - INTERVAL 1 MINUTE WHERE source_id = '999_p2' AND shop_id = '5'");
+$appels = [];
+socRepostGuet(true);
+check('sans réponse dans le délai : publié quand même', Db::row("SELECT etat FROM social_repost_cible WHERE source_id = '999_p2' AND shop_id = '5'")['etat'] === 'sans_reponse'
+    && count($appelsVers('#^222/feed$#')) === 1);
+
+// Copie : le visuel et le texte de la marque, puis celui de la boutique.
+socRepostConfigPut(['mode' => 'copie', 'boutiques' => ['5' => ['on' => false]]]);
+$GLOBALS['RP_POSTS'][] = $rpPost('p5', 2, 'Tarte aux pommes du week-end');
+$appels = [];
+socRepostGuet(true);
+$ph = $appelsVers('#^111/photos$#');
+check('copie : la photo de la marque et son texte, puis celui de la boutique ; Wavre décochée ne reçoit rien', count($ph) === 1 && ($ph[0][2]['url'] ?? '') === 'https://scontent.fb/p5.jpg'
+    && ($ph[0][2]['caption'] ?? '') === "Tarte aux pommes du week-end\n\nChez nous à Halle" && !$appelsVers('#^222/#'), json_encode($ph));
+
+// Retirer des Pages des boutiques.
+$appels = []; $GLOBALS['SUPPRIMES'] = [];
+[$code, $v] = $fr('POST', '/repost/retirer', ['source' => '999_p5']);
+check('retirer : supprimé de la Page de Halle et du calendrier', $code === 200 && ($v['retrait']['ok'] ?? false) && count($GLOBALS['SUPPRIMES']) === 1
+    && socItem('posts', socRepostPostId('999_p5')) === null && (socRepostLigne('999_p5')['statut'] ?? '') === 'retire');
+[$code, $v] = $fr('POST', '/repost/reglage', ['actif' => false]);
+check('mise en pause depuis l’écran', $code === 200 && !$v['reglage']['actif']);
+check('journal : chaque geste du repost tracé', (int) Db::row("SELECT COUNT(*) n FROM social_activite WHERE quoi = 'Repost'")['n'] >= 8);
+
+// Remise en état pour la suite.
+Meta::$transport = $rpTransportAvant; Meta::reset();
+socShopPut('marque', ['ids' => $rpMarqueAvant]);
+socSettingPut('instagram_unique', $rpIgAvant, false);
+sfReglesPut($rpRegAvant);
+foreach (Db::rows('SELECT content_id FROM social_repost') as $r) { Db::exec('DELETE FROM social_publication WHERE content_id = ?', [$r['content_id']]); socItemDelete('posts', (string) $r['content_id']); }
+Db::exec('DELETE FROM social_repost'); Db::exec('DELETE FROM social_repost_cible');
+socSettingPut('repost', null, false); socSettingPut('repost_guet', null, false);
+
 echo "API HTTP (routeur)\n";
 [$code, $b] = socRoute('GET', '/state');
 check('GET /state', $code === 200 && $b['mode'] === 'live' && count($b['shops']) === 2);
