@@ -407,7 +407,11 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   Facebook (l'image reste la vignette du calendrier). Sans H.264 (VP9, WebM : refusés par Meta
   pour un reel), elle se télécharge seulement.
 - **Vidéo importée** — lue en `data:` comme les photos (45 Mo au plus) : le serveur l'écrit
-  sous `uploads/` et Meta la télécharge. Auparavant gardée en adresse `blob:`, locale au
+  sous `uploads/` et Meta la télécharge. Elle s'ajoute dans tous les modes (bouton « Vidéo », ou
+  « Importer » avec les photos du téléphone ou de l'ordinateur) et depuis la **médiathèque**, qui range
+  aussi les vidéos (vignette tirée de la première seconde) : le post passe alors en « Photos telles
+  quelles » (une vidéo ne se compose pas dans un visuel), une photo sert de couverture. La vidéo d'un
+  post revient avec lui à la réouverture. Auparavant gardée en adresse `blob:`, locale au
   navigateur, elle ne pouvait pas être publiée.
 - **Détourage des photos** — bouton ✂ sur chaque photo du post (`POST /media/detourer`,
   `src/detourage.php`) : remove.bg retire le fond, la photo devient un PNG transparent posé

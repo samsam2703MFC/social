@@ -213,15 +213,14 @@
               </sc-if>
               <sc-if value="{{ notLocked }}" hint-placeholder-val="{{ true }}">
                 <button onClick="{{ openLib }}" style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">Médiathèque<span style="font-size:10px;color:#666666;font-weight:400;">{{ libCount }} visuels</span></button>
-                <label style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Importer<span style="font-size:10px;color:#666666;font-weight:400;">photos</span>
-                  <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ onFiles }}" style="display:none;">
+                <label style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Importer<span style="font-size:10px;color:#666666;font-weight:400;">photos ou vidéo</span>
+                  <input type="file" accept="image/*,video/*" multiple="{{ true }}" onChange="{{ onFiles }}" style="display:none;">
                 </label>
                 <button onClick="{{ clearPhotos }}" title="Retirer toutes les photos du post" style="height:68px;padding:0 12px;border-radius:8px;border:0.5px solid rgba(34,34,34,0.18);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;">Vider</button>
-                <sc-if value="{{ isBrut }}" hint-placeholder-val="{{ false }}">
-                  <label style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Vidéo<span style="font-size:10px;color:#666666;font-weight:400;">MP4 · 60 s</span>
-                    <input type="file" accept="video/*" onChange="{{ onVideo }}" style="display:none;">
-                  </label>
-                </sc-if>
+                <!-- Une vidéo s'ajoute dans tous les modes : le post passe alors en « Photos telles quelles ». -->
+                <label title="{{ videoTip }}" style="height:68px;padding:0 14px;border-radius:8px;border:1.5px dashed rgba(34,34,34,0.25);background:#FFFFFF;cursor:pointer;font-size:12px;font-weight:500;color:#222222;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box;">Vidéo<span style="font-size:10px;color:#666666;font-weight:400;">MP4 · 60 s</span>
+                  <input type="file" accept="video/*" onChange="{{ onVideo }}" style="display:none;">
+                </label>
               </sc-if>
             </div>
           </div>
@@ -290,6 +289,7 @@
           <sc-for list="{{ results }}" as="r" hint-placeholder-count="0">
             <button onClick="{{ r.toggle }}" title="{{ r.tip }}" style="position:relative;aspect-ratio:1/1;border-radius:8px;background:#F4EFE8;border:2px solid {{ r.ring }};box-sizing:border-box;cursor:pointer;overflow:hidden;padding:0;">
               <img src="{{ r.src }}" alt="" style="width:100%;height:100%;object-fit:contain;display:block;">
+              <sc-if value="{{ r.isVideo }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:3px;bottom:3px;border-radius:4px;background:rgba(35,34,32,0.8);color:#FFFFFF;font-size:9px;font-weight:600;padding:1px 4px;display:block;">▶ vidéo</span></sc-if>
               <sc-if value="{{ r.inPost }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:#8D1D2C;color:#FFFFFF;font-size:10px;line-height:16px;text-align:center;display:block;">✓</span></sc-if>
             </button>
           </sc-for>
@@ -1082,8 +1082,8 @@
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
             <label style="background:transparent;border:0.5px solid rgba(34,34,34,0.18);color:#222222;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;" style-hover="border-color:#222222;">
-              Importer des photos
-              <input type="file" accept="image/*" multiple="{{ true }}" onChange="{{ onFileLib }}" style="display:none;">
+              Importer photos ou vidéos
+              <input type="file" accept="image/*,video/*" multiple="{{ true }}" onChange="{{ onFileLib }}" style="display:none;">
             </label>
             <button onClick="{{ closeLib }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Terminer</button>
           </div>
@@ -1132,6 +1132,7 @@
                 <div onClick="{{ m.select }}" style="display:block;border:2px solid {{ m.ring }};border-radius:10px;background:#FFFFFF;cursor:pointer;overflow:clip;box-sizing:border-box;">
                   <div style="position:relative;width:100%;height:0;padding-bottom:100%;background:#F4EFE8;">
                     <img src="{{ m.src }}" alt="" style="position:absolute;left:10px;top:10px;width:calc(100% - 20px);height:calc(100% - 20px);object-fit:contain;display:block;">
+                    <sc-if value="{{ m.isVideo }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:8px;bottom:8px;height:20px;padding:0 8px;border-radius:999px;background:#232220;color:#FFFFFF;font-size:11px;font-weight:500;line-height:20px;display:block;">▶ Vidéo</span></sc-if>
                     <sc-if value="{{ m.inPost }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:8px;left:8px;height:20px;padding:0 8px;border-radius:999px;background:#8D1D2C;color:#FFFFFF;font-size:11px;font-weight:500;line-height:20px;display:block;">Dans le post</span></sc-if>
                     <button onClick="{{ m.toggle }}" style="position:absolute;bottom:8px;right:8px;border:none;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;background:{{ m.btnBg }};color:{{ m.btnFg }};">{{ m.btn }}</button>
                   </div>
@@ -1173,6 +1174,7 @@
               <label style="display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Saisonnalité
                 <select value="{{ editSeason }}" onChange="{{ setEditSeason }}" style="font-size:13px;color:#222222;background:#F4EFE8;border:0.5px solid rgba(34,34,34,0.10);border-radius:6px;padding:8px 10px;text-transform:none;letter-spacing:0;font-weight:400;"><option value="Toute l'année">Toute l'année</option><option value="Printemps">Printemps</option><option value="Été">Été</option><option value="Automne">Automne</option><option value="Hiver">Hiver</option><option value="Noël &amp; Nouvel An">Noël &amp; Nouvel An</option><option value="Épiphanie">Épiphanie</option><option value="Saint-Valentin">Saint-Valentin</option><option value="Pâques">Pâques</option><option value="Fête des mères">Fête des mères</option><option value="Saint-Nicolas">Saint-Nicolas</option></select>
               </label>
+              <sc-if value="{{ editIsPhoto }}" hint-placeholder-val="{{ true }}">
               <div style="display:flex;flex-direction:column;gap:6px;">
                 <span style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:#666666;">Rendu</span>
                 <div style="display:inline-flex;background:#F4EFE8;border-radius:8px;padding:3px;gap:2px;align-self:flex-start;">
@@ -1180,6 +1182,8 @@
                   <button onClick="{{ editCutOff }}" style="border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;background:{{ efBg }};color:{{ efFg }};">Pleine</button>
                 </div>
               </div>
+              </sc-if>
+              <sc-if value="{{ editIsVideo }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#666666;line-height:1.45;">Vidéo : elle part telle quelle (« Photos telles quelles »), en vidéo ou en reel. Une photo du post sert de couverture.</span></sc-if>
               <button onClick="{{ editToggle }}" style="margin-top:6px;background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:11px 16px;font-size:14px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">{{ editToggleLabel }}</button>
               <button onClick="{{ editDelete }}" style="background:transparent;border:none;color:#8D1D2C;font-size:12px;font-weight:500;cursor:pointer;padding:8px 0;">Supprimer de la médiathèque</button>
             </div>
@@ -1254,7 +1258,9 @@ class Component extends DCLogic {
       if (p.offre) base.offre = p.offre;
       if (p.montage) { base.mode = ['collage', 'frise'].includes(p.montage.kind) ? p.montage.kind : 'pano'; base.m = Object.assign(this.MONTAGE(), p.montage.m); base.photos = p.montage.photos || []; }
       else if (p.visual) { base.mode = 'studio'; base.v = Object.assign({}, v, p.visual.v, { nl: Object.assign({}, v.nl, (p.visual.v || {}).nl) }); base.photos = p.visual.photos || []; }
-      else { base.mode = 'brut'; base.photos = (p.media || [{ src: p.img, kind: 'img', cut: true }]).filter(m => m.kind !== 'video').map(m => ({ src: m.src, cut: m.cut !== false, name: m.name || '' })); base.v.title = p.title; }
+      else { base.mode = 'brut'; base.photos = (p.media || [{ src: p.img, kind: 'img', cut: true }]).filter(m => m.kind !== 'video').map(m => ({ src: m.src, cut: m.cut !== false, name: m.name || '' })); base.v.title = p.title;
+        // La vidéo du post revient avec lui (elle repartait sinon sans vidéo à la réouverture).
+        const vd = (p.media || []).find(m => m.kind === 'video'); if (vd) base.video = { src: vd.src, name: vd.name || 'Vidéo' }; }
     }
     const shop = SA.param('shop'); if (shop && !p) { base.scope = 'shop'; base.sel = [shop]; }
     const date = SA.param('date'); if (date && !p) base.date = date;
@@ -1306,14 +1312,47 @@ class Component extends DCLogic {
     if (q) { const hay = this.norm([it.name, it.cat, it.sub, it.season].join(' ')); for (const w of this.norm(q).split(/\s+/).filter(Boolean)) if (!hay.includes(w)) return false; }
     return true;
   }
-  /** Des fichiers → la médiathèque (et le post, si demandé). */
+  /**
+   * Une vidéo du téléphone ou de l'ordinateur : lue en data: (le serveur l'écrit sous uploads/, Meta la télécharge ;
+   * 45 Mo au plus), avec une vignette tirée de sa première seconde pour la médiathèque.
+   */
+  lireVideo(file) {
+    if (!file || !/^video\//.test(file.type)) return Promise.resolve(null);
+    if (file.size > 45 * 1048576) { this.toast('Vidéo trop lourde : 45 Mo au plus.'); return Promise.resolve(null); }
+    const nom = String(file.name || 'Vidéo').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+    const vignette = () => new Promise(ok => {
+      const url = URL.createObjectURL(file), vd = document.createElement('video'), fin = (x) => { try { URL.revokeObjectURL(url); } catch (e) {} ok(x); };
+      vd.muted = true; vd.preload = 'metadata'; vd.playsInline = true;
+      vd.onloadeddata = () => { try { vd.currentTime = Math.min(0.5, (vd.duration || 1) / 2); } catch (e) { fin(null); } };
+      vd.onseeked = () => { try { const k = Math.min(1, 480 / Math.max(vd.videoWidth || 1, vd.videoHeight || 1)), c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round((vd.videoWidth || 480) * k)); c.height = Math.max(1, Math.round((vd.videoHeight || 480) * k));
+        c.getContext('2d').drawImage(vd, 0, 0, c.width, c.height); fin(c.toDataURL('image/jpeg', 0.8)); } catch (e) { fin(null); } };
+      vd.onerror = () => fin(null); setTimeout(() => fin(null), 5000); vd.src = url;
+    });
+    return Promise.all([new Promise(ok => { const rd = new FileReader(); rd.onload = () => ok(rd.result); rd.onerror = () => ok(null); rd.readAsDataURL(file); }), vignette()])
+      .then(([src, poster]) => { if (!src) { this.toast('Vidéo illisible.'); return null; } return { src, poster, name: nom }; });
+  }
+  /** Met la vidéo dans le post. Une vidéo ne se compose pas dans un visuel : le post passe en « Photos telles quelles ». */
+  choisirVideo(vd) {
+    if (!vd || this.state.status === 'Publié') return;
+    const s = this.state, versBrut = s.mode !== 'brut';
+    this.setState({ video: { src: vd.src, name: String(vd.name || 'Vidéo').slice(0, 40), poster: vd.poster || null }, mode: 'brut', type: s.type === 'Libre' ? 'Vidéo / film' : s.type });
+    if (versBrut) this.toast('Vidéo ajoutée : le post passe en « Photos telles quelles » (une vidéo ne se compose pas dans un visuel). Une photo ajoutée sert de couverture.');
+  }
+  /** Des fichiers → la médiathèque (et le post, si demandé) : photos et vidéos. */
   async addFilesLib(files, toPost) {
-    const arr = Array.from(files || []).filter(f => /^image\//.test(f.type)).slice(0, 30); if (!arr.length) return;
+    const tous = Array.from(files || []), arr = tous.filter(f => /^image\//.test(f.type)).slice(0, 30), vids = tous.filter(f => /^video\//.test(f.type)).slice(0, 3);
+    if (!arr.length && !vids.length) return;
     const read = (await Promise.all(arr.map(f => this.readFile(f)))).filter(Boolean);
-    const added = read.map((x, i) => ({ id: 'u' + Date.now() + '-' + i + Math.random().toString(36).slice(2, 6), src: x.src, name: String(x.name || 'Photo').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '), cat: '', sub: '', season: "Toute l'année", cut: !!x.cut }));
+    const lus = (await Promise.all(vids.map(f => this.lireVideo(f)))).filter(Boolean);
+    const id = (i) => 'u' + Date.now() + '-' + i + Math.random().toString(36).slice(2, 6);
+    const added = read.map((x, i) => ({ id: id(i), src: x.src, name: String(x.name || 'Photo').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '), cat: '', sub: '', season: "Toute l'année", cut: !!x.cut }))
+      .concat(lus.map((x, i) => ({ id: id('v' + i), kind: 'video', src: x.src, poster: x.poster, name: x.name, cat: '', sub: '', season: "Toute l'année", cut: false })));
     if (!added.length) return;
     const lib = this.state.lib.concat(added); this.saveLib(lib);
-    this.setState(st => ({ lib, photos: toPost ? st.photos.concat(added.map(x => ({ src: x.src, cut: x.cut, name: x.name }))) : st.photos, editId: toPost ? st.editId : added[0].id }));
+    const photos = added.filter(x => x.kind !== 'video');
+    this.setState(st => ({ lib, photos: toPost ? st.photos.concat(photos.map(x => ({ src: x.src, cut: x.cut, name: x.name }))) : st.photos, editId: toPost ? st.editId : added[0].id }));
+    if (toPost && lus.length) this.choisirVideo(lus[0]);
   }
   componentDidUpdate() { this.montagePreview(); }
   componentWillUnmount() { clearTimeout(this._tt); clearTimeout(this._mT); this._dead = true; }
@@ -2179,12 +2218,12 @@ class Component extends DCLogic {
         : s.mode === 'collage' ? 'Photos du collage · ' + s.photos.length + ' (la n°1 prend la plus grande case)'
         : s.mode === 'studio' ? 'Photos du visuel · ' + s.photos.length + (curSlots > 1 ? ' (ce montage a ' + curSlots + ' cases, les photos se répètent s\u2019il en manque)' : ' (la n°1 est utilisée)') : 'Photos publiées · ' + s.photos.length + ' (la n°1 apparaît en premier)',
       hasVideo: !!s.video, videoName: s.video ? s.video.name : '', removeVideo: () => this.setState({ video: null }),
-      onFiles: async (e) => { const fl = Array.from(e.target.files || []); e.target.value = ''; const add = (await Promise.all(fl.slice(0, 12).map(f => this.readFile(f)))).filter(Boolean); if (add.length) this.setState({ photos: this.state.photos.concat(add) }); },
-      onVideo: (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
-        // Lue en data: comme les photos : le serveur l'écrit sous uploads/ et Meta la télécharge (une adresse blob: ne quitte pas le navigateur).
-        if (f.size > 45 * 1048576) { this.toast('Vidéo trop lourde : 45 Mo au plus.'); return; }
-        const rd = new FileReader(); rd.onload = () => this.setState({ video: { src: rd.result, name: f.name.slice(0, 12) }, type: s.type === 'Libre' ? 'Vidéo / film' : s.type });
-        rd.onerror = () => this.toast('Vidéo illisible.'); rd.readAsDataURL(f); },
+      // Photos et vidéo du téléphone ou de l'ordinateur, ensemble : la vidéo (la première) entre dans le post comme avec « Vidéo ».
+      onFiles: async (e) => { const fl = Array.from(e.target.files || []); e.target.value = ''; const vid = fl.find(f => /^video\//.test(f.type));
+        const add = (await Promise.all(fl.filter(f => /^image\//.test(f.type)).slice(0, 12).map(f => this.readFile(f)))).filter(Boolean); if (add.length) this.setState({ photos: this.state.photos.concat(add) });
+        if (vid) this.choisirVideo(await this.lireVideo(vid)); },
+      onVideo: async (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) this.choisirVideo(await this.lireVideo(f)); },
+      videoTip: s.mode === 'brut' ? 'Ajouter une vidéo (MP4, 45 Mo au plus)' : 'Ajouter une vidéo : le post passera en « Photos telles quelles »',
       cutModes: [['auto', 'Auto'], ['cut', 'Détourées'], ['full', 'Pleines']].map(([k, label]) => { const [bg, fg] = seg(v.cutMode === k); return { label, bg, fg, pick: () => this.V({ cutMode: k }) }; }),
       // Recadrage : le format du visuel est fixé ici (l'image part déjà aux dimensions de Meta).
       vFormats: this.FORMATS.map(([k, label, tip]) => { const [bg, fg] = seg((v.format || 'carre') === k); return { label, tip, bg, fg, pick: () => !locked && this.V({ format: k }) }; }),
@@ -2440,8 +2479,13 @@ class Component extends DCLogic {
       campaign: s.campaign, setCampaign: (e) => this.setState({ campaign: e.target.value }), campOptions: st.campaigns.filter(c => c.status !== 'terminée' || c.id === s.campaign).map(c => ({ id: c.id, name: c.name })),
       // médiathèque (comme Posts Facebook) : recherche dans le formulaire, modale à catégories, fiche d'un visuel
       ...(() => {
-        const libAll = s.lib, inPost = (it) => s.photos.some(p => p.src === it.src);
-        const togglePost = (it) => { if (locked) return; this.setState(st => ({ photos: st.photos.some(p => p.src === it.src) ? st.photos.filter(p => p.src !== it.src) : st.photos.concat({ src: it.src, cut: it.cut !== false, name: it.name }) })); };
+        const estVid = (it) => it.kind === 'video';
+        const libAll = s.lib, inPost = (it) => estVid(it) ? !!s.video && s.video.src === it.src : s.photos.some(p => p.src === it.src);
+        // Une vidéo de la médiathèque devient LA vidéo du post (une seule par post) ; une photo s'ajoute ou se retire.
+        const togglePost = (it) => { if (locked) return;
+          if (estVid(it)) { if (inPost(it)) this.setState({ video: null }); else this.choisirVideo(it); return; }
+          this.setState(st => ({ photos: st.photos.some(p => p.src === it.src) ? st.photos.filter(p => p.src !== it.src) : st.photos.concat({ src: it.src, cut: it.cut !== false, name: it.name }) })); };
+        const vign = (it) => estVid(it) ? it.poster || 'img/illus/decorative/bubble.png' : it.src;
         const tags = (it) => [it.cat || 'Non classée', it.sub, it.season].filter(Boolean).join(' · ');
         const set = (k) => (e) => this.setState({ [k]: e.target.value });
         const found = libAll.filter(it => this.matches(it, s.query, s.fCat, '', s.fSeason));
@@ -2457,7 +2501,7 @@ class Component extends DCLogic {
         this.STYLES1.concat(this.STYLES2).forEach(([k]) => { const C = k.charAt(0).toUpperCase() + k.slice(1); cards['sel' + C] = v.style === k ? '#8D1D2C' : 'transparent'; cards['pick' + C] = () => !locked && this.V({ style: k }); });
         return Object.assign(cards, {
           query: s.query, fCat: s.fCat, fSeason: s.fSeason, setQuery: set('query'), setFCat: set('fCat'), setFSeason: set('fSeason'),
-          results: found.slice(0, 40).map(it => ({ src: it.src, inPost: inPost(it), ring: inPost(it) ? '#8D1D2C' : 'transparent', tip: it.name + ' · ' + tags(it), toggle: () => togglePost(it) })),
+          results: found.slice(0, 40).map(it => ({ src: vign(it), isVideo: estVid(it), inPost: inPost(it), ring: inPost(it) ? '#8D1D2C' : 'transparent', tip: (estVid(it) ? 'Vidéo · ' : '') + it.name + ' · ' + tags(it), toggle: () => togglePost(it) })),
           resultLabel: found.length + (found.length > 1 ? ' visuels' : ' visuel'),
           selCount: s.photos.length,
           onDragOver: (e) => e.preventDefault(), onDropLib: (e) => { e.preventDefault(); e.stopPropagation(); this.addFilesLib(e.dataTransfer.files, false); },
@@ -2474,11 +2518,11 @@ class Component extends DCLogic {
           hasFilter: !!(s.mQuery || s.mCat || s.mSub || s.mSeason || s.mOnlyPost), clearFilters: () => this.setState({ mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false }),
           mLabel: mFound.length + (mFound.length > 1 ? ' visuels ' : ' visuel ') + ctx, mCount: mFound.length, mEmpty: mFound.length === 0,
           mSelNotAll: !locked && mFound.some(x => !inPost(x)),
-          addResultsToPost: () => { if (locked) return; this.setState(st => ({ photos: st.photos.concat(mFound.filter(x => !st.photos.some(p => p.src === x.src)).map(x => ({ src: x.src, cut: x.cut !== false, name: x.name }))) })); },
-          mResults: mFound.slice(0, 160).map(it => ({ src: it.src, name: it.name, tags: tags(it), inPost: inPost(it), ring: s.editId === it.id ? '#8D1D2C' : 'transparent',
+          addResultsToPost: () => { if (locked) return; this.setState(st => ({ photos: st.photos.concat(mFound.filter(x => !estVid(x) && !st.photos.some(p => p.src === x.src)).map(x => ({ src: x.src, cut: x.cut !== false, name: x.name }))) })); },
+          mResults: mFound.slice(0, 160).map(it => ({ src: vign(it), isVideo: estVid(it), name: it.name, tags: (estVid(it) ? 'Vidéo · ' : '') + tags(it), inPost: inPost(it), ring: s.editId === it.id ? '#8D1D2C' : 'transparent',
             btn: inPost(it) ? 'Retirer' : '+ Post', btnBg: inPost(it) ? '#232220' : '#8D1D2C', btnFg: '#FFFFFF',
             select: () => this.setState({ editId: it.id }), toggle: (e) => { e.stopPropagation(); togglePost(it); } })),
-          hasEdit: !!ed, noEdit: !ed, editSrc: ed ? ed.src : '', editInPost: !!(ed && inPost(ed)), editName: ed ? ed.name : '', editCat: ed ? ed.cat : '', editSub: ed ? ed.sub : '', editSeason: ed ? ed.season : "Toute l'année",
+          hasEdit: !!ed, noEdit: !ed, editSrc: ed ? vign(ed) : '', editIsVideo: !!ed && estVid(ed), editIsPhoto: !ed || !estVid(ed), editInPost: !!(ed && inPost(ed)), editName: ed ? ed.name : '', editCat: ed ? ed.cat : '', editSub: ed ? ed.sub : '', editSeason: ed ? ed.season : "Toute l'année",
           editSubOptions: ed ? (this.CATS[ed.cat] || []) : [],
           setEditName: (e) => this.editItem({ name: e.target.value }), setEditCat: (e) => this.editItem({ cat: e.target.value, sub: '' }), setEditSub: (e) => this.editItem({ sub: e.target.value }), setEditSeason: (e) => this.editItem({ season: e.target.value }),
           ecBg, ecFg, efBg, efFg, editCutOn: () => this.editItem({ cut: true }), editCutOff: () => this.editItem({ cut: false }),
@@ -2498,7 +2542,8 @@ class Component extends DCLogic {
         });
       })(),
       libCount: s.lib.length, openLib: () => this.setState({ libOpen: true, libPick: [] }), closeLib: () => this.setState({ libOpen: false }),
-      confirmLib: () => { const add = s.libPick.map(id => s.lib.find(x => x.id === id)).filter(Boolean).map(x => ({ src: x.src, cut: x.cut !== false, name: x.name })); this.setState({ photos: s.photos.concat(add), libOpen: false }); },
+      confirmLib: () => { const pris = s.libPick.map(id => s.lib.find(x => x.id === id)).filter(Boolean), vid = pris.find(x => x.kind === 'video');
+        const add = pris.filter(x => x.kind !== 'video').map(x => ({ src: x.src, cut: x.cut !== false, name: x.name })); this.setState({ photos: s.photos.concat(add), libOpen: false }); if (vid) this.choisirVideo(vid); },
       libPickCount: s.libPick.length, lq: s.lq, setLq: (e) => this.setState({ lq: e.target.value }), lcat: s.lcat, setLcat: (e) => this.setState({ lcat: e.target.value }), libItems, libCats: [...new Set(s.lib.map(x => x.cat).filter(Boolean))], libOpen: s.libOpen,
       // publication
       whenNow: () => this.setState({ when: 'now' }), whenLater: () => this.setState({ when: 'later' }), isLater: s.when === 'later', wnBg, wnFg, wlBg, wlFg,
