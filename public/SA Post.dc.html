@@ -987,7 +987,7 @@
           <!-- visuel : instance unique du studio -->
           <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ true }}">
             <div style="position:relative;">
-            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-label-move="{{ onLabelMove }}" on-label-select="{{ onLabelSelect }}" on-label-edit="{{ onLabelEdit }}" on-label-delete="{{ onLabelDelete }}" on-text-pick="{{ onTextPick }}" hint-size="100%,420px"></dc-import>
+            <dc-import name="Posts Facebook" art-only="{{ true }}" control="{{ studioControl }}" on-api="{{ onStudioApi }}" on-label-move="{{ onLabelMove }}" on-label-select="{{ onLabelSelect }}" on-label-edit="{{ onLabelEdit }}" on-label-delete="{{ onLabelDelete }}" on-text-pick="{{ onTextPick }}" on-text-edit="{{ onTextEdit }}" hint-size="100%,420px"></dc-import>
             <sc-if value="{{ isStoryUi }}" hint-placeholder-val="{{ false }}">
               <div style="position:absolute;inset:0;pointer-events:none;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
                 <div style="position:absolute;left:0;right:0;top:0;height:16%;background:linear-gradient(180deg,rgba(0,0,0,0.5),rgba(0,0,0,0));"></div>
@@ -1084,7 +1084,7 @@
             <button onClick="{{ couleurFermer }}" title="Fermer" style="border:none;background:transparent;color:#8A847C;font-size:13px;cursor:pointer;padding:0 2px;margin-left:auto;">×</button>
           </div>
         </sc-if>
-        <sc-if value="{{ hasCouleurAstuce }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Cliquez sur un texte du visuel pour changer sa couleur.</span></sc-if>
+        <sc-if value="{{ hasCouleurAstuce }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#666666;">Cliquez sur un texte du visuel pour le modifier ou changer sa couleur.</span></sc-if>
         <sc-if value="{{ igWarn }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8A4B00;background:#FCE7C8;border-radius:8px;padding:8px 10px;">{{ igWarnText }}</span></sc-if>
         <span style="font-size:11px;color:#666666;line-height:1.5;">Variables pour {{ pv.city }} : {{ pv.resolved }}</span>
       </aside>
@@ -2420,7 +2420,7 @@ class Component extends DCLogic {
       // Prix différents selon la boutique : l'aperçu (et l'export) montre le prix de la boutique choisie.
       ...(() => { const g = this.groupesPrix(), p = g.length && s.pb && s.pb.prix ? s.pb.prix[s.pbApercu] : undefined;
         this._prixApercu = g.length ? (p == null ? '' : String(Number(p).toFixed(2)).replace('.', ',')) : null; return {}; })(),
-      studioControl: Object.assign({}, vL, this._prixApercu != null ? { price: this._prixApercu } : {}, { txtSel: s.txtSel, texteSel: s.couleurRole || null, photos: s.photos,
+      studioControl: Object.assign({}, vL, this._prixApercu != null ? { price: this._prixApercu } : {}, { noEdit: locked ? Object.keys(this.NOMS_TEXTE) : this._prixApercu != null ? ['price'] : [], txtSel: s.txtSel, texteSel: s.couleurRole || null, photos: s.photos,
         showPrice: v.showPrice && !!String(this._prixApercu != null ? this._prixApercu : v.price || '').trim(), showPromo: v.showPromo && !!String(v.promo || '').trim(), showTitle: v.showTitle && !!String(v.title || '').trim(), showPhrase: v.showPhrase && !!String(v.phrase || '').trim() }),
       onStudioApi: (api) => { this._api = api; },
       // Un texte posé glissé sur l'aperçu : sa nouvelle position ; un clic le sélectionne.
@@ -2432,6 +2432,13 @@ class Component extends DCLogic {
       onLabelDelete: (id) => { if (!locked) this.effacerTexte(id); },
       // Un clic sur un texte du visuel : sa couleur s'ouvre sous l'aperçu (et à côté de son champ).
       onTextPick: (role) => { if (!locked) this.setState({ couleurRole: role, couleurNom: this.NOMS_TEXTE[role] || role }); },
+      // Modifier un texte sur le visuel même : il s'écrit dans la langue que montre l'aperçu (les textes
+      // traduits ont leur version NL), et il s'affiche s'il était décoché.
+      onTextEdit: (role, val) => {
+        if (locked) return;
+        const cur = this.state.v, nl = pvLang === 'nl' && LOC.includes(role), show = { eyebrow: 'showEyebrow', title: 'showTitle', phrase: 'showPhrase', price: 'showPrice', promo: 'showPromo', site: 'showSite' }[role];
+        this.V(Object.assign(nl ? { nl: Object.assign({}, cur.nl, { [role]: val }) } : { [role]: val }, show && !cur[show] && String(val).trim() ? { [show]: true } : {}));
+      },
       txtRef: (el) => { this._txtIn = el; },
       // ciblage
       shopBadges: SA.SHOPS.concat(tests).map(sh => { const on = t.includes(sh.id), test = !!sh.test;

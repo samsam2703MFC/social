@@ -356,7 +356,7 @@
 
     <!-- ================= APERÇU ================= -->
     <section style="flex:3 1 420px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0;">
-      <div ref="{{ previewRef }}" onDragOver="{{ onDragOver }}" onDrop="{{ onDrop }}" style="width:100%;max-width:{{ previewMax }};aspect-ratio:{{ artRatio }};overflow:hidden;border-radius:4px;box-shadow:0 1px 2px rgba(34,34,34,0.12),0 12px 40px rgba(34,34,34,0.10);background:#F5EFE4;">
+      <div ref="{{ previewRef }}" onDragOver="{{ onDragOver }}" onDrop="{{ onDrop }}" style="position:relative;width:100%;max-width:{{ previewMax }};aspect-ratio:{{ artRatio }};overflow:hidden;border-radius:4px;box-shadow:0 1px 2px rgba(34,34,34,0.12),0 12px 40px rgba(34,34,34,0.10);background:#F5EFE4;">
         <div style="width:{{ artW }}px;height:{{ artH }}px;transform:scale(var(--s,0.5));transform-origin:0 0;">
 
           <!-- ARTBOARD : 1080 × 1080 (carré), 1080 × 1350 (portrait 4:5), 2057 × 1080 (paysage 1,91:1, exporté en 1200 × 630) -->
@@ -965,6 +965,15 @@
             <sc-if value="{{ illusMask }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:{{ illusX }}%;top:{{ illusY }}%;width:{{ illusW }}px;aspect-ratio:{{ illusRatio }};transform:translate(-50%,-50%);background:{{ illusColor }};-webkit-mask:url('{{ illusSrc }}') center/contain no-repeat;mask:url('{{ illusSrc }}') center/contain no-repeat;pointer-events:none;z-index:6;"></div></sc-if>
           </div>
         </div>
+        <!-- Un texte du visuel se modifie sur place : le clic ouvre ce champ juste à côté, le visuel suit la frappe.
+             Il vit hors du plan de travail : l'export ne le voit pas. -->
+        <sc-if value="{{ edOn }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:{{ edL }}px;top:{{ edT }}px;width:{{ edW }}px;z-index:30;display:flex;align-items:center;gap:6px;box-sizing:border-box;padding:4px 4px 4px 10px;background:#FFFFFF;border:1.5px solid #8D1D2C;border-radius:8px;box-shadow:0 8px 24px rgba(34,34,34,0.22);">
+            <span style="flex:0 0 auto;font-family:'Gotham';font-size:11px;font-weight:500;color:#8D1D2C;white-space:nowrap;">{{ edNom }}</span>
+            <input ref="{{ edRef }}" type="text" value="{{ edVal }}" onChange="{{ edSet }}" onKeyDown="{{ edKey }}" onBlur="{{ edFin }}" aria-label="{{ edNom }}" style="flex:1 1 auto;min-width:0;font-family:'Gotham';font-size:14px;color:#222222;border:none;outline:none;background:transparent;padding:6px 2px;">
+            <button onClick="{{ edFin }}" title="Terminer (Entrée) · Échap annule" style="flex:0 0 auto;width:28px;height:28px;border-radius:6px;border:none;background:#8D1D2C;color:#FFFFFF;font-size:14px;line-height:1;cursor:pointer;">✓</button>
+          </div>
+        </sc-if>
       </div>
       <sc-if value="{{ notArtOnly }}" hint-placeholder-val="{{ true }}"><p style="font-size:12px;color:#666666;margin:0;text-align:center;">Aperçu à l'échelle · export {{ exportDims }} px · vous pouvez déposer des photos directement sur l'aperçu</p></sc-if>
     </section>
@@ -1127,16 +1136,16 @@ class Component extends DCLogic {
       eyebrow: 'Édition saisonnière · Automne 2026', title: 'Brioche croustillante',
       phrase: 'brioche filée, cœur de myrtille et crumble citronné',
       price: '4,20', unit: 'La pièce', promo: '4+1', promoSub: 'la 5ᵉ offerte', site: 'www.latelierby.be',
-      phraseFont: 'script', phraseColor: 'auto', exporting: false, exportError: false,
+      phraseFont: 'script', phraseColor: 'auto', exporting: false, exportError: false, ed: null,
     };
     try {
       const saved = JSON.parse(localStorage.getItem('latelier.fbpost.state') || 'null');
-      if (saved) { ['photos', 'photo', 'cutout', 'photoKind', 'lib', 'libReady', 'modalOpen', 'exporting', 'exportError'].forEach(k => delete saved[k]); Object.assign(base, saved); }
+      if (saved) { ['photos', 'photo', 'cutout', 'photoKind', 'lib', 'libReady', 'modalOpen', 'exporting', 'exportError', 'ed'].forEach(k => delete saved[k]); Object.assign(base, saved); }
     } catch (e) {}
     return base;
   }
   save() {
-    try { const { lib, libReady, modalOpen, exporting, exportError, ...rest } = this.state; localStorage.setItem(this.KEY, JSON.stringify(rest)); } catch (e) {}
+    try { const { lib, libReady, modalOpen, exporting, exportError, ed, ...rest } = this.state; localStorage.setItem(this.KEY, JSON.stringify(rest)); } catch (e) {}
   }
   idb(mode, fn) {
     return new Promise((res, rej) => {
@@ -1403,6 +1412,32 @@ class Component extends DCLogic {
     } catch (e) { console.error(e); this.setState({ exportError: true }); }
     this.setState({ exporting: false });
   }
+  NOMS_EDITION = { eyebrow: 'Mention', title: 'Nom', phrase: 'Phrase', price: 'Prix', unit: 'Unité', promo: 'Offre', promoSub: 'Sous-texte', site: 'Site' };
+  /**
+   * Le champ qui modifie un texte du visuel, posé juste sous lui (au-dessus s'il touche le bas). Les
+   * coordonnées sont celles de l'écran, prises dans le conteneur de l'aperçu : l'échelle du plan de
+   * travail n'y entre pas. L'hôte peut fermer un texte à l'édition (control.noEdit) — un prix lu
+   * boutique par boutique, par exemple.
+   */
+  ouvrirEdition(role, el) {
+    const box = this._prev, ctl = this.props.control || {};
+    if (!box || !el || (Array.isArray(ctl.noEdit) && ctl.noEdit.includes(role))) return;
+    const b = box.getBoundingClientRect(), r = el.getBoundingClientRect(), h = 40;
+    const w = Math.min(b.width - 8, Math.max(240, r.width + 60));
+    const l = Math.max(4, Math.min(b.width - w - 4, r.left + r.width / 2 - b.left - w / 2));
+    const bas = r.bottom - b.top + 8, haut = r.top - b.top - h - 8;
+    const t = bas + h <= b.height - 4 ? bas : Math.max(4, haut);
+    const val = ctl[role] == null ? '' : String(ctl[role]);
+    this.setState({ ed: { role, orig: val, value: val, l, t, w } });
+    setTimeout(() => { const i = this._edIn; if (i) { try { i.focus({ preventScroll: true }); i.select(); } catch (e) {} } }, 30);
+  }
+  /** Fermer le champ ; `annuler` remet le texte d'avant le clic. */
+  fermerEdition(annuler) {
+    const ed = this.state.ed;
+    if (!ed) return;
+    if (annuler && ed.value !== ed.orig && typeof this.props.onTextEdit === 'function') this.props.onTextEdit(ed.role, ed.orig);
+    this.setState({ ed: null });
+  }
   renderVals() {
     const s = this.merged(), libAll = s.lib, sel = s.sel || [];
     const byId = {}; libAll.forEach(x => { byId[x.id] = x; });
@@ -1519,11 +1554,19 @@ class Component extends DCLogic {
       illusW: il ? Math.round(Math.min(F.w, F.h) * Math.min(80, Math.max(5, il.taille != null ? +il.taille : 28)) / 100) : 0, illusRatio: il ? ratios[il.src] || '1/1' : '1/1',
       formats: Object.keys(this.FORMATS).map(k => { const on = k === fKey, [bg, fg] = seg(on); return { label: this.FORMATS[k].label, tip: this.FORMATS[k].tip, bg, fg, pick: () => this.setState({ format: k }) }; }),
       artRef: (el) => { this._art = el; this.applyTheme(); },
-      // Un clic sur un texte du visuel : l'écran hôte ouvre la couleur de ce texte.
+      // Un clic sur un texte du visuel : l'écran hôte ouvre la couleur de ce texte et, s'il sait l'écrire
+      // (onTextEdit), le texte se modifie sur place.
       artClick: (e) => { const t = e.target && e.target.closest ? e.target.closest('[class*="pf-t-"]') : null, m = t && /pf-t-(\w+)/.exec(t.className);
-        if (!m || typeof this.props.onTextPick !== 'function') return;
         const R = { eyebrow: 'eyebrow', title: 'title', phrase: 'phrase', price: 'price', unit: 'unit', promo: 'promo', promosub: 'promoSub', site: 'site' };
-        if (R[m[1]]) this.props.onTextPick(R[m[1]]); },
+        if (!m || !R[m[1]]) return;
+        if (typeof this.props.onTextPick === 'function') this.props.onTextPick(R[m[1]]);
+        if (typeof this.props.onTextEdit === 'function') this.ouvrirEdition(R[m[1]], t); },
+      ...(() => { const ed = s.exporting ? null : this.state.ed;
+        return { edOn: !!ed, edL: ed ? ed.l : 0, edT: ed ? ed.t : 0, edW: ed ? ed.w : 0, edVal: ed ? ed.value : '', edNom: ed ? this.NOMS_EDITION[ed.role] || '' : '',
+          edRef: (el) => { this._edIn = el; },
+          edSet: (e) => { const v = e.target.value; this.setState({ ed: Object.assign({}, this.state.ed, { value: v }) }); this.props.onTextEdit(this.state.ed.role, v); },
+          edKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); this.fermerEdition(false); } else if (e.key === 'Escape') { e.preventDefault(); this.fermerEdition(true); } },
+          edFin: () => this.fermerEdition(false) }; })(),
       previewRef: (el) => {
         if (!el || this._prev === el) return;
         this._prev = el;
