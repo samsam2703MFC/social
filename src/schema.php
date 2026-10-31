@@ -207,6 +207,8 @@ function socParamsInit(): void
         'url_bo'            => [(string) ($c['boUrl'] ?? '/consulant_bo/'), false],
         'webshop_url'       => ['https://webshop.atelierby.be/', false],
         'marketing_api'     => [(string) ($c['marketingApi'] ?? 'http://127.0.0.1/consulant_bo/api/v1/marketing'), false],
+        // Où lire le jeton de service de l'API Marketing (posé par son déploiement, lisible par www-data).
+        'marketing_service_token_file' => [(string) ($c['marketingServiceTokenFile'] ?? '/var/www/private/marketing/service-token'), false],
         'url_franchise'     => [(string) ($c['franchiseeUrl'] ?? '/social_franchisee/'), false],
         'utilisateur'       => [(string) ($c['userName'] ?? 'Franchiseur'), false],
         'marge'             => [(float) ($d['margin'] ?? 0.62), false],
