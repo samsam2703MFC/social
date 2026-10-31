@@ -34,6 +34,24 @@ final class BoMarketing
     {
         return self::$retenue ?? self::candidates()[0];
     }
+    /**
+     * Le jeton de service de l'API Marketing (en-tête X-Marketing-Service) : sans lui, l'API répond 401
+     * une fois l'identité de développement coupée. Le déploiement du module Marketing le tire sur le
+     * serveur et le pose dans service-token, à côté de son .env ; il ne passe ni par ce dépôt ni par l'écran.
+     */
+    public static function jetonService(): ?string
+    {
+        $fichier = (string) (socSetting('marketing_service_token_file') ?: '/var/www/private/marketing/service-token');
+        $jeton = is_readable($fichier) ? trim((string) @file_get_contents($fichier)) : '';
+        return strlen($jeton) >= 32 ? $jeton : null;
+    }
+    /** @return list<string> */
+    private static function entetes(): array
+    {
+        $h = ['Accept: application/json'];
+        if (($j = self::jetonService()) !== null) { $h[] = 'X-Marketing-Service: ' . $j; }
+        return $h;
+    }
 
     /** GET JSON sur l'API marketing du BO (lecture seule) ; la première adresse qui répond est retenue. */
     public static function get(string $path): mixed
@@ -56,7 +74,7 @@ final class BoMarketing
             [$code, $b] = (self::$transport)($url);
         } else {
             $ch = curl_init($url);
-            curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_HTTPHEADER => ['Accept: application/json']]);
+            curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_HTTPHEADER => self::entetes()]);
             $r = curl_exec($ch);
             $code = $r === false ? 0 : (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $err = $r === false ? curl_error($ch) : '';
