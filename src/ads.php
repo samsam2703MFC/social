@@ -9,7 +9,9 @@ declare(strict_types=1);
  *  - « Compte réseau » : une campagne sur le compte réseau, et un ad set par
  *    boutique (une zone chacun) — c'est ce qui permet de lire la dépense et
  *    les résultats boutique par boutique dans « Retour sur campagne » ;
- *  - boutique bilingue : un ad set et une créa par langue (`targeting.locales`) ;
+ *  - langue de la pub (`lang` de l'assistant) : celle de chaque boutique par défaut —
+ *    une boutique bilingue reçoit un ad set et une créa par langue (`targeting.locales`) —,
+ *    ou une langue choisie (français, néerlandais, les deux), ciblée par `targeting.locales` ;
  *  - variantes (A/B/C) : une créa et une pub par variante dans chaque ad set —
  *    Meta répartit la diffusion et privilégie la plus performante ;
  *  - « dark post » (nouvelle créa) : Meta crée un post « pub uniquement », absent
@@ -85,6 +87,28 @@ function socInteretsRefuses(MetaError $e): array
     foreach ($m as $x) { $ab[$x[1]] = isset($x[2]) ? (string) json_decode('"' . $x[2] . '"') : ''; }
     socSettingPut('meta_interets_abandonnes', $ab);
     return array_values(array_unique(array_column($m, 1)));
+}
+
+/**
+ * Les versions d'une pub pour une boutique : [langue, ciblée par `targeting.locales`].
+ *  - `shop` (défaut) : la langue de la boutique ; une boutique bilingue reçoit une version par
+ *    langue, chacune ciblée ; une boutique d'une seule langue, une version montrée à tous ;
+ *  - `fr`, `nl` : cette langue seule, montrée aux personnes qui utilisent Facebook et Instagram
+ *    dans cette langue ;
+ *  - `both` : les deux, chacune ciblée.
+ *
+ * @return list<array{0:string,1:bool}>
+ */
+function socAdLangues(array $w, array $shop): array
+{
+    $choix = (string) ($w['lang'] ?? 'shop');
+    if ($choix === 'fr' || $choix === 'nl') { return [[$choix, true]]; }
+    if ($choix === 'both') {
+        $ordre = array_values(array_intersect((array) ($shop['langs'] ?? []), ['fr', 'nl']));
+        return array_map(static fn ($L) => [$L, true], array_values(array_unique(array_merge($ordre, ['fr', 'nl']))));
+    }
+    $langs = $shop['langs'] ?: ['fr'];
+    return array_map(static fn ($L) => [(string) $L, count($langs) > 1], $langs);
 }
 
 /** La clé de locale Meta d'une langue (`targeting.locales`). */
@@ -182,11 +206,11 @@ function socAdCreate(array $ad): array
             $c = Meta::call('POST', $act . '/campaigns', $camp);
             $campaignId = (string) ($c['id'] ?? '');
 
-            // Un ad set (et une créa, une pub) par boutique et par langue.
+            // Un ad set (et une créa, une pub) par boutique et par langue (voir socAdLangues).
             $jeux = []; $creesAvant = $crees;
+            $langueChoisie = in_array((string) ($w['lang'] ?? 'shop'), ['fr', 'nl', 'both'], true);
             foreach ($ids as $sid) {
-                $langs = $shops[$sid]['langs'] ?: ['fr'];
-                foreach ($langs as $L) { $jeux[] = [$sid, $L, count($langs) > 1]; }
+                foreach (socAdLangues($w, $shops[$sid]) as [$L, $cible]) { $jeux[] = [$sid, $L, $cible]; }
             }
             $parJeu = ($w['budgetLevel'] ?? 'adset') === 'adset' ? ((float) $w['amount']) / ($reseau ? count($jeux) : max(1, count($jeux))) : 0;
             foreach ($jeux as [$sid, $L, $bilingue]) {
@@ -202,7 +226,13 @@ function socAdCreate(array $ad): array
                         'targeting_automation' => ['advantage_audience' => !empty($w['advantage']) ? 1 : 0]];
                     if (($w['gender'] ?? 'all') !== 'all') { $targeting['genders'] = [$w['gender'] === 'men' ? 1 : 2]; }
                     if ($interets) { $targeting['flexible_spec'] = [['interests' => $interets]]; }
-                    if ($bilingue && ($loc = socLocale($L)) !== null) { $targeting['locales'] = [$loc]; }
+                    if ($bilingue) {
+                        $loc = socLocale($L);
+                        // Une langue choisie qui ne se cible pas montrerait la pub à tous, dans une langue qu'ils ne lisent
+                        // peut-être pas : on s'arrête plutôt. (Langue de la boutique : comportement inchangé.)
+                        if ($loc === null && $langueChoisie) { throw new MetaError('langue « ' . strtoupper($L) . ' » introuvable chez Meta (adlocale) : ciblage par langue impossible', 100); }
+                        if ($loc !== null) { $targeting['locales'] = [$loc]; }
+                    }
                     $as = ['name' => (string) $w['name'] . ' · ' . $shop['name'] . ($bilingue ? ' · ' . strtoupper($L) : ''), 'campaign_id' => $campaignId,
                         'status' => (string) ($w['status'] ?? 'PAUSED'), 'billing_event' => 'IMPRESSIONS', 'optimization_goal' => (string) $w['goal'],
                         'start_time' => socIso((string) $w['start'], '07:00'), 'end_time' => socIso((string) $w['end'], '22:00'),

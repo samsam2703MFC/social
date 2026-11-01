@@ -144,3 +144,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-10-29T11:39:30Z posts de la marque programmes dans le module (Page de la marque), a venir du repost
 2026-10-30T14:33:04Z textes du visuel modifiables au clic (Creer un post)
 2026-10-31T13:52:10Z jeton de service vers l'API Marketing (X-Marketing-Service)
+2026-11-01T12:43:45Z publicites Meta : choix de la langue de la pub

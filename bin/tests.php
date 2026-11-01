@@ -662,6 +662,36 @@ check('aucun ad set : pub refusée, campagne vide supprimée chez Meta', socItem
 socStateSave(['changes' => ['ads' => ['delete' => ['a9', 'a10']]]]);
 socSettingPut('meta_interets_abandonnes', null); socSettingPut('meta_cache_interets', null);
 
+// Langue de la pub (`lang` de l'assistant) : celle de la boutique par défaut, ou une langue choisie, ciblée par targeting.locales.
+$pubLangue = static fn (string $id, array $shops, ?string $lang) => ['id' => $id, 'name' => 'Langue ' . $id, 'shops' => $shops, 'scope' => 'boutique', 'budgetType' => 'quotidien',
+    'budget' => 10, 'cap' => 0, 'spent' => 0, 'start' => $spec['start'], 'end' => $spec['end'], 'status' => 'En revue', 'radius' => 8, 'post' => 'p1',
+    'spec' => array_merge($spec, ['shops' => $shops, 'interests' => []], $lang === null ? [] : ['lang' => $lang])];
+$adsetsDe = static fn (string $act) => array_map(static fn ($a) => ['nom' => (string) ($a[2]['name'] ?? ''), 'locales' => json_decode((string) ($a[2]['targeting'] ?? '{}'), true)['locales'] ?? null],
+    $appelsVers('#^' . $act . '/adsets$#'));
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [$pubLangue('a20', ['5'], null)]]]]);
+$as = $adsetsDe('act_1002');
+check('langue selon la boutique (Wavre, français seul) : un ad set montré à tous, sans locales', count($as) === 1 && $as[0]['locales'] === null && socItem('ads', 'a20')['status'] !== 'Refusée', json_encode($as));
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [$pubLangue('a21', ['5'], 'nl')]]]]);
+$as = $adsetsDe('act_1002');
+check('langue choisie « néerlandais » (Wavre) : un ad set ciblé NL (locales Dutch), nommé · NL', count($as) === 1 && $as[0]['locales'] === [14] && str_ends_with($as[0]['nom'], ' · NL')
+    && socItem('ads', 'a21')['status'] !== 'Refusée', json_encode([$as, socItem('ads', 'a21')['reason'] ?? null]));
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [$pubLangue('a22', ['4'], 'fr')]]]]);
+$as = $adsetsDe('act_1001');
+check('langue choisie « français » (Halle bilingue) : un seul ad set, ciblé FR (locales French)', count($as) === 1 && $as[0]['locales'] === [9] && str_ends_with($as[0]['nom'], ' · FR'), json_encode($as));
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [$pubLangue('a23', ['5'], 'both')]]]]);
+$as = $adsetsDe('act_1002');
+check('langue choisie « les deux » (Wavre, français seul) : deux ad sets, FR puis NL, chacun ciblé', count($as) === 2 && $as[0]['locales'] === [9] && $as[1]['locales'] === [14]
+    && count($appelsVers('#^act_1002/ads$#')) === 2, json_encode($as));
+$appels = [];
+socStateSave(['changes' => ['ads' => ['upsert' => [$pubLangue('a24', ['5'], 'de')]]]]);
+$as = $adsetsDe('act_1002');
+check('langue inconnue : traitée comme « selon la boutique »', count($as) === 1 && $as[0]['locales'] === null, json_encode($as));
+socStateSave(['changes' => ['ads' => ['delete' => ['a20', 'a21', 'a22', 'a23', 'a24']]]]);
+
 echo "Dark posts : réservés à la publicité\n";
 $video = 'data:video/mp4;base64,' . base64_encode(str_repeat("\x00\x00\x00\x18ftypmp42", 30));
 $d1 = ['id' => 'd1', 'date' => date('Y-m-d'), 'time' => '09:00', 'title' => 'Panorama automne', 'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => true]], 'fb' => true, 'ig' => true,
