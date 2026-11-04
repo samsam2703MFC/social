@@ -16,7 +16,7 @@ declare(strict_types=1);
  *  - Instagram : /{business}/instagram_accounts + le compte rattaché à chaque Page ;
  *  - pixels : /{business}/adspixels, sinon /act_…/adspixels de chaque compte.
  *
- * Le résultat est gardé en base (`meta_portefeuille`, social_parametre).
+ * Le résultat est gardé en base (`meta_portefeuille`, mar_sa_parametre).
  */
 
 /** Toutes les pages d'un appel paginé de Graph (`$token` : token de Page, sinon celui du System User). */

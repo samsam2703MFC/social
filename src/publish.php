@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * La publication des posts — écran « Créer un post » → Pages API.
  *
- * La file est tenue par le backend (`social_publication`), pas par Meta : un post
+ * La file est tenue par le backend (`mar_sa_publication`), pas par Meta : un post
  * « Programmé » y dépose une ligne par boutique et par canal, à l'heure dite,
  * étalée de `spread / (n − 1)` minutes d'une Page à la suivante ; le cron
  * (bin/cron.php, chaque minute) publie ce qui est échu. « Publier
@@ -26,7 +26,7 @@ function socCatalogue(): array
 {
     $api = Tfb::configured('admin') ? socApiCatalogue() : [];
     if ($api) { return $api; }
-    $c = socSetting('catalogue');  // social_parametre (repli)
+    $c = socSetting('catalogue');  // mar_sa_parametre (repli)
     if (is_array($c) && $c) { return $c; }
     $j = json_decode((string) @file_get_contents(__DIR__ . '/data/catalogue.json'), true);
     return is_array($j) ? $j : [];
@@ -218,13 +218,13 @@ function socCanalNom(string $canal): string
 function socQueue(array $post, bool $maintenant = false): int
 {
     $id = (string) $post['id'];
-    Db::exec("DELETE FROM social_publication WHERE content_id = ? AND statut <> 'publie'", [$id]);
+    Db::exec("DELETE FROM mar_sa_publication WHERE content_id = ? AND statut <> 'publie'", [$id]);
     $shops = array_values((array) ($post['shops'] ?? []));
     $n = count($shops);
     $t0 = $maintenant ? time() : (strtotime(($post['date'] ?? date('Y-m-d')) . ' ' . ($post['time'] ?? '08:00')) ?: time());
     $spread = max(0, (int) ($post['spread'] ?? 0));
     $deja = [];
-    foreach (Db::rows("SELECT shop_id, canal FROM social_publication WHERE content_id = ?", [$id]) as $r) { $deja[$r['shop_id'] . '|' . $r['canal']] = true; }
+    foreach (Db::rows("SELECT shop_id, canal FROM mar_sa_publication WHERE content_id = ?", [$id]) as $r) { $deja[$r['shop_id'] . '|' . $r['canal']] = true; }
     $k = 0;
     // Instagram unique : le post part une seule fois sur le compte de la marque (dès qu'une boutique visée l'a coché).
     $unique = socIgUnique();
@@ -236,7 +236,7 @@ function socQueue(array $post, bool $maintenant = false): int
             // Instagram unique : un magasin test ne publie jamais sur le compte du réseau.
             if (str_starts_with($c, 'ig') && $unique) { if (!in_array((string) $sid, $tests, true)) { $igReseau[$c] = true; } continue; }
             if (isset($deja[$sid . '|' . $c])) { continue; }
-            Db::exec('INSERT INTO social_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
+            Db::exec('INSERT INTO mar_sa_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
                 [$id, (string) $sid, $c, date('Y-m-d H:i:s', $t0 + $off), 'attente', date('Y-m-d H:i:s')]);
             $k++;
         }
@@ -248,14 +248,14 @@ function socQueue(array $post, bool $maintenant = false): int
         foreach (socCanauxPost($post, 'marque') as $c) {
             if (str_starts_with($c, 'ig') && $unique) { $igReseau[$c] = true; continue; }
             if (isset($deja['marque|' . $c])) { continue; }
-            Db::exec('INSERT INTO social_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
+            Db::exec('INSERT INTO mar_sa_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
                 [$id, 'marque', $c, date('Y-m-d H:i:s', $t0), 'attente', date('Y-m-d H:i:s')]);
             $k++;
         }
     }
     foreach (array_keys($igReseau) as $c) {
         if (isset($deja['marque|' . $c])) { continue; }
-        Db::exec('INSERT INTO social_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
+        Db::exec('INSERT INTO mar_sa_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
             [$id, 'marque', $c, date('Y-m-d H:i:s', $t0), 'attente', date('Y-m-d H:i:s')]);
         $k++;
     }
@@ -265,7 +265,7 @@ function socQueue(array $post, bool $maintenant = false): int
 /** Retire de la file ce qui n'est pas encore parti (brouillon, refus, suppression). */
 function socUnqueue(string $postId): void
 {
-    Db::exec("DELETE FROM social_publication WHERE content_id = ? AND statut <> 'publie'", [$postId]);
+    Db::exec("DELETE FROM mar_sa_publication WHERE content_id = ? AND statut <> 'publie'", [$postId]);
 }
 
 /** Publie sur une Page Facebook. Rend l'id Meta du post. */
@@ -404,14 +404,14 @@ function socMotif(MetaError $e, string $canal): string
 function socRunQueue(?string $postId = null, int $max = 60): array
 {
     $now = date('Y-m-d H:i:s');
-    $sql = "SELECT * FROM social_publication WHERE statut = 'attente' AND prevue_le <= ?" . ($postId !== null ? ' AND content_id = ?' : '') . ' ORDER BY prevue_le, id LIMIT ' . (int) $max;
+    $sql = "SELECT * FROM mar_sa_publication WHERE statut = 'attente' AND prevue_le <= ?" . ($postId !== null ? ' AND content_id = ?' : '') . ' ORDER BY prevue_le, id LIMIT ' . (int) $max;
     $rows = Db::rows($sql, $postId !== null ? [$now, $postId] : [$now]);
     $touches = [];
     $shops = [];
     foreach (socShops() as $s) { $shops[$s['id']] = $s; }
     foreach ($rows as $r) {
         // Réservation : deux crons simultanés ne publient pas deux fois.
-        if (Db::exec("UPDATE social_publication SET statut = 'en_cours', essais = essais + 1, maj_le = ? WHERE id = ? AND statut = 'attente'", [$now, $r['id']]) === 0) { continue; }
+        if (Db::exec("UPDATE mar_sa_publication SET statut = 'en_cours', essais = essais + 1, maj_le = ? WHERE id = ? AND statut = 'attente'", [$now, $r['id']]) === 0) { continue; }
         $post = socItem('posts', (string) $r['content_id']);
         // `marque` : sa Page Facebook parle pour toute la marque (son nom, ses deux langues) ; son Instagram
         // est le compte du réseau, qui cite les boutiques visées.
@@ -428,15 +428,15 @@ function socRunQueue(?string $postId = null, int $max = 60): array
                 'ig' => socPublishIg($post, $shop, $msg), 'fb_story' => socPublishFbStory($post, $shop), 'ig_story' => socPublishIgStory($post, $shop),
                 default => socPublishFb($post, $shop, $msg),
             };
-            Db::exec("UPDATE social_publication SET statut = 'publie', meta_id = ?, erreur = NULL, code_erreur = NULL, maj_le = ? WHERE id = ?", [$mid, date('Y-m-d H:i:s'), $r['id']]);
+            Db::exec("UPDATE mar_sa_publication SET statut = 'publie', meta_id = ?, erreur = NULL, code_erreur = NULL, maj_le = ? WHERE id = ?", [$mid, date('Y-m-d H:i:s'), $r['id']]);
         } catch (SocBlocage $e) {
-            Db::exec("UPDATE social_publication SET statut = 'echec', erreur = ?, code_erreur = 0, maj_le = ? WHERE id = ?",
+            Db::exec("UPDATE mar_sa_publication SET statut = 'echec', erreur = ?, code_erreur = 0, maj_le = ? WHERE id = ?",
                 [mb_substr('Publication bloquée, offre à revoir : ' . $e->getMessage(), 0, 500), date('Y-m-d H:i:s'), $r['id']]);
         } catch (MetaError $e) {
-            Db::exec("UPDATE social_publication SET statut = 'echec', erreur = ?, code_erreur = ?, maj_le = ? WHERE id = ?",
+            Db::exec("UPDATE mar_sa_publication SET statut = 'echec', erreur = ?, code_erreur = ?, maj_le = ? WHERE id = ?",
                 [mb_substr(socMotif($e, (string) $r['canal']), 0, 500), $e->metaCode, date('Y-m-d H:i:s'), $r['id']]);
         } catch (Throwable $e) {
-            Db::exec("UPDATE social_publication SET statut = 'echec', erreur = ?, code_erreur = 0, maj_le = ? WHERE id = ?",
+            Db::exec("UPDATE mar_sa_publication SET statut = 'echec', erreur = ?, code_erreur = 0, maj_le = ? WHERE id = ?",
                 [mb_substr('Erreur interne : ' . $e->getMessage(), 0, 500), date('Y-m-d H:i:s'), $r['id']]);
         }
         $touches[(string) $r['content_id']] = true;
@@ -459,7 +459,7 @@ function socSyncPostStatus(string $postId): ?array
 {
     $post = socItem('posts', $postId);
     if ($post === null) { return null; }
-    $rows = Db::rows('SELECT * FROM social_publication WHERE content_id = ?', [$postId]);
+    $rows = Db::rows('SELECT * FROM mar_sa_publication WHERE content_id = ?', [$postId]);
     if (!$rows) { return $post; }
     $attente = array_filter($rows, static fn ($r) => in_array($r['statut'], ['attente', 'en_cours'], true));
     if ($attente) { return $post; }
@@ -494,7 +494,7 @@ function socSyncPostStatus(string $postId): ?array
 /** Relance les lignes en échec d'un post, tout de suite. */
 function socRetry(string $postId): ?array
 {
-    $n = Db::exec("UPDATE social_publication SET statut = 'attente', prevue_le = ?, maj_le = ? WHERE content_id = ? AND statut = 'echec'",
+    $n = Db::exec("UPDATE mar_sa_publication SET statut = 'attente', prevue_le = ?, maj_le = ? WHERE content_id = ? AND statut = 'echec'",
         [date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), $postId]);
     if ($n === 0) { return socItem('posts', $postId); }
     $r = socRunQueue($postId);
@@ -531,7 +531,7 @@ function socPostSupprimer(string $id, bool $chezMeta): array
     $post = socItem('posts', $id);
     if ($post === null) { throw new HttpError(404, 'post introuvable : ' . $id); }
     $titre = (string) ($post['title'] ?? $id);
-    $lignes = Db::rows("SELECT * FROM social_publication WHERE content_id = ? AND statut = 'publie' AND meta_id IS NOT NULL AND meta_id <> ''", [$id]);
+    $lignes = Db::rows("SELECT * FROM mar_sa_publication WHERE content_id = ? AND statut = 'publie' AND meta_id IS NOT NULL AND meta_id <> ''", [$id]);
     $faits = []; $erreurs = [];
     if ($chezMeta && $lignes) {
         $shops = [];
@@ -547,7 +547,7 @@ function socPostSupprimer(string $id, bool $chezMeta): array
                 if ($tok === null || $tok === '') { throw new MetaError('compte non accessible au token (Page non partagée avec l’utilisateur système)', 190); }
                 foreach (array_filter(array_map('trim', explode(',', (string) $r['meta_id']))) as $mid) { socMetaSupprimer($mid, $tok); }
                 // Partie chez Meta : la ligne n'a plus rien à suivre (ni à re-supprimer si une autre échoue).
-                Db::exec('DELETE FROM social_publication WHERE id = ?', [$r['id']]);
+                Db::exec('DELETE FROM mar_sa_publication WHERE id = ?', [$r['id']]);
                 $faits[] = $quoi;
             } catch (MetaError $e) {
                 $erreurs[] = $quoi + ['reason' => socMotif($e, (string) $r['canal'])];
@@ -559,7 +559,7 @@ function socPostSupprimer(string $id, bool $chezMeta): array
             . implode(' · ', array_map(static fn ($k) => $k['shopName'] . ' (' . $k['channel'] . ') : ' . $k['reason'], $erreurs)));
         return ['ok' => false, 'id' => $id, 'supprimees' => $faits, 'erreurs' => $erreurs, 'post' => $post];
     }
-    Db::exec('DELETE FROM social_publication WHERE content_id = ?', [$id]);
+    Db::exec('DELETE FROM mar_sa_publication WHERE content_id = ?', [$id]);
     socItemDelete('posts', $id);
     socLog(socUser(), 'Suppression', '« ' . $titre . ' » supprimé'
         . ($faits ? ' (et retiré de ' . implode(', ', array_map(static fn ($k) => $k['shopName'] . ' ' . $k['channel'], $faits)) . ')'
@@ -571,7 +571,7 @@ function socPostSupprimer(string $id, bool $chezMeta): array
 function socPostMetaIds(string $postId): array
 {
     $out = [];
-    foreach (Db::rows("SELECT shop_id, meta_id FROM social_publication WHERE content_id = ? AND canal = 'fb' AND statut = 'publie'", [$postId]) as $r) {
+    foreach (Db::rows("SELECT shop_id, meta_id FROM mar_sa_publication WHERE content_id = ? AND canal = 'fb' AND statut = 'publie'", [$postId]) as $r) {
         $out[(string) $r['shop_id']] = (string) $r['meta_id'];
     }
     return $out;

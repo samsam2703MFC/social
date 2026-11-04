@@ -17,13 +17,13 @@ declare(strict_types=1);
  * l'écran l'affiche comme telle. Marge, ROAS et ROI se calculent à l'écran
  * (social-data.js, `roi()`), avec le taux de marge du réglage.
  *
- * Le cron recalcule ; l'écran lit `social_resultat`.
+ * Le cron recalcule ; l'écran lit `mar_sa_resultat`.
  */
 
 function socResults(): array
 {
     $out = [];
-    foreach (Db::rows('SELECT campagne_id, shop_id, data FROM social_resultat') as $r) {
+    foreach (Db::rows('SELECT campagne_id, shop_id, data FROM mar_sa_resultat') as $r) {
         $d = json_decode((string) $r['data'], true);
         if (is_array($d)) { $out[(string) $r['campagne_id']][(string) $r['shop_id']] = $d; }
     }
@@ -125,7 +125,7 @@ function socResultsSync(?string $seule = null): int
             $d = $m + ($v ?? ['caRef' => null, 'caCamp' => null, 'tRef' => null, 'tCamp' => null, 'qRef' => null, 'qCamp' => null]);
             $d['spend'] = round((float) $d['spend'], 2);
             if ($motif !== null) { $d['noSales'] = $motif; }
-            Db::exec('INSERT INTO social_resultat (campagne_id, shop_id, depense, portee, impressions, clics, ca_campagne, ca_reference, data, synchro_le)
+            Db::exec('INSERT INTO mar_sa_resultat (campagne_id, shop_id, depense, portee, impressions, clics, ca_campagne, ca_reference, data, synchro_le)
                       VALUES (?,?,?,?,?,?,?,?,?,?)
                       ON DUPLICATE KEY UPDATE depense = VALUES(depense), portee = VALUES(portee), impressions = VALUES(impressions), clics = VALUES(clics),
                         ca_campagne = VALUES(ca_campagne), ca_reference = VALUES(ca_reference), data = VALUES(data), synchro_le = VALUES(synchro_le)',

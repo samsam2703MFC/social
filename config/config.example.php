@@ -6,9 +6,9 @@
  * Le fichier ne sert qu'à TROUVER LA BASE : le module lit les identifiants
  * MySQL du BO consultant dans le config/config.php du BO. Tout le reste —
  * données et clés (token Meta, secret de l'app, jeton webhook, URL publique…)
- * — est stocké et lu dans la base, table `social_parametre`, et se modifie
+ * — est stocké et lu dans la base, tables `mar_variable` et `mar_keys` (module `social`, secrets chiffrés), et se modifie
  * dans l'écran Paramètres. Les valeurs ci-dessous ne servent qu'à remplir
- * `social_parametre` au premier lancement.
+ * `mar_variable` / `mar_keys` (module `social`) au premier lancement.
  */
 return [
     // Dossier d'installation du BO consultant (celui qui contient config/config.php).

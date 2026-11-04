@@ -8,7 +8,7 @@ declare(strict_types=1);
  *
  *  1. un System User du Business Manager (token longue durée). Le token, la
  *     clé secrète de l'app et le jeton du webhook sont stockés et LUS dans
- *     `social_parametre` (clés meta_system_token, meta_app_secret,
+ *     `mar_sa_parametre` (clés meta_system_token, meta_app_secret,
  *     meta_verify_token, marquées secrètes : jamais renvoyées au navigateur).
  *     Au premier lancement, ceux de Brand Guard (BO) y sont recopiés ; un
  *     champ resté VIDE reprend la connexion partagée du CRM candidat (table
@@ -39,12 +39,12 @@ final class Meta
     public static $sleep = null;
     private static ?array $pageTokens = null;
 
-    /** Clé de l'écran → [clé de social_parametre, clé de la connexion partagée du CRM]. */
+    /** Clé de l'écran → [clé de mar_sa_parametre, clé de la connexion partagée du CRM]. */
     private const CLES = ['systemToken' => ['meta_system_token', 'system_token'], 'appSecret' => ['meta_app_secret', 'app_secret'],
         'verifyToken' => ['meta_verify_token', 'verify_token'], 'appId' => ['meta_app_id', 'app_id']];
 
     /**
-     * Les réglages Meta : social_parametre d'abord ; un champ vide reprend la
+     * Les réglages Meta : mar_sa_parametre d'abord ; un champ vide reprend la
      * connexion partagée du CRM (`meta_connexion`, client oct. 2026 : « copier
      * les connexions Meta du CRM — ou une table spécifique dans la base »).
      */
@@ -56,7 +56,7 @@ final class Meta
         return $c;
     }
 
-    /** D'où vient chaque clé : 'social' (social_parametre), 'crm' (connexion partagée) ou '' (absente). */
+    /** D'où vient chaque clé : 'social' (mar_sa_parametre), 'crm' (connexion partagée) ou '' (absente). */
     public static function sources(): array
     {
         $out = [];

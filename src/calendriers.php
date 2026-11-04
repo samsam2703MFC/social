@@ -12,7 +12,7 @@ declare(strict_types=1);
  *
  * Les comptes (Pages et Instagram, avec leur photo de profil) servent de
  * filtres au Calendrier. Les publications faites par le module sont reconnues
- * (social_publication.meta_id) et ne sont pas montrées deux fois.
+ * (mar_sa_publication.meta_id) et ne sont pas montrées deux fois.
  */
 
 const SOC_CAL_MAX = 400;         // publications au plus par compte et par passage
@@ -83,7 +83,7 @@ function socCalComptes(): array
 function socCalDuModule(): array
 {
     $ids = [];
-    foreach (Db::rows("SELECT meta_id FROM social_publication WHERE meta_id IS NOT NULL AND meta_id <> ''") as $r) { $ids[(string) $r['meta_id']] = true; }
+    foreach (Db::rows("SELECT meta_id FROM mar_sa_publication WHERE meta_id IS NOT NULL AND meta_id <> ''") as $r) { $ids[(string) $r['meta_id']] = true; }
     foreach (socItems('posts') as $p) {
         foreach ((array) ($p['frise']['ig'] ?? []) as $parBoutique) { foreach ((array) $parBoutique as $mid) { if (is_scalar($mid)) { $ids[(string) $mid] = true; } } }
     }
@@ -279,7 +279,7 @@ function socCalSupprimer(string $id, string $compte): array
         socLog(socUser(), 'Suppression', 'Publication ' . $quoi['channel'] . ' de ' . $quoi['shopName'] . ' : suppression refusée — ' . socMotif($e, $fb ? 'fb' : 'ig'));
         return ['ok' => false, 'id' => $id, 'supprimees' => [], 'erreurs' => [$quoi + ['reason' => socMotif($e, $fb ? 'fb' : 'ig')]]];
     }
-    Db::exec('DELETE FROM social_rattachement WHERE objet = ?', [$id]);
+    Db::exec('DELETE FROM mar_sa_rattachement WHERE objet = ?', [$id]);
     socLog(socUser(), 'Suppression', 'Publication ' . $quoi['channel'] . ' de ' . $quoi['shopName'] . ' supprimée chez Meta (' . $mid . ')');
     return ['ok' => true, 'id' => $id, 'supprimees' => [$quoi], 'erreurs' => []];
 }

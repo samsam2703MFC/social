@@ -13,7 +13,7 @@ declare(strict_types=1);
  *    (`effective_instagram_media_id`) : lien pour l'ouvrir, réutilisation dans
  *    une autre pub (likes et commentaires cumulés), suivi des commentaires.
  *  - Les commentaires sont relus toutes les heures (cron) ou à la demande, gardés
- *    dans `social_commentaire`, et peuvent être masqués depuis l'écran.
+ *    dans `mar_sa_commentaire`, et peuvent être masqués depuis l'écran.
  */
 
 /** Relit chez Meta le dark post d'une pub créée (ou rien, s'il n'existe pas encore). */
@@ -45,7 +45,7 @@ function socDarkRelire(array $o, array $shop): array
 /** Le dark post déjà diffusé d'un post du module pour une boutique (même langue de préférence). */
 function socDarkStory(string $postId, string $shopId, string $lang): string
 {
-    $rows = Db::rows("SELECT story_id, langue FROM social_meta_objet WHERE kind = 'ad' AND post_id = ? AND shop_id = ? AND dark = 1 AND story_id IS NOT NULL ORDER BY id DESC",
+    $rows = Db::rows("SELECT story_id, langue FROM mar_sa_meta_objet WHERE kind = 'ad' AND post_id = ? AND shop_id = ? AND dark = 1 AND story_id IS NOT NULL ORDER BY id DESC",
         [$postId, $shopId]);
     foreach ($rows as $r) { if ((string) $r['langue'] === $lang) { return (string) $r['story_id']; } }
     return (string) ($rows[0]['story_id'] ?? '');
@@ -55,9 +55,9 @@ function socDarkStory(string $postId, string $shopId, string $lang): string
 function socDarkPosts(): array
 {
     $n = [];
-    foreach (Db::rows('SELECT objet_id, COUNT(*) n, SUM(masque) m FROM social_commentaire GROUP BY objet_id') as $r) { $n[(string) $r['objet_id']] = [(int) $r['n'], (int) $r['m']]; }
+    foreach (Db::rows('SELECT objet_id, COUNT(*) n, SUM(masque) m FROM mar_sa_commentaire GROUP BY objet_id') as $r) { $n[(string) $r['objet_id']] = [(int) $r['n'], (int) $r['m']]; }
     $out = [];
-    foreach (Db::rows("SELECT local_id, post_id, shop_id, langue, variante, story_id, ig_media_id, lien, lien_ig FROM social_meta_objet
+    foreach (Db::rows("SELECT local_id, post_id, shop_id, langue, variante, story_id, ig_media_id, lien, lien_ig FROM mar_sa_meta_objet
                        WHERE kind = 'ad' AND dark = 1 AND ad_id IS NOT NULL ORDER BY id") as $r) {
         $fb = $n[(string) $r['story_id']] ?? [0, 0]; $ig = $n[(string) $r['ig_media_id']] ?? [0, 0];
         $out[] = ['ad' => (string) $r['local_id'], 'post' => (string) ($r['post_id'] ?? ''), 'shop' => (string) $r['shop_id'], 'lang' => (string) ($r['langue'] ?? ''),
@@ -71,7 +71,7 @@ function socDarkPosts(): array
 function socDarkCommentsSync(?string $adId = null): array
 {
     if (!Meta::configured()) { return ['erreur' => 'token Meta absent']; }
-    $sql = "SELECT local_id, post_id, shop_id, story_id, ig_media_id FROM social_meta_objet WHERE kind = 'ad' AND dark = 1 AND ad_id IS NOT NULL"
+    $sql = "SELECT local_id, post_id, shop_id, story_id, ig_media_id FROM mar_sa_meta_objet WHERE kind = 'ad' AND dark = 1 AND ad_id IS NOT NULL"
         . " AND (story_id IS NOT NULL OR ig_media_id IS NOT NULL)" . ($adId !== null ? ' AND local_id = ?' : '');
     $shops = []; foreach (socShops() as $s) { $shops[$s['id']] = $s; }
     $vus = []; $lus = 0; $erreurs = [];
@@ -90,7 +90,7 @@ function socDarkCommentsSync(?string $adId = null): array
                 foreach ((array) ($c['data'] ?? []) as $x) {
                     if (!is_array($x) || empty($x['id'])) { continue; }
                     $quand = strtotime((string) ($x['created_time'] ?? $x['timestamp'] ?? '')) ?: time();
-                    Db::exec('INSERT INTO social_commentaire (id, canal, objet_id, shop_id, post_id, pub_id, auteur, message, cree_le, masque, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+                    Db::exec('INSERT INTO mar_sa_commentaire (id, canal, objet_id, shop_id, post_id, pub_id, auteur, message, cree_le, masque, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
                         . ' ON DUPLICATE KEY UPDATE message = VALUES(message), masque = VALUES(masque), maj_le = VALUES(maj_le)',
                         [(string) $x['id'], $canal, $objet, (string) $r['shop_id'], $r['post_id'] ?? null, (string) $r['local_id'],
                             mb_substr((string) ($x['from']['name'] ?? $x['username'] ?? ''), 0, 160), mb_substr((string) ($x['message'] ?? $x['text'] ?? ''), 0, 5000),
@@ -110,8 +110,8 @@ function socDarkComments(?string $adId, ?string $postId): array
 {
     if ($adId === null && $postId === null) { return []; }
     $rows = $adId !== null
-        ? Db::rows('SELECT * FROM social_commentaire WHERE pub_id = ? ORDER BY cree_le DESC LIMIT 200', [$adId])
-        : Db::rows('SELECT * FROM social_commentaire WHERE post_id = ? ORDER BY cree_le DESC LIMIT 200', [$postId]);
+        ? Db::rows('SELECT * FROM mar_sa_commentaire WHERE pub_id = ? ORDER BY cree_le DESC LIMIT 200', [$adId])
+        : Db::rows('SELECT * FROM mar_sa_commentaire WHERE post_id = ? ORDER BY cree_le DESC LIMIT 200', [$postId]);
     $noms = []; foreach (socShops() as $s) { $noms[$s['id']] = $s['name']; }
     return array_map(static fn ($r) => ['id' => (string) $r['id'], 'channel' => $r['canal'] === 'ig' ? 'Instagram' : 'Facebook', 'shop' => (string) $r['shop_id'],
         'shopName' => $noms[(string) $r['shop_id']] ?? (string) $r['shop_id'], 'author' => (string) ($r['auteur'] ?? ''), 'message' => (string) ($r['message'] ?? ''),
@@ -121,12 +121,12 @@ function socDarkComments(?string $adId, ?string $postId): array
 /** Masque (ou réaffiche) un commentaire chez Meta. */
 function socDarkCommentMasquer(string $id, bool $masquer): array
 {
-    $r = Db::row('SELECT * FROM social_commentaire WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_sa_commentaire WHERE id = ?', [$id]);
     if ($r === null) { throw new HttpError(404, 'commentaire inconnu'); }
     $shop = socShop((string) $r['shop_id']);
     $tok = $shop && ($shop['ids']['page_id'] ?? '') !== '' ? Meta::pageToken((string) $shop['ids']['page_id']) : null;
     Meta::call('POST', $id, $r['canal'] === 'ig' ? ['hide' => $masquer] : ['is_hidden' => $masquer], $tok);
-    Db::exec('UPDATE social_commentaire SET masque = ?, maj_le = ? WHERE id = ?', [$masquer ? 1 : 0, date('Y-m-d H:i:s'), $id]);
+    Db::exec('UPDATE mar_sa_commentaire SET masque = ?, maj_le = ? WHERE id = ?', [$masquer ? 1 : 0, date('Y-m-d H:i:s'), $id]);
     socLog(socUser(), 'Commentaire', ($masquer ? 'Masqué' : 'Réaffiché') . ' sur un dark post (' . ($r['canal'] === 'ig' ? 'Instagram' : 'Facebook') . ', '
         . ($shop['name'] ?? $r['shop_id']) . ') : « ' . mb_substr((string) $r['message'], 0, 80) . ' »');
     return ['id' => $id, 'hidden' => $masquer];

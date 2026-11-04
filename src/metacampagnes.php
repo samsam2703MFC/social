@@ -12,7 +12,7 @@ declare(strict_types=1);
  * (pour le Retour sur campagne), la mettre en pause, la relancer, l'arrêter
  * ou relever son plafond — appliqué au niveau de la campagne Meta.
  *
- * Les campagnes créées par le module sont reconnues (social_meta_objet) et
+ * Les campagnes créées par le module sont reconnues (mar_sa_meta_objet) et
  * jamais importées une seconde fois.
  *
  * Relu à la demande (« Récupérer les campagnes Meta ») et à chaque synchro
@@ -122,7 +122,7 @@ function socComptesConnus(): array
 function socCampagnesDuModule(): array
 {
     $ids = [];
-    foreach (Db::rows("SELECT DISTINCT campaign_id FROM social_meta_objet WHERE kind = 'ad' AND campaign_id IS NOT NULL AND local_id NOT LIKE ?", [SOC_IMPORT_PREFIXE . '%']) as $r) {
+    foreach (Db::rows("SELECT DISTINCT campaign_id FROM mar_sa_meta_objet WHERE kind = 'ad' AND campaign_id IS NOT NULL AND local_id NOT LIKE ?", [SOC_IMPORT_PREFIXE . '%']) as $r) {
         $ids[(string) $r['campaign_id']] = true;
     }
     return $ids;
@@ -344,7 +344,7 @@ function socCampagneMetaVersPub(array $c, array $enfants, array $st, array $comp
 /** Remplace les objets Meta d'une campagne importée (une ligne par pub, pour le Retour sur campagne). */
 function socCampagneMetaObjets(string $localId, string $act, string $cid, array $objets): void
 {
-    Db::exec("DELETE FROM social_meta_objet WHERE kind = 'ad' AND local_id = ?", [$localId]);
+    Db::exec("DELETE FROM mar_sa_meta_objet WHERE kind = 'ad' AND local_id = ?", [$localId]);
     if (!$objets) { $objets = [['shop_id' => null]]; }
     foreach ($objets as $o) {
         socMetaObjectAdd($o + ['kind' => 'ad', 'local_id' => $localId, 'account' => $act, 'campaign_id' => $cid]);

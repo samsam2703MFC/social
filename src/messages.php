@@ -16,7 +16,7 @@ declare(strict_types=1);
  * Meta n'autorise une réponse que dans les 24 h qui suivent le dernier message du client (fenêtre standard) : au-delà,
  * l'outil le dit et renvoie vers l'application Instagram. Rien n'est envoyé à Claude.
  *
- * Tables : `social_conversation` (une par client et par compte, son attribution, son suivi) et `social_message`.
+ * Tables : `mar_sa_conversation` (une par client et par compte, son attribution, son suivi) et `mar_sa_message`.
  * Relues par le cron toutes les heures et par « Relire ».
  */
 
@@ -80,19 +80,19 @@ function socMsgGarder(array $cv, array $c): int
         }
         $texte = (string) ($m['message'] ?? '');
         if ($texte === '' && !$pieces) { $texte = '(message non lisible ici : story, réaction ou contenu partagé)'; }
-        Db::exec('INSERT INTO social_message (id, conversation_id, sens, auteur, texte, pieces, cree_le) VALUES (?,?,?,?,?,?,?)
+        Db::exec('INSERT INTO mar_sa_message (id, conversation_id, sens, auteur, texte, pieces, cree_le) VALUES (?,?,?,?,?,?,?)
             ON DUPLICATE KEY UPDATE texte = VALUES(texte), pieces = VALUES(pieces)',
             [(string) $m['id'], (string) $cv['id'], $in ? 'in' : 'out', $in ? $clientNom : (string) ($m['from']['username'] ?? ($c['name'] ?? '')), mb_substr($texte, 0, 4000),
              $pieces ? json_encode($pieces, JSON_UNESCAPED_SLASHES) : null, $quand]);
         $n++;
     }
-    $der = Db::row('SELECT sens, texte, pieces, cree_le FROM social_message WHERE conversation_id = ? ORDER BY cree_le DESC, id DESC LIMIT 1', [(string) $cv['id']]);
+    $der = Db::row('SELECT sens, texte, pieces, cree_le FROM mar_sa_message WHERE conversation_id = ? ORDER BY cree_le DESC, id DESC LIMIT 1', [(string) $cv['id']]);
     if ($der && (string) $der['texte'] === '' && $der['pieces']) { $der['texte'] = 'Photo ou vidéo'; }
-    $dIn = Db::row("SELECT MAX(cree_le) d FROM social_message WHERE conversation_id = ? AND sens = 'in'", [(string) $cv['id']])['d'] ?? null;
+    $dIn = Db::row("SELECT MAX(cree_le) d FROM mar_sa_message WHERE conversation_id = ? AND sens = 'in'", [(string) $cv['id']])['d'] ?? null;
     $shop = $c['shop'] !== null && $c['shop'] !== 'marque' ? (string) $c['shop'] : null;
     $idc = (string) $cv['id'];
     $maintenant = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO social_conversation (id, canal, compte, page_id, shop_id, client_id, client_nom, dernier_le, dernier_sens, dernier_texte, dernier_in_le, vu_le, maj_le)
+    Db::exec('INSERT INTO mar_sa_conversation (id, canal, compte, page_id, shop_id, client_id, client_nom, dernier_le, dernier_sens, dernier_texte, dernier_in_le, vu_le, maj_le)
         VALUES (?,\'ig\',?,?,?,?,?,?,?,?,?,?,?)
         ON DUPLICATE KEY UPDATE client_id = IF(VALUES(client_id) <> \'\', VALUES(client_id), client_id), client_nom = IF(VALUES(client_nom) <> \'\', VALUES(client_nom), client_nom),
             dernier_le = VALUES(dernier_le), dernier_sens = VALUES(dernier_sens), dernier_texte = VALUES(dernier_texte), dernier_in_le = VALUES(dernier_in_le), maj_le = VALUES(maj_le),
@@ -110,11 +110,11 @@ function socMsgGarder(array $cv, array $c): int
  */
 function socMsgRouter(string $id): void
 {
-    $c = Db::row('SELECT shop_id, attribue_shop FROM social_conversation WHERE id = ?', [$id]);
+    $c = Db::row('SELECT shop_id, attribue_shop FROM mar_sa_conversation WHERE id = ?', [$id]);
     if (!$c || $c['shop_id'] !== null || $c['attribue_shop'] !== null) { return; }
-    $sid = socBoutiqueCitee(array_column(Db::rows("SELECT texte FROM social_message WHERE conversation_id = ? AND sens = 'in' ORDER BY cree_le, id", [$id]), 'texte'));
+    $sid = socBoutiqueCitee(array_column(Db::rows("SELECT texte FROM mar_sa_message WHERE conversation_id = ? AND sens = 'in' ORDER BY cree_le, id", [$id]), 'texte'));
     if ($sid === null) { return; }
-    Db::exec('UPDATE social_conversation SET attribue_shop = ?, attribue_par = ?, attribue_le = ?, attribue_note = ? WHERE id = ? AND attribue_shop IS NULL',
+    Db::exec('UPDATE mar_sa_conversation SET attribue_shop = ?, attribue_par = ?, attribue_le = ?, attribue_note = ? WHERE id = ? AND attribue_shop IS NULL',
         [$sid, 'Automatique', date('Y-m-d H:i:s'), 'Le client cite la boutique ' . (socMsgNoms()[$sid] ?? $sid) . '.', $id]);
 }
 
@@ -148,9 +148,9 @@ function socMessages(array $q = []): array
     if ($f === 'afaire') { $where .= " AND c.dernier_sens = 'in' AND c.traite_le IS NULL"; }
     elseif ($f === 'boutiques') { $where .= ' AND c.attribue_shop IS NOT NULL'; }
     $noms = socMsgNoms();
-    $l = array_map(static fn ($r) => socMsgLigne($r, $noms), Db::rows("SELECT c.* FROM social_conversation c WHERE $where ORDER BY (c.dernier_sens = 'in' AND c.traite_le IS NULL) DESC, c.dernier_le DESC LIMIT 200", $args));
+    $l = array_map(static fn ($r) => socMsgLigne($r, $noms), Db::rows("SELECT c.* FROM mar_sa_conversation c WHERE $where ORDER BY (c.dernier_sens = 'in' AND c.traite_le IS NULL) DESC, c.dernier_le DESC LIMIT 200", $args));
     $tot = Db::row("SELECT SUM(dernier_sens = 'in' AND traite_le IS NULL) afaire, SUM(dernier_sens = 'in' AND traite_le IS NULL AND attribue_shop IS NULL) reseau, SUM(attribue_shop IS NOT NULL) boutiques, COUNT(*) tout
-        FROM social_conversation WHERE dernier_le >= ?", $args) ?? [];
+        FROM mar_sa_conversation WHERE dernier_le >= ?", $args) ?? [];
     $scopes = (array) ((socSetting('meta_jeton_info') ?? [])['scopes'] ?? []);
     return ['conversations' => $l, 'totaux' => ['afaire' => (int) ($tot['afaire'] ?? 0), 'reseau' => (int) ($tot['reseau'] ?? 0), 'boutiques' => (int) ($tot['boutiques'] ?? 0), 'tout' => (int) ($tot['tout'] ?? 0)],
         'relus' => socSetting('messages_relus'), 'jours' => SOC_MSG_JOURS, 'fenetreH' => SOC_MSG_FENETRE_H,
@@ -160,7 +160,7 @@ function socMessages(array $q = []): array
 
 function socMsgConversationRow(string $id): array
 {
-    $r = Db::row('SELECT * FROM social_conversation WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_sa_conversation WHERE id = ?', [$id]);
     if (!$r) { throw new HttpError(404, 'Conversation introuvable.'); }
     return $r;
 }
@@ -171,7 +171,7 @@ function socMsgConversation(string $id): array
     $r = socMsgConversationRow($id);
     $msgs = array_map(static fn ($m) => ['id' => (string) $m['id'], 'sens' => (string) $m['sens'], 'auteur' => (string) ($m['auteur'] ?? ''), 'texte' => (string) ($m['texte'] ?? ''),
         'pieces' => $m['pieces'] ? (json_decode((string) $m['pieces'], true) ?: []) : [], 'le' => substr((string) $m['cree_le'], 0, 16), 'par' => (string) ($m['par'] ?? '')],
-        Db::rows('SELECT * FROM social_message WHERE conversation_id = ? ORDER BY cree_le, id', [$id]));
+        Db::rows('SELECT * FROM mar_sa_message WHERE conversation_id = ? ORDER BY cree_le, id', [$id]));
     return ['conversation' => socMsgLigne($r, socMsgNoms()), 'messages' => $msgs];
 }
 
@@ -201,9 +201,9 @@ function socMsgRepondre(string $id, string $texte, ?string $qui = null): array
     $mid = (string) ($res['message_id'] ?? ('local-' . bin2hex(random_bytes(6))));
     $qui ??= socUser();
     $maintenant = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO social_message (id, conversation_id, sens, auteur, texte, pieces, cree_le, par) VALUES (?,?,\'out\',?,?,NULL,?,?)
+    Db::exec('INSERT INTO mar_sa_message (id, conversation_id, sens, auteur, texte, pieces, cree_le, par) VALUES (?,?,\'out\',?,?,NULL,?,?)
         ON DUPLICATE KEY UPDATE par = VALUES(par)', [$mid, $id, (string) ($c['name'] ?? ''), $texte, $maintenant, mb_substr($qui, 0, 120)]);
-    Db::exec("UPDATE social_conversation SET dernier_le = ?, dernier_sens = 'out', dernier_texte = ?, traite_le = ?, repondu_par = ?, maj_le = ? WHERE id = ?",
+    Db::exec("UPDATE mar_sa_conversation SET dernier_le = ?, dernier_sens = 'out', dernier_texte = ?, traite_le = ?, repondu_par = ?, maj_le = ? WHERE id = ?",
         [$maintenant, mb_substr($texte, 0, 500), $maintenant, mb_substr($qui, 0, 120), $maintenant, $id]);
     socLog($qui, 'Messages', 'Réponse en message privé Instagram à ' . ((string) $r['client_nom'] ?: 'un client'));
     return socMsgConversation($id);
@@ -213,7 +213,7 @@ function socMsgRepondre(string $id, string $texte, ?string $qui = null): array
 function socMsgTraiter(string $id, bool $traite): array
 {
     socMsgConversationRow($id);
-    Db::exec('UPDATE social_conversation SET traite_le = ? WHERE id = ?', [$traite ? date('Y-m-d H:i:s') : null, $id]);
+    Db::exec('UPDATE mar_sa_conversation SET traite_le = ? WHERE id = ?', [$traite ? date('Y-m-d H:i:s') : null, $id]);
     return socMsgConversation($id);
 }
 
@@ -222,7 +222,7 @@ function socMsgAttribuer(string $id, string $shop, string $note = ''): array
 {
     $r = socMsgConversationRow($id);
     if ($shop !== '' && !in_array($shop, array_map(static fn ($s) => (string) $s['id'], socShops()), true)) { throw new HttpError(422, 'Boutique inconnue.'); }
-    Db::exec('UPDATE social_conversation SET attribue_shop = ?, attribue_par = ?, attribue_le = ?, attribue_note = ? WHERE id = ?',
+    Db::exec('UPDATE mar_sa_conversation SET attribue_shop = ?, attribue_par = ?, attribue_le = ?, attribue_note = ? WHERE id = ?',
         [$shop !== '' ? $shop : null, $shop !== '' ? socUser() : null, $shop !== '' ? date('Y-m-d H:i:s') : null, $shop !== '' ? mb_substr(trim($note), 0, 300) : null, $id]);
     socLog(socUser(), 'Messages', $shop !== '' ? 'Conversation avec ' . ((string) $r['client_nom'] ?: 'un client') . ' confiée à ' . (socMsgNoms()[$shop] ?? $shop) : 'Conversation reprise par le réseau');
     return socMsgConversation($id);
@@ -233,10 +233,10 @@ function socMessagesAlertes(?string $shop = null): array
 {
     $d = date('Y-m-d H:i:s', strtotime('-' . SOC_MSG_JOURS . ' days'));
     if ($shop !== null) {
-        $n = Db::row("SELECT COUNT(*) n FROM social_conversation WHERE dernier_le >= ? AND dernier_sens = 'in' AND traite_le IS NULL AND (attribue_shop = ? OR (attribue_shop IS NULL AND shop_id = ?))", [$d, $shop, $shop]);
+        $n = Db::row("SELECT COUNT(*) n FROM mar_sa_conversation WHERE dernier_le >= ? AND dernier_sens = 'in' AND traite_le IS NULL AND (attribue_shop = ? OR (attribue_shop IS NULL AND shop_id = ?))", [$d, $shop, $shop]);
         return ['aRepondre' => (int) ($n['n'] ?? 0)];
     }
-    $n = Db::row("SELECT COUNT(*) n FROM social_conversation WHERE dernier_le >= ? AND dernier_sens = 'in' AND traite_le IS NULL AND attribue_shop IS NULL AND shop_id IS NULL", [$d]);
+    $n = Db::row("SELECT COUNT(*) n FROM mar_sa_conversation WHERE dernier_le >= ? AND dernier_sens = 'in' AND traite_le IS NULL AND attribue_shop IS NULL AND shop_id IS NULL", [$d]);
     return ['aRepondre' => (int) ($n['n'] ?? 0)];
 }
 
@@ -245,7 +245,7 @@ function socMessagesAlertes(?string $shop = null): array
 /** La conversation est-elle à cette boutique ? (confiée par le réseau, ou sur son propre Instagram) — sinon 404. */
 function sfMsgPropre(string $shop, string $id): array
 {
-    $r = Db::row('SELECT * FROM social_conversation WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_sa_conversation WHERE id = ?', [$id]);
     $a = $r ? ($r['attribue_shop'] !== null ? (string) $r['attribue_shop'] : ($r['shop_id'] !== null ? (string) $r['shop_id'] : null)) : null;
     if (!$r || $a !== $shop) { throw new HttpError(404, 'Conversation introuvable.'); }
     return $r;
@@ -255,7 +255,7 @@ function sfMessages(string $shop): array
 {
     if (!sfRegles()['voirMessages']) { return ['conversations' => [], 'masque' => true, 'aRepondre' => 0]; }
     $noms = socMsgNoms();
-    $l = array_map(static fn ($r) => socMsgLigne($r, $noms), Db::rows("SELECT * FROM social_conversation WHERE dernier_le >= ? AND (attribue_shop = ? OR (attribue_shop IS NULL AND shop_id = ?))
+    $l = array_map(static fn ($r) => socMsgLigne($r, $noms), Db::rows("SELECT * FROM mar_sa_conversation WHERE dernier_le >= ? AND (attribue_shop = ? OR (attribue_shop IS NULL AND shop_id = ?))
         ORDER BY (dernier_sens = 'in' AND traite_le IS NULL) DESC, dernier_le DESC LIMIT 100", [date('Y-m-d H:i:s', strtotime('-' . SOC_MSG_JOURS . ' days')), $shop, $shop]));
     return ['conversations' => $l, 'masque' => false, 'aRepondre' => count(array_filter($l, static fn ($c) => $c['aRepondre'])), 'peutRepondre' => (bool) sfRegles()['repondreMessages'],
         'fenetreH' => SOC_MSG_FENETRE_H, 'relus' => (socSetting('messages_relus') ?? [])['le'] ?? null];

@@ -23,7 +23,7 @@ partage **tous les accès** du BO consultant :
 | Adresse, position GPS | caisse du panel (`shops`, via `ceo_shop.pwa_shop_id`) |
 | Ventes (retour sur campagne) | caisse du panel (`transaction`, `transaction_product`, `product`) |
 | Opérations | les campagnes commerciales du **Marketing du BO**, lues par son API (`GET /api/v1/marketing/campaigns`, `/campaigns/{id}`, `/shops`) — jamais créées ni modifiées ici |
-| Clés Meta | celles de Brand Guard, **recopiées une fois** dans `social_parametre` au premier lancement ; un champ resté **vide** reprend la **connexion partagée du CRM candidat** (table `meta_connexion`, voir plus bas) |
+| Clés Meta | celles de Brand Guard, **recopiées une fois** dans `mar_variable` / `mar_keys` (module `social`) au premier lancement ; un champ resté **vide** reprend la **connexion partagée du CRM candidat** (table `meta_connexion`, voir plus bas) |
 | Journal | chaque geste s'écrit aussi dans `ceo_journal_entry` (écran Journal du cockpit, type « Social & Ads ») |
 
 Le module n'écrit **jamais** dans les tables `ceo_*`, `brand_guard_*` ni dans
@@ -38,51 +38,64 @@ candidature du CRM, ses clés dans **une table commune** de la base partagée.
   `system_token`, `verify_token`, `page_id`, `page_token`, `graph_version`…) est
   **créée et tenue par le CRM** (à chaque « Connecter et tester » de ses
   Paramètres → Intégrations). Le module la **lit** : `Meta::config()` prend la
-  clé de `social_parametre`, et seulement si elle est vide celle du CRM
+  clé de `mar_variable` / `mar_keys` (module `social`), et seulement si elle est vide celle du CRM
   (`socMetaConnexion`). L'écran l'indique (« · repris du CRM ») et
   **« ↺ Reprendre la connexion du CRM »** (`POST /parametres/cles/crm`) vide les
   clés saisies ici. Les secrets ne partent jamais au navigateur.
 - **Webhook** : une application Meta n'a qu'UNE adresse de rappel pour les
   Pages — celle de l'API de la page franchise. Elle relaie ici, corps et
   signature de Meta tels quels, les leads de **nos** formulaires
-  (`social_meta_objet`). Le module y inscrit l'adresse de son webhook
+  (`mar_sa_meta_objet`). Le module y inscrit l'adresse de son webhook
   (`relais_social` = `url_publique` + `api/v1/social/webhook`,
   `socMetaRelaisInscrire`, à chaque démarrage du module — `socInstall`) — c'est la seule
-  écriture du module dans une table qui n'est pas `social_*`. Son webhook
+  écriture du module hors des tables du module marketing (`mar_*`). Son webhook
   ignore un lead d'un formulaire qui n'est pas le sien (une candidature du
   CRM peut voisiner avec les nôtres dans le même envoi). Le cron continue de
   relire nos formulaires (`socLeadsSync`).
 
-## Tout est en base : tables `social_*`
+## Tout est en base : tables `mar_sa_*`
 
 Toutes les données **et toutes les clés** sont stockées et lues dans la base
 (aucun secret en fichier ni en variable d'environnement côté module) :
 
 | Table | Contenu |
 |---|---|
-| `social_parametre` | paramètres et clés : `meta_system_token`, `meta_app_secret`, `meta_verify_token` (marqués `secret`, jamais renvoyés au navigateur), `meta_version`, `meta_dsa`, `meta_compte_reseau`, `url_publique`, `url_bo`, `utilisateur`, `marge`, `catalogue`… |
-| `social_content` | les posts (titre, statut, date, heure, boutiques, canaux, textes FR/NL, image, erreur…) |
-| `social_campagne` | ancienne table des opérations locales — plus utilisée (les opérations viennent du Marketing du BO) |
-| `social_publicite` | les publicités (objectif, statut Meta, budget, plafond, dépense, motif de refus) |
-| `social_formulaire` | les formulaires de leads, une ligne par version |
-| `social_lead` | les leads reçus |
-| `social_groupe` / `social_modele` | groupes de boutiques / modèles de posts |
-| `social_boutique` | langues, horaires, identifiants Meta (`page_id`, `ad_account_id`, `instagram_user_id`, `pixel_id`), état des connexions |
-| `social_publication` | la file de publication (post × boutique × canal, heure prévue, résultat Meta) |
-| `social_meta_objet` | objets créés chez Meta (campagne, ad set, créa, pub, formulaire) |
-| `social_resultat` | résultats Meta + ventes caisse par campagne et boutique |
-| `social_rattachement` | le lien seul entre une publication lue chez Meta (`mfb-…`, `mig-…`) et une opération du Marketing (`bo-…`) |
-| `social_instagram_media` | les 30 dernières publications de chaque compte Instagram (grille du profil) |
-| `social_commentaire` | les commentaires reçus sur les dark posts (Facebook et Instagram), masqués ou non |
-| `social_modele_franchise` | les modèles de post ouverts aux boutiques (espace franchisé) |
-| `social_repost` | les publications de la Page de la marque vues par le repost automatique : reprises, exclues (et pourquoi) ou retirées, avec le post du module qui les porte (`rp-…`) |
-| `social_repost_cible` | le sort de chaque publication dans chaque boutique : automatique, à valider, validé, refusé (motif), sans réponse, forcé par le réseau, retiré |
-| `social_activite` | le journal d'activité |
+| `mar_variable` / `mar_keys` (module `social`) | tables communes du module marketing : les réglages en clair dans `mar_variable` (`meta_version`, `meta_dsa`, `meta_compte_reseau`, `url_publique`, `url_bo`, `utilisateur`, `marge`, `catalogue`…), les secrets **chiffrés** dans `mar_keys` (`meta_system_token`, `meta_app_secret`, `meta_verify_token`, comptes TFBuddy — jamais renvoyés au navigateur), avec la clé maîtresse du module Marketing (`master.key`, hors de la base). L’ancienne `social_parametre` est vidée dans ces deux tables au premier démarrage |
+| `mar_sa_content` | les posts (titre, statut, date, heure, boutiques, canaux, textes FR/NL, image, erreur…) |
+| `mar_sa_campagne` | ancienne table des opérations locales — plus utilisée (les opérations viennent du Marketing du BO) |
+| `mar_sa_publicite` | les publicités (objectif, statut Meta, budget, plafond, dépense, motif de refus) |
+| `mar_sa_formulaire` | les formulaires de leads, une ligne par version |
+| `mar_sa_lead` | les leads reçus |
+| `mar_sa_groupe` / `mar_sa_modele` | groupes de boutiques / modèles de posts |
+| `mar_sa_boutique` | langues, horaires, identifiants Meta (`page_id`, `ad_account_id`, `instagram_user_id`, `pixel_id`), état des connexions |
+| `mar_sa_publication` | la file de publication (post × boutique × canal, heure prévue, résultat Meta) |
+| `mar_sa_meta_objet` | objets créés chez Meta (campagne, ad set, créa, pub, formulaire) |
+| `mar_sa_resultat` | résultats Meta + ventes caisse par campagne et boutique |
+| `mar_sa_rattachement` | le lien seul entre une publication lue chez Meta (`mfb-…`, `mig-…`) et une opération du Marketing (`bo-…`) |
+| `mar_sa_instagram_media` | les 30 dernières publications de chaque compte Instagram (grille du profil) |
+| `mar_sa_commentaire` | les commentaires reçus sur les dark posts (Facebook et Instagram), masqués ou non |
+| `mar_sa_modele_franchise` | les modèles de post ouverts aux boutiques (espace franchisé) |
+| `mar_sa_repost` | les publications de la Page de la marque vues par le repost automatique : reprises, exclues (et pourquoi) ou retirées, avec le post du module qui les porte (`rp-…`) |
+| `mar_sa_repost_cible` | le sort de chaque publication dans chaque boutique : automatique, à valider, validé, refusé (motif), sans réponse, forcé par le réseau, retiré |
+| `mar_sa_activite` | le journal d'activité |
 
 Chaque table a des colonnes typées (lisibles en SQL) et une colonne `data` qui
 garde l'objet complet de l'écran (réglages du studio visuel, ciblage de
 l'assistant Publicités, questions d'un formulaire). Tables créées au premier
 appel (`src/schema.php`), sans migration, comme le BO.
+
+**Passage sous le préfixe `mar_` (novembre 2026).** Le module marketing entier
+doit pouvoir être déplacé dans un autre projet : ses tables portent toutes le
+préfixe `mar_`. Les tables de Social s'appellent `mar_sa_*` (`mar_social_*`
+appartient déjà au cockpit). Au premier démarrage qui suit la mise en ligne,
+`socMigrerPrefixe()` renomme les anciennes `social_*` en une seule instruction
+`RENAME TABLE` (atomique : données, index et clés suivent ; retour arrière par
+le renommage inverse). Si une table existe sous les deux noms avec des lignes
+des deux côtés, rien n'est touché et le conflit est écrit au journal.
+`socMigrerParametres()` verse ensuite l'ancienne table de paramètres dans
+`mar_variable` / `mar_keys` ; un secret n'y passe que si son chiffrement puis
+son déchiffrement réussissent avec la clé maîtresse, sinon il reste où il était
+et continue d'être lu.
 
 Les clés Meta se saisissent dans **Paramètres → API Meta → Clés d'accès Meta**
 (un champ vide ne change rien ; la valeur n'est jamais réaffichée).
@@ -95,7 +108,7 @@ boutiques (`/public/shops`, `/shops`), catalogue et prix
 (`/shops/{id}/products/available`, `?lang_code=nl`), gammes
 (`/product-availability-periods`), ventes par produit et tickets
 (`/shops/{id}/statistics/sales/product-category-groups` et `/kpis`, avec
-`date_from`/`date_to`). Comptes admin et consultant dans `social_parametre`
+`date_from`/`date_to`). Comptes admin et consultant dans `mar_variable` / `mar_keys` (module `social`)
 (repris une fois du BO), modifiables dans **Paramètres → API TFBuddy**.
 
 **Créer un post → catalogue** (`src/catalogue.php`, `GET /catalogue/nav?shop=`, `GET /catalogue/offres`) :
@@ -138,7 +151,7 @@ identifiants restent visibles dans Paramètres. Sans caisse : ni webshop, ni ven
 
 Ce même onglet liste **les routes qui fonctionnent et celles qui ne
 fonctionnent pas** sur le serveur : audit de toutes les routes GET du swagger
-(bouton, ou cron chaque nuit à 5 h 20), résultat dans `social_api_audit`.
+(bouton, ou cron chaque nuit à 5 h 20), résultat dans `mar_sa_api_audit`.
 Rapport complet : **`docs/AUDIT.md`**.
 
 ## Portefeuille Business Manager
@@ -156,7 +169,7 @@ cron relit le portefeuille toutes les heures (à la 37e minute ; ou toutes les 6
 les identifiants saisis à la main » est coché — puis revérifie les connexions des
 boutiques modifiées. Elle part aussi dès qu'un nouveau token est enregistré, et à la
 demande (« Mettre à jour maintenant »). Le journal ne garde que les changements.
-Réglages en base : `social_parametre.meta_ids_auto` (dernier passage :
+Réglages en base : `meta_ids_auto` (`mar_variable`, module `social`) (dernier passage :
 `meta_ids_auto_dernier`).
 
 ## Ce que fait le serveur chez Meta
@@ -198,16 +211,16 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   n'apparaissent qu'à leur sortie.
 - **Page de la marque dans « Créer un post »** — une ligne en tête du tableau des boutiques : le post
   (`marque: true`, canaux dans `ch.marque`) part aussi sur la Page Facebook de la marque, à l'heure
-  dite, par la file (`social_publication`, boutique `marque`, canal `fb`), au nom de la marque et dans
+  dite, par la file (`mar_sa_publication`, boutique `marque`, canal `fb`), au nom de la marque et dans
   ses deux langues ; son Instagram, en Instagram unique, est le compte du réseau (une seule
   publication avec celle des boutiques). Le repost le reprend ensuite chez les boutiques, sauf chez
   celles que le post visait déjà (`data.direct` du repost, case « par le post »).
   Routes : `GET /repost?jours=`, `POST /repost/reglage`, `/repost/relire`, `/repost/relancer`
   `{source?, shop?}`, `/repost/forcer {source, shop?}`, `/repost/retirer {source}` ; espace
   franchisé : `GET /franchise/reposts`, `POST /franchise/reposts/repondre {source, accepter, motif}`.
-  Réglage : `social_parametre.repost` ; dernier passage : `repost_guet` ; posts programmés lus :
+  Réglage : `repost` (`mar_variable`, module `social`) ; dernier passage : `repost_guet` ; posts programmés lus :
   `repost_avenir`.
-- **Posts** — file tenue par le backend (`social_publication`) : « Programmé » =
+- **Posts** — file tenue par le backend (`mar_sa_publication`) : « Programmé » =
   en file à l'heure dite, étalée de `X / (n−1)` minutes par Page ; « Publier
   maintenant » = publié dans la requête. Variables `{ville}`, `{adresse}`,
   `{horaires}`, `{prix}`, `{produit_du_jour}` résolues boutique par boutique, dans
@@ -240,7 +253,7 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
 - **Grille Instagram** (écran du même nom) — par boutique, le profil tel qu'il
   sera : les posts programmés (calendrier) au-dessus des 30 dernières publications
   relues chez Instagram (`GET /{ig_user_id}/media`, table
-  `social_instagram_media`, cron horaire + bouton « Relire chez Instagram »).
+  `mar_sa_instagram_media`, cron horaire + bouton « Relire chez Instagram »).
   Contrôles : alignement de chaque frise (programmée ou déjà en ligne), posts « à
   valider » qui la décaleraient s'ils étaient refusés, demi-heure autour des
   frises. Glisser une case programmée sur une autre échange leurs créneaux.
@@ -261,7 +274,7 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   par variante dans le suivi. Après création, le serveur relit l'id du dark post
   (`effective_object_story_id`, `effective_instagram_media_id`) : liens, réutilisation
   dans une autre pub (« Sponsoriser un post existant », likes et commentaires
-  cumulés), commentaires relus toutes les heures (`social_commentaire`), masquables
+  cumulés), commentaires relus toutes les heures (`mar_sa_commentaire`), masquables
   depuis l'écran Publicités.
 - **Post → modèle franchisé** — dans « Créer un post », « Enregistrer comme modèle
   franchisé » fige le visuel du post (studio, montage ou photos) et son texte en un
@@ -344,7 +357,7 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   (sa dépense et ses résultats comptent alors dans le Retour sur opération). Une
   campagne disparue chez Meta passe « Arrêtée ». Les montants restent dans la devise
   du compte (affichée si ce n'est pas l'euro). Compte rendu du dernier passage :
-  `social_parametre.meta_campagnes_import`.
+  `meta_campagnes_import` (`mar_variable`, module `social`).
 - **Formulaires de leads** — `POST /{page_id}/leadgen_forms` sur chaque Page ;
   nouvelle version = nouveau formulaire + archivage de l'ancien ; les pubs
   reçoivent une nouvelle créa avec le nouveau formulaire.
@@ -535,7 +548,7 @@ Le navigateur n'appelle **jamais** Meta. Référence complète des appels :
   publications déjà en ligne sur les Pages), depuis une publicité (Publicités Meta),
   ou depuis l'opération (panneau « Rattacher » : posts et pubs de la période, à
   cocher). Post du module et publicité : leur champ `campaign` ; publication lue
-  chez Meta : le lien seul, table `social_rattachement`.
+  chez Meta : le lien seul, table `mar_sa_rattachement`.
 - **Plan de posts d'une campagne** (`src/plan.php`, panneau de l'opération) — durée (toute la
   campagne, 1 à 8 semaines ou dates choisies ; jamais avant demain), réseaux et rythme par semaine
   (Facebook + Instagram — le même post —, Facebook seul, Instagram seul, stories) et un mix
@@ -710,7 +723,7 @@ par le franchiseur (écran **Espace franchisé** du module, dans le rail) :
 
 ## Transport dans l'ERP
 
-Le module se déplace d'un bloc (tables `social_*`, `src/`, `public/`, `franchisee/`,
+Le module se déplace d'un bloc (tables `mar_sa_*`, `src/`, `public/`, `franchisee/`,
 `bin/`). Ses six liens à l'hôte — base, session, utilisateur, journal, boutiques,
 session des franchisés — se remplacent dans un seul fichier, `config/hote.php`
 (modèle : `config/hote.example.php`), sans toucher au code. Mode d'emploi complet :
@@ -741,7 +754,7 @@ GitHub requis dans ce dépôt : `DEPLOY_SSH_PASSWORD` (le même que le BO).
 
 À la main, sur le serveur : `sudo bin/deploy.sh` — copie vers `/var/www/social`,
 alias Apache `/social`, `config/config.php` (chemin du BO, aucun secret),
-tables `social_*`, cron `/etc/cron.d/social` :
+tables `mar_sa_*`, cron `/etc/cron.d/social` :
 
 ```
 * * * * *   php bin/cron.php queue   # posts échus
@@ -778,8 +791,8 @@ config/            config.example.php (premier lancement), hote.example.php (poi
   api/index.php    contrôleur frontal de l'API
   vendor/          React, ReactDOM, Babel, html-to-image (embarqués, aucun CDN)
 src/
-  bootstrap.php    lien BO : config, base, session, social_parametre, journal
-  schema.php       tables social_*
+  bootstrap.php    lien BO : config, base, session, réglages (mar_variable / mar_keys), journal
+  schema.php       tables mar_sa_*
   store.php        état des écrans (lecture, enregistrement par différences)
   shops.php        boutiques du BO + test des connexions Meta
   meta.php         client Graph / Marketing API

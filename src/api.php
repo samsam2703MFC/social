@@ -100,7 +100,7 @@ function socRoute(string $method, string $path): array
         return [200, ['ok' => true, 'metaStatus' => Meta::statut()]];
     }
     if ($method === 'POST' && $path === '/parametres/cles') {
-        // Les clés Meta, écrites en base (social_parametre). Un champ vide n'efface rien.
+        // Les clés Meta, écrites en base (mar_sa_parametre). Un champ vide n'efface rien.
         $map = ['systemToken' => 'meta_system_token', 'appSecret' => 'meta_app_secret', 'verifyToken' => 'meta_verify_token', 'anthropicKey' => 'anthropic_api_key', 'removebgKey' => 'removebg_api_key'];
         if (preg_match('/^\d{5,20}$/', trim((string) (body()['appId'] ?? '')))) { socSettingPut('meta_app_id', trim((string) body()['appId']), false); }
         $faits = [];
@@ -347,7 +347,7 @@ function socRoute(string $method, string $path): array
         foreach (['admin', 'consultant'] as $r) {
             if (isset($b[$r . 'Phone'])) { socSettingPut('tfb_' . $r . '_phone', trim((string) $b[$r . 'Phone']), false); $faits[] = $r . ' (téléphone)'; }
             if (trim((string) ($b[$r . 'Password'] ?? '')) !== '') { socSettingPut('tfb_' . $r . '_password', (string) $b[$r . 'Password'], true); $faits[] = $r . ' (mot de passe)'; }
-            Db::exec('DELETE FROM social_parametre WHERE cle = ?', ['tfb_jeton_' . $r]);
+            socSettingDelete('tfb_jeton_' . $r);
         }
         Tfb::reset();
         $test = [];

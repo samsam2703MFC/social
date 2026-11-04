@@ -12,7 +12,7 @@ declare(strict_types=1);
  *  - admin      : POST /admin/auth/login {phone, password}       (ERP)
  *  - consultant : POST /consultant/auth/login {phone, password}  (panel)
  *
- * Tout vit dans `social_parametre` : base (tfb_base), identifiants
+ * Tout vit dans `mar_sa_parametre` : base (tfb_base), identifiants
  * (tfb_admin_phone / tfb_admin_password, tfb_consultant_phone /
  * tfb_consultant_password — mots de passe secrets) et jetons en cache
  * (tfb_jeton_admin, tfb_jeton_consultant, secrets). Au premier lancement, les
@@ -118,7 +118,7 @@ final class Tfb
 /**
  * Premier lancement : les comptes API du BO (réglages `erpAdmin` et
  * `panelApi` de ceo_app_setting, sinon son config/config.php) sont recopiés
- * dans social_parametre. Ensuite, seule la base du module fait foi.
+ * dans mar_sa_parametre. Ensuite, seule la base du module fait foi.
  */
 function socTfbInit(): void
 {
@@ -142,7 +142,7 @@ function socTfbInit(): void
 /**
  * Les boutiques de l'API : `GET /public/shops` (sans compte : adresse, horaires,
  * e-mail, téléphone, TVA), complétées par `GET /shops` (compte admin) quand il
- * répond. Mémorisées 15 min dans social_parametre (`tfb_cache_shops`) : l'écran
+ * répond. Mémorisées 15 min dans mar_sa_parametre (`tfb_cache_shops`) : l'écran
  * ne doit pas attendre l'API à chaque chargement, ni s'éteindre si elle tombe.
  *
  * @return list<array{id:string,name:string,address:string,hours:string,email:string,phone:string,vat:string,source:string}>

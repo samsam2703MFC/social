@@ -198,7 +198,7 @@ function socOperationRattache(string $id): array
         $parStatut[$statut] = ($parStatut[$statut] ?? 0) + 1;
         $posts++;
     }
-    $meta = (int) (Db::row('SELECT COUNT(*) n FROM social_rattachement WHERE operation_id = ?', [$id])['n'] ?? 0);
+    $meta = (int) (Db::row('SELECT COUNT(*) n FROM mar_sa_rattachement WHERE operation_id = ?', [$id])['n'] ?? 0);
     $pubs = [];
     foreach (socItems('ads') as $a) {
         if (($a['campaign'] ?? null) !== $id) { continue; }
@@ -233,14 +233,14 @@ function socOperationParId(string $id): ?array
 function socRattachements(): array
 {
     $out = [];
-    foreach (Db::rows('SELECT objet, operation_id FROM social_rattachement') as $r) { $out[(string) $r['objet']] = (string) $r['operation_id']; }
+    foreach (Db::rows('SELECT objet, operation_id FROM mar_sa_rattachement') as $r) { $out[(string) $r['objet']] = (string) $r['operation_id']; }
     return $out;
 }
 
 /**
  * Rattache (ou détache, `operation` null) un post ou une publicité à une opération du Marketing du BO.
  *  - post du module, publicité (du module ou récupérée chez Meta) : son champ `campaign` ;
- *  - publication lue en direct chez Meta (`mfb-…`, `mig-…`) : le lien seul, dans social_rattachement.
+ *  - publication lue en direct chez Meta (`mfb-…`, `mig-…`) : le lien seul, dans mar_sa_rattachement.
  */
 function socRattacher(string $kind, string $id, ?string $operation): array
 {
@@ -252,9 +252,9 @@ function socRattacher(string $kind, string $id, ?string $operation): array
     }
     $nom = '';
     if ($kind === 'post' && preg_match('/^m(fb|ig)-/', $id)) {
-        if ($op === null) { Db::exec('DELETE FROM social_rattachement WHERE objet = ?', [$id]); }
+        if ($op === null) { Db::exec('DELETE FROM mar_sa_rattachement WHERE objet = ?', [$id]); }
         else {
-            Db::exec('INSERT INTO social_rattachement (objet, operation_id, par, le) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE operation_id = VALUES(operation_id), par = VALUES(par), le = VALUES(le)',
+            Db::exec('INSERT INTO mar_sa_rattachement (objet, operation_id, par, le) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE operation_id = VALUES(operation_id), par = VALUES(par), le = VALUES(le)',
                 [$id, $op['id'], socUser(), date('Y-m-d H:i:s')]);
         }
         $nom = 'publication ' . $id;

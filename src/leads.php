@@ -108,7 +108,7 @@ function socLeadformHook(?array $avant, array $f): array
 
 function socPageTokenDuForm(string $localId, string $formId): ?string
 {
-    $r = Db::row('SELECT shop_id FROM social_meta_objet WHERE kind = ? AND local_id = ? AND form_id = ?', ['leadform', $localId, $formId]);
+    $r = Db::row('SELECT shop_id FROM mar_sa_meta_objet WHERE kind = ? AND local_id = ? AND form_id = ?', ['leadform', $localId, $formId]);
     $shop = $r ? socShop((string) $r['shop_id']) : null;
     try { return $shop && $shop['ids']['page_id'] !== '' ? Meta::pageToken((string) $shop['ids']['page_id']) : null; }
     catch (MetaError $e) { return null; }
@@ -130,7 +130,7 @@ function socLeadSave(array $l, ?string $formLocal, ?string $shopId): bool
     $fd = [];
     foreach ((array) ($l['field_data'] ?? []) as $f) { $fd[socLeadKey((string) ($f['name'] ?? ''))] = implode(', ', (array) ($f['values'] ?? [])); }
     $t = strtotime((string) ($l['created_time'] ?? '')) ?: time();
-    return Db::exec('INSERT IGNORE INTO social_lead (id, formulaire_id, form_meta, shop_id, pub, cree_le, champs) VALUES (?,?,?,?,?,?,?)',
+    return Db::exec('INSERT IGNORE INTO mar_sa_lead (id, formulaire_id, form_meta, shop_id, pub, cree_le, champs) VALUES (?,?,?,?,?,?,?)',
         [(string) $l['id'], $formLocal, (string) ($l['form_id'] ?? ''), $shopId, (string) ($l['ad_name'] ?? $l['ad_id'] ?? ''),
          date('Y-m-d H:i:s', $t), json_encode($fd, JSON_UNESCAPED_UNICODE)]) > 0;
 }
@@ -140,7 +140,7 @@ function socLeads(): array
 {
     return array_map(static fn ($r) => ['id' => $r['id'], 'form' => $r['formulaire_id'], 'created_time' => substr((string) $r['cree_le'], 0, 16),
         'ad' => (string) $r['pub'], 'shop' => $r['shop_id'], 'field_data' => json_decode((string) $r['champs'], true) ?: []],
-        Db::rows('SELECT * FROM social_lead ORDER BY cree_le DESC LIMIT 2000'));
+        Db::rows('SELECT * FROM mar_sa_lead ORDER BY cree_le DESC LIMIT 2000'));
 }
 
 /** Rattrapage : relit les leads de chaque formulaire publié. */
@@ -148,7 +148,7 @@ function socLeadsSync(): int
 {
     if (!Meta::configured()) { return 0; }
     $n = 0;
-    foreach (Db::rows("SELECT * FROM social_meta_objet WHERE kind = 'leadform' AND form_id IS NOT NULL") as $o) {
+    foreach (Db::rows("SELECT * FROM mar_sa_meta_objet WHERE kind = 'leadform' AND form_id IS NOT NULL") as $o) {
         $tok = socPageTokenDuForm((string) $o['local_id'], (string) $o['form_id']);
         $path = (string) $o['form_id'] . '/leads';
         $params = ['fields' => 'id,created_time,field_data,ad_id,ad_name,form_id', 'limit' => 100];
@@ -186,7 +186,7 @@ function socWebhook(string $corps, ?string $signature): array
         foreach ((array) ($e['changes'] ?? []) as $c) {
             if (($c['field'] ?? '') !== 'leadgen') { continue; }
             $v = (array) ($c['value'] ?? []);
-            $o = Db::row("SELECT * FROM social_meta_objet WHERE kind = 'leadform' AND form_id = ?", [(string) ($v['form_id'] ?? '')]);
+            $o = Db::row("SELECT * FROM mar_sa_meta_objet WHERE kind = 'leadform' AND form_id = ?", [(string) ($v['form_id'] ?? '')]);
             // Pas un de NOS formulaires (ex. une candidature du CRM, dans le même
             // envoi relayé par l'API franchise — application Meta partagée) : ce
             // lead ne nous regarde pas. Comme socLeadsSync, qui ne lit que les nôtres.

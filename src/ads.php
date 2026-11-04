@@ -23,7 +23,7 @@ declare(strict_types=1);
  * L'assistant de l'écran envoie son état complet (`spec`) ; le serveur en
  * tire les appels, résout ce que l'écran ne peut pas savoir (ids des centres
  * d'intérêt et des langues par Targeting Search, `image_hash`, id du post
- * publié) et note chaque objet créé dans `social_meta_objet`.
+ * publié) et note chaque objet créé dans `mar_sa_meta_objet`.
  */
 
 const SOC_AD_STATUT = ['Active' => 'ACTIVE', 'En pause' => 'PAUSED', 'Arrêtée' => 'ARCHIVED'];
@@ -484,7 +484,7 @@ function socIgPub(array $shop): string
 
 function socMetaObjectAdd(array $o): void
 {
-    Db::exec('INSERT INTO social_meta_objet (kind, local_id, shop_id, account, campaign_id, adset_id, creative_id, ad_id, form_id, meta_status, error, created_at,
+    Db::exec('INSERT INTO mar_sa_meta_objet (kind, local_id, shop_id, account, campaign_id, adset_id, creative_id, ad_id, form_id, meta_status, error, created_at,
                 variante, post_id, langue, dark, story_id, ig_media_id, lien, lien_ig)
               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$o['kind'], $o['local_id'], $o['shop_id'] ?? null, $o['account'] ?? null, $o['campaign_id'] ?? null, $o['adset_id'] ?? null,
@@ -495,7 +495,7 @@ function socMetaObjectAdd(array $o): void
 
 function socMetaObjects(string $kind, string $localId): array
 {
-    return Db::rows('SELECT * FROM social_meta_objet WHERE kind = ? AND local_id = ? ORDER BY id', [$kind, $localId]);
+    return Db::rows('SELECT * FROM mar_sa_meta_objet WHERE kind = ? AND local_id = ? ORDER BY id', [$kind, $localId]);
 }
 
 /**
@@ -576,7 +576,7 @@ function socAdHook(?array $avant, array $ad): array
                 $v = $variantes[(int) ($o['variante'] ?? 0)] ?? $variantes[0];
                 $cr = socCreative((string) $o['account'], $w, $shop, (string) ($o['langue'] ?: ($shop['langs'][0] ?? 'fr')), $v, $form);
                 Meta::call('POST', (string) $o['ad_id'], ['creative' => ['creative_id' => $cr]]);
-                Db::exec('UPDATE social_meta_objet SET creative_id = ? WHERE id = ?', [$cr, $o['id']]);
+                Db::exec('UPDATE mar_sa_meta_objet SET creative_id = ? WHERE id = ?', [$cr, $o['id']]);
             } catch (MetaError $e) { $erreurs[] = $shop['name'] . ' : ' . $e->getMessage(); }
         }
     }
@@ -674,7 +674,7 @@ function socAdsSync(): int
                 $r = Meta::call('GET', (string) $o['ad_id'], ['fields' => 'effective_status,ad_review_feedback']);
                 $eff = (string) ($r['effective_status'] ?? '');
                 $statuts[] = socAdStatutEcran($eff);
-                Db::exec('UPDATE social_meta_objet SET meta_status = ? WHERE id = ?', [$eff, $o['id']]);
+                Db::exec('UPDATE mar_sa_meta_objet SET meta_status = ? WHERE id = ?', [$eff, $o['id']]);
                 foreach ((array) ($r['ad_review_feedback']['global'] ?? []) as $k => $v) { $motifs[] = is_string($v) ? $v : (string) $k; }
                 $i = Meta::call('GET', (string) $o['ad_id'] . '/insights', ['fields' => 'spend,impressions,clicks', 'date_preset' => 'maximum']);
                 $row = (array) ($i['data'][0] ?? []);
@@ -690,7 +690,7 @@ function socAdsSync(): int
                     if ($shops === null) { $shops = []; foreach (socShops() as $sh) { $shops[$sh['id']] = $sh; } }
                     if (isset($shops[(string) $o['shop_id']])) {
                         $n2 = socDarkRelire($o, $shops[(string) $o['shop_id']]);
-                        Db::exec('UPDATE social_meta_objet SET story_id = ?, ig_media_id = ?, lien = ?, lien_ig = ? WHERE id = ?',
+                        Db::exec('UPDATE mar_sa_meta_objet SET story_id = ?, ig_media_id = ?, lien = ?, lien_ig = ? WHERE id = ?',
                             [$n2['story_id'] ?? null, $n2['ig_media_id'] ?? null, $n2['lien'] ?? null, $n2['lien_ig'] ?? null, $o['id']]);
                     }
                 }

@@ -32,34 +32,34 @@ function socTxt(mixed $v, int $max = 0): ?string { if ($v === null || is_array($
 function socTables(): array
 {
     return [
-        'posts' => ['social_content', static fn (array $p) => [
+        'posts' => ['mar_sa_content', static fn (array $p) => [
             'titre' => socTxt($p['title'] ?? null, 200), 'type' => socTxt($p['type'] ?? null, 60), 'statut' => socTxt($p['status'] ?? null, 30),
             'date_pub' => socJour($p['date'] ?? null), 'heure' => socTxt($p['time'] ?? null, 5), 'campagne_id' => socTxt($p['campaign'] ?? null, 64),
             'boutiques' => socCsv($p['shops'] ?? null), 'facebook' => !empty($p['fb']) ? 1 : 0, 'instagram' => !empty($p['ig']) ? 1 : 0,
             'texte_fr' => socTxt($p['text'] ?? null), 'texte_nl' => socTxt($p['textNl'] ?? null), 'lien' => socTxt($p['link'] ?? null, 500),
             'image' => is_string($p['img'] ?? null) && !str_starts_with($p['img'], 'data:') ? mb_substr($p['img'], 0, 500) : null,
             'auteur' => socTxt($p['author'] ?? null, 120), 'publie_le' => socTxt($p['publishedAt'] ?? null), 'erreur' => socTxt($p['error'] ?? null)]],
-        'campaigns' => ['social_campagne', static fn (array $c) => [
+        'campaigns' => ['mar_sa_campagne', static fn (array $c) => [
             'nom' => socTxt($c['name'] ?? null, 200), 'type' => socTxt($c['type'] ?? null, 40), 'statut' => socTxt($c['status'] ?? null, 30),
             'debut' => socJour($c['start'] ?? null), 'fin' => socJour($c['end'] ?? null), 'budget' => socNum($c['budget'] ?? null),
             'objectif_kpi' => socTxt($c['goal']['metric'] ?? null, 80), 'objectif_valeur' => socNum($c['goal']['value'] ?? null),
             'boutiques' => socCsv($c['shops'] ?? null), 'produits' => is_array($c['products'] ?? null) ? implode(' | ', $c['products']) : null]],
-        'ads' => ['social_publicite', static fn (array $a) => [
+        'ads' => ['mar_sa_publicite', static fn (array $a) => [
             'nom' => socTxt($a['name'] ?? null, 200), 'campagne_id' => socTxt($a['campaign'] ?? null, 64), 'objectif' => socTxt($a['objective'] ?? null, 60),
             'statut' => socTxt($a['status'] ?? null, 30), 'portee' => socTxt($a['scope'] ?? null, 20), 'type_budget' => socTxt($a['budgetType'] ?? null, 20),
             'budget' => socNum($a['budget'] ?? null), 'plafond' => socNum($a['cap'] ?? null), 'depense' => socNum($a['spent'] ?? null),
             'debut' => socJour($a['start'] ?? null), 'fin' => socJour($a['end'] ?? null), 'content_id' => socTxt($a['post'] ?? null, 64),
             'formulaire_id' => socTxt($a['leadForm'] ?? null, 64), 'motif' => socTxt($a['reason'] ?? null)]],
-        'leadforms' => ['social_formulaire', static fn (array $f) => [
+        'leadforms' => ['mar_sa_formulaire', static fn (array $f) => [
             'famille' => socTxt($f['family'] ?? null, 64), 'version' => isset($f['version']) ? (int) $f['version'] : null, 'nom' => socTxt($f['name'] ?? null, 200),
             'locale' => socTxt($f['locale'] ?? null, 10), 'statut' => socTxt($f['status'] ?? null, 30), 'cree_le' => socJour($f['created'] ?? null),
             'boutiques' => socCsv($f['shops'] ?? null), 'erreur_meta' => socTxt($f['metaError'] ?? null)]],
-        'groups' => ['social_groupe', static fn (array $g) => [
+        'groups' => ['mar_sa_groupe', static fn (array $g) => [
             'nom' => socTxt($g['name'] ?? null, 160), 'langue' => socTxt($g['lang'] ?? null, 10), 'boutiques' => socCsv($g['shops'] ?? null)]],
-        'templates' => ['social_modele', static fn (array $t) => [
+        'templates' => ['mar_sa_modele', static fn (array $t) => [
             'nom' => socTxt($t['name'] ?? null, 160), 'type' => socTxt($t['type'] ?? null, 60), 'texte_fr' => socTxt($t['text'] ?? null), 'texte_nl' => socTxt($t['textNl'] ?? null)]],
         // Les modèles de l'espace franchisé (src/franchise.php).
-        'ftemplates' => ['social_modele_franchise', static fn (array $t) => [
+        'ftemplates' => ['mar_sa_modele_franchise', static fn (array $t) => [
             'nom' => socTxt($t['name'] ?? null, 160), 'type' => socTxt($t['type'] ?? null, 60), 'actif' => !empty($t['active']) ? 1 : 0,
             'ordre' => isset($t['order']) ? (int) $t['order'] : null, 'validation' => !empty($t['validation']) ? 1 : 0,
             'texte_fr' => socTxt($t['text'] ?? null), 'texte_nl' => socTxt($t['textNl'] ?? null)]],
@@ -203,7 +203,7 @@ function socStateGet(): array
         // Commentaires et avis Google à traiter (rouges, oranges, en retard) : les pastilles du menu.
         'alertes' => socCommentairesAlertes() + ['boost' => socBoostEnAttente(), 'messages' => socMessagesAlertes()],
         'activity' => array_map(static fn ($r) => ['at' => substr((string) $r['at'], 0, 16), 'who' => $r['who'], 'what' => $r['what'], 'detail' => $r['detail']],
-            Db::rows('SELECT le AS at, qui AS who, quoi AS what, detail FROM social_activite ORDER BY le DESC, id DESC LIMIT 400')),
+            Db::rows('SELECT le AS at, qui AS who, quoi AS what, detail FROM mar_sa_activite ORDER BY le DESC, id DESC LIMIT 400')),
         'meta' => ['version' => Meta::config()['version'], 'dsa' => (array) (socSetting('meta_dsa') ?? ($d['dsa'] ?? [])),
             'networkAccount' => socBrand()['ids']['ad_account_id'], 'ids' => $ids, 'geo' => $geo, 'comptes' => socComptesConnus(),
             'lastCheck' => $checked ? max($checked) : null],
