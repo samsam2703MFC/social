@@ -557,6 +557,15 @@
     if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
     return j;
   }
+  /** Un fichier envoyé tel quel (corps brut, pas de base64) : la médiathèque commune en garde l'original. */
+  async function envoyer(method, path, blob, query) {
+    const qs = query ? new URLSearchParams(Object.entries(query).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => [k, String(v)])).toString() : '';
+    const r = await fetch(API + path + (qs ? '?' + qs : ''), { method, credentials: 'same-origin', headers: { 'Content-Type': blob.type || 'application/octet-stream', Accept: 'application/json' }, body: blob });
+    let j = null; try { j = await r.json(); } catch (e) {}
+    if (r.status === 401 && j && j.login) { location.href = j.login; throw new Error('auth'); }
+    if (!r.ok) throw new Error((j && j.error) || (r.status === 413 ? 'fichier trop lourd pour le serveur' : 'HTTP ' + r.status));
+    return j;
+  }
   // Applique un état lu au serveur aux constantes que les écrans lisent directement.
   function apply(L) {
     LIVE = L; planAjouter(L.webshopPlan); TODAY = L.today || TODAY; MARGIN = L.margin != null ? +L.margin : MARGIN; IMPORT = L.metaImport || null;
@@ -979,7 +988,7 @@
   else window.addEventListener('focus', () => { refresh(); });
 
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
-    api, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT,
+    api, envoyer, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT,
     prixBoutiques, repost, repostReglage, repostRelire, repostRelancer, repostForcer, repostRetirer,
     commentaires, commentairesRelire, commentaireTraiter, commentaireRepondre, bilan, kit, kitSave, google, googleRelire, googleSynchroniser, googleReglages,
     pubRegles, pubReglesSave, pubMeilleurs, pubDemandes, pubRefuser, pubDemandeBoostee,
