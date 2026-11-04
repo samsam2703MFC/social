@@ -9,10 +9,10 @@ declare(strict_types=1);
  *    réseau qui la concernent), les campagnes du réseau où elle figure, ses
  *    promotions.
  *  - Il ne publie QUE depuis les modèles que le franchiseur lui ouvre
- *    (`social_modele_franchise`) : texte figé (FR/NL), visuel figé, et les seuls
+ *    (`mar_sa_modele_franchise`) : texte figé (FR/NL), visuel figé, et les seuls
  *    champs que le modèle autorise (produit de son catalogue, remise bornée, offre
  *    d'une liste, période, phrase courte, photo).
- *  - Les règles du réseau (`social_parametre.franchise_regles`) — validation par
+ *  - Les règles du réseau (`mar_sa_parametre.franchise_regles`) — validation par
  *    le franchiseur, quota par semaine, délai, jours et heures, canaux, remise
  *    maximale — sont vérifiées ICI, côté serveur : l'écran ne fait que les montrer.
  *  - Accès : par l'ERP seulement, sans connexion propre à l'espace. Le gérant déjà
@@ -467,7 +467,7 @@ function sfGoogle(string $shop, array $q): array
  */
 function sfCommentairePropre(string $shop, string $id): array
 {
-    $r = Db::row('SELECT shop_id, canal, couleur FROM social_commentaire WHERE id = ?', [$id]);
+    $r = Db::row('SELECT shop_id, canal, couleur FROM mar_sa_commentaire WHERE id = ?', [$id]);
     $regles = sfRegles();
     $regle = $r && $r['canal'] === 'gg' ? 'voirAvisGoogle' : 'voirCommentaires';
     if (!$regles[$regle]) { throw new HttpError(403, $regle === 'voirAvisGoogle' ? 'avis Google non partagés par le réseau' : 'commentaires non partagés par le réseau'); }

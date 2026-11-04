@@ -88,7 +88,7 @@
     <sc-if value="{{ isApi }}" hint-placeholder-val="{{ false }}">
       <sc-if value="{{ live }}" hint-placeholder-val="{{ false }}">
         <section id="sec-cles" style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Clés d'accès Meta</span><span style="font-size:11px;color:#666666;">Stockées en base (table social_parametre) · jamais réaffichées · un champ vide ne change rien</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Clés d'accès Meta</span><span style="font-size:11px;color:#666666;">Chiffrées en base (mar_keys) · jamais réaffichées · un champ vide ne change rien</span></div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">
             <sc-for list="{{ keyFields }}" as="k" hint-placeholder-count="3">
               <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;">
@@ -385,7 +385,7 @@
 
     <sc-if value="{{ isTfb }}" hint-placeholder-val="{{ false }}">
       <section style="background:#FFFFFF;border-radius:10px;border:0.5px solid rgba(34,34,34,0.10);padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
-        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Compte de l'API TFBuddy</span><span style="font-size:11px;color:#666666;">Source principale des données du module · stocké en base (social_parametre) · swagger : <span style="font-family:ui-monospace,monospace;">{{ tfbSwagger }}</span></span></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:500;">Compte de l'API TFBuddy</span><span style="font-size:11px;color:#666666;">Source principale des données du module · stocké en base (mar_variable / mar_keys) · swagger : <span style="font-family:ui-monospace,monospace;">{{ tfbSwagger }}</span></span></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
           <sc-for list="{{ tfbFields }}" as="k" hint-placeholder-count="5">
             <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#444444;"><span>{{ k.label }} <span style="font-size:11px;color:{{ k.stFg }};">{{ k.state }}</span></span>

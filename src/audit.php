@@ -13,7 +13,7 @@ declare(strict_types=1);
  * pas — la route est notée « non testée » plutôt que déclarée en panne.
  *
  * Lecture seule : seules les routes GET sont appelées. Résultat dans
- * `social_api_audit`, résumé dans social_parametre (`tfb_audit`), affichés
+ * `mar_sa_api_audit`, résumé dans mar_sa_parametre (`tfb_audit`), affichés
  * dans Paramètres → API TFBuddy.
  */
 
@@ -27,7 +27,7 @@ const SOC_TFB_UTILISEES = [
 
 function socAuditTable(): void
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS social_api_audit (methode VARCHAR(8) NOT NULL, chemin VARCHAR(255) NOT NULL,'
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_sa_api_audit (methode VARCHAR(8) NOT NULL, chemin VARCHAR(255) NOT NULL,'
         . 'tag VARCHAR(120) NULL, realm VARCHAR(12) NULL, url_testee VARCHAR(400) NULL, http INT NULL, statut VARCHAR(12) NOT NULL,'
         . 'ms INT NULL, taille INT NULL, apercu VARCHAR(500) NULL, resume VARCHAR(255) NULL, utilise VARCHAR(160) NULL, teste_le DATETIME NOT NULL,'
         . 'PRIMARY KEY (methode, chemin), KEY idx_statut (statut)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
@@ -109,7 +109,7 @@ function socAuditRun(int $max = 0, int $parallele = 8): array
 
     $now = date('Y-m-d H:i:s');
     $ecrire = static function (array $r, ?int $http, string $statut, ?int $ms, ?int $taille, ?string $apercu, ?string $resume) use ($now): void {
-        Db::exec('INSERT INTO social_api_audit (methode, chemin, tag, realm, url_testee, http, statut, ms, taille, apercu, resume, utilise, teste_le)
+        Db::exec('INSERT INTO mar_sa_api_audit (methode, chemin, tag, realm, url_testee, http, statut, ms, taille, apercu, resume, utilise, teste_le)
                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
                   ON DUPLICATE KEY UPDATE tag = VALUES(tag), realm = VALUES(realm), url_testee = VALUES(url_testee), http = VALUES(http),
                     statut = VALUES(statut), ms = VALUES(ms), taille = VALUES(taille), apercu = VALUES(apercu), resume = VALUES(resume),
@@ -162,7 +162,7 @@ function socAuditRun(int $max = 0, int $parallele = 8): array
         http_build_query(['date' => $jour, 'date_from' => $j7, 'date_to' => $jour, 'from' => $j7, 'to' => $jour, 'start_date' => $j7, 'end_date' => $jour]),
         http_build_query(['from' => $m6, 'to' => date('Y-m'), 'date_from' => $m6, 'date_to' => date('Y-m'), 'year' => date('Y'), 'month' => date('n')]),
     ];
-    foreach (Db::rows("SELECT * FROM social_api_audit WHERE statut = 'parametre' AND teste_le = ?", [$now]) as $row) {
+    foreach (Db::rows("SELECT * FROM mar_sa_api_audit WHERE statut = 'parametre' AND teste_le = ?", [$now]) as $row) {
         $r = ['chemin' => $row['chemin'], 'tag' => (string) $row['tag'], 'realm' => $row['realm'], 'url' => $row['url_testee']];
         if ($r['realm'] !== 'public' && empty($jetons[$r['realm']])) { continue; }
         foreach ($variantes as $q) {
@@ -176,12 +176,12 @@ function socAuditRun(int $max = 0, int $parallele = 8): array
         }
     }
     // Les routes disparues du swagger ne restent pas affichées.
-    Db::exec('DELETE FROM social_api_audit WHERE teste_le < ?', [$now]);
+    Db::exec('DELETE FROM mar_sa_api_audit WHERE teste_le < ?', [$now]);
 
     $res = ['le' => $now, 'total' => 0, 'duree' => (int) round(microtime(true) - $t0), 'base' => Tfb::base(),
         'comptes' => ['admin' => $jetons['admin'] !== null, 'consultant' => $jetons['consultant'] !== null]];
     foreach (['ok', 'refuse', 'absent', 'erreur', 'parametre', 'non_teste', 'injoignable'] as $s) { $res[$s] = 0; }
-    foreach (Db::rows('SELECT statut, COUNT(*) n FROM social_api_audit GROUP BY statut') as $r) { $res[$r['statut']] = (int) $r['n']; $res['total'] += (int) $r['n']; }
+    foreach (Db::rows('SELECT statut, COUNT(*) n FROM mar_sa_api_audit GROUP BY statut') as $r) { $res[$r['statut']] = (int) $r['n']; $res['total'] += (int) $r['n']; }
     socSettingPut('tfb_audit', $res);
     socSettingPut('tfb_audit_en_cours', null);
     socLog('Système', 'Audit API', 'API TFBuddy : ' . $res['ok'] . ' route(s) GET fonctionnent sur ' . $res['total'] . ' (' . $res['refuse'] . ' refusées, '
@@ -217,6 +217,6 @@ function socAuditGet(): array
     socAuditTable();
     $cours = socSetting('tfb_audit_en_cours');
     return ['resume' => socSetting('tfb_audit'), 'tfb' => Tfb::statut(), 'enCours' => is_array($cours) && ($cours['depuis'] ?? 0) > time() - 900 ? $cours : null,
-        'routes' => Db::rows('SELECT methode, chemin, tag, realm, http, statut, ms, taille, apercu, resume, utilise, teste_le FROM social_api_audit
+        'routes' => Db::rows('SELECT methode, chemin, tag, realm, http, statut, ms, taille, apercu, resume, utilise, teste_le FROM mar_sa_api_audit
                               ORDER BY FIELD(statut, "ok", "parametre", "refuse", "erreur", "injoignable", "absent", "non_teste"), tag, chemin')];
 }

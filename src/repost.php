@@ -7,21 +7,21 @@ declare(strict_types=1);
  *
  * - Le guet (bin/cron.php repost, toutes les 5 minutes, ou « Relire maintenant ») lit les
  *   publications de la Page de la marque depuis l'activation (jamais l'historique) et range
- *   chacune dans `social_repost` : reprise, ou exclue (mot interdit, partage d'une autre
+ *   chacune dans `mar_sa_repost` : reprise, ou exclue (mot interdit, partage d'une autre
  *   publication, ni texte ni visuel).
  * - Une publication reprise devient un post du module (`rp-…`, type « Repost ») : il passe par la
- *   même file que les autres (`social_publication`), le même calendrier, les mêmes échecs et la
+ *   même file que les autres (`mar_sa_publication`), le même calendrier, les mêmes échecs et la
  *   même relance. Facebook : « partager » publie sur la Page de la boutique un lien vers le post
  *   de la marque ; « copier » publie le même visuel et le même texte. Une vidéo ou un lien ne se
  *   copient pas : ils sont partagés. Instagram n'a pas de repost : copie sur le compte de la
  *   boutique, seulement si les boutiques ont le leur (jamais en Instagram unique : le compte du
  *   réseau EST celui de la marque).
- * - Boutique par boutique (`social_repost_cible`) : automatique, ou le franchisé valide dans son
+ * - Boutique par boutique (`mar_sa_repost_cible`) : automatique, ou le franchisé valide dans son
  *   espace (Calendrier). Sans réponse dans le délai : publié quand même, ou rien (réglage).
  *   Le réseau peut relancer un échec, reposter malgré un refus ou une exclusion, retirer un
  *   repost des Pages des boutiques.
  *
- * Réglage : `social_parametre.repost` ; dernier passage du guet : `repost_guet`.
+ * Réglage : `mar_sa_parametre.repost` ; dernier passage du guet : `repost_guet`.
  */
 
 const SOC_REPOST_FENETRE_J = 3;   // une publication plus ancienne n'est jamais reprise (guet arrêté, puis relancé)
@@ -185,7 +185,7 @@ function socRepostPostId(string $src): string
 
 function socRepostLigne(string $src): ?array
 {
-    $r = Db::row('SELECT * FROM social_repost WHERE source_id = ?', [$src]);
+    $r = Db::row('SELECT * FROM mar_sa_repost WHERE source_id = ?', [$src]);
     if ($r === null) { return null; }
     $r['data'] = json_decode((string) $r['data'], true) ?: [];
     return $r;
@@ -240,7 +240,7 @@ function socRepostNouveau(array $x, array $c): ?string
     // Le réglage du moment est figé avec la publication : une validation tardive suit ce qui a été proposé.
     $data = ['images' => $imgs, 'delaiMin' => $c['delaiMin'], 'texte' => $c['texte'], 'sansReponse' => $c['sansReponse'],
         'instagram' => $c['instagram'], 'modeDemande' => $c['mode'], 'direct' => socRepostDirect($src)];
-    $n = Db::exec('INSERT IGNORE INTO social_repost (source_id, publie_le, type, texte, image, permalink, statut, motif, mode, content_id, vu_le, maj_le, data) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    $n = Db::exec('INSERT IGNORE INTO mar_sa_repost (source_id, publie_le, type, texte, image, permalink, statut, motif, mode, content_id, vu_le, maj_le, data) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$src, $publie, $type, (string) ($x['message'] ?? ''), mb_substr((string) (($imgs[0] ?? '') ?: ($x['full_picture'] ?? '')), 0, 1000) ?: null,
             mb_substr((string) ($x['permalink_url'] ?? ''), 0, 500) ?: null, $motif === null ? 'reposte' : 'exclu', $motif, $mode, socRepostPostId($src),
             date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
@@ -252,8 +252,8 @@ function socRepostNouveau(array $x, array $c): ?string
     }
     socRepostCibler($src, $c);
     $rp = socRepostLigne($src);
-    $nb = (int) Db::row('SELECT COUNT(*) n FROM social_repost_cible WHERE source_id = ?', [$src])['n'];
-    $av = (int) Db::row("SELECT COUNT(*) n FROM social_repost_cible WHERE source_id = ? AND etat = 'a_valider'", [$src])['n'];
+    $nb = (int) Db::row('SELECT COUNT(*) n FROM mar_sa_repost_cible WHERE source_id = ?', [$src])['n'];
+    $av = (int) Db::row("SELECT COUNT(*) n FROM mar_sa_repost_cible WHERE source_id = ? AND etat = 'a_valider'", [$src])['n'];
     socLog('Système', 'Repost', '« ' . $titre . ' » repris sur ' . $nb . ' Page(s)' . ($av ? ', dont ' . $av . ' à valider par le franchisé' : '')
         . ($rp !== null && $rp['mode'] !== $c['mode'] ? ' (partagé : ' . mb_strtolower($type) . ' impossible à copier)' : ''));
     socRepostPoster($src);
@@ -268,7 +268,7 @@ function socRepostDirect(string $src): array
 {
     // L'id rendu par Meta est celui du post (`{page}_{post}`), sauf pour une vidéo : celui de la vidéo,
     // que le post de la Page reprend après le `_`.
-    $rows = Db::rows("SELECT content_id, meta_id FROM social_publication WHERE shop_id = 'marque' AND canal = 'fb' AND statut = 'publie' AND meta_id <> '' AND maj_le >= ?",
+    $rows = Db::rows("SELECT content_id, meta_id FROM mar_sa_publication WHERE shop_id = 'marque' AND canal = 'fb' AND statut = 'publie' AND meta_id <> '' AND maj_le >= ?",
         [date('Y-m-d H:i:s', time() - (SOC_REPOST_FENETRE_J + 1) * 86400)]);
     foreach ($rows as $r) {
         $m = (string) $r['meta_id'];
@@ -292,7 +292,7 @@ function socRepostCibler(string $src, array $c, ?array $seules = null): void
         $b = $c['boutiques'][$sid] ?? ['on' => false, 'validation' => false];
         if ($seules !== null ? !in_array($sid, $seules, true) : (!$b['on'] || in_array($sid, (array) ($rp['data']['direct'] ?? []), true))) { continue; }
         $valider = $b['validation'] && $seules === null;
-        Db::exec('INSERT IGNORE INTO social_repost_cible (source_id, shop_id, etat, propose_le, limite_le, prevue_le) VALUES (?,?,?,?,?,?)',
+        Db::exec('INSERT IGNORE INTO mar_sa_repost_cible (source_id, shop_id, etat, propose_le, limite_le, prevue_le) VALUES (?,?,?,?,?,?)',
             [$src, $sid, $valider ? 'a_valider' : 'auto', $now, $valider ? $limite : null, $valider ? null : max($slot, $now)]);
     }
 }
@@ -306,7 +306,7 @@ function socRepostPoster(string $src): ?array
 {
     $rp = socRepostLigne($src);
     if ($rp === null || $rp['statut'] !== 'reposte') { return null; }
-    $cibles = Db::rows('SELECT * FROM social_repost_cible WHERE source_id = ? AND etat IN (' . implode(',', array_fill(0, count(SOC_REPOST_PUBLIENT), '?')) . ') ORDER BY prevue_le, shop_id',
+    $cibles = Db::rows('SELECT * FROM mar_sa_repost_cible WHERE source_id = ? AND etat IN (' . implode(',', array_fill(0, count(SOC_REPOST_PUBLIENT), '?')) . ') ORDER BY prevue_le, shop_id',
         array_merge([$src], SOC_REPOST_PUBLIENT));
     if (!$cibles) { return null; }
     $d = $rp['data'];
@@ -328,7 +328,7 @@ function socRepostPoster(string $src): ?array
     foreach ($cibles as $cb) {
         foreach ($ch[(string) $cb['shop_id']] as $canal => $oui) {
             if (!$oui) { continue; }
-            $nouvelles = Db::exec('INSERT IGNORE INTO social_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
+            $nouvelles = Db::exec('INSERT IGNORE INTO mar_sa_publication (content_id, shop_id, canal, prevue_le, statut, maj_le) VALUES (?,?,?,?,?,?)',
                 [$id, (string) $cb['shop_id'], $canal, (string) ($cb['prevue_le'] ?: date('Y-m-d H:i:s')), 'attente', date('Y-m-d H:i:s')]) > 0 || $nouvelles;
         }
     }
@@ -345,7 +345,7 @@ function socRepostPoster(string $src): ?array
     ]);
     socItemPut('posts', $p);
     // Ce qui est déjà dû part tout de suite (une validation, une relance) ; le reste attend la file.
-    if ((int) Db::row("SELECT COUNT(*) n FROM social_publication WHERE content_id = ? AND statut = 'attente' AND prevue_le <= ?", [$id, date('Y-m-d H:i:s')])['n'] > 0) {
+    if ((int) Db::row("SELECT COUNT(*) n FROM mar_sa_publication WHERE content_id = ? AND statut = 'attente' AND prevue_le <= ?", [$id, date('Y-m-d H:i:s')])['n'] > 0) {
         socRunQueue($id);
     }
     return socItem('posts', $id);
@@ -367,10 +367,10 @@ function socRepostEcheances(): int
     $c = socRepostConfig();
     $touches = [];
     $n = 0;
-    foreach (Db::rows("SELECT k.*, r.data FROM social_repost_cible k JOIN social_repost r ON r.source_id = k.source_id WHERE k.etat = 'a_valider' AND k.limite_le <= ?", [date('Y-m-d H:i:s')]) as $cb) {
+    foreach (Db::rows("SELECT k.*, r.data FROM mar_sa_repost_cible k JOIN mar_sa_repost r ON r.source_id = k.source_id WHERE k.etat = 'a_valider' AND k.limite_le <= ?", [date('Y-m-d H:i:s')]) as $cb) {
         $d = json_decode((string) $cb['data'], true) ?: [];
         $publier = (string) ($d['sansReponse'] ?? $c['sansReponse']) === 'publier';
-        $ok = Db::exec("UPDATE social_repost_cible SET etat = ?, repondu_le = ?, prevue_le = ? WHERE source_id = ? AND shop_id = ? AND etat = 'a_valider'",
+        $ok = Db::exec("UPDATE mar_sa_repost_cible SET etat = ?, repondu_le = ?, prevue_le = ? WHERE source_id = ? AND shop_id = ? AND etat = 'a_valider'",
             [$publier ? 'sans_reponse' : 'expire', date('Y-m-d H:i:s'), $publier ? date('Y-m-d H:i:s', socRepostCreneau(time(), $c)) : null, $cb['source_id'], $cb['shop_id']]);
         if ($ok === 0) { continue; }
         $n++;
@@ -385,7 +385,7 @@ function socRepostEcheances(): int
 /** Le franchisé publie ou refuse un repost proposé à sa boutique. */
 function socRepostRepondre(string $shop, string $src, bool $accepter, string $motif, string $par): array
 {
-    $cb = Db::row('SELECT * FROM social_repost_cible WHERE source_id = ? AND shop_id = ?', [$src, $shop]);
+    $cb = Db::row('SELECT * FROM mar_sa_repost_cible WHERE source_id = ? AND shop_id = ?', [$src, $shop]);
     $rp = socRepostLigne($src);
     if ($cb === null || $rp === null) { throw new HttpError(404, 'publication introuvable pour cette boutique'); }
     if ($cb['etat'] !== 'a_valider') { throw new HttpError(409, 'déjà traité : ' . socRepostEtatNom((string) $cb['etat'])); }
@@ -395,12 +395,12 @@ function socRepostRepondre(string $shop, string $src, bool $accepter, string $mo
     $nom = (string) (socShop($shop)['name'] ?? $shop);
     if ($accepter) {
         $slot = socRepostCreneau(max(time(), (int) strtotime((string) $rp['publie_le']) + 60 * (int) ($rp['data']['delaiMin'] ?? $c['delaiMin'])), $c);
-        Db::exec("UPDATE social_repost_cible SET etat = 'valide', repondu_le = ?, par = ?, prevue_le = ?, motif = NULL WHERE source_id = ? AND shop_id = ? AND etat = 'a_valider'",
+        Db::exec("UPDATE mar_sa_repost_cible SET etat = 'valide', repondu_le = ?, par = ?, prevue_le = ?, motif = NULL WHERE source_id = ? AND shop_id = ? AND etat = 'a_valider'",
             [date('Y-m-d H:i:s'), mb_substr($par, 0, 120), date('Y-m-d H:i:s', $slot), $src, $shop]);
         socLog($par, 'Repost', $nom . ' publie « ' . $titre . ' » sur sa Page');
         socRepostPoster($src);
     } else {
-        Db::exec("UPDATE social_repost_cible SET etat = 'refuse', repondu_le = ?, par = ?, motif = ? WHERE source_id = ? AND shop_id = ? AND etat = 'a_valider'",
+        Db::exec("UPDATE mar_sa_repost_cible SET etat = 'refuse', repondu_le = ?, par = ?, motif = ? WHERE source_id = ? AND shop_id = ? AND etat = 'a_valider'",
             [date('Y-m-d H:i:s'), mb_substr($par, 0, 120), mb_substr(trim($motif), 0, 500) ?: null, $src, $shop]);
         socLog($par, 'Repost', $nom . ' refuse « ' . $titre . ' »' . (trim($motif) !== '' ? ' : ' . trim($motif) : ''));
     }
@@ -411,10 +411,10 @@ function socRepostRepondre(string $shop, string $src, bool $accepter, string $mo
 function socRepostRelancer(?string $src, ?string $shop): int
 {
     $ids = $src !== null ? [socRepostPostId($src)]
-        : array_column(Db::rows("SELECT DISTINCT p.content_id FROM social_publication p JOIN social_repost r ON r.content_id = p.content_id WHERE p.statut = 'echec'"), 'content_id');
+        : array_column(Db::rows("SELECT DISTINCT p.content_id FROM mar_sa_publication p JOIN mar_sa_repost r ON r.content_id = p.content_id WHERE p.statut = 'echec'"), 'content_id');
     $n = 0;
     foreach ($ids as $id) {
-        $n += Db::exec("UPDATE social_publication SET statut = 'attente', prevue_le = ?, maj_le = ? WHERE content_id = ? AND statut = 'echec'" . ($shop !== null ? ' AND shop_id = ?' : ''),
+        $n += Db::exec("UPDATE mar_sa_publication SET statut = 'attente', prevue_le = ?, maj_le = ? WHERE content_id = ? AND statut = 'echec'" . ($shop !== null ? ' AND shop_id = ?' : ''),
             array_merge([date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), $id], $shop !== null ? [$shop] : []));
         socRunQueue((string) $id);
     }
@@ -432,14 +432,14 @@ function socRepostForcer(string $src, ?string $shop): void
     if ($rp === null) { throw new HttpError(404, 'publication de la marque inconnue'); }
     $c = socRepostConfig();
     if ($rp['statut'] === 'exclu') {
-        Db::exec("UPDATE social_repost SET statut = 'reposte', motif = NULL, maj_le = ? WHERE source_id = ?", [date('Y-m-d H:i:s'), $src]);
+        Db::exec("UPDATE mar_sa_repost SET statut = 'reposte', motif = NULL, maj_le = ? WHERE source_id = ?", [date('Y-m-d H:i:s'), $src]);
         socRepostCibler($src, $c, $shop !== null ? [$shop] : null);
     } elseif ($rp['statut'] === 'reposte' && $shop !== null) {
         if (socShop($shop) === null) { throw new HttpError(404, 'boutique inconnue'); }
         $prevue = date('Y-m-d H:i:s', socRepostCreneau(time(), $c));
-        $deja = Db::row('SELECT etat FROM social_repost_cible WHERE source_id = ? AND shop_id = ?', [$src, $shop]);
+        $deja = Db::row('SELECT etat FROM mar_sa_repost_cible WHERE source_id = ? AND shop_id = ?', [$src, $shop]);
         if ($deja !== null && in_array($deja['etat'], SOC_REPOST_PUBLIENT, true)) { throw new HttpError(409, 'cette boutique reprend déjà la publication'); }
-        Db::exec('INSERT INTO social_repost_cible (source_id, shop_id, etat, propose_le, prevue_le, repondu_le, par) VALUES (?,?,?,?,?,?,?)'
+        Db::exec('INSERT INTO mar_sa_repost_cible (source_id, shop_id, etat, propose_le, prevue_le, repondu_le, par) VALUES (?,?,?,?,?,?,?)'
             . ' ON DUPLICATE KEY UPDATE etat = VALUES(etat), prevue_le = VALUES(prevue_le), repondu_le = VALUES(repondu_le), par = VALUES(par)',
             [$src, $shop, 'force', date('Y-m-d H:i:s'), $prevue, date('Y-m-d H:i:s'), mb_substr(socUser(), 0, 120)]);
     } else {
@@ -458,8 +458,8 @@ function socRepostRetirer(string $src): array
     $id = (string) $rp['content_id'];
     $r = socItem('posts', $id) !== null ? socPostSupprimer($id, true) : ['ok' => true, 'supprimees' => [], 'erreurs' => []];
     if (!$r['ok']) { return $r; }
-    Db::exec("UPDATE social_repost SET statut = 'retire', maj_le = ? WHERE source_id = ?", [date('Y-m-d H:i:s'), $src]);
-    Db::exec("UPDATE social_repost_cible SET etat = 'retire' WHERE source_id = ?", [$src]);
+    Db::exec("UPDATE mar_sa_repost SET statut = 'retire', maj_le = ? WHERE source_id = ?", [date('Y-m-d H:i:s'), $src]);
+    Db::exec("UPDATE mar_sa_repost_cible SET etat = 'retire' WHERE source_id = ?", [$src]);
     socLog(socUser(), 'Repost', '« ' . socCalTitre((string) $rp['texte'], (string) $rp['type'] . ' de la marque') . ' » retiré des Pages des boutiques');
     return $r;
 }
@@ -512,7 +512,7 @@ function socRepostProgrammes(bool $forcer = false): array
 function socRepostProgrammesModule(): array
 {
     $out = [];
-    $sql = "SELECT content_id, MIN(prevue_le) prevue FROM social_publication WHERE shop_id = 'marque' AND canal = 'fb' AND statut = 'attente' GROUP BY content_id";
+    $sql = "SELECT content_id, MIN(prevue_le) prevue FROM mar_sa_publication WHERE shop_id = 'marque' AND canal = 'fb' AND statut = 'attente' GROUP BY content_id";
     foreach (Db::rows($sql) as $r) {
         $post = socItem('posts', (string) $r['content_id']);
         if ($post === null) { continue; }
@@ -613,14 +613,14 @@ function socRepostVue(int $jours = 14, bool $relire = false): array
 {
     $jours = in_array($jours, [7, 14, 30, 90], true) ? $jours : 14;
     $c = socRepostConfig();
-    $rps = Db::rows('SELECT * FROM social_repost WHERE publie_le >= ? ORDER BY publie_le DESC LIMIT 300', [date('Y-m-d H:i:s', time() - $jours * 86400)]);
+    $rps = Db::rows('SELECT * FROM mar_sa_repost WHERE publie_le >= ? ORDER BY publie_le DESC LIMIT 300', [date('Y-m-d H:i:s', time() - $jours * 86400)]);
     $srcs = array_column($rps, 'source_id');
     $cibles = []; $pubs = [];
     if ($srcs) {
         $in = implode(',', array_fill(0, count($srcs), '?'));
-        foreach (Db::rows("SELECT * FROM social_repost_cible WHERE source_id IN ($in)", $srcs) as $cb) { $cibles[(string) $cb['source_id']][(string) $cb['shop_id']] = $cb; }
+        foreach (Db::rows("SELECT * FROM mar_sa_repost_cible WHERE source_id IN ($in)", $srcs) as $cb) { $cibles[(string) $cb['source_id']][(string) $cb['shop_id']] = $cb; }
         $cids = array_column($rps, 'content_id');
-        foreach (Db::rows('SELECT * FROM social_publication WHERE content_id IN (' . implode(',', array_fill(0, count($cids), '?')) . ') ORDER BY canal', $cids) as $p) {
+        foreach (Db::rows('SELECT * FROM mar_sa_publication WHERE content_id IN (' . implode(',', array_fill(0, count($cids), '?')) . ') ORDER BY canal', $cids) as $p) {
             $pubs[(string) $p['content_id']][(string) $p['shop_id']][] = $p;
         }
     }
@@ -699,7 +699,7 @@ function socRepostVueFranchise(string $shop): array
             'etat' => (string) $r['etat'], 'etatNom' => socRepostEtatNom((string) $r['etat']), 'limite' => $r['limite_le'], 'sansReponse' => (string) ($d['sansReponse'] ?? 'publier'),
             'motif' => (string) ($r['motif'] ?? ''), 'reponduLe' => $r['repondu_le'], 'par' => (string) ($r['par'] ?? '')];
     };
-    $sql = 'SELECT k.*, r.publie_le, r.type, r.texte, r.image, r.permalink, r.mode, r.data FROM social_repost_cible k JOIN social_repost r ON r.source_id = k.source_id WHERE k.shop_id = ? AND r.statut = ?';
+    $sql = 'SELECT k.*, r.publie_le, r.type, r.texte, r.image, r.permalink, r.mode, r.data FROM mar_sa_repost_cible k JOIN mar_sa_repost r ON r.source_id = k.source_id WHERE k.shop_id = ? AND r.statut = ?';
     $attente = array_map($vue, Db::rows($sql . " AND k.etat = 'a_valider' ORDER BY k.limite_le", [$shop, 'reposte']));
     $recents = array_map($vue, Db::rows($sql . " AND k.etat <> 'a_valider' AND k.propose_le >= ? ORDER BY r.publie_le DESC LIMIT 10", [$shop, 'reposte', date('Y-m-d H:i:s', time() - 30 * 86400)]));
     return ['attente' => $attente, 'recents' => $recents, 'marque' => socBrand()['name']];

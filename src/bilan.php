@@ -88,7 +88,7 @@ function socBilanCalculer(string $periode = 'semaine'): array
             SUM(c.traite_le IS NULL AND c.couleur IN ('rouge','orange') AND $vu < ?) retard,
             SUM(c.traite_le IS NOT NULL AND c.couleur IN ('rouge','orange') AND c.traite_le >= ?) traites,
             SUM(c.traite_le IS NOT NULL AND c.couleur IN ('rouge','orange') AND c.traite_le >= ? AND TIMESTAMPDIFF(MINUTE, $vu, c.traite_le) <= ?) dansDelai
-        FROM social_commentaire c WHERE c.shop_id IS NOT NULL GROUP BY c.shop_id", [$lim, $d30, $d30, $delai * 60]) as $r) {
+        FROM mar_sa_commentaire c WHERE c.shop_id IS NOT NULL GROUP BY c.shop_id", [$lim, $d30, $d30, $delai * 60]) as $r) {
         $com[(string) $r['shop_id']] = ['rouges' => (int) $r['rouges'], 'oranges' => (int) $r['oranges'], 'enRetard' => (int) $r['retard'],
             'traites30' => (int) $r['traites'], 'dansDelai30' => (int) $r['dansDelai']];
     }

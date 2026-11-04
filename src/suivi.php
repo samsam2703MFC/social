@@ -150,7 +150,7 @@ function socSuiviDepenses(string $du, string $au, bool $parJour = true): array
     $bp = (string) (socBrand()['ids']['page_id'] ?? '');
     if ($bp !== '') { $pageDeBoutique['marque'] = $bp; }
     $connus = [];
-    foreach (Db::rows("SELECT ad_id, shop_id FROM social_meta_objet WHERE kind = 'ad' AND ad_id IS NOT NULL") as $r) { $connus[(string) $r['ad_id']] = $pageDeBoutique[(string) $r['shop_id']] ?? ''; }
+    foreach (Db::rows("SELECT ad_id, shop_id FROM mar_sa_meta_objet WHERE kind = 'ad' AND ad_id IS NOT NULL") as $r) { $connus[(string) $r['ad_id']] = $pageDeBoutique[(string) $r['shop_id']] ?? ''; }
     foreach (socComptesPub() as $act => $cpt) {
         try {
             $info = Meta::call('GET', $act, ['fields' => 'currency']);

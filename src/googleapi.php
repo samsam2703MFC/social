@@ -7,7 +7,7 @@ declare(strict_types=1);
  *
  *  1. Un seul compte Google, autorisé une fois (OAuth) : l'identifiant du client OAuth (google_client_id), sa clé
  *     secrète (google_client_secret) et le jeton de rafraîchissement (google_refresh_token) sont dans
- *     `social_parametre`, les deux derniers marqués secrets : jamais renvoyés au navigateur. Le jeton d'accès (une
+ *     `mar_sa_parametre`, les deux derniers marqués secrets : jamais renvoyés au navigateur. Le jeton d'accès (une
  *     heure) se redemande à Google et reste en base, secret lui aussi.
  *     Le jeton de rafraîchissement s'obtient une fois hors du module (OAuth Playground, docs/GOOGLE.md) : Google
  *     refuse une adresse de retour en IP ou en http, celle du serveur aujourd'hui.
@@ -42,7 +42,7 @@ final class GoogleApi
     public const ADS_VERSION = 'v26';
     private const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
-    /** Les réglages Google, lus dans social_parametre (et seulement là). */
+    /** Les réglages Google, lus dans mar_sa_parametre (et seulement là). */
     public static function config(): array
     {
         $s = static fn (string $k) => trim((string) (socSetting($k) ?? ''));

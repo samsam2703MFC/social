@@ -343,20 +343,80 @@ Tfb::$transport = static function (string $m, string $url, array $h, ?string $bo
 
 $appelsVers = static function (string $re) use (&$appels): array { return array_values(array_filter($appels, static fn ($a) => preg_match($re, $a[1]))); };
 
+// La clé maîtresse de mar_keys : un fichier propre au test (en production, celui du module Marketing).
+$cleMaitresse = $tmp . '/master.key';
+@mkdir($tmp, 0700, true);
+file_put_contents($cleMaitresse, base64_encode(random_bytes(32)));
+putenv('SOCIAL_KEYS_FILE=' . $cleMaitresse);
+SocCles::oublier();
+
 echo "Installation\n";
+// Une base d'avant le 05/11/2026 : les tables portaient `social_`. Un appel arrivé trop tôt a
+// déjà créé une `mar_sa_lead` vide à côté de l'ancienne, pleine.
+$pdo->exec("CREATE TABLE social_parametre (cle VARCHAR(64) PRIMARY KEY, valeur LONGTEXT NOT NULL, secret TINYINT(1) NOT NULL DEFAULT 0, maj_le DATETIME NOT NULL)");
+$pdo->exec("INSERT INTO social_parametre VALUES ('marge', '0.6', 0, NOW())");
+$pdo->exec("CREATE TABLE social_lead (id VARCHAR(40) PRIMARY KEY, data LONGTEXT NULL)");
+$pdo->exec("INSERT INTO social_lead VALUES ('L-ANCIEN', '{}')");
+$pdo->exec("CREATE TABLE mar_sa_lead (id VARCHAR(40) PRIMARY KEY, data LONGTEXT NULL)");
+socMigrerPrefixe();
+$restantes = $pdo->query("SHOW TABLES LIKE 'social\\_%'")->fetchAll(PDO::FETCH_COLUMN);
+check('préfixe : les tables social_* passent sous mar_sa_*, données comprises (une mar_sa_ vide créée trop tôt cède la place)',
+    $restantes === [] && (string) $pdo->query("SELECT valeur FROM mar_sa_parametre WHERE cle = 'marge'")->fetchColumn() === '0.6'
+        && (string) $pdo->query("SELECT id FROM mar_sa_lead")->fetchColumn() === 'L-ANCIEN',
+    json_encode($restantes));
+check('préfixe : la migration rejouée ne fait plus rien', socMigrerPrefixe() === ['renommer' => [], 'conflits' => []]);
+// Les deux tables du test n'ont que les colonnes utiles ici : l'installation crée les vraies.
+$pdo->exec("DROP TABLE mar_sa_lead");
+$pdo->exec("DROP TABLE mar_sa_parametre");
+Db::hasTable('mar_sa_lead', true); Db::hasTable('mar_sa_parametre', true);
 socInstall();
-$tables = $pdo->query("SHOW TABLES LIKE 'social\\_%'")->fetchAll(PDO::FETCH_COLUMN);
-foreach (['social_parametre', 'social_content', 'social_campagne', 'social_publicite', 'social_formulaire', 'social_lead', 'social_groupe',
-          'social_modele', 'social_boutique', 'social_publication', 'social_meta_objet', 'social_resultat', 'social_activite'] as $t) {
+$tables = $pdo->query("SHOW TABLES LIKE 'mar\\_sa\\_%'")->fetchAll(PDO::FETCH_COLUMN);
+foreach (['mar_sa_parametre', 'mar_sa_content', 'mar_sa_campagne', 'mar_sa_publicite', 'mar_sa_formulaire', 'mar_sa_lead', 'mar_sa_groupe',
+          'mar_sa_modele', 'mar_sa_boutique', 'mar_sa_publication', 'mar_sa_meta_objet', 'mar_sa_resultat', 'mar_sa_activite'] as $t) {
     check("table $t", in_array($t, $tables, true));
 }
-check('aucune table hors préfixe social_ créée par le module', !array_filter($pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN), static fn ($t) => str_starts_with($t, 'soc_')));
+check('aucune table hors préfixe mar_sa_ créée par le module', !array_filter($pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN), static fn ($t) => str_starts_with($t, 'soc_')));
 check('token Meta repris du BO, stocké en base', socSetting('meta_system_token') === 'TOK-BO');
-check('token marqué secret', (int) Db::row("SELECT secret FROM social_parametre WHERE cle = 'meta_system_token'")['secret'] === 1);
-check('Meta lit le token dans social_parametre', Meta::config()['systemToken'] === 'TOK-BO');
+$chiffre = (string) (Db::row("SELECT ciphertext FROM mar_keys WHERE module = 'social' AND name = 'meta_system_token'")['ciphertext'] ?? '');
+check('token chiffré dans mar_keys (module social), rien du clair, plus dans l\'ancienne table',
+    preg_match('/^(x1|g1):/', $chiffre) === 1 && !str_contains($chiffre, 'TOK-BO')
+        && Db::row("SELECT 1 FROM mar_sa_parametre WHERE cle = 'meta_system_token'") === null);
+check('Meta lit le token dans mar_keys', Meta::config()['systemToken'] === 'TOK-BO');
 socSettingPut('meta_system_token', 'TOK-DB', true);
 check('changer la clé en base change la clé utilisée', Meta::config()['systemToken'] === 'TOK-DB');
 check('les clés secrètes ne partent pas au navigateur', !str_contains(json_encode(socParams()), 'TOK-DB'));
+
+echo "Réglages et clés (mar_variable, mar_keys)\n";
+// Sans clé maîtresse lisible : une clé reste dans l'ancienne table (jamais en clair dans mar_variable), et se lit encore.
+putenv('SOCIAL_KEYS_FILE=' . $tmp . '/absente.key'); SocCles::oublier();
+socSettingPut('anthropic_api_key', 'sk-sans-maitresse-123456', true);
+check('sans clé maîtresse : la clé reste dans l\'ancienne table, lisible, jamais dans mar_variable',
+    socSetting('anthropic_api_key') === 'sk-sans-maitresse-123456'
+        && Db::row("SELECT 1 FROM mar_sa_parametre WHERE cle = 'anthropic_api_key' AND secret = 1") !== null
+        && Db::row("SELECT 1 FROM mar_variable WHERE name = 'anthropic_api_key'") === null
+        && !str_contains(json_encode(socParams()), 'sans-maitresse'));
+// La clé maîtresse revient : le démarrage suivant verse la clé, chiffrée, et vide l'ancienne ligne.
+putenv('SOCIAL_KEYS_FILE=' . $cleMaitresse); SocCles::oublier();
+$verse = socMigrerParametres();
+check('clé maîtresse revenue : la clé est versée chiffrée dans mar_keys, l\'ancienne ligne disparaît, la valeur se relit',
+    $verse['cles'] >= 1 && socSetting('anthropic_api_key') === 'sk-sans-maitresse-123456'
+        && Db::row("SELECT 1 FROM mar_sa_parametre WHERE cle = 'anthropic_api_key'") === null
+        && (string) (Db::row("SELECT hint FROM mar_keys WHERE module = 'social' AND name = 'anthropic_api_key'")['hint'] ?? '') === '••••3456',
+    json_encode($verse));
+// Une clé déplacée sous un autre nom ne se déchiffre pas ; une autre clé maîtresse non plus.
+$c = (string) Db::row("SELECT ciphertext FROM mar_keys WHERE module = 'social' AND name = 'anthropic_api_key'")['ciphertext'];
+check('une valeur chiffrée ne se déchiffre ni sous un autre nom ni sous le module Marketing',
+    SocCles::dechiffrer($c, 'meta_app_secret') === null && SocCles::dechiffrer($c, 'anthropic_api_key') !== null);
+// Un réglage ordinaire va dans mar_variable ; un cache trop grand pour la colonne reste dans l'ancienne table.
+socSettingPut('utilisateur', 'Réseau', false);
+check('un réglage va dans mar_variable (module social), valeur JSON', (string) (Db::row("SELECT value FROM mar_variable WHERE module = 'social' AND name = 'utilisateur'")['value'] ?? '') === '"Réseau"');
+$gros = str_repeat('x', min(socVariableMax(), 70000) + 10);
+socSettingPut('cache_test_gros', $gros, false);
+check('une valeur plus grande que la colonne ne casse rien : elle se relit', socSetting('cache_test_gros') === $gros);
+socSettingDelete('cache_test_gros');
+check('retirer un réglage le retire partout', socSetting('cache_test_gros', 'absent') === 'absent');
+$migre = socMigrerParametres();
+check('la migration rejouée ne verse plus rien', $migre['variables'] === 0 && $migre['cles'] === 0, json_encode($migre));
 
 echo "Connexion Meta partagée avec le CRM (meta_connexion)\n";
 check('table du CRM absente : rien ne casse, rien d’inscrit', socMetaConnexion('system_token') === '' && socMetaRelaisInscrire() === null);
@@ -369,7 +429,7 @@ Meta::reset();
 check('un champ rempli ici l’emporte sur le CRM', Meta::config()['systemToken'] === 'TOK-DB' && Meta::sources()['systemToken'] === 'social');
 $avant = ['id' => socSetting('meta_app_id'), 'url' => socSetting('url_publique'), 'secret' => socSetting('meta_app_secret'), 'verify' => socSetting('meta_verify_token')];
 socSettingPut('meta_system_token', '', true);
-Db::exec("DELETE FROM social_parametre WHERE cle = 'meta_app_id'");
+Db::exec("DELETE FROM mar_sa_parametre WHERE cle = 'meta_app_id'");
 Meta::reset();
 check('champ vide : le token du CRM est repris', Meta::config()['systemToken'] === 'TOK-CRM' && Meta::sources()['systemToken'] === 'crm');
 check('App ID repris du CRM, source dite à l’écran', Meta::config()['appId'] === '4242' && Meta::statut()['sources']['appId'] === 'crm');
@@ -396,7 +456,9 @@ check('sans connexion partagée : la reprise est refusée, rien n’est vidé', 
 echo "Boutiques (API TFBuddy + BO)\n";
 $shops = socShops();
 check('boutiques = celles de l’API, identifiant de caisse', array_column($shops, 'id') === ['4', '5'], json_encode(array_column($shops, 'id')));
-check('comptes API repris du BO, mot de passe secret', socSetting('tfb_admin_phone') === '0470' && (int) Db::row("SELECT secret FROM social_parametre WHERE cle = 'tfb_admin_password'")['secret'] === 1);
+check('comptes API repris du BO, mot de passe secret (chiffré dans mar_keys), téléphone dans mar_variable',
+    socSetting('tfb_admin_phone') === '0470' && Db::row("SELECT 1 FROM mar_keys WHERE module = 'social' AND name = 'tfb_admin_password'") !== null
+        && Db::row("SELECT 1 FROM mar_variable WHERE module = 'social' AND name = 'tfb_admin_phone'") !== null);
 check('franchisé et zone du BO rattachés par pwa_shop_id', socShop('4')['franchisee'] === 'Nathan Charlot');
 check('horaires lus dans l’API', socShop('4')['hours'] === '7h00–18h30' && socShop('4')['hoursNl'] === '7u00–18u30');
 check('sources tracées', in_array('API public/shops + shops', socShop('4')['sources'], true), json_encode(socShop('4')['sources']));
@@ -410,7 +472,7 @@ $hal = socShop('4'); $wav = socShop('5');
 check('test : Page Halle connectée', $hal['fb'] === 'connected');
 check('test : Instagram Halle trouvé par la Page', $hal['igs'] === 'connected' && $hal['ids']['instagram_user_id'] === '17841');
 check('test : Wavre sans Instagram', $wav['igs'] === 'none');
-check('connexions écrites en colonnes', Db::row("SELECT conn_facebook FROM social_boutique WHERE shop_id = '4'")['conn_facebook'] === 'connected');
+check('connexions écrites en colonnes', Db::row("SELECT conn_facebook FROM mar_sa_boutique WHERE shop_id = '4'")['conn_facebook'] === 'connected');
 
 echo "Paramètres de l'écran\n";
 socStateSave(['shops' => [['id' => '4', 'langs' => ['nl', 'fr'], 'hours' => '7h00–18h30', 'hoursNl' => '7u00–18u30']],
@@ -432,13 +494,13 @@ $post = ['id' => 'p1', 'date' => date('Y-m-d', strtotime('+2 days')), 'time' => 
     'product' => 'p1', 'spread' => 10];
 $r = socStateSave(['changes' => ['posts' => ['upsert' => [$post]]]]);
 $p1 = socItem('posts', 'p1');
-check('post enregistré dans social_content', Db::row("SELECT titre, statut, boutiques FROM social_content WHERE id = 'p1'") === ['titre' => 'Brioche', 'statut' => 'Programmé', 'boutiques' => '4,5']);
+check('post enregistré dans mar_sa_content', Db::row("SELECT titre, statut, boutiques FROM mar_sa_content WHERE id = 'p1'") === ['titre' => 'Brioche', 'statut' => 'Programmé', 'boutiques' => '4,5']);
 check('image data: écrite en fichier', str_starts_with((string) $p1['img'], 'uploads/'), (string) $p1['img']);
-$rows = Db::rows("SELECT * FROM social_publication WHERE content_id = 'p1' ORDER BY prevue_le, canal");
+$rows = Db::rows("SELECT * FROM mar_sa_publication WHERE content_id = 'p1' ORDER BY prevue_le, canal");
 check('3 publications en file (Halle fb+ig, Wavre fb)', count($rows) === 3);
 check('étalement de 10 min sur la 2e Page', $rows[2]['prevue_le'] === date('Y-m-d', strtotime('+2 days')) . ' 08:10:00', $rows[2]['prevue_le'] ?? '');
 check('rien ne part avant l’heure', socRunQueue() === []);
-Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'p1'");
+Db::exec("UPDATE mar_sa_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'p1'");
 $appels = [];
 socRunQueue();
 $p1 = socItem('posts', 'p1');
@@ -463,7 +525,7 @@ $p3 = ['id' => 'p3', 'date' => date('Y-m-d', strtotime('+3 days')), 'time' => '0
 socStateSave(['changes' => ['posts' => ['upsert' => [$p3]]]]);
 $p3['status'] = 'Brouillon';
 socStateSave(['changes' => ['posts' => ['upsert' => [$p3]]]]);
-check('repassé en brouillon → retiré de la file', (int) Db::row("SELECT COUNT(*) n FROM social_publication WHERE content_id = 'p3'")['n'] === 0);
+check('repassé en brouillon → retiré de la file', (int) Db::row("SELECT COUNT(*) n FROM mar_sa_publication WHERE content_id = 'p3'")['n'] === 0);
 socStateSave(['changes' => ['posts' => ['delete' => ['p3']]]]);
 check('suppression', socItem('posts', 'p3') === null);
 
@@ -517,15 +579,15 @@ $p8 = ['id' => 'p8', 'date' => $j5, 'time' => '10:20', 'title' => 'Trop près', 
 $r = socStateSave(['changes' => ['posts' => ['upsert' => [$p8]]]]);
 $p8b = socItem('posts', 'p8');
 check('post Instagram à 20 min d’une frise : refusé, gardé en brouillon avec le motif', $p8b['status'] === 'Brouillon' && str_contains((string) $p8b['error'], '30 minutes')
-    && str_contains($r['errors'][0]['error'] ?? '', 'Frise p7') && (int) Db::row("SELECT COUNT(*) n FROM social_publication WHERE content_id = 'p8'")['n'] === 0);
+    && str_contains($r['errors'][0]['error'] ?? '', 'Frise p7') && (int) Db::row("SELECT COUNT(*) n FROM mar_sa_publication WHERE content_id = 'p8'")['n'] === 0);
 $p8['time'] = '10:40';
 socStateSave(['changes' => ['posts' => ['upsert' => [$p8]]]]);
-check('à 40 min : accepté et en file', socItem('posts', 'p8')['status'] === 'Programmé' && (int) Db::row("SELECT COUNT(*) n FROM social_publication WHERE content_id = 'p8'")['n'] === 2);
+check('à 40 min : accepté et en file', socItem('posts', 'p8')['status'] === 'Programmé' && (int) Db::row("SELECT COUNT(*) n FROM mar_sa_publication WHERE content_id = 'p8'")['n'] === 2);
 $p9 = ['id' => 'p9', 'date' => $j5, 'time' => '10:10', 'title' => 'Facebook seul', 'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => false]], 'fb' => true, 'ig' => false, 'status' => 'Programmé', 'text' => 'x'];
 socStateSave(['changes' => ['posts' => ['upsert' => [$p9]]]]);
 check('Facebook seul pendant la frise : accepté', socItem('posts', 'p9')['status'] === 'Programmé');
 $appels = []; $igPanne = 2; $igPub = 0;
-Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'p7'");
+Db::exec("UPDATE mar_sa_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'p7'");
 socRunQueue('p7');
 $p7 = socItem('posts', 'p7');
 check('frise interrompue à la 2e tuile : 1 tuile en ligne, notée, échec Instagram', count($p7['frise']['ig']['4'] ?? []) === 1 && ($p7['partial']['ko'][0]['channel'] ?? '') === 'Instagram');
@@ -587,7 +649,7 @@ check('boutiques du Marketing (erp-N) → boutiques du module, budget par boutiq
     && str_ends_with((string) $o1['image'], '/consulant_bo/assistant/uploads/a.png') && str_ends_with((string) $o1['lien'], '/marketing/?campagne=1'), json_encode($o1));
 check('campagne réseau sans boutique choisie : tout le réseau ; sans date : à venir', count($ops['bo-2']['shops']) === count(socShops()) && $ops['bo-2']['status'] === 'à venir');
 $r = socStateSave(['changes' => ['campaigns' => ['upsert' => [['id' => 'c9', 'name' => 'Locale']]]]]);
-check('une opération ne se crée pas ici : refus, rien en base', str_contains((string) ($r['errors'][0]['error'] ?? ''), 'Marketing du BO') && Db::row("SELECT COUNT(*) n FROM social_campagne")['n'] == 0);
+check('une opération ne se crée pas ici : refus, rien en base', str_contains((string) ($r['errors'][0]['error'] ?? ''), 'Marketing du BO') && Db::row("SELECT COUNT(*) n FROM mar_sa_campagne")['n'] == 0);
 [$code, $b] = socRoute('GET', '/operations');
 check('GET /operations', $code === 200 && count($b['operations']) === 2 && $b['erreur'] === null);
 $GLOBALS['BO_PANNE'] = true;
@@ -614,7 +676,7 @@ check('montants en centimes (10 € → 1000 par jour)', str_contains(json_encod
 check('rayon en km sur la position de la boutique', str_contains($appelsVers('#^act_1002/adsets$#')[0][2]['targeting'] ?? '', '"radius":10'));
 check('post sponsorisé : object_story_id du post publié', preg_match('/^111_\d+$/', (string) ($appelsVers('#^act_1001/adcreatives$#')[0][2]['object_story_id'] ?? '')) === 1);
 check('intérêt résolu par Targeting Search', str_contains($appelsVers('#^act_1002/adsets$#')[0][2]['targeting'] ?? '', '6003107902'));
-check('objets Meta notés', (int) Db::row("SELECT COUNT(*) n FROM social_meta_objet WHERE kind = 'ad' AND local_id = 'a1' AND ad_id IS NOT NULL")['n'] === 3);
+check('objets Meta notés', (int) Db::row("SELECT COUNT(*) n FROM mar_sa_meta_objet WHERE kind = 'ad' AND local_id = 'a1' AND ad_id IS NOT NULL")['n'] === 3);
 $appels = [];
 $a1['status'] = 'En pause';
 socStateSave(['changes' => ['ads' => ['upsert' => [$a1]]]]);
@@ -628,7 +690,7 @@ $budgets = array_map(static fn ($a) => $a[2]['daily_budget'], array_values(array
 sort($budgets);
 check('budget demandé : réparti par campagne (une par boutique) puis par ad set (Halle bilingue : 2)', $budgets === [750, 750, 1500] && socItem('ads', 'a1')['budget'] == 30
     && !isset(socItem('ads', 'a1')['budgetDemande']) && (socItem('ads', 'a1')['spec']['amount'] ?? null) == 15, json_encode($budgets));
-$camps1 = array_values(array_unique(array_column(Db::rows("SELECT campaign_id FROM social_meta_objet WHERE kind = 'ad' AND local_id = 'a1' AND ad_id IS NOT NULL"), 'campaign_id')));
+$camps1 = array_values(array_unique(array_column(Db::rows("SELECT campaign_id FROM mar_sa_meta_objet WHERE kind = 'ad' AND local_id = 'a1' AND ad_id IS NOT NULL"), 'campaign_id')));
 $appels = [];
 socStateSave(['changes' => ['ads' => ['upsert' => [array_merge(socItem('ads', 'a1'), ['status' => 'Active'])]]]]);
 check('reprise : pubs, ad sets et campagnes remis en ACTIVE chez Meta', count(array_filter($appels, static fn ($a) => in_array($a[1], $camps1, true) && ($a[2]['status'] ?? '') === 'ACTIVE')) === count($camps1)
@@ -640,7 +702,7 @@ check('synchro : statut Meta ACTIVE, dépense relue ; clics et impressions cumul
     && socItem('ads', 'a1')['clicks'] === 180 && socItem('ads', 'a1')['impressions'] === 9000, json_encode(array_intersect_key(socItem('ads', 'a1'), array_flip(['spent', 'clicks', 'impressions']))));
 $a1c = socItem('ads', 'a1'); socStateSave(['changes' => ['ads' => ['upsert' => [array_merge($a1c, ['clicks' => 999999, 'impressions' => 1])]]]]);
 check('clics et impressions : gardés par le serveur (l’écran ne les écrase pas)', socItem('ads', 'a1')['clicks'] === 180 && socItem('ads', 'a1')['impressions'] === 9000);
-check('dépense en colonne', Db::row("SELECT depense FROM social_publicite WHERE id = 'a1'")['depense'] === '121.50');
+check('dépense en colonne', Db::row("SELECT depense FROM mar_sa_publicite WHERE id = 'a1'")['depense'] === '121.50');
 socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a2', 'name' => 'Sans spec', 'shops' => ['5'], 'status' => 'En revue']]]]]);
 check('pub sans description d’assistant : refusée avec motif', socItem('ads', 'a2')['status'] === 'Refusée');
 // Centre d'intérêt abandonné par Meta : retiré du ciblage, ad set renvoyé, écarté des recherches suivantes.
@@ -656,7 +718,7 @@ check('intérêt abandonné : écarté des recherches suivantes', (socInteretsAb
 // Aucun ad set créé : la campagne vide ne reste pas chez Meta.
 $appels = []; $GLOBALS['SUPPRIMES'] = [];
 socStateSave(['changes' => ['ads' => ['upsert' => [$pubTest('a10', ['Refus'])]]]]);
-$camp10 = (string) (Db::row("SELECT campaign_id FROM social_meta_objet WHERE kind = 'ad' AND local_id = 'a10'")['campaign_id'] ?? '');
+$camp10 = (string) (Db::row("SELECT campaign_id FROM mar_sa_meta_objet WHERE kind = 'ad' AND local_id = 'a10'")['campaign_id'] ?? '');
 check('aucun ad set : pub refusée, campagne vide supprimée chez Meta', socItem('ads', 'a10')['status'] === 'Refusée' && $camp10 !== ''
     && in_array($camp10, array_column($GLOBALS['SUPPRIMES'], 0), true), json_encode([$camp10, $GLOBALS['SUPPRIMES']]));
 socStateSave(['changes' => ['ads' => ['delete' => ['a9', 'a10']]]]);
@@ -702,7 +764,7 @@ $d2 = ['id' => 'd2', 'date' => date('Y-m-d'), 'time' => '09:00', 'title' => 'Fil
     'text' => 'x', 'media' => [['src' => $video, 'kind' => 'video', 'name' => 'brioche.mp4']]];
 socStateSave(['changes' => ['posts' => ['upsert' => [$d1, $d2]]]]);
 check('dark post : jamais publié (statut « Dark post », rien en file)', socItem('posts', 'd1')['status'] === 'Dark post' && socItem('posts', 'd2')['status'] === 'Dark post'
-    && (int) Db::row("SELECT COUNT(*) n FROM social_publication WHERE content_id IN ('d1','d2')")['n'] === 0);
+    && (int) Db::row("SELECT COUNT(*) n FROM mar_sa_publication WHERE content_id IN ('d1','d2')")['n'] === 0);
 check('dark post : absent de la grille Instagram (non programmé)', !in_array('d1', array_column(socItems('posts'), 'id'), true) || socItem('posts', 'd1')['status'] !== 'Programmé');
 $appels = [];
 $spec3 = array_merge($spec, ['name' => 'Automne dark', 'shops' => ['4'], 'crea' => 'new', 'post' => 'd1', 'message' => 'Le panorama de {ville}', 'messageNl' => 'Het panorama van {ville}',
@@ -723,7 +785,7 @@ check('variante B (vidéo) : video_data, vignette de Meta, titre repris de la va
     && ($vids[0]['video_data']['image_url'] ?? '') === 'https://cdn.fb/vignette.jpg' && in_array($vids[0]['video_data']['title'], ['Gamme automne', 'Herfstgamma'], true));
 check('vidéo envoyée une fois au compte (advideos), images une fois chacune (adimages)', count($appelsVers('#^act_1001/advideos$#')) === 1 && count($appelsVers('#^act_1001/adimages$#')) === 3);
 check('identité Instagram de la boutique sur chaque créa', count(array_filter($specs, static fn ($x) => ($x['instagram_user_id'] ?? '') === '17841')) === 4);
-$objs = Db::rows("SELECT * FROM social_meta_objet WHERE kind = 'ad' AND local_id = 'a3' AND ad_id IS NOT NULL ORDER BY id");
+$objs = Db::rows("SELECT * FROM mar_sa_meta_objet WHERE kind = 'ad' AND local_id = 'a3' AND ad_id IS NOT NULL ORDER BY id");
 check('dark posts relus : id Facebook, id Instagram, liens', count($objs) === 4 && !array_filter($objs, static fn ($o) => !$o['story_id'] || !$o['ig_media_id'] || !str_starts_with((string) $o['lien'], 'https://www.facebook.com/111_') || !str_starts_with((string) $o['lien_ig'], 'https://www.instagram.com/p/')));
 $appels = [];
 socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a12', 'name' => 'Itinéraire', 'shops' => ['5'], 'scope' => 'boutique', 'budgetType' => 'quotidien', 'budget' => 10, 'cap' => 0, 'spent' => 0,
@@ -742,7 +804,7 @@ $spec4 = array_merge($spec, ['name' => 'Relance', 'shops' => ['4'], 'crea' => 'e
 socStateSave(['changes' => ['ads' => ['upsert' => [['id' => 'a4', 'name' => 'Relance', 'shops' => ['4'], 'scope' => 'boutique', 'budgetType' => 'quotidien', 'budget' => 5, 'cap' => 50, 'spent' => 0,
     'start' => $spec['start'], 'end' => $spec['end'], 'status' => 'En revue', 'radius' => 8, 'post' => 'd1', 'spec' => $spec4]]]]]);
 $stories = array_column(array_column($appelsVers('#^act_1001/adcreatives$#'), 2), 'object_story_id');
-$attendu = [Db::row("SELECT story_id FROM social_meta_objet WHERE local_id = 'a3' AND post_id = 'd1' AND langue = 'nl'")['story_id'], Db::row("SELECT story_id FROM social_meta_objet WHERE local_id = 'a3' AND post_id = 'd1' AND langue = 'fr'")['story_id']];
+$attendu = [Db::row("SELECT story_id FROM mar_sa_meta_objet WHERE local_id = 'a3' AND post_id = 'd1' AND langue = 'nl'")['story_id'], Db::row("SELECT story_id FROM mar_sa_meta_objet WHERE local_id = 'a3' AND post_id = 'd1' AND langue = 'fr'")['story_id']];
 check('réutilisation : le même dark post (par langue) sponsorisé à nouveau', $stories === $attendu, json_encode($stories));
 socAdsSync();
 $st3 = socItem('ads', 'a3')['stats'] ?? [];
@@ -760,7 +822,7 @@ $GLOBALS['SOC_BODY'] = ['masquer' => true];
 unset($GLOBALS['SOC_BODY']);
 $hide = $appels[count($appels) - 1] ?? [];
 check('masquer un commentaire : appel Meta et état en base', $code === 200 && $hide[1] === $cid && (($hide[2]['is_hidden'] ?? $hide[2]['hide'] ?? '') === 'true')
-    && (int) Db::row('SELECT masque FROM social_commentaire WHERE id = ?', [$cid])['masque'] === 1);
+    && (int) Db::row('SELECT masque FROM mar_sa_commentaire WHERE id = ?', [$cid])['masque'] === 1);
 [$code, $b] = (static function () { $_GET['ad'] = 'a3'; try { return socRoute('GET', '/darkposts/commentaires'); } finally { unset($_GET['ad']); } })();
 check('GET /darkposts/commentaires?ad=a3', $code === 200 && count($b['comments']) === 8);
 $dp = array_values(array_filter(socStateGet()['darkPosts'], static fn ($x) => $x['ad'] === 'a3'));
@@ -807,7 +869,7 @@ $promoOk = ['template' => 'fp-remise', 'product' => 'p1', 'discount' => 20, 'fro
 $pf = socItem('posts', (string) ($b['post']['id'] ?? ''));
 check('promotion -20 % : créée « à valider », texte du modèle rempli, rien en file', $code === 200 && $pf['status'] === 'À valider' && $pf['origin'] === 'franchise'
     && str_starts_with($pf['text'], '-20 % sur Brioche croustillante chez L’Atelier By {ville}, du ' . date('d/m', strtotime($j3)))
-    && str_contains($pf['textNl'], 'Krokante brioche') && (int) Db::row('SELECT COUNT(*) n FROM social_publication WHERE content_id = ?', [$pf['id']])['n'] === 0, json_encode($b));
+    && str_contains($pf['textNl'], 'Krokante brioche') && (int) Db::row('SELECT COUNT(*) n FROM mar_sa_publication WHERE content_id = ?', [$pf['id']])['n'] === 0, json_encode($b));
 check('visuel écrit en fichier, promo notée', str_starts_with((string) $pf['img'], 'uploads/') && ($pf['promo']['label'] ?? '') === '-20 %' && ($pf['promo']['to'] ?? '') === $j8);
 $refus = static function (array $patch, string $attendu) use ($fr, $promoOk) {
     [$code, $b] = $fr('POST', '/franchise/posts', array_merge($promoOk, $patch));
@@ -824,7 +886,7 @@ check('phrase libre : pas de lien', $code === 422 && str_contains($b['error'], '
 [$code, $b] = $fr('POST', '/franchise/posts', ['template' => 'fp-produit', 'product' => 'p1', 'fb' => true, 'ig' => false, 'date' => $j3, 'time' => '09:00', 'visual' => $vis]);
 $pp = socItem('posts', (string) ($b['post']['id'] ?? ''));
 check('produit du jour (sans validation) : programmé et en file, Facebook seul', $code === 200 && $pp['status'] === 'Programmé'
-    && Db::rows('SELECT canal FROM social_publication WHERE content_id = ?', [$pp['id']]) === [['canal' => 'fb']] && sfQuotaUtilise('4', $j3) === 2, json_encode([$code, $b, Db::rows('SELECT canal FROM social_publication WHERE content_id = ?', [$pp['id'] ?? ''])]));
+    && Db::rows('SELECT canal FROM mar_sa_publication WHERE content_id = ?', [$pp['id']]) === [['canal' => 'fb']] && sfQuotaUtilise('4', $j3) === 2, json_encode([$code, $b, Db::rows('SELECT canal FROM mar_sa_publication WHERE content_id = ?', [$pp['id'] ?? ''])]));
 socStateSave(['changes' => ['posts' => ['upsert' => [array_merge(socItem('posts', $pf['id']), ['status' => 'Brouillon', 'refus' => 'Remise trop forte pour cette période'])]]]]);
 [$code, $et] = $fr('GET', '/franchise/etat');
 $vue = array_values(array_filter($et['posts'], static fn ($x) => $x['id'] === $pf['id']))[0] ?? [];
@@ -920,7 +982,7 @@ $qb = socLeadformBody(['name' => 'Libre', 'questions' => [['type' => 'FULL_NAME'
 check('question personnalisée sans option : réponse libre, sans « options » (Meta refuse un tableau vide)', $qb[1] === ['type' => 'CUSTOM', 'key' => 'question_1', 'label' => 'Votre entreprise ?'], json_encode($qb[1]));
 check('question personnalisée : clés en a-z0-9_, uniques, options vides écartées', $qb[2]['key'] === 'question_3' && array_column($qb[2]['options'], 'key') === ['8_a_15', '8_15', '8_15_3']
     && array_column($qb[2]['options'], 'value') === ['8 à 15', '8-15', '8 15'], json_encode($qb[2]));
-check('formulaire dans social_formulaire', Db::row("SELECT nom, version FROM social_formulaire WHERE id = 'lf1'") == ['nom' => 'Plateaux', 'version' => 1]);
+check('formulaire dans mar_sa_formulaire', Db::row("SELECT nom, version FROM mar_sa_formulaire WHERE id = 'lf1'") == ['nom' => 'Plateaux', 'version' => 1]);
 socLeadsSync();
 $leads = socLeads();
 check('leads relus, champs normalisés', ($leads[0]['field_data']['FULL_NAME'] ?? '') === 'Marie Claes' && ($leads[0]['field_data']['nb_personnes'] ?? '') === '16 à 30');
@@ -945,7 +1007,7 @@ check('dépense Meta par boutique', (float) ($h['spend'] ?? 0) === 81.0, json_en
 check('CA campagne lu dans la caisse (7 jours × 25 €)', (float) ($h['caCamp'] ?? 0) === 175.0, (string) ($h['caCamp'] ?? 'null'));
 check('référence = moyenne des 6 semaines précédentes (7 × 10 €)', (float) ($h['caRef'] ?? 0) === 70.0, (string) ($h['caRef'] ?? 'null'));
 check('Wavre sans vente : motif affiché', isset($res['bo-1']['5']['noSales']));
-check('résultat en colonnes', Db::row("SELECT ca_campagne FROM social_resultat WHERE campagne_id = 'bo-1' AND shop_id = '4'")['ca_campagne'] === '175.00');
+check('résultat en colonnes', Db::row("SELECT ca_campagne FROM mar_sa_resultat WHERE campagne_id = 'bo-1' AND shop_id = '4'")['ca_campagne'] === '175.00');
 
 echo "Marque et audit de l'API\n";
 socStateSave(['meta' => ['ids' => ['marque' => ['page_id' => '999', 'ad_account_id' => 'act_7777']]]]);
@@ -1011,14 +1073,14 @@ check('tout remplacer : écrase', socShop('4')['ids']['ad_account_id'] === 'act_
 
 echo "Identifiants Meta : mise à jour automatique\n";
 socShopPut('5', ['ids' => ['page_id' => '', 'ad_account_id' => '', 'instagram_user_id' => '', 'pixel_id' => '']]);
-$journalAvant = (int) Db::row("SELECT COUNT(*) n FROM social_activite WHERE detail LIKE 'Portefeuille Meta relu%'")['n'];
+$journalAvant = (int) Db::row("SELECT COUNT(*) n FROM mar_sa_activite WHERE detail LIKE 'Portefeuille Meta relu%'")['n'];
 $r = socIdsAuto();
 check('auto (cron) : identifiants vides remplis depuis le portefeuille', ($r['ok'] ?? false) && socShop('5')['ids']['page_id'] === '222' && socShop('5')['ids']['pixel_id'] === '880112'
     && socShop('4')['ids']['ad_account_id'] === 'act_2001', json_encode($r));
 check('auto : pas relancé avant la fréquence choisie (1 h)', isset(socIdsAuto()['ignore']));
 $r2 = socIdsAuto(true);
 check('auto : rien de nouveau → journal silencieux', ($r2['ok'] ?? false) && $r2['appliques'] === []
-    && (int) Db::row("SELECT COUNT(*) n FROM social_activite WHERE detail LIKE 'Portefeuille Meta relu%'")['n'] === $journalAvant);
+    && (int) Db::row("SELECT COUNT(*) n FROM mar_sa_activite WHERE detail LIKE 'Portefeuille Meta relu%'")['n'] === $journalAvant);
 socShopPut('5', ['ids' => array_merge(socShop('5')['ids'], ['page_id' => '777'])]);
 socIdsAutoPut(['actif' => true, 'ecraser' => true, 'frequence' => 6]);
 socIdsAuto(true);
@@ -1035,7 +1097,7 @@ check('nouveau token enregistré : identifiants relus tout de suite', $code === 
 check('GET /meta/ids/auto : réglages et dernier passage', $code === 200 && $b['config']['frequence'] === 1 && !empty($b['dernier']['le']));
 
 echo "Campagnes existantes chez Meta : récupération\n";
-$modCid = (string) Db::row("SELECT campaign_id FROM social_meta_objet WHERE kind = 'ad' AND campaign_id IS NOT NULL ORDER BY id LIMIT 1")['campaign_id'];
+$modCid = (string) Db::row("SELECT campaign_id FROM mar_sa_meta_objet WHERE kind = 'ad' AND campaign_id IS NOT NULL ORDER BY id LIMIT 1")['campaign_id'];
 $j = static fn (int $d) => date('Y-m-d', strtotime(($d >= 0 ? '+' : '') . $d . ' days')) . 'T08:00:00+0200';
 $GLOBALS['META_EXISTANT'] = [
     'campaigns' => [
@@ -1113,7 +1175,7 @@ check('rafraîchissement : mise à jour sans doublon, rattachement conservé', $
 check('campagnes supprimées chez Meta : marquées arrêtées', $r['disparues'] === 2 && $m2['status'] === 'Arrêtée' && $m2['gone'] === true);
 
 echo "Calendriers Meta : lecture en direct (rien en base)\n";
-$duMod = (string) (Db::row("SELECT meta_id FROM social_publication WHERE canal = 'fb' AND meta_id LIKE '111\_%' ORDER BY id LIMIT 1")['meta_id'] ?? '111_0');
+$duMod = (string) (Db::row("SELECT meta_id FROM mar_sa_publication WHERE canal = 'fb' AND meta_id LIKE '111\_%' ORDER BY id LIMIT 1")['meta_id'] ?? '111_0');
 $demain = strtotime('+1 day 10:30');
 $GLOBALS['META_PUBLIES'] = [
     ['id' => '111_9001', 'message' => "Nouvelle tarte aux pommes !\nDisponible dès ce matin.", 'created_time' => date('c', strtotime('-2 days 09:15')), 'permalink_url' => 'https://facebook.com/111/posts/9001',
@@ -1145,10 +1207,10 @@ $_GET = ['du' => date('Y-m-d', strtotime('-7 days')), 'au' => date('Y-m-d', strt
 $_GET = []; unset($GLOBALS['POSTS_222_REFUS']);
 $cpt2 = array_column($b2['comptes'], null, 'key');
 check('tous les accès refusés : Page signalée avec le motif, les autres comptes passent', str_contains((string) ($cpt2['fb:222']['erreur'] ?? ''), 'pages_read_engagement') && ($cpt2['fb:111']['publies'] ?? 0) === 1, json_encode([$cpt2['fb:222'] ?? null, $cpt2['fb:111'] ?? null]));
-check('rien n’est copié en base', (int) Db::row("SELECT COUNT(*) n FROM social_content WHERE id LIKE 'mfb-%' OR id LIKE 'mig-%'")['n'] === 0);
+check('rien n’est copié en base', (int) Db::row("SELECT COUNT(*) n FROM mar_sa_content WHERE id LIKE 'mfb-%' OR id LIKE 'mig-%'")['n'] === 0);
 $r = socStateSave(['changes' => ['posts' => ['upsert' => [$f2]]]]);
 check('publication Meta renvoyée par l’écran : refusée, ni enregistrée ni mise en file', ($r['errors'][0]['error'] ?? '') === 'publication Meta : lecture seule' && socItem('posts', 'mfb-111_9002') === null
-    && (int) Db::row("SELECT COUNT(*) n FROM social_publication WHERE content_id LIKE 'mfb-%'")['n'] === 0);
+    && (int) Db::row("SELECT COUNT(*) n FROM mar_sa_publication WHERE content_id LIKE 'mfb-%'")['n'] === 0);
 $_GET = ['du' => '2026-01-01', 'au' => '2026-12-31'];
 $c400 = (static function () { try { return socRoute('GET', '/meta/calendriers')[0]; } catch (HttpError $e) { return $e->status; } })();
 $_GET = [];
@@ -1224,9 +1286,9 @@ $_GET = ['du' => date('Y-m-d', strtotime('-7 days')), 'au' => date('Y-m-d', strt
 [, $b3] = socRoute('GET', '/meta/calendriers'); $_GET = [];
 $cp3 = array_column($b3['posts'], null, 'id');
 check('publication Facebook lue chez Meta rattachée : le lien seul en base, l’opération revient avec la publication', $code === 200
-    && Db::row("SELECT operation_id FROM social_rattachement WHERE objet = 'mfb-111_9001'")['operation_id'] === 'bo-1' && ($cp3['mfb-111_9001']['campaign'] ?? null) === 'bo-1' && array_key_exists('campaign', $cp3['mig-m2'] ?? []) && $cp3['mig-m2']['campaign'] === null, json_encode([$code, $cp3['mfb-111_9001']['campaign'] ?? '?']));
+    && Db::row("SELECT operation_id FROM mar_sa_rattachement WHERE objet = 'mfb-111_9001'")['operation_id'] === 'bo-1' && ($cp3['mfb-111_9001']['campaign'] ?? null) === 'bo-1' && array_key_exists('campaign', $cp3['mig-m2'] ?? []) && $cp3['mig-m2']['campaign'] === null, json_encode([$code, $cp3['mfb-111_9001']['campaign'] ?? '?']));
 [$code] = $ratt(['kind' => 'post', 'id' => 'mfb-111_9001', 'operation' => null]);
-check('détacher une publication Meta', $code === 200 && Db::row("SELECT COUNT(*) n FROM social_rattachement WHERE objet = 'mfb-111_9001'")['n'] == 0);
+check('détacher une publication Meta', $code === 200 && Db::row("SELECT COUNT(*) n FROM mar_sa_rattachement WHERE objet = 'mfb-111_9001'")['n'] == 0);
 [$code] = $ratt(['kind' => 'post', 'id' => 'p1', 'operation' => 'bo-1']);
 check('post du module rattaché (champ campaign)', $code === 200 && (socItem('posts', 'p1')['campaign'] ?? null) === 'bo-1');
 [$code] = $ratt(['kind' => 'ad', 'id' => 'a1', 'operation' => null]);
@@ -1245,7 +1307,7 @@ $appels = [];
 check('Facebook : vues et personnes (noms 2025), réactions par les insights, métrique retirée ignorée', $code === 200 && $s1['vues'] === 1234 && $s1['personnes'] === 980 && $s1['reactions'] === 35
     && $s1['clics'] === null && $s1['motif'] === null, json_encode($s1));
 check('Facebook : lu en direct avec le token de la Page, rien en base', (bool) array_filter($appels, static fn ($a) => $a[1] === '111_9001/insights' && ($a[2]['access_token'] ?? '') === 'PT111')
-    && (int) Db::row("SELECT COUNT(*) n FROM social_content WHERE id LIKE 'mfb-%'")['n'] === 0);
+    && (int) Db::row("SELECT COUNT(*) n FROM mar_sa_content WHERE id LIKE 'mfb-%'")['n'] === 0);
 [$code, $s2] = $stat('mig-m2', 'ig:17841');
 check('Instagram : vues, couverture, enregistrements, partages, j’aime', $code === 200 && $s2['vues'] === 500 && $s2['personnes'] === 400 && $s2['enregistrements'] === 7
     && $s2['partages'] === 3 && $s2['reactions'] === 41 && $s2['commentaires'] === 6 && $s2['motif'] === null, json_encode($s2));
@@ -1289,7 +1351,7 @@ $dep = array_values(array_filter($appels, static fn ($a) => $a[1] === 'act_2001/
 check('un an : insights de la Page en tranches de 90 jours au plus, bout à bout ; dépense sans détail par jour',
     $an['jours'] === 365 && count($fen) === 5 && $suite && $fen[0][0] === $an['du'] && end($fen)[1] === date('Y-m-d', strtotime($an['au'] . ' +1 day'))
     && $dep && !array_key_exists('time_increment', $dep[0][2]) && ($an['lignes'][0]['facebook']['net'] ?? null) === 7, json_encode([$fen, $an['lignes'][0]['facebook']['net'] ?? null]));
-check('suivi : rien n’est écrit en base', (int) Db::row("SELECT COUNT(*) n FROM social_parametre WHERE cle LIKE '%suivi%'")['n'] === 0);
+check('suivi : rien n’est écrit en base', (int) Db::row("SELECT COUNT(*) n FROM mar_sa_parametre WHERE cle LIKE '%suivi%'")['n'] === 0);
 
 echo "Espace franchisé : suivi de sa boutique\n";
 unset($GLOBALS['SOCIAL_HOTE']);
@@ -1340,7 +1402,7 @@ sfReglesPut(array_merge(sfRegles(), ['voirAnalyse' => false]));
 [$code] = $fr('GET', '/franchise/vues', [], ['jours' => '7']);
 check('analyse non partagée par le réseau : refusée ; la règle revient dans l’état du franchisé', $code === 403 && sfRegles()['voirAnalyse'] === false);
 sfReglesPut(array_merge(sfRegles(), ['voirAnalyse' => true]));
-check('analyse : rien n’est écrit en base', (int) Db::row("SELECT COUNT(*) n FROM social_parametre WHERE cle LIKE '%vues%'")['n'] === 0);
+check('analyse : rien n’est écrit en base', (int) Db::row("SELECT COUNT(*) n FROM mar_sa_parametre WHERE cle LIKE '%vues%'")['n'] === 0);
 
 echo "Grille Instagram : abonnés jour par jour (gagnés, perdus) et comptes touchés\n";
 $appels = [];
@@ -1378,9 +1440,9 @@ $restreinte = [];
 $pu = ['id' => 'pu1', 'date' => date('Y-m-d', strtotime('+1 day')), 'time' => '09:00', 'type' => 'Produit', 'title' => 'Réseau', 'img' => 'uploads/x.png', 'media' => [['src' => 'uploads/x.png', 'kind' => 'img']],
     'shops' => ['4', '5'], 'ch' => ['4' => ['fb' => true, 'ig' => true], '5' => ['fb' => true, 'ig' => true]], 'fb' => true, 'ig' => true, 'status' => 'Programmé', 'text' => 'Bon appétit à {ville} !', 'spread' => 0];
 socStateSave(['changes' => ['posts' => ['upsert' => [$pu]]]]);
-$rows = Db::rows("SELECT shop_id, canal FROM social_publication WHERE content_id = 'pu1' ORDER BY canal, shop_id");
+$rows = Db::rows("SELECT shop_id, canal FROM mar_sa_publication WHERE content_id = 'pu1' ORDER BY canal, shop_id");
 check('file : Facebook par boutique, Instagram une seule fois (compte de la marque)', array_map(static fn ($r) => $r['canal'] . ':' . $r['shop_id'], $rows) === ['fb:4', 'fb:5', 'ig:marque'], json_encode($rows));
-Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'pu1'");
+Db::exec("UPDATE mar_sa_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'pu1'");
 $appels = [];
 socRunQueue('pu1');
 $igPosts = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === '17841/media'));
@@ -1495,11 +1557,11 @@ $publie = static function (string $id, array $lignes, string $statut = 'Publié'
     socItemPut('posts', ['id' => $id, 'title' => 'À supprimer ' . $id, 'type' => 'Produit', 'shops' => ['4'], 'fb' => true, 'ig' => true, 'status' => $statut,
         'date' => date('Y-m-d'), 'time' => '10:00', 'text' => 'x']);
     foreach ($lignes as [$canal, $mid, $st]) {
-        Db::exec('INSERT INTO social_publication (content_id, shop_id, canal, prevue_le, statut, meta_id, maj_le) VALUES (?,?,?,?,?,?,?)', [$id, '4', $canal, date('Y-m-d H:i:s'), $st, $mid, date('Y-m-d H:i:s')]);
+        Db::exec('INSERT INTO mar_sa_publication (content_id, shop_id, canal, prevue_le, statut, meta_id, maj_le) VALUES (?,?,?,?,?,?,?)', [$id, '4', $canal, date('Y-m-d H:i:s'), $st, $mid, date('Y-m-d H:i:s')]);
     }
 };
 $suppr = static function (array $b): array { $GLOBALS['SOC_BODY'] = $b; try { return socRoute('POST', '/posts/supprimer'); } catch (HttpError $e) { return [$e->status, ['error' => $e->getMessage()]]; } finally { unset($GLOBALS['SOC_BODY']); } };
-$lignesDe = static fn (string $id) => (int) Db::row('SELECT COUNT(*) n FROM social_publication WHERE content_id = ?', [$id])['n'];
+$lignesDe = static fn (string $id) => (int) Db::row('SELECT COUNT(*) n FROM mar_sa_publication WHERE content_id = ?', [$id])['n'];
 $publie('pdel1', [['fb', '111_5001', 'publie'], ['ig', 'ig5002', 'publie']]);
 $GLOBALS['SUPPRIMES'] = [];
 [$code, $r] = $suppr(['id' => 'pdel1', 'meta' => true]);
@@ -1542,7 +1604,7 @@ check('publication faite hors du module : supprimée chez Meta (Page et Instagra
 [$c4] = $suppr(['id' => 'introuvable', 'meta' => true]);
 [$c5] = $suppr(['id' => '../x']);
 check('publication d’un autre compte, post inconnu ou identifiant invalide : refusé', $c3 === 404 && $c4 === 404 && $c5 === 400, json_encode([$c3, $c4, $c5]));
-check('suppressions tracées au journal', (int) Db::row("SELECT COUNT(*) n FROM social_activite WHERE quoi = 'Suppression'")['n'] >= 6);
+check('suppressions tracées au journal', (int) Db::row("SELECT COUNT(*) n FROM mar_sa_activite WHERE quoi = 'Suppression'")['n'] >= 6);
 
 echo "Boutiques hors caisse : Pages Meta du portefeuille sans boutique de l'API\n";
 $pfAvant = socSetting('meta_portefeuille');
@@ -1563,9 +1625,9 @@ check('hors caisse : pas de webshop (lien vers l’accueil)', socWebshopUrl($hc[
 check('magasin test : hors du réseau (« toutes les boutiques », opérations, espace franchisé), retrouvé par son identifiant',
     !empty($hc[0]['test']) && !in_array($hc[0]['id'], array_column(socReseau(), 'id'), true) && socShop($hc[0]['id']) !== null && count(socReseau()) === count(socShops()) - 1);
 socQueue(['id' => 'ptest1', 'shops' => [$hc[0]['id']], 'fb' => true, 'ig' => true, 'date' => date('Y-m-d', strtotime('+2 days')), 'time' => '10:00']);
-$rq = Db::rows('SELECT shop_id, canal FROM social_publication WHERE content_id = ?', ['ptest1']);
+$rq = Db::rows('SELECT shop_id, canal FROM mar_sa_publication WHERE content_id = ?', ['ptest1']);
 check('post sur le magasin test : sa Page, jamais l’Instagram du réseau', in_array(['shop_id' => $hc[0]['id'], 'canal' => 'fb'], $rq, true) && !in_array('marque', array_column($rq, 'shop_id'), true), json_encode($rq));
-Db::exec('DELETE FROM social_publication WHERE content_id = ?', ['ptest1']);
+Db::exec('DELETE FROM mar_sa_publication WHERE content_id = ?', ['ptest1']);
 check('nom tiré de la Page', socNomDePage("L'Atelier by - Gembloux") === 'Gembloux' && socNomDePage('L’Atelier By Namur') === 'Namur' && socNomDePage('Autre Page') === 'Autre Page');
 check('la marque : son nom seul ; une boutique ou un franchisé « L’Atelier by … » n’est pas la marque', socEstLaMarque("L'Atelier By") && socEstLaMarque("L'Atelier by latelierby.be")
     && !socEstLaMarque("L'Atelier by - Gembloux latelierbygembloux") && !socEstLaMarque("L'Atelier by Harmonie") && socDevinerBoutique("L'Atelier by Harmonie", socShops()) === null);
@@ -1579,7 +1641,7 @@ check('rafraîchissement des identifiants : la Page de la marque revient à la P
     && (bool) array_filter($ap['appliques'], static fn ($f) => str_contains($f, 'Page de la marque corrigée')), json_encode([$ap, socBrand()['ids']]));
 check('… et Gembloux redevient une boutique hors caisse', in_array('Gembloux', array_column(array_filter(socShops(), static fn ($s) => !empty($s['horsCaisse'])), 'name'), true));
 socShopPut('marque', ['ids' => $marqueAvant]);
-Db::exec("DELETE FROM social_boutique WHERE shop_id LIKE 'pg%'");
+Db::exec("DELETE FROM mar_sa_boutique WHERE shop_id LIKE 'pg%'");
 socSettingPut('meta_portefeuille', $pfAvant);
 
 echo "Créer un post : catalogue du webshop (catégorie → sous-catégorie → produit), prix d'une boutique, promotions\n";
@@ -1621,10 +1683,10 @@ check('POST /catalogue/verifier : les écarts pour l’écran', $code === 200 &&
 $pv = ['id' => 'pv1', 'date' => date('Y-m-d', strtotime('+1 day')), 'time' => '09:00', 'type' => 'Produit', 'title' => 'Cookie', 'img' => 'uploads/x.png', 'media' => [['src' => 'uploads/x.png', 'kind' => 'img']],
     'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => false]], 'fb' => true, 'ig' => false, 'status' => 'Programmé', 'text' => 'Cookie à 2,50 €', 'spread' => 0, 'catalogue' => ['prix' => 2.5] + $cookie];
 socStateSave(['changes' => ['posts' => ['upsert' => [$pv]]]]);
-Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'pv1'");
+Db::exec("UPDATE mar_sa_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'pv1'");
 $appels = [];
 socRunQueue('pv1');
-$lig = Db::row("SELECT statut, erreur FROM social_publication WHERE content_id = 'pv1'");
+$lig = Db::row("SELECT statut, erreur FROM mar_sa_publication WHERE content_id = 'pv1'");
 check('publication arrêtée : prix changé, rien n’est envoyé à Meta', ($lig['statut'] ?? '') === 'echec' && str_starts_with((string) $lig['erreur'], 'Publication bloquée, offre à revoir : prix de « Cookie chocolat »')
     && !array_filter($appels, static fn ($a) => $a[0] === 'POST'), json_encode($lig));
 $tfbAvant = Tfb::$transport;
@@ -1822,7 +1884,7 @@ $st = array_values(array_filter($crees, static fn ($p) => $p['plan']['reseau'] =
 check('POST /campagnes/plan/creer : des brouillons rattachés à la campagne, sur ses boutiques, rien en file de publication', $code === 200 && $c['crees'] === $nPlan && count($crees) === $nPlan
     && !array_filter($crees, static fn ($p) => $p['status'] !== 'Brouillon' || $p['campaign'] !== 'bo-1' || $p['shops'] !== ['4', '5'] || $p['text'] !== '')
     && $st && $st[0]['story'] === 'seule' && $st[0]['fb'] && $st[0]['ig'] && str_ends_with($crees[0]['title'], ' · Automne')
-    && (int) Db::row('SELECT COUNT(*) n FROM social_publication WHERE content_id IN (' . implode(',', array_fill(0, count($c['ids']), '?')) . ')', $c['ids'])['n'] === 0, json_encode($crees[0] ?? $c));
+    && (int) Db::row('SELECT COUNT(*) n FROM mar_sa_publication WHERE content_id IN (' . implode(',', array_fill(0, count($c['ids']), '?')) . ')', $c['ids'])['n'] === 0, json_encode($crees[0] ?? $c));
 $garde = $crees[0]; $garde['text'] = 'Déjà rédigé.'; socItemPut('posts', $garde);
 [$code, $c2] = $gp('POST', '/campagnes/plan/creer', ['campagne' => 'bo-1', 'du' => $du, 'au' => $au, 'rythme' => ['fbig' => 2, 'story' => 1], 'mix' => 'equilibre', 'remplacer' => true]);
 check('refaire le plan (remplacer) : les brouillons encore vides du plan précédent sont retirés, un brouillon déjà rédigé est gardé', $code === 200 && $c2['retires'] === $nPlan - 1
@@ -1837,7 +1899,7 @@ socSettingPut('reco_cache', null, false); socSettingPut('anthropic_api_key', nul
 
 echo "Commentaires de toutes les Pages et de l'Instagram : lecture, classement vert / orange / rouge, suivi\n";
 $idsCom = ['111_c1_1', '111_c1_2', '111_c1_3', '111_c1_4', 'igc_1', 'igc_old'];
-$com = static fn () => array_column(Db::rows('SELECT * FROM social_commentaire WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom), null, 'id');
+$com = static fn () => array_column(Db::rows('SELECT * FROM mar_sa_commentaire WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom), null, 'id');
 $s = socCommentairesSync();
 $cs = $com();
 check('lecture : commentaires de la Page et de l’Instagram, avec la publication commentée ; ni les réponses de la Page, ni ceux des publications anciennes',
@@ -1848,7 +1910,7 @@ $a = socCommentairesAnalyser();
 $cs = $com();
 check('sans clé Claude : règles simples (cheveu → rouge, question → orange, compliment → vert)', $cs['111_c1_3']['couleur'] === 'rouge' && $cs['111_c1_2']['couleur'] === 'orange'
     && $cs['111_c1_1']['couleur'] === 'vert' && $cs['igc_1']['couleur'] === 'orange' && $cs['111_c1_1']['analyse'] === 'regles' && $a['ia'] === false, json_encode(array_column($cs, 'couleur', 'id')));
-Db::exec('UPDATE social_commentaire SET couleur = NULL WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
+Db::exec('UPDATE mar_sa_commentaire SET couleur = NULL WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
 socSettingPut('anthropic_api_key', 'sk-test-cle', true); $iaAppels = []; $iaMode = 'ok';
 $a = socCommentairesAnalyser();
 $cs = $com();
@@ -1860,7 +1922,7 @@ check('avec Claude : classé dans le contexte de la publication, effort bas, san
 $iaAppels = [];
 socCommentairesSync(); $a2 = socCommentairesAnalyser();
 check('relecture : le classement est gardé, rien n’est renvoyé à Claude', $com()['111_c1_3']['analyse'] === 'ia' && !array_filter($iaAppels, static fn ($x) => str_ends_with($x[1], '/v1/messages')));
-Db::exec("UPDATE social_commentaire SET couleur = NULL WHERE id = '111_c1_1'"); $iaMode = 'panne';
+Db::exec("UPDATE mar_sa_commentaire SET couleur = NULL WHERE id = '111_c1_1'"); $iaMode = 'panne';
 $a3 = socCommentairesAnalyser();
 check('Claude indisponible : repli sur les règles, l’erreur est rendue', $com()['111_c1_1']['analyse'] === 'regles' && str_contains((string) $a3['erreur'], 'indisponible'), json_encode($a3));
 $iaMode = 'ok'; socSettingPut('anthropic_api_key', null, true);
@@ -1876,9 +1938,9 @@ check('traité : sort des « non traités », compté comme fermé, avec qui et 
 try { $GLOBALS['SOC_BODY'] = ['id' => 'inconnu', 'traite' => true]; socRoute('POST', '/commentaires/traiter'); $code404 = 200; } catch (HttpError $e) { $code404 = $e->status; } finally { unset($GLOBALS['SOC_BODY']); }
 check('commentaire inconnu : 404', $code404 === 404);
 // Espace franchisé : les commentaires de sa Page seulement (pas l'Instagram du réseau, ni les autres boutiques).
-Db::exec("INSERT INTO social_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur) VALUES ('wavre_c1', 'fb', '222_1', '5', 'X', 'Autre boutique', ?, 0, ?, 'rouge')",
+Db::exec("INSERT INTO mar_sa_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur) VALUES ('wavre_c1', 'fb', '222_1', '5', 'X', 'Autre boutique', ?, 0, ?, 'rouge')",
     [date('Y-m-d H:i:s', strtotime('-1 hour')), date('Y-m-d H:i:s')]);
-Db::exec("UPDATE social_commentaire SET shop_id = 'marque' WHERE id = 'igc_1'");  // l'Instagram du réseau
+Db::exec("UPDATE mar_sa_commentaire SET shop_id = 'marque' WHERE id = 'igc_1'");  // l'Instagram du réseau
 sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
 [$code, $b] = $fr('GET', '/franchise/commentaires');
 $idsF = array_column($b['commentaires'] ?? [], 'id');
@@ -1895,9 +1957,9 @@ $regCom = sfRegles(); sfReglesPut(array_merge($regCom, ['voirCommentaires' => fa
 check('franchisé : masqués si le réseau ne les partage pas', $b['hidden'] === true && !$b['commentaires']);
 sfReglesPut($regCom); unset($_COOKIE[SF_COOKIE]);
 echo "Commentaires : répondre depuis l'outil, alertes, retard et escalade, qui traite quoi\n";
-Db::exec('UPDATE social_commentaire SET traite_le = NULL, traite_par = NULL, reponse_envoyee = NULL WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
-Db::exec("UPDATE social_commentaire SET vu_le = ? WHERE id = '111_c1_2'", [date('Y-m-d H:i:s', strtotime('-30 hours'))]);
-Db::exec("UPDATE social_commentaire SET vu_le = NOW() WHERE id IN ('111_c1_1', '111_c1_3', 'igc_1')");
+Db::exec('UPDATE mar_sa_commentaire SET traite_le = NULL, traite_par = NULL, reponse_envoyee = NULL WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
+Db::exec("UPDATE mar_sa_commentaire SET vu_le = ? WHERE id = '111_c1_2'", [date('Y-m-d H:i:s', strtotime('-30 hours'))]);
+Db::exec("UPDATE mar_sa_commentaire SET vu_le = NOW() WHERE id IN ('111_c1_1', '111_c1_3', 'igc_1')");
 $_GET = ['jours' => '30']; [, $b] = socRoute('GET', '/commentaires'); $_GET = [];
 $cm = array_column($b['commentaires'], null, 'id');
 check('qui traite : les commentaires d’une Page de boutique sont à la boutique, rouges compris (plus d’écran côté marque) ; Instagram du réseau sans boutique citée → le réseau', $cm['111_c1_3']['responsable'] === 'franchise'
@@ -1920,7 +1982,7 @@ Meta::$transport = static function (string $m, string $url, array $p) use ($meta
     return $metaAvant($m, $url, $p);
 };
 $GLOBALS['SOC_BODY'] = ['id' => '111_c1_3', 'message' => '  Bonjour Paul, nous sommes désolés.  Écrivez-nous en message privé.  ']; [$codeR, $rR] = socRoute('POST', '/commentaires/repondre'); unset($GLOBALS['SOC_BODY']);
-$c3 = Db::row("SELECT * FROM social_commentaire WHERE id = '111_c1_3'");
+$c3 = Db::row("SELECT * FROM mar_sa_commentaire WHERE id = '111_c1_3'");
 check('réponse publiée sous le commentaire Facebook, au nom de la Page (son token), puis marqué traité', $codeR === 200 && ($repl[0][0] ?? '') === '111_c1_3/comments' && ($repl[0][1]['access_token'] ?? '') === 'PT111'
     && ($repl[0][1]['message'] ?? '') === 'Bonjour Paul, nous sommes désolés. Écrivez-nous en message privé.' && $c3['reponse_envoyee'] !== null && $c3['reponse_id'] === '111_c1_3_r' && $c3['traite_le'] !== null, json_encode([$repl, $rR]));
 $GLOBALS['SOC_BODY'] = ['id' => 'igc_1', 'message' => 'Basiliekstraat 12, Halle.']; [$codeI] = socRoute('POST', '/commentaires/repondre'); unset($GLOBALS['SOC_BODY']);
@@ -1929,18 +1991,18 @@ $err = static function (string $route, array $b): array { $GLOBALS['SOC_BODY'] =
 [$cP, $mP] = $err('/commentaires/repondre', ['id' => '111_c1_1', 'message' => 'Merci !']);
 [$cV] = $err('/commentaires/repondre', ['id' => '111_c1_2', 'message' => '   ']);
 check('Meta refuse (permission) : 422 avec la permission à accorder ; réponse vide : 422 ; rien n’est marqué traité', $cP === 422 && str_contains($mP, 'pages_manage_engagement') && $cV === 422
-    && Db::row("SELECT traite_le FROM social_commentaire WHERE id = '111_c1_1'")['traite_le'] === null, $mP);
-Db::exec("INSERT INTO social_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur, note) VALUES ('gg_test', 'gg', 'gg:4', '4', 'X', 'Bof', NOW(), 0, NOW(), 'orange', 3)");
+    && Db::row("SELECT traite_le FROM mar_sa_commentaire WHERE id = '111_c1_1'")['traite_le'] === null, $mP);
+Db::exec("INSERT INTO mar_sa_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur, note) VALUES ('gg_test', 'gg', 'gg:4', '4', 'X', 'Bof', NOW(), 0, NOW(), 'orange', 3)");
 [$cG, $mG] = $err('/commentaires/repondre', ['id' => 'gg_test', 'message' => 'Merci']);
 check('avis Google : pas de réponse par API (la fiche Google), dit pourquoi', $cG === 422 && str_contains($mG, 'fiche Google'));
-Db::exec("DELETE FROM social_commentaire WHERE id = 'gg_test'");
+Db::exec("DELETE FROM mar_sa_commentaire WHERE id = 'gg_test'");
 // Espace franchisé
 sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
 [$cF] = $fr('POST', '/franchise/commentaires/repondre', ['id' => '111_c1_2', 'message' => 'Bonjour Marc, jusqu’à dimanche !']);
 [$cF2] = $fr('POST', '/franchise/commentaires/traiter', ['id' => '111_c1_3', 'traite' => false]);
 [$cF3] = $fr('POST', '/franchise/commentaires/repondre', ['id' => '111_c1_3', 'message' => 'Désolé']);
 check('franchisé : répond lui-même aux commentaires de sa Page (au nom de sa Page), rouges compris : les rouvre, y répond', $cF === 200 && in_array('111_c1_2/comments', array_column($repl, 0), true)
-    && Db::row("SELECT reponse_par FROM social_commentaire WHERE id = '111_c1_2'")['reponse_par'] === 'Gérant Halle' && $cF2 === 200 && $cF3 === 200 && (end($repl)[0] ?? '') === '111_c1_3/comments', json_encode([$cF, $cF2, $cF3]));
+    && Db::row("SELECT reponse_par FROM mar_sa_commentaire WHERE id = '111_c1_2'")['reponse_par'] === 'Gérant Halle' && $cF2 === 200 && $cF3 === 200 && (end($repl)[0] ?? '') === '111_c1_3/comments', json_encode([$cF, $cF2, $cF3]));
 [, $etF] = $fr('GET', '/franchise/etat');
 check('franchisé : ses alertes dans son état (ce que la boutique doit traiter)', isset($etF['alertes']['com']['pourBoutique']) && $etF['alertes']['com']['rouges'] === 0, json_encode($etF['alertes'] ?? null));
 $regV2 = sfRegles();
@@ -1957,18 +2019,18 @@ $cptReseau = ['shop' => 'marque', 'id' => '17841', 'name' => 'Réseau'];
 socCommentaireGarder('ig', ['id' => 'rt_c1'], ['id' => 'mr1'], $cptReseau, 'Zoé', 'Super accueil à Wavre hier !', date('c'), 'La nouvelle gamme', '', '', false);
 socCommentaireGarder('ig', ['id' => 'rt_c2'], ['id' => 'mr2'], $cptReseau, 'Léo', 'Halle ou Wavre, laquelle ouvre dimanche ?', date('c'), 'Ouverture exceptionnelle à Halle', '', '', false);
 socCommentaireGarder('ig', ['id' => 'rt_c3'], ['id' => 'mr3'], $cptReseau, 'Max', 'Miam 😍', date('c'), 'La nouvelle gamme dans toutes nos boutiques', '', '', false);
-$shRt = array_column(Db::rows("SELECT id, shop_id FROM social_commentaire WHERE id IN ('rt_c1','rt_c2','rt_c3')"), 'shop_id', 'id');
+$shRt = array_column(Db::rows("SELECT id, shop_id FROM mar_sa_commentaire WHERE id IN ('rt_c1','rt_c2','rt_c3')"), 'shop_id', 'id');
 check('commentaire du compte réseau : à la boutique citée (commentaire, sinon publication) ; aucune citée → reste au réseau', $shRt['rt_c1'] === '5' && $shRt['rt_c2'] === '4' && $shRt['rt_c3'] === 'marque', json_encode($shRt));
-Db::exec("INSERT INTO social_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le) VALUES ('rt_c4', 'ig', 'mr4', NULL, 'Eva', 'Vous livrez à Wavre ?', NOW(), 0, NOW())");
+Db::exec("INSERT INTO mar_sa_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le) VALUES ('rt_c4', 'ig', 'mr4', NULL, 'Eva', 'Vous livrez à Wavre ?', NOW(), 0, NOW())");
 $routAvant = socSetting('commentaires_routage'); socSettingPut('commentaires_routage', null, false);
 socCommentairesReprise();
-check('une fois : les commentaires déjà gardés du compte réseau vont à la boutique citée', Db::row("SELECT shop_id FROM social_commentaire WHERE id = 'rt_c4'")['shop_id'] === '5' && socSetting('commentaires_routage') !== null);
+check('une fois : les commentaires déjà gardés du compte réseau vont à la boutique citée', Db::row("SELECT shop_id FROM mar_sa_commentaire WHERE id = 'rt_c4'")['shop_id'] === '5' && socSetting('commentaires_routage') !== null);
 socSettingPut('commentaires_routage', $routAvant, false);
-Db::exec("DELETE FROM social_commentaire WHERE id IN ('rt_c1','rt_c2','rt_c3','rt_c4')");
+Db::exec("DELETE FROM mar_sa_commentaire WHERE id IN ('rt_c1','rt_c2','rt_c3','rt_c4')");
 $_GET = ['jours' => '30']; [, $b] = socRoute('GET', '/commentaires'); $_GET = [];
 check('délai médian de traitement (rouges et oranges traités)', is_float($b['totaux']['delaiMedianH']) && $b['totaux']['delaiMedianH'] >= 0, json_encode($b['totaux']));
-Db::exec("DELETE FROM social_commentaire WHERE id = 'wavre_c1'");
-Db::exec('DELETE FROM social_commentaire WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
+Db::exec("DELETE FROM mar_sa_commentaire WHERE id = 'wavre_c1'");
+Db::exec('DELETE FROM mar_sa_commentaire WHERE id IN (' . implode(',', array_fill(0, count($idsCom), '?')) . ')', $idsCom);
 
 echo "Avis Google : la Réputation digitale du BO (tables lues), avis classés vert / orange / rouge, espace franchisé\n";
 BoCockpit::$transport = static fn (string $m, string $url, array $body): array => [0, ''];
@@ -1994,11 +2056,11 @@ check('par l’API du BO (GET /reputation du cockpit) : mêmes calculs, clé jam
     && $rpA['reseau']['moyenne'] === 4.58 && $rpA['reseau']['avis5Requis'] === 7 && $mgA['4']['avis5Requis'] === 25 && $rpA['connecteur']['configure'] === true && $rpA['connecteur']['raccordes'] === 2
     && !str_contains(json_encode($b), 'AIza'), json_encode($rpA));
 $sA = socGoogleAvisSync(); socGoogleAvisSync();
-$ggA = Db::rows("SELECT id, shop_id, note, cree_le FROM social_commentaire WHERE canal = 'gg'");
+$ggA = Db::rows("SELECT id, shop_id, note, cree_le FROM mar_sa_commentaire WHERE canal = 'gg'");
 check('par l’API : les derniers avis recopiés une seule fois (relus toutes les heures), à leur boutique', $sA['lus'] === 2 && $sA['source'] === 'api' && count($ggA) === 2
     && $ggA[0]['shop_id'] === '4', json_encode($ggA));
 $idApi = socGoogleAvisId('4', 'Paul R.', '2026-09-20', 1);
-Db::exec("UPDATE social_commentaire SET traite_le = NOW() WHERE id = ?", [$idApi]);
+Db::exec("UPDATE mar_sa_commentaire SET traite_le = NOW() WHERE id = ?", [$idApi]);
 BoCockpit::$transport = null;
 // Les tables du BO, telles que son installeur les crée (src/installer.php du BO).
 $pdo->exec("CREATE TABLE ceo_shop_reputation (shop_id VARCHAR(8) PRIMARY KEY, place_id VARCHAR(120) NULL, profile_url VARCHAR(400) NULL, rating_avg DECIMAL(3,2) NULL, rating_count INT NOT NULL DEFAULT 0, synced_at DATETIME NULL)");
@@ -2028,16 +2090,16 @@ check('clé Google du BO : jamais rendue, seulement son existence', ($rp['connec
     && !str_contains(json_encode($bk), 'AIzaTESTCLE'));
 $pdo->exec("DELETE FROM ceo_app_setting WHERE `key` = 'google'");
 $s = socGoogleAvisSync();
-$gg = array_column(Db::rows("SELECT * FROM social_commentaire WHERE canal = 'gg'"), null, 'id');
+$gg = array_column(Db::rows("SELECT * FROM mar_sa_commentaire WHERE canal = 'gg'"), null, 'id');
 $auteurs = ['g1' => 'Paul R.', 'g2' => 'Anne B.', 'g3' => 'Luc D.', 'g4' => 'Eva', 'g5' => 'Tom'];
-$idG = static fn (string $ext) => (string) Db::row("SELECT id FROM social_commentaire WHERE canal = 'gg' AND auteur = ?", [$auteurs[$ext]])['id'];
+$idG = static fn (string $ext) => (string) Db::row("SELECT id FROM mar_sa_commentaire WHERE canal = 'gg' AND auteur = ?", [$auteurs[$ext]])['id'];
 check('même avis lu par l’API puis dans les tables du BO : le même, son suivi gardé', isset($gg[$idApi]) && $gg[$idApi]['traite_le'] !== null && $idG('g1') === $idApi);
-Db::exec("UPDATE social_commentaire SET traite_le = NULL WHERE canal = 'gg'");
+Db::exec("UPDATE mar_sa_commentaire SET traite_le = NULL WHERE canal = 'gg'");
 check('avis recopiés pour les classer : boutique du module, note, fiche en contexte, lien de la fiche', $s['lus'] === 4 && count($gg) === 4 && $gg[$idG('g1')]['shop_id'] === '4'
     && (int) $gg[$idG('g1')]['note'] === 1 && str_contains((string) $gg[$idG('g1')]['objet_texte'], 'Fiche Google de L’Atelier By Halle (note de la fiche : 4,4 sur 50 avis)')
     && $gg[$idG('g4')]['shop_id'] === '5' && $gg[$idG('g1')]['lien'] === 'https://maps.google.com/?cid=1', json_encode([$s, array_column($gg, 'shop_id', 'id')]));
 socCommentairesAnalyser();
-$gg = array_column(Db::rows("SELECT * FROM social_commentaire WHERE canal = 'gg'"), null, 'id');
+$gg = array_column(Db::rows("SELECT * FROM mar_sa_commentaire WHERE canal = 'gg'"), null, 'id');
 check('sans clé Claude : la note d’abord (1★ rouge, 3★ orange, 4-5★ vert), même pour un avis ancien ou sans texte',
     $gg[$idG('g1')]['couleur'] === 'rouge' && $gg[$idG('g3')]['couleur'] === 'orange' && $gg[$idG('g2')]['couleur'] === 'vert' && $gg[$idG('g4')]['couleur'] === 'vert', json_encode(array_column($gg, 'couleur', 'id')));
 check('règles : un bon avis avec une réserve est orange, pas rouge', socCommentaireRegles('Très bon mais vendeuse impolie', 4)['couleur'] === 'orange' && socCommentaireRegles('Super ? oui !', 5)['couleur'] === 'vert');
@@ -2045,17 +2107,17 @@ check('règles : « jamais déçus », « pas déçu », « nulle part ailleurs 
     socCommentaireRegles('En sucré ou en salé, nous ne sommes jamais déçus !', 5)['couleur'] === 'vert' && socCommentaireRegles('Pas déçu du détour', null)['couleur'] === 'vert'
     && socCommentaireRegles('Introuvable nulle part ailleurs', null)['couleur'] === 'vert' && socCommentaireRegles('Super, mais un peu déçu par la tarte au citron', 4)['couleur'] === 'orange'
     && socCommentaireRegles('Très déçu, plus jamais', null)['couleur'] === 'rouge');
-Db::exec("INSERT INTO social_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur, sujet, analyse, note) VALUES
+Db::exec("INSERT INTO mar_sa_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur, sujet, analyse, note) VALUES
     ('gg_rep1', 'gg', 'gg:4', '4', 'X', 'Nous ne sommes jamais déçus !', NOW(), 0, NOW(), 'orange', 'Bon avis, une réserve', 'regles', 5),
     ('gg_rep2', 'gg', 'gg:4', '4', 'Y', 'Nous ne sommes jamais déçus !', NOW(), 0, NOW(), 'orange', 'Bon avis, une réserve', 'regles', 5)");
-Db::exec("UPDATE social_commentaire SET traite_le = NOW() WHERE id = 'gg_rep2'");
+Db::exec("UPDATE mar_sa_commentaire SET traite_le = NOW() WHERE id = 'gg_rep2'");
 socSettingPut('commentaires_regles_version', 1, false); $iaRep = socSetting('commentaires_ia_reprise'); socSettingPut('commentaires_ia_reprise', 'test', false);
 socCommentairesReprise();
-check('règles changées : ce qu’elles avaient classé est reclassé une fois (pas ce qui est traité)', Db::row("SELECT couleur FROM social_commentaire WHERE id = 'gg_rep1'")['couleur'] === 'vert'
-    && Db::row("SELECT couleur FROM social_commentaire WHERE id = 'gg_rep2'")['couleur'] === 'orange' && (int) socSetting('commentaires_regles_version') === SOC_COM_REGLES_VERSION);
+check('règles changées : ce qu’elles avaient classé est reclassé une fois (pas ce qui est traité)', Db::row("SELECT couleur FROM mar_sa_commentaire WHERE id = 'gg_rep1'")['couleur'] === 'vert'
+    && Db::row("SELECT couleur FROM mar_sa_commentaire WHERE id = 'gg_rep2'")['couleur'] === 'orange' && (int) socSetting('commentaires_regles_version') === SOC_COM_REGLES_VERSION);
 socSettingPut('commentaires_ia_reprise', $iaRep, false);
-Db::exec("DELETE FROM social_commentaire WHERE id IN ('gg_rep1','gg_rep2')");
-Db::exec("UPDATE social_commentaire SET couleur = NULL WHERE canal = 'gg'");
+Db::exec("DELETE FROM mar_sa_commentaire WHERE id IN ('gg_rep1','gg_rep2')");
+Db::exec("UPDATE mar_sa_commentaire SET couleur = NULL WHERE canal = 'gg'");
 socSettingPut('anthropic_api_key', 'sk-test-cle', true); $iaAppels = []; $iaMode = 'ok';
 socCommentairesAnalyser();
 $req = (array_values(array_filter($iaAppels, static fn ($x) => str_ends_with($x[1], '/v1/messages')))[0][3] ?? []);
@@ -2107,11 +2169,11 @@ $regG = sfRegles(); sfReglesPut(array_merge($regG, ['voirAvisGoogle' => false]))
 check('franchisé : avis Google masqués si le réseau ne les partage pas (lecture et suivi)', $b['hidden'] === true && !$b['avis'] && $c3 === 403);
 sfReglesPut($regG); unset($_COOKIE[SF_COOKIE]);
 // Faire venir des avis : historique de la note, avis gagnés, lien court traçable, synchronisation automatique.
-Db::exec('DELETE FROM social_google_suivi'); Db::exec('DELETE FROM social_avis_scan');
-Db::exec('INSERT INTO social_google_suivi (jour, shop_id, note, avis) VALUES (?,?,?,?), (?,?,?,?)', [date('Y-m-d', strtotime('-8 days')), '4', 4.38, 45, date('Y-m-d', strtotime('-40 days')), '4', 4.30, 40]);
+Db::exec('DELETE FROM mar_sa_google_suivi'); Db::exec('DELETE FROM mar_sa_avis_scan');
+Db::exec('INSERT INTO mar_sa_google_suivi (jour, shop_id, note, avis) VALUES (?,?,?,?), (?,?,?,?)', [date('Y-m-d', strtotime('-8 days')), '4', 4.38, 45, date('Y-m-d', strtotime('-40 days')), '4', 4.30, 40]);
 [, $b] = socRoute('GET', '/google');
 $mgS = array_column($b['reputation']['magasins'], null, 'id');
-check('suivi : la note du jour est gardée ; avis gagnés sur 7 et 30 jours d’après l’historique ; total réseau', (int) Db::row("SELECT avis FROM social_google_suivi WHERE shop_id = '4' AND jour = ?", [date('Y-m-d')])['avis'] === 50
+check('suivi : la note du jour est gardée ; avis gagnés sur 7 et 30 jours d’après l’historique ; total réseau', (int) Db::row("SELECT avis FROM mar_sa_google_suivi WHERE shop_id = '4' AND jour = ?", [date('Y-m-d')])['avis'] === 50
     && $mgS['4']['gagnes7'] === 5 && $mgS['4']['gagnes30'] === 10 && $mgS['5']['gagnes7'] === 0 && $b['reputation']['reseau']['gagnes7'] === 5, json_encode([$mgS['4']['gagnes7'] ?? null, $mgS['4']['gagnes30'] ?? null]));
 check('lien d’avis : la fenêtre « Donner un avis » de la fiche, et le lien court du module', $mgS['4']['lienAvis'] === 'https://search.google.com/local/writereview?placeid=P-HAL'
     && str_ends_with((string) $mgS['4']['lienCourt'], '/api/v1/social/avis/4'));
@@ -2122,7 +2184,7 @@ try { socRoute('GET', '/google'); $codeG = 200; } catch (HttpError $e) { $codeG 
 unset($GLOBALS['SOCIAL_HOTE']['auth']);
 try { socRoute('GET', '/avis/999'); $code404 = 200; } catch (HttpError $e) { $code404 = $e->status; }
 check('lien court : public (sans session), compte le scan puis renvoie vers la fiche ; boutique sans fiche : 404 ; le reste du module reste fermé', $codeR === 302 && $redir instanceof SocRedirection
-    && $redir->url === 'https://search.google.com/local/writereview?placeid=P-HAL' && (int) Db::row("SELECT COUNT(*) n FROM social_avis_scan WHERE shop_id = '4' AND source = 'qr'")['n'] === 1
+    && $redir->url === 'https://search.google.com/local/writereview?placeid=P-HAL' && (int) Db::row("SELECT COUNT(*) n FROM mar_sa_avis_scan WHERE shop_id = '4' AND source = 'qr'")['n'] === 1
     && $code404 === 404 && $codeGauth === 401, json_encode([$codeR, $code404, $codeGauth]));
 [, $b] = socRoute('GET', '/google');
 check('scans comptés par boutique et pour le réseau', array_column($b['reputation']['magasins'], null, 'id')['4']['scans7'] === 1 && $b['reputation']['reseau']['scans7'] === 1);
@@ -2149,8 +2211,8 @@ $mF = $b['reputation']['magasins'][0] ?? [];
 check('franchisé : son lien court et son lien d’avis, ses avis gagnés ; ni les clics sur son lien, ni les réglages du réseau', str_ends_with((string) ($mF['lienCourt'] ?? ''), '/avis/4') && $mF['gagnes7'] === 5
     && !array_key_exists('scans7', $mF) && !array_key_exists('scans30', $mF) && !isset($b['reglages']), json_encode($mF));
 unset($_COOKIE[SF_COOKIE]);
-Db::exec('DELETE FROM social_google_suivi'); Db::exec('DELETE FROM social_avis_scan');
-Db::exec("DELETE FROM social_commentaire WHERE canal = 'gg'");
+Db::exec('DELETE FROM mar_sa_google_suivi'); Db::exec('DELETE FROM mar_sa_avis_scan');
+Db::exec("DELETE FROM mar_sa_commentaire WHERE canal = 'gg'");
 $pdo->exec("DELETE FROM ceo_shop WHERE id = '5'"); $pdo->exec('DROP TABLE ceo_shop_reputation'); $pdo->exec('DROP TABLE ceo_shop_review'); $pdo->exec("DELETE FROM ceo_app_setting WHERE `key` = 'reputationCible'");
 Db::hasTable('ceo_shop_reputation', true); Db::hasTable('ceo_shop_review', true);
 
@@ -2164,7 +2226,7 @@ socItemPut('posts', ['id' => 'bil3', 'date' => date('Y-m-d', strtotime('-10 days
 socItemPut('posts', ['id' => 'bil4', 'date' => $hier, 'time' => '12:00', 'title' => 'B4', 'status' => 'Programmé', 'shops' => ['5'], 'fb' => true, 'ig' => false]);
 $ilya = static fn (int $h) => date('Y-m-d H:i:s', strtotime('-' . $h . ' hours'));
 foreach ([['bc1', '4', 'orange', $ilya(5), $ilya(3)], ['bc2', '4', 'rouge', $ilya(30), null], ['bc3', '5', 'orange', $ilya(50), $ilya(8)]] as [$id, $sh, $col, $vu, $tr]) {
-    Db::exec('INSERT INTO social_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur, vu_le, traite_le) VALUES (?,?,?,?,?,?,?,0,?,?,?,?)',
+    Db::exec('INSERT INTO mar_sa_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur, vu_le, traite_le) VALUES (?,?,?,?,?,?,?,0,?,?,?,?)',
         [$id, 'fb', 'x', $sh, 'A', 'M', $vu, $vu, $col, $vu, $tr]);
 }
 $bil = socBilan(true);
@@ -2214,11 +2276,11 @@ $regB = sfRegles(); sfReglesPut(array_merge($regB, ['voirClassement' => false]))
 check('franchisé : classement masqué si le réseau ne le partage pas', !isset($sem2['ligne']['rang']) && !isset($sem2['ligne']['rangs']) && $sem2['classement'] === false);
 sfReglesPut($regB); unset($_COOKIE[SF_COOKIE]);
 // Réactivité : sans rien de traité, une boutique en retard passe derrière celle qui n'a rien à traiter (plus devant).
-Db::exec("DELETE FROM social_commentaire WHERE id IN ('bc1','bc3')");
+Db::exec("DELETE FROM mar_sa_commentaire WHERE id IN ('bc1','bc3')");
 $R = array_column(socBilanCalculer()['lignes'], null, 'id');
 check('réactivité : rien à traiter passe devant des retards sans rien de traité', $R['4']['dansDelaiPct'] === null && $R['4']['enRetard'] === 1 && $R['5']['enRetard'] === 0
     && $R['5']['rangs']['reactivite'] === 1 && $R['4']['rangs']['reactivite'] > 1, json_encode([$R['4']['rangs'], $R['5']['rangs']]));
-Db::exec("DELETE FROM social_content WHERE id IN ('bil1','bil2','bil3','bil4','bil5')"); Db::exec("DELETE FROM social_commentaire WHERE id IN ('bc1','bc2','bc3')"); socSettingPut('bilan_cache', null, false);
+Db::exec("DELETE FROM mar_sa_content WHERE id IN ('bil1','bil2','bil3','bil4','bil5')"); Db::exec("DELETE FROM mar_sa_commentaire WHERE id IN ('bc1','bc2','bc3')"); socSettingPut('bilan_cache', null, false);
 
 echo "Kit du mois : les posts que le réseau demande à chaque boutique ce mois-ci\n";
 $modK = sfModeles(true)[0]['id'];
@@ -2240,7 +2302,7 @@ check('programmé à ±7 jours de la date conseillée : fait, pour cette boutiqu
     && $bK['5']['fait'] === false && $vK2['items'][0]['faits'] === 1);
 [$cK2] = $err('/kit', ['items' => [['id' => $idK, 'modele' => $modK, 'date' => $jK]]]);
 check('kit modifié : même élément (même id)', $cK2 === 200 && socKit()[0]['id'] === $idK);
-unset($_COOKIE[SF_COOKIE]); Db::exec("DELETE FROM social_content WHERE id = 'kitp1'"); socSettingPut('kit_mois', null, false);
+unset($_COOKIE[SF_COOKIE]); Db::exec("DELETE FROM mar_sa_content WHERE id = 'kitp1'"); socSettingPut('kit_mois', null, false);
 
 echo "Publicité pilotée : règle de pause (marque), meilleurs posts à booster, demandes de boost (franchisé)\n";
 $err = static function (string $route, array $b): array { $GLOBALS['SOC_BODY'] = $b; try { $r = socRoute('POST', $route); return [$r[0], $r[1]]; } catch (HttpError $e) { return [$e->status, $e->getMessage()]; } finally { unset($GLOBALS['SOC_BODY']); } };
@@ -2252,7 +2314,7 @@ check('règle active sans seuil, ou dépense minimale nulle : 422', $cR0 === 422
 // a1 (relue plus haut : 3 pubs, 40,50 € et 60 clics chacune → CPC 0,675 €).
 // Seuils en francs suisses : seule a1 (CHF) est concernée, pas les autres pubs de la recette.
 $a1 = socItem('ads', 'a1'); $a1['devise'] = 'CHF'; $a1['status'] = 'Active'; unset($a1['autoPause'], $a1['autoPauseLevee']); socItemPut('ads', $a1);
-$adsA1 = array_column(Db::rows("SELECT ad_id FROM social_meta_objet WHERE kind = 'ad' AND local_id = 'a1' AND ad_id IS NOT NULL"), 'ad_id');
+$adsA1 = array_column(Db::rows("SELECT ad_id FROM mar_sa_meta_objet WHERE kind = 'ad' AND local_id = 'a1' AND ad_id IS NOT NULL"), 'ad_id');
 $pausesA1 = static function () use (&$appels, $adsA1): int { return count(array_filter($appels, static fn ($a) => $a[0] === 'POST' && in_array($a[1], $adsA1, true) && ($a[2]['status'] ?? '') === 'PAUSED')); };
 socPubReglesPut(['pauseActive' => true, 'seuils' => ['CHF' => ['cpcMax' => 1.0, 'depenseMin' => 20], 'PLN' => ['cpcMax' => 4, 'depenseMin' => 80]]]);
 $appels = []; socAdsSync();
@@ -2349,8 +2411,8 @@ $crI = $bAppels[0][2] ?? [];
 check('boost d’un post Instagram : source_instagram_media_id, sous le compte Instagram et sa Page', socItem('ads', 'ab3')['status'] === 'En revue' && ($crI['source_instagram_media_id'] ?? '') === 'm2'
     && ($crI['instagram_user_id'] ?? '') === '17841' && ($crI['object_id'] ?? '') === '111', json_encode([$crI, socItem('ads', 'ab3')['reason'] ?? null]));
 Meta::$transport = $metaAvantB;
-foreach (['ab1', 'ab2', 'ab3'] as $x) { socItemDelete('ads', $x); Db::exec("DELETE FROM social_meta_objet WHERE kind = 'ad' AND local_id = ?", [$x]); }
-Db::exec('DELETE FROM social_boost_demande'); socSettingPut('pub_meilleurs_cache', null, false); socSettingPut('pub_regles', null, false);
+foreach (['ab1', 'ab2', 'ab3'] as $x) { socItemDelete('ads', $x); Db::exec("DELETE FROM mar_sa_meta_objet WHERE kind = 'ad' AND local_id = ?", [$x]); }
+Db::exec('DELETE FROM mar_sa_boost_demande'); socSettingPut('pub_meilleurs_cache', null, false); socSettingPut('pub_regles', null, false);
 
 echo "Messages privés Instagram : la marque trie, répond, confie à une boutique ; la boutique répond\n";
 $metaAvantM = Meta::$transport; $mEnvois = [];
@@ -2372,7 +2434,7 @@ Meta::$transport = static function (string $m, string $url, array $p) use ($meta
 };
 $syM = socMessagesSync();
 check('relecture : conversations des 30 derniers jours (pas la vieille), messages gardés, pièces jointes', $syM['conversations'] === 2 && $syM['lus'] === 4 && !$syM['erreurs']
-    && Db::row("SELECT pieces FROM social_message WHERE id = 'mid.9'")['pieces'] !== null && Db::row("SELECT COUNT(*) n FROM social_message WHERE conversation_id = 'cv3'")['n'] == 0, json_encode($syM));
+    && Db::row("SELECT pieces FROM mar_sa_message WHERE id = 'mid.9'")['pieces'] !== null && Db::row("SELECT COUNT(*) n FROM mar_sa_message WHERE conversation_id = 'cv3'")['n'] == 0, json_encode($syM));
 [, $bxM] = socRoute('GET', '/messages');
 $cvM = array_column($bxM['conversations'], null, 'id');
 check('boîte de la marque : à répondre, client, fenêtre de 24 h ouverte (cv1) ou fermée (cv2)', count($bxM['conversations']) === 2 && $cvM['cv1']['client'] === 'julie.d' && $cvM['cv1']['aRepondre'] === true
@@ -2415,7 +2477,7 @@ sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
 [$cF4, $rF4] = $fr('POST', '/franchise/messages/repondre', ['id' => 'cv1', 'texte' => 'Oui, samedi aussi !']);
 [, $etM] = $fr('GET', '/franchise/etat');
 check('franchisé : répond dans la fenêtre, depuis l’Instagram de la conversation, signé « Gérant · boutique »', $cF4 === 200 && count($mEnvois) === 2
-    && Db::row("SELECT repondu_par FROM social_conversation WHERE id = 'cv1'")['repondu_par'] === 'Gérant Halle · Halle' && isset($etM['alertes']['messages']['aRepondre']), json_encode([$cF4, $rF4['conversation'] ?? null]));
+    && Db::row("SELECT repondu_par FROM mar_sa_conversation WHERE id = 'cv1'")['repondu_par'] === 'Gérant Halle · Halle' && isset($etM['alertes']['messages']['aRepondre']), json_encode([$cF4, $rF4['conversation'] ?? null]));
 $regM = sfRegles();
 sfReglesPut(array_merge($regM, ['repondreMessages' => false]));
 [$cF5] = $fr('POST', '/franchise/messages/repondre', ['id' => 'cv1', 'texte' => 'Re']);
@@ -2433,14 +2495,14 @@ $cvR = static fn (string $id, string $txt) => ['id' => $id, 'updated_time' => da
     'messages' => ['data' => [['id' => 'm_' . $id, 'created_time' => date('c', strtotime('-5 minutes')), 'from' => ['id' => 'ig_' . $id, 'username' => 'client_' . $id], 'message' => $txt]]]];
 socMsgGarder($cvR('cvr1', 'Bonjour, ma commande à retirer à Wavre est-elle prête ?'), $cptIgReseau);
 socMsgGarder($cvR('cvr2', 'Vous faites des gâteaux d’anniversaire ?'), $cptIgReseau);
-$r1 = Db::row("SELECT attribue_shop, attribue_par, attribue_note FROM social_conversation WHERE id = 'cvr1'"); $r2 = Db::row("SELECT attribue_shop FROM social_conversation WHERE id = 'cvr2'");
+$r1 = Db::row("SELECT attribue_shop, attribue_par, attribue_note FROM mar_sa_conversation WHERE id = 'cvr1'"); $r2 = Db::row("SELECT attribue_shop FROM mar_sa_conversation WHERE id = 'cvr2'");
 sfSessionOuvrir(['5'], 'Gérant Wavre', 'code');
 [, $sfW] = $fr('GET', '/franchise/messages', [], ['shop' => '5']);
 unset($_COOKIE[SF_COOKIE]);
 check('message privé du compte réseau : confié tout seul à la boutique citée, qui le voit ; aucune citée → reste au réseau', $r1['attribue_shop'] === '5' && $r1['attribue_par'] === 'Automatique'
     && str_contains((string) $r1['attribue_note'], 'Wavre') && $r2['attribue_shop'] === null && in_array('cvr1', array_column($sfW['conversations'], 'id'), true), json_encode([$r1, $r2, array_column($sfW['conversations'] ?? [], 'id')]));
 Meta::$transport = $metaAvantM;
-Db::exec("DELETE FROM social_message WHERE conversation_id IN ('cv1','cv2','cv3','cvr1','cvr2')"); Db::exec("DELETE FROM social_conversation WHERE id IN ('cv1','cv2','cv3','cvr1','cvr2')"); socSettingPut('messages_relus', null, false);
+Db::exec("DELETE FROM mar_sa_message WHERE conversation_id IN ('cv1','cv2','cv3','cvr1','cvr2')"); Db::exec("DELETE FROM mar_sa_conversation WHERE id IN ('cv1','cv2','cv3','cvr1','cvr2')"); socSettingPut('messages_relus', null, false);
 
 echo "Idées de posts : promotions sans post, opérations, gammes, heures creuses (BO)\n";
 $auj = date('Y-m-d'); $j = static fn (int $n) => date('Y-m-d', strtotime($auj . ' ' . ($n >= 0 ? '+' : '') . $n . ' days'));
@@ -2646,12 +2708,12 @@ $visCarre = $png(108, 108); $visStory = $png(108, 192);
 sfSessionOuvrir(['4'], 'Test stories', 'code');
 $jj = static fn (int $n) => date('Y-m-d', strtotime(($n >= 0 ? '+' : '') . $n . ' days'));
 $base = ['template' => 'fp-produit', 'product' => 'p1', 'fb' => true, 'ig' => true, 'date' => $jj(3), 'time' => '10:00'];
-$lignes = static fn (string $id) => array_map(static fn ($r) => $r['shop_id'] . ':' . $r['canal'], Db::rows('SELECT shop_id, canal FROM social_publication WHERE content_id = ? ORDER BY canal', [$id]));
+$lignes = static fn (string $id) => array_map(static fn ($r) => $r['shop_id'] . ':' . $r['canal'], Db::rows('SELECT shop_id, canal FROM mar_sa_publication WHERE content_id = ? ORDER BY canal', [$id]));
 [$code, $b] = $fr('POST', '/franchise/posts', array_merge($base, ['format' => 'story', 'visual' => $visStory]));
 $ps = socItem('posts', (string) ($b['post']['id'] ?? ''));
 check('story seule : le visuel 9:16 part en story sur la Page et l’Instagram, pas dans le fil', $code === 200 && ($ps['story'] ?? null) === 'seule' && ($b['post']['story'] ?? null) === 'seule'
     && $lignes($ps['id']) === ['4:fb_story', '4:ig_story'], json_encode([$code, $b, $ps ? $lignes($ps['id']) : null]));
-Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = ?", [$ps['id']]);
+Db::exec("UPDATE mar_sa_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = ?", [$ps['id']]);
 $appels = [];
 socRunQueue($ps['id']);
 $photoStory = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === '111/photos'));
@@ -2665,7 +2727,7 @@ check('story Facebook : la photo non publiée, puis la story (photo_stories) ; s
 $pps = socItem('posts', (string) ($b['post']['id'] ?? ''));
 check('post + story : le post dans le fil, puis sa story (son propre visuel 9:16, écrit en fichier)', $code === 200 && ($pps['story'] ?? null) === 'aussi'
     && str_starts_with((string) $pps['storyImg'], 'uploads/') && $pps['storyImg'] !== $pps['img'] && $lignes($pps['id']) === ['4:fb', '4:fb_story'], json_encode([$code, $b]));
-Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = ?", [$pps['id']]);
+Db::exec("UPDATE mar_sa_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = ?", [$pps['id']]);
 $appels = [];
 socRunQueue($pps['id']);
 $ph = array_values(array_filter($appels, static fn ($a) => $a[0] === 'POST' && $a[1] === '111/photos'));
@@ -2704,7 +2766,7 @@ sfReglesPut(array_merge(sfRegles(), ['recurrenceMax' => 8]));
 check('annuler une date de la série : celle-là seule', $code === 200 && $an['retires'] === 1 && socItem('posts', $serie[1]['id']) === null && socItem('posts', $serie[2]['id']) !== null);
 [$code, $an] = $fr('POST', '/franchise/posts/' . $serie[0]['id'] . '/annuler', ['shop' => '4', 'serie' => true]);
 check('annuler toute la série : les dates encore à venir', $code === 200 && $an['retires'] === 2 && socItem('posts', $serie[0]['id']) === null && socItem('posts', $serie[2]['id']) === null);
-foreach ([$ps, $pps] as $x) { if ($x) { Db::exec('DELETE FROM social_publication WHERE content_id = ?', [$x['id']]); socItemDelete('posts', (string) $x['id']); } }
+foreach ([$ps, $pps] as $x) { if ($x) { Db::exec('DELETE FROM mar_sa_publication WHERE content_id = ?', [$x['id']]); socItemDelete('posts', (string) $x['id']); } }
 sfReglesPut($regAvant); socSettingPut('instagram_unique', $igUniqueAvant, false);
 unset($_COOKIE[SF_COOKIE]);
 
@@ -2857,7 +2919,7 @@ check('mot exclu (sans tenir compte des majuscules) : exclue, avec le motif', (s
 $f1 = $appelsVers('#^111/feed$#');
 check('Halle (automatique) : partage = lien vers le post de la marque, texte de la boutique au-dessus', count($f1) === 2 && ($f1[0][2]['link'] ?? '') === 'https://www.facebook.com/999/posts/p1'
     && ($f1[0][2]['message'] ?? '') === 'Chez nous à Halle' && ($f1[0][2]['access_token'] ?? '') === 'PT111', json_encode($f1));
-check('Wavre (validation) : rien de publié, deux reposts à valider', !$appelsVers('#^222/#') && (int) Db::row("SELECT COUNT(*) n FROM social_repost_cible WHERE shop_id = '5' AND etat = 'a_valider'")['n'] === 2);
+check('Wavre (validation) : rien de publié, deux reposts à valider', !$appelsVers('#^222/#') && (int) Db::row("SELECT COUNT(*) n FROM mar_sa_repost_cible WHERE shop_id = '5' AND etat = 'a_valider'")['n'] === 2);
 $rp1 = socItem('posts', socRepostPostId('999_p1'));
 check('le repost est un post du module (calendrier, file) : publié sur la seule Page de Halle', ($rp1['status'] ?? '') === 'Publié' && $rp1['shops'] === ['4'] && $rp1['type'] === 'Repost' && $rp1['ig'] === false, json_encode($rp1));
 check('vidéo : partagée (elle ne se copie pas)', (socRepostLigne('999_p3')['mode'] ?? '') === 'partage' && (socRepostLigne('999_p3')['type'] ?? '') === 'Vidéo');
@@ -2876,9 +2938,9 @@ check('espace franchisé : une autre boutique → 403', $code === 403);
 $appels = [];
 [$code, $fv] = $fr('POST', '/franchise/reposts/repondre', ['shop' => '5', 'source' => '999_p1', 'accepter' => true]);
 check('Wavre valide : publié tout de suite sur sa Page, signé', $code === 200 && count($appelsVers('#^222/feed$#')) === 1 && count($fv['attente']) === 1
-    && Db::row("SELECT etat, par FROM social_repost_cible WHERE source_id = '999_p1' AND shop_id = '5'") === ['etat' => 'valide', 'par' => 'Julie (ERP)']);
+    && Db::row("SELECT etat, par FROM mar_sa_repost_cible WHERE source_id = '999_p1' AND shop_id = '5'") === ['etat' => 'valide', 'par' => 'Julie (ERP)']);
 [$code, $fv] = $fr('POST', '/franchise/reposts/repondre', ['shop' => '5', 'source' => '999_p3', 'accepter' => false, 'motif' => 'Plus de levain ce week-end']);
-check('Wavre refuse, avec son motif', $code === 200 && !$fv['attente'] && Db::row("SELECT etat, motif FROM social_repost_cible WHERE source_id = '999_p3' AND shop_id = '5'") === ['etat' => 'refuse', 'motif' => 'Plus de levain ce week-end']);
+check('Wavre refuse, avec son motif', $code === 200 && !$fv['attente'] && Db::row("SELECT etat, motif FROM mar_sa_repost_cible WHERE source_id = '999_p3' AND shop_id = '5'") === ['etat' => 'refuse', 'motif' => 'Plus de levain ce week-end']);
 [$code] = $fr('POST', '/franchise/reposts/repondre', ['shop' => '5', 'source' => '999_p3', 'accepter' => true]);
 check('déjà traité : 409', $code === 409);
 unset($_COOKIE[SF_COOKIE]);
@@ -2929,7 +2991,7 @@ $pm = ['id' => 'pm-marque', 'title' => 'Bûches de Noël', 'type' => 'Photo', 'd
     'shops' => [], 'marque' => true, 'ch' => ['marque' => ['fb' => true, 'ig' => false]], 'fb' => true, 'ig' => false,
     'text' => 'Nos bûches de Noël, en précommande', 'textNl' => 'Onze kerststronken, nu te bestellen', 'img' => 'uploads/buche.jpg', 'media' => [['src' => 'uploads/buche.jpg']]];
 socPostHook(null, $pm);
-$pmLigne = Db::row("SELECT shop_id, canal, prevue_le, statut FROM social_publication WHERE content_id = 'pm-marque'");
+$pmLigne = Db::row("SELECT shop_id, canal, prevue_le, statut FROM mar_sa_publication WHERE content_id = 'pm-marque'");
 check('post de la marque programmé dans le module : une ligne de file pour sa Page Facebook, à l’heure dite',
     $pmLigne === ['shop_id' => 'marque', 'canal' => 'fb', 'prevue_le' => date('Y-m-d H:i:00', $pmQuand), 'statut' => 'attente'], json_encode($pmLigne));
 $GLOBALS['RP_PROG_ERR'] = true;
@@ -2940,7 +3002,7 @@ check('« À venir » : ce post, connu par la file même si Meta refuse la lectu
     && ($avm['cases']['4']['statut'] ?? '') === 'prog' && ($avm['cases']['5']['statut'] ?? '') === 'val' && ($v['aVenir']['erreur'] ?? '') !== '', json_encode($v['aVenir']));
 $GLOBALS['RP_PROG_ERR'] = false;
 socSettingPut('repost_avenir', null, false);
-Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'pm-marque'");
+Db::exec("UPDATE mar_sa_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'pm-marque'");
 $appels = [];
 socRunQueue('pm-marque');
 $pmPub = $appelsVers('#^999/photos$#');
@@ -2951,7 +3013,7 @@ check('à l’heure : publié sur la Page de la marque, avec son token, en fran�
 check('publié : il quitte « À venir » (le guet le reprendra à sa lecture de la Page)', !in_array('pm-marque', array_column($v['aVenir']['posts'], 'source'), true));
 $pm2 = array_replace($pm, ['id' => 'pm-marque-2', 'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => true], 'marque' => ['fb' => true, 'ig' => true]]]);
 socQueue($pm2);
-$pmLignes = array_map(static fn ($r) => $r['shop_id'] . '|' . $r['canal'], Db::rows("SELECT shop_id, canal FROM social_publication WHERE content_id = 'pm-marque-2' ORDER BY shop_id, canal"));
+$pmLignes = array_map(static fn ($r) => $r['shop_id'] . '|' . $r['canal'], Db::rows("SELECT shop_id, canal FROM mar_sa_publication WHERE content_id = 'pm-marque-2' ORDER BY shop_id, canal"));
 check('marque et boutique ensemble : la Page de Halle, la Page de la marque, et une seule fois l’Instagram du réseau', $pmLignes === ['4|fb', 'marque|fb', 'marque|ig'], json_encode($pmLignes));
 // Un post de la marque qui vise aussi Halle : Halle le reçoit du module ; le repost ne le lui republie pas.
 $pm3 = array_replace($pm, ['id' => 'pm-marque-3', 'shops' => ['4'], 'ch' => ['4' => ['fb' => true, 'ig' => false], 'marque' => ['fb' => true, 'ig' => false]]]);
@@ -2959,22 +3021,22 @@ socPostHook(null, $pm3);
 [, $v] = $fr('GET', '/repost');
 $av3 = array_column($v['aVenir']['posts'], 'cases', 'source')['pm-marque-3'] ?? [];
 check('à venir : Halle, visée par le post lui-même, n’attend pas de repost ; Wavre le validera', ($av3['4']['statut'] ?? '') === 'direct' && ($av3['5']['statut'] ?? '') === 'val', json_encode($av3));
-Db::exec("UPDATE social_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'pm-marque-3'");
+Db::exec("UPDATE mar_sa_publication SET prevue_le = NOW() - INTERVAL 1 MINUTE WHERE content_id = 'pm-marque-3'");
 socRunQueue('pm-marque-3');
-$pm3Meta = (string) (Db::row("SELECT meta_id FROM social_publication WHERE content_id = 'pm-marque-3' AND shop_id = 'marque'")['meta_id'] ?? '');
+$pm3Meta = (string) (Db::row("SELECT meta_id FROM mar_sa_publication WHERE content_id = 'pm-marque-3' AND shop_id = 'marque'")['meta_id'] ?? '');
 $GLOBALS['RP_POSTS'][] = $rpPost(substr($pm3Meta, 4), 0, 'Nos bûches de Noël, en précommande');
 $appels = [];
 socRepostGuet(true);
 check('à sa sortie, le guet le reprend : Wavre à valider, Halle pas repostée (elle l’a déjà)', $pm3Meta !== '' && (socRepostLigne($pm3Meta)['statut'] ?? '') === 'reposte'
-    && array_column(Db::rows('SELECT shop_id FROM social_repost_cible WHERE source_id = ?', [$pm3Meta]), 'shop_id') === ['5'] && !$appelsVers('#^111/#'), $pm3Meta);
+    && array_column(Db::rows('SELECT shop_id FROM mar_sa_repost_cible WHERE source_id = ?', [$pm3Meta]), 'shop_id') === ['5'] && !$appelsVers('#^111/#'), $pm3Meta);
 [, $v] = $fr('GET', '/repost');
 $c3 = array_column($v['lignes'], 'cases', 'source')[$pm3Meta] ?? [];
 check('écran : la case de Halle dit « par le post »', ($c3['4']['statut'] ?? '') === 'direct' && ($c3['5']['statut'] ?? '') === 'val', json_encode($c3));
 $GLOBALS['RP_POSTS'] = array_values(array_filter($GLOBALS['RP_POSTS'], static fn ($x) => $x['id'] !== $pm3Meta));
 $rp3 = socRepostLigne($pm3Meta);
-Db::exec('DELETE FROM social_repost_cible WHERE source_id = ?', [$pm3Meta]); Db::exec('DELETE FROM social_repost WHERE source_id = ?', [$pm3Meta]);
-if ($rp3 !== null) { Db::exec('DELETE FROM social_publication WHERE content_id = ?', [$rp3['content_id']]); socItemDelete('posts', (string) $rp3['content_id']); }
-foreach (['pm-marque', 'pm-marque-2', 'pm-marque-3'] as $x) { Db::exec('DELETE FROM social_publication WHERE content_id = ?', [$x]); socItemDelete('posts', $x); }
+Db::exec('DELETE FROM mar_sa_repost_cible WHERE source_id = ?', [$pm3Meta]); Db::exec('DELETE FROM mar_sa_repost WHERE source_id = ?', [$pm3Meta]);
+if ($rp3 !== null) { Db::exec('DELETE FROM mar_sa_publication WHERE content_id = ?', [$rp3['content_id']]); socItemDelete('posts', (string) $rp3['content_id']); }
+foreach (['pm-marque', 'pm-marque-2', 'pm-marque-3'] as $x) { Db::exec('DELETE FROM mar_sa_publication WHERE content_id = ?', [$x]); socItemDelete('posts', $x); }
 
 // Échec chez Meta, alerte, relance.
 $restreinte['111'] = true;
@@ -2991,19 +3053,19 @@ check('« Relancer » : les échecs repartent, publiés', $code === 200 && $v['r
 $appels = [];
 [$code] = $fr('POST', '/repost/forcer', ['source' => '999_p3', 'shop' => '5']);
 check('reposter malgré le refus : publié sur la Page de Wavre', $code === 200 && count($appelsVers('#^222/feed$#')) === 1
-    && Db::row("SELECT etat FROM social_repost_cible WHERE source_id = '999_p3' AND shop_id = '5'")['etat'] === 'force');
+    && Db::row("SELECT etat FROM mar_sa_repost_cible WHERE source_id = '999_p3' AND shop_id = '5'")['etat'] === 'force');
 [$code] = $fr('POST', '/repost/forcer', ['source' => '999_p3', 'shop' => '5']);
 check('une boutique qui reprend déjà : 409', $code === 409);
 $appels = [];
 [$code] = $fr('POST', '/repost/forcer', ['source' => '999_p2']);
 check('publication exclue reprise : Halle tout de suite, Wavre à valider', $code === 200 && (socRepostLigne('999_p2')['statut'] ?? '') === 'reposte'
-    && count($appelsVers('#^111/feed$#')) === 1 && Db::row("SELECT etat FROM social_repost_cible WHERE source_id = '999_p2' AND shop_id = '5'")['etat'] === 'a_valider');
+    && count($appelsVers('#^111/feed$#')) === 1 && Db::row("SELECT etat FROM mar_sa_repost_cible WHERE source_id = '999_p2' AND shop_id = '5'")['etat'] === 'a_valider');
 
 // Validation échue : publiée quand même (réglage du moment).
-Db::exec("UPDATE social_repost_cible SET limite_le = NOW() - INTERVAL 1 MINUTE WHERE source_id = '999_p2' AND shop_id = '5'");
+Db::exec("UPDATE mar_sa_repost_cible SET limite_le = NOW() - INTERVAL 1 MINUTE WHERE source_id = '999_p2' AND shop_id = '5'");
 $appels = [];
 socRepostGuet(true);
-check('sans réponse dans le délai : publié quand même', Db::row("SELECT etat FROM social_repost_cible WHERE source_id = '999_p2' AND shop_id = '5'")['etat'] === 'sans_reponse'
+check('sans réponse dans le délai : publié quand même', Db::row("SELECT etat FROM mar_sa_repost_cible WHERE source_id = '999_p2' AND shop_id = '5'")['etat'] === 'sans_reponse'
     && count($appelsVers('#^222/feed$#')) === 1);
 
 // Copie : le visuel et le texte de la marque, puis celui de la boutique.
@@ -3022,15 +3084,15 @@ check('retirer : supprimé de la Page de Halle et du calendrier', $code === 200 
     && socItem('posts', socRepostPostId('999_p5')) === null && (socRepostLigne('999_p5')['statut'] ?? '') === 'retire');
 [$code, $v] = $fr('POST', '/repost/reglage', ['actif' => false]);
 check('mise en pause depuis l’écran', $code === 200 && !$v['reglage']['actif']);
-check('journal : chaque geste du repost tracé', (int) Db::row("SELECT COUNT(*) n FROM social_activite WHERE quoi = 'Repost'")['n'] >= 8);
+check('journal : chaque geste du repost tracé', (int) Db::row("SELECT COUNT(*) n FROM mar_sa_activite WHERE quoi = 'Repost'")['n'] >= 8);
 
 // Remise en état pour la suite.
 Meta::$transport = $rpTransportAvant; Meta::reset();
 socShopPut('marque', ['ids' => $rpMarqueAvant]);
 socSettingPut('instagram_unique', $rpIgAvant, false);
 sfReglesPut($rpRegAvant);
-foreach (Db::rows('SELECT content_id FROM social_repost') as $r) { Db::exec('DELETE FROM social_publication WHERE content_id = ?', [$r['content_id']]); socItemDelete('posts', (string) $r['content_id']); }
-Db::exec('DELETE FROM social_repost'); Db::exec('DELETE FROM social_repost_cible');
+foreach (Db::rows('SELECT content_id FROM mar_sa_repost') as $r) { Db::exec('DELETE FROM mar_sa_publication WHERE content_id = ?', [$r['content_id']]); socItemDelete('posts', (string) $r['content_id']); }
+Db::exec('DELETE FROM mar_sa_repost'); Db::exec('DELETE FROM mar_sa_repost_cible');
 socSettingPut('repost', null, false); socSettingPut('repost_guet', null, false); socSettingPut('repost_avenir', null, false);
 
 echo "API HTTP (routeur)\n";

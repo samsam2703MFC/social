@@ -35,7 +35,7 @@ function socRecoModule(): array
     $posts = [];
     foreach (socItems('posts') as $p) { $posts[(string) ($p['id'] ?? '')] = $p; }
     $out = [];
-    foreach (Db::rows("SELECT content_id, meta_id FROM social_publication WHERE meta_id IS NOT NULL AND meta_id <> ''") as $r) {
+    foreach (Db::rows("SELECT content_id, meta_id FROM mar_sa_publication WHERE meta_id IS NOT NULL AND meta_id <> ''") as $r) {
         $p = $posts[(string) $r['content_id']] ?? null;
         if ($p === null) { continue; }
         $v = is_array($p['visual']['v'] ?? null) ? $p['visual']['v'] : null;

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * Les commentaires de toutes les Pages Facebook et de tous les comptes Instagram du réseau (publications
- * récentes), plus ceux des dark posts (src/darkposts.php), dans `social_commentaire`, chacun classé :
+ * récentes), plus ceux des dark posts (src/darkposts.php), dans `mar_sa_commentaire`, chacun classé :
  *  - vert : positif ou neutre, rien de particulier à faire ;
  *  - orange : appelle une réponse sans urgence (question, suggestion, petite déception) ;
  *  - rouge : à traiter vite (plainte, santé, colère, insulte, arnaque…).
@@ -78,7 +78,7 @@ function socCommentaireGarder(string $canal, array $x, array $objet, array $comp
     // (dans le commentaire, sinon dans la publication) ; les autres restent au réseau (application Instagram ou Facebook).
     $shop = $compte['shop'] ?? null;
     if ($shop === null || $shop === 'marque') { $shop = socBoutiqueCitee([$message, $texteObjet]) ?? $shop; }
-    Db::exec('INSERT INTO social_commentaire (id, canal, objet_id, shop_id, post_id, pub_id, auteur, message, cree_le, masque, maj_le, compte, compte_nom, objet_texte, objet_lien, lien, vu_le)'
+    Db::exec('INSERT INTO mar_sa_commentaire (id, canal, objet_id, shop_id, post_id, pub_id, auteur, message, cree_le, masque, maj_le, compte, compte_nom, objet_texte, objet_lien, lien, vu_le)'
         . ' VALUES (?,?,?,?,NULL,NULL,?,?,?,?,?,?,?,?,?,?,NOW())'
         . ' ON DUPLICATE KEY UPDATE message = VALUES(message), masque = VALUES(masque), maj_le = VALUES(maj_le), compte = VALUES(compte), compte_nom = VALUES(compte_nom),'
         . ' objet_texte = VALUES(objet_texte), objet_lien = VALUES(objet_lien), lien = VALUES(lien)',
@@ -96,7 +96,7 @@ function socCommentairesAnalyser(int $max = SOC_COM_MAX_ANALYSE): array
 {
     socCommentairesReprise();
     // Un avis Google se classe à tout âge : la fiche les garde visibles des mois durant.
-    $rows = Db::rows('SELECT c.id, c.canal, c.message, c.objet_texte, c.pub_id, c.post_id, c.compte_nom, c.note FROM social_commentaire c'
+    $rows = Db::rows('SELECT c.id, c.canal, c.message, c.objet_texte, c.pub_id, c.post_id, c.compte_nom, c.note FROM mar_sa_commentaire c'
         . " WHERE c.couleur IS NULL AND (c.cree_le >= ? OR c.canal = 'gg') ORDER BY c.cree_le DESC LIMIT " . max(1, min(500, $max)), [date('Y-m-d H:i:s', strtotime('-60 days'))]);
     if (!$rows) { return ['classes' => 0, 'ia' => SocIa::configured(), 'erreur' => null]; }
     $classes = 0; $erreur = null;
@@ -110,7 +110,7 @@ function socCommentairesAnalyser(int $max = SOC_COM_MAX_ANALYSE): array
             $a = $res[(string) $r['id']] ?? null;
             $src = $a !== null ? 'ia' : 'regles';
             $a ??= socCommentaireRegles((string) $r['message'], $r['canal'] === 'gg' ? (int) $r['note'] : null);
-            Db::exec('UPDATE social_commentaire SET couleur = ?, sujet = ?, resume = ?, action = ?, reponse = ?, analyse = ?, analyse_le = ? WHERE id = ?',
+            Db::exec('UPDATE mar_sa_commentaire SET couleur = ?, sujet = ?, resume = ?, action = ?, reponse = ?, analyse = ?, analyse_le = ? WHERE id = ?',
                 [$a['couleur'], mb_substr((string) $a['sujet'], 0, 80), mb_substr((string) ($a['resume'] ?? ''), 0, 300), mb_substr((string) ($a['action'] ?? ''), 0, 300),
                     mb_substr((string) ($a['reponse'] ?? ''), 0, 1000), $src, date('Y-m-d H:i:s'), (string) $r['id']]);
             $classes++;
@@ -127,24 +127,24 @@ function socCommentairesAnalyser(int $max = SOC_COM_MAX_ANALYSE): array
 function socCommentairesReprise(): void
 {
     if ((int) (socSetting('commentaires_regles_version') ?? 1) < SOC_COM_REGLES_VERSION) {
-        foreach (Db::rows("SELECT id, canal, message, note FROM social_commentaire WHERE analyse = 'regles' AND traite_le IS NULL") as $r) {
+        foreach (Db::rows("SELECT id, canal, message, note FROM mar_sa_commentaire WHERE analyse = 'regles' AND traite_le IS NULL") as $r) {
             $a = socCommentaireRegles((string) $r['message'], $r['canal'] === 'gg' ? (int) $r['note'] : null);
-            Db::exec('UPDATE social_commentaire SET couleur = ?, sujet = ?, action = ? WHERE id = ?',
+            Db::exec('UPDATE mar_sa_commentaire SET couleur = ?, sujet = ?, action = ? WHERE id = ?',
                 [$a['couleur'], mb_substr((string) $a['sujet'], 0, 80), mb_substr((string) $a['action'], 0, 300), (string) $r['id']]);
         }
         socSettingPut('commentaires_regles_version', SOC_COM_REGLES_VERSION, false);
     }
     // Une fois : les commentaires d'un compte du réseau (non traités) vont à la boutique qu'ils citent.
     if (!socSetting('commentaires_routage')) {
-        foreach (Db::rows("SELECT id, message, objet_texte FROM social_commentaire WHERE canal IN ('fb','ig') AND (shop_id IS NULL OR shop_id = 'marque') AND traite_le IS NULL") as $r) {
+        foreach (Db::rows("SELECT id, message, objet_texte FROM mar_sa_commentaire WHERE canal IN ('fb','ig') AND (shop_id IS NULL OR shop_id = 'marque') AND traite_le IS NULL") as $r) {
             if (($sid = socBoutiqueCitee([(string) $r['message'], (string) $r['objet_texte']])) !== null) {
-                Db::exec('UPDATE social_commentaire SET shop_id = ? WHERE id = ?', [$sid, (string) $r['id']]);
+                Db::exec('UPDATE mar_sa_commentaire SET shop_id = ? WHERE id = ?', [$sid, (string) $r['id']]);
             }
         }
         socSettingPut('commentaires_routage', date('Y-m-d H:i:s'), false);
     }
     if (SocIa::configured() && !socSetting('commentaires_ia_reprise')) {
-        Db::exec("UPDATE social_commentaire SET couleur = NULL WHERE analyse = 'regles' AND traite_le IS NULL AND (cree_le >= ? OR canal = 'gg')",
+        Db::exec("UPDATE mar_sa_commentaire SET couleur = NULL WHERE analyse = 'regles' AND traite_le IS NULL AND (cree_le >= ? OR canal = 'gg')",
             [date('Y-m-d H:i:s', strtotime('-60 days'))]);
         socSettingPut('commentaires_ia_reprise', date('Y-m-d H:i:s'), false);
     }
@@ -244,7 +244,7 @@ function socCommentairesListe(array $q): array
     if (!empty($q['enRetard'])) { $where[] = "c.traite_le IS NULL AND c.couleur IN ('rouge','orange') AND " . SOC_COM_VU . ' < ?'; $args[] = date('Y-m-d H:i:s', strtotime('-' . $delai . ' hours')); }
     $parShop = isset($q['shop']) && $q['shop'] !== '' ? (string) $q['shop'] : null;
     if ($parShop !== null) { $where[] = 'c.shop_id = ?'; $args[] = $parShop; }
-    $rows = Db::rows('SELECT * FROM social_commentaire c WHERE ' . implode(' AND ', $where) . ' ORDER BY c.cree_le DESC LIMIT 500', $args);
+    $rows = Db::rows('SELECT * FROM mar_sa_commentaire c WHERE ' . implode(' AND ', $where) . ' ORDER BY c.cree_le DESC LIMIT 500', $args);
     $shops = []; foreach (socShops() as $s) { $shops[(string) $s['id']] = (string) $s['name']; }
     $pubs = []; foreach (socItems('ads') as $a) { $pubs[(string) $a['id']] = (string) ($a['name'] ?? ''); }
     $maintenant = time();
@@ -267,11 +267,11 @@ function socCommentairesListe(array $q): array
             'traiteLe' => $r['traite_le'] !== null ? substr((string) $r['traite_le'], 0, 16) : null, 'traitePar' => (string) ($r['traite_par'] ?? '')];
     }, $rows);
     // Les totaux de la période, tous filtres de couleur et de suivi confondus.
-    $tot = Db::rows('SELECT couleur, traite_le IS NULL AS ouvert, COUNT(*) n FROM social_commentaire c WHERE c.cree_le >= ? AND ' . $canal . ($parShop !== null ? ' AND c.shop_id = ?' : '')
+    $tot = Db::rows('SELECT couleur, traite_le IS NULL AS ouvert, COUNT(*) n FROM mar_sa_commentaire c WHERE c.cree_le >= ? AND ' . $canal . ($parShop !== null ? ' AND c.shop_id = ?' : '')
         . ' GROUP BY couleur, ouvert', $parShop !== null ? [$args[0], $parShop] : [$args[0]]);
     $totaux = ['rouge' => 0, 'orange' => 0, 'vert' => 0, 'aClasser' => 0, 'rougeOuverts' => 0, 'orangeOuverts' => 0, 'total' => 0, 'enRetard' => 0, 'delaiMedianH' => null];
     $sh = $parShop !== null ? ' AND c.shop_id = ?' : '';
-    $totaux['enRetard'] = (int) Db::row("SELECT COUNT(*) n FROM social_commentaire c WHERE $canal$sh AND c.traite_le IS NULL AND c.couleur IN ('rouge','orange') AND " . SOC_COM_VU . ' < ?',
+    $totaux['enRetard'] = (int) Db::row("SELECT COUNT(*) n FROM mar_sa_commentaire c WHERE $canal$sh AND c.traite_le IS NULL AND c.couleur IN ('rouge','orange') AND " . SOC_COM_VU . ' < ?',
         array_merge($parShop !== null ? [$parShop] : [], [date('Y-m-d H:i:s', strtotime('-' . $delai . ' hours'))]))['n'];
     $totaux['delaiMedianH'] = socComDelaiMedian($canal . $sh, array_merge($parShop !== null ? [$parShop] : [], [$args[0]]));
     foreach ($tot as $t) {
@@ -280,7 +280,7 @@ function socCommentairesListe(array $q): array
         if ((int) $t['ouvert'] && in_array($k, ['rouge', 'orange'], true)) { $totaux[$k . 'Ouverts'] += (int) $t['n']; }
     }
     $comptes = array_map(static fn ($r) => ['key' => $r['canal'] . ':' . $r['compte'], 'name' => (string) $r['compte_nom']],
-        Db::rows('SELECT DISTINCT canal, compte, compte_nom FROM social_commentaire c WHERE compte IS NOT NULL AND compte_nom IS NOT NULL AND ' . $canal . ($parShop !== null ? ' AND shop_id = ?' : '')
+        Db::rows('SELECT DISTINCT canal, compte, compte_nom FROM mar_sa_commentaire c WHERE compte IS NOT NULL AND compte_nom IS NOT NULL AND ' . $canal . ($parShop !== null ? ' AND shop_id = ?' : '')
             . ' ORDER BY compte_nom', $parShop !== null ? [$parShop] : []));
     return ['jours' => $jours, 'commentaires' => $liste, 'totaux' => $totaux, 'comptes' => $comptes, 'relu' => socSetting('commentaires_relus'),
         'ia' => socIaStatut()];
@@ -307,7 +307,7 @@ function socComResponsable(array $r, array $regles): string
 /** Le délai médian (heures) entre la première lecture et « traité », sur les commentaires d'un filtre. */
 function socComDelaiMedian(string $where, array $args): ?float
 {
-    $d = array_map('floatval', array_column(Db::rows('SELECT TIMESTAMPDIFF(MINUTE, ' . SOC_COM_VU . ', c.traite_le) / 60 AS h FROM social_commentaire c'
+    $d = array_map('floatval', array_column(Db::rows('SELECT TIMESTAMPDIFF(MINUTE, ' . SOC_COM_VU . ', c.traite_le) / 60 AS h FROM mar_sa_commentaire c'
         . ' WHERE ' . $where . " AND c.traite_le IS NOT NULL AND c.couleur IN ('rouge','orange') AND c.cree_le >= ?", $args), 'h'));
     if (!$d) { return null; }
     sort($d);
@@ -325,7 +325,7 @@ function socCommentairesAlertes(?string $shop = null): array
     $lim = date('Y-m-d H:i:s', strtotime('-' . (int) $regles['delaiReponseHeures'] . ' hours'));
     $vide = static fn () => ['rouges' => 0, 'oranges' => 0, 'enRetard' => 0, 'pourBoutique' => 0, 'pourReseau' => 0];
     $out = ['com' => $vide(), 'google' => $vide()];
-    foreach (Db::rows("SELECT c.canal, c.canal = 'gg' AS gg, c.couleur, c.shop_id, " . SOC_COM_VU . ' < ? AS retard, COUNT(*) n FROM social_commentaire c'
+    foreach (Db::rows("SELECT c.canal, c.canal = 'gg' AS gg, c.couleur, c.shop_id, " . SOC_COM_VU . ' < ? AS retard, COUNT(*) n FROM mar_sa_commentaire c'
         . " WHERE c.traite_le IS NULL AND c.couleur IN ('rouge','orange')" . ($shop !== null ? ' AND c.shop_id = ?' : '') . ' GROUP BY c.canal, gg, c.couleur, c.shop_id, retard',
         $shop !== null ? [$lim, $shop] : [$lim]) as $r) {
         $k = (int) $r['gg'] ? 'google' : 'com'; $n = (int) $r['n'];
@@ -345,7 +345,7 @@ function socCommentairesAlertes(?string $shop = null): array
  */
 function socCommentaireRepondre(string $id, string $message, ?string $qui = null): array
 {
-    $r = Db::row('SELECT * FROM social_commentaire WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_sa_commentaire WHERE id = ?', [$id]);
     if (!$r) { throw new HttpError(404, 'commentaire inconnu'); }
     $message = trim(preg_replace('/[ \t]+/u', ' ', $message));
     if ($message === '' || mb_strlen($message) > 2000) { throw new HttpError(422, 'Écrivez une réponse (2 000 caractères au plus).'); }
@@ -369,7 +369,7 @@ function socCommentaireRepondre(string $id, string $message, ?string $qui = null
             . (in_array($e->metaCode, [3, 10, 200], true) ? ' → accordez la permission ' . $perm . ' à l’app (System User), Paramètres → Version & permissions.' : ''));
     }
     $qui ??= socUser();
-    Db::exec('UPDATE social_commentaire SET reponse_envoyee = ?, reponse_id = ?, reponse_le = ?, reponse_par = ?, traite_le = COALESCE(traite_le, ?), traite_par = COALESCE(traite_par, ?) WHERE id = ?',
+    Db::exec('UPDATE mar_sa_commentaire SET reponse_envoyee = ?, reponse_id = ?, reponse_le = ?, reponse_par = ?, traite_le = COALESCE(traite_le, ?), traite_par = COALESCE(traite_par, ?) WHERE id = ?',
         [$message, mb_substr((string) ($res['id'] ?? ''), 0, 80), date('Y-m-d H:i:s'), mb_substr($qui, 0, 120), date('Y-m-d H:i:s'), mb_substr($qui, 0, 120), $id]);
     socLog($qui, 'Commentaires', 'Réponse publiée sous un commentaire ' . ($r['canal'] === 'ig' ? 'Instagram' : 'Facebook') . ' (' . ($r['compte_nom'] ?: $r['shop_id']) . ')');
     return ['ok' => true, 'reponseId' => (string) ($res['id'] ?? ''), 'le' => date('Y-m-d H:i')];
@@ -378,7 +378,7 @@ function socCommentaireRepondre(string $id, string $message, ?string $qui = null
 /** Marque un commentaire comme traité (ou le rouvre). */
 function socCommentaireTraiter(string $id, bool $traite): array
 {
-    if (!Db::row('SELECT id FROM social_commentaire WHERE id = ?', [$id])) { throw new HttpError(404, 'commentaire inconnu'); }
-    Db::exec('UPDATE social_commentaire SET traite_le = ?, traite_par = ? WHERE id = ?', [$traite ? date('Y-m-d H:i:s') : null, $traite ? mb_substr(socUser(), 0, 120) : null, $id]);
+    if (!Db::row('SELECT id FROM mar_sa_commentaire WHERE id = ?', [$id])) { throw new HttpError(404, 'commentaire inconnu'); }
+    Db::exec('UPDATE mar_sa_commentaire SET traite_le = ?, traite_par = ? WHERE id = ?', [$traite ? date('Y-m-d H:i:s') : null, $traite ? mb_substr(socUser(), 0, 120) : null, $id]);
     return ['ok' => true];
 }

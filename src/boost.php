@@ -12,7 +12,7 @@ declare(strict_types=1);
  *  - Les meilleurs posts de la semaine (marque) : les publications des 7 derniers jours de chaque Page et de chaque
  *    Instagram, lues chez Meta, classées par interactions (réactions, commentaires, partages) et rapportées à la
  *    médiane du compte ; le meilleur de chaque boutique, prêt à booster (l'assistant de pub s'ouvre prérempli).
- *  - Les demandes de boost (franchisé → marque, `social_boost_demande`) : la boutique propose au réseau de booster une
+ *  - Les demandes de boost (franchisé → marque, `mar_sa_boost_demande`) : la boutique propose au réseau de booster une
  *    publication de sa Page ou de son Instagram ; la marque la booste (l'assistant s'ouvre, la demande passe
  *    « boostée » quand la pub est créée chez Meta) ou la refuse avec un mot. La boutique suit ses demandes.
  */
@@ -189,24 +189,24 @@ function socBoostDemandes(): array
 {
     $noms = []; foreach (socShops() as $s) { $noms[(string) $s['id']] = (string) $s['name']; }
     $l = array_map(static fn ($r) => socBoostLigne($r) + ['shopNom' => $noms[(string) $r['shop_id']] ?? (string) $r['shop_id']],
-        Db::rows("SELECT * FROM social_boost_demande WHERE statut = 'attente' OR cree_le >= ? ORDER BY statut = 'attente' DESC, cree_le DESC LIMIT 200",
+        Db::rows("SELECT * FROM mar_sa_boost_demande WHERE statut = 'attente' OR cree_le >= ? ORDER BY statut = 'attente' DESC, cree_le DESC LIMIT 200",
             [date('Y-m-d H:i:s', strtotime('-60 days'))]));
     return ['demandes' => $l, 'attente' => count(array_filter($l, static fn ($d) => $d['statut'] === 'attente'))];
 }
 
 function socBoostEnAttente(): int
 {
-    return (int) (Db::row("SELECT COUNT(*) n FROM social_boost_demande WHERE statut = 'attente'")['n'] ?? 0);
+    return (int) (Db::row("SELECT COUNT(*) n FROM mar_sa_boost_demande WHERE statut = 'attente'")['n'] ?? 0);
 }
 
 /** La marque refuse une demande, avec un mot pour la boutique. */
 function socBoostRefuser(int $id, string $reponse): array
 {
-    $r = Db::row('SELECT * FROM social_boost_demande WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM mar_sa_boost_demande WHERE id = ?', [$id]);
     if (!$r) { throw new HttpError(404, 'Demande introuvable.'); }
     if ($r['statut'] !== 'attente') { throw new HttpError(409, 'Cette demande est déjà traitée.'); }
     $reponse = mb_substr(trim($reponse), 0, 500);
-    Db::exec("UPDATE social_boost_demande SET statut = 'refusee', reponse = ?, traite_le = ?, traite_par = ? WHERE id = ?", [$reponse, date('Y-m-d H:i:s'), socUser(), $id]);
+    Db::exec("UPDATE mar_sa_boost_demande SET statut = 'refusee', reponse = ?, traite_le = ?, traite_par = ? WHERE id = ?", [$reponse, date('Y-m-d H:i:s'), socUser(), $id]);
     socLog(socUser(), 'Publicité', 'Demande de boost refusée (boutique ' . $r['shop_id'] . ')' . ($reponse !== '' ? ' : ' . $reponse : ''));
     return socBoostDemandes();
 }
@@ -214,7 +214,7 @@ function socBoostRefuser(int $id, string $reponse): array
 /** La pub qui booste une demande est créée chez Meta : la demande passe « boostée ». */
 function socBoostBoostee(int $id, string $metaId, string $adId): void
 {
-    $n = Db::exec("UPDATE social_boost_demande SET statut = 'boostee', ad_id = ?, reponse = NULL, traite_le = ?, traite_par = ? WHERE id = ? AND meta_id = ? AND statut <> 'boostee'",
+    $n = Db::exec("UPDATE mar_sa_boost_demande SET statut = 'boostee', ad_id = ?, reponse = NULL, traite_le = ?, traite_par = ? WHERE id = ? AND meta_id = ? AND statut <> 'boostee'",
         [$adId, date('Y-m-d H:i:s'), socUser(), $id, $metaId]);
     if ($n > 0) { socLog(socUser(), 'Publicité', 'Demande de boost n° ' . $id . ' boostée'); }
 }
@@ -246,7 +246,7 @@ function socBoostCrea(array $boost, array $shop): array
 /** Les demandes de la boutique, les plus récentes d'abord. */
 function sfBoostListe(string $shop): array
 {
-    $l = array_map('socBoostLigne', Db::rows('SELECT * FROM social_boost_demande WHERE shop_id = ? ORDER BY cree_le DESC, id DESC LIMIT 50', [$shop]));
+    $l = array_map('socBoostLigne', Db::rows('SELECT * FROM mar_sa_boost_demande WHERE shop_id = ? ORDER BY cree_le DESC, id DESC LIMIT 50', [$shop]));
     return ['demandes' => $l, 'attente' => count(array_filter($l, static fn ($d) => $d['statut'] === 'attente')), 'max' => SOC_BOOST_ATTENTE_MAX,
         'permis' => (bool) sfRegles()['proposerBoost']];
 }
@@ -268,10 +268,10 @@ function sfBoostDemander(string $shop, string $id, string $compte, string $messa
     }
     $c = socCalComptes()[$compte];
     if ($fb && !str_starts_with($meta, (string) $c['id'] . '_')) { throw new HttpError(404, 'Cette publication n’est pas sur la Page de votre boutique.'); }
-    $ex = Db::row('SELECT * FROM social_boost_demande WHERE shop_id = ? AND meta_id = ?', [$shop, $meta]);
+    $ex = Db::row('SELECT * FROM mar_sa_boost_demande WHERE shop_id = ? AND meta_id = ?', [$shop, $meta]);
     if ($ex && $ex['statut'] === 'attente') { throw new HttpError(409, 'Vous avez déjà proposé cette publication : le réseau ne l’a pas encore traitée.'); }
     if ($ex && $ex['statut'] === 'boostee') { throw new HttpError(409, 'Cette publication est déjà boostée par le réseau.'); }
-    $n = (int) (Db::row("SELECT COUNT(*) n FROM social_boost_demande WHERE shop_id = ? AND statut = 'attente'", [$shop])['n'] ?? 0);
+    $n = (int) (Db::row("SELECT COUNT(*) n FROM mar_sa_boost_demande WHERE shop_id = ? AND statut = 'attente'", [$shop])['n'] ?? 0);
     if ($n >= SOC_BOOST_ATTENTE_MAX) { throw new HttpError(422, 'Vous avez déjà ' . $n . ' demandes en attente : attendez la réponse du réseau.'); }
     try {
         $x = Meta::call('GET', $meta, ['fields' => $fb ? 'id,message,created_time,permalink_url,full_picture' : 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp'], (string) $c['token']);
@@ -284,10 +284,10 @@ function sfBoostDemander(string $shop, string $id, string $compte, string $messa
         $img !== '' ? mb_substr($img, 0, 1000) : null, mb_substr((string) ($fb ? ($x['permalink_url'] ?? '') : ($x['permalink'] ?? '')), 0, 1000) ?: null,
         $quand[0] !== '' ? $quand[0] : null, mb_substr(trim($message), 0, 500), mb_substr($par, 0, 120), date('Y-m-d H:i:s')];
     if ($ex) {
-        Db::exec("UPDATE social_boost_demande SET compte = ?, canal = ?, titre = ?, texte = ?, img = ?, permalink = ?, date_post = ?, message = ?, par = ?, cree_le = ?,
+        Db::exec("UPDATE mar_sa_boost_demande SET compte = ?, canal = ?, titre = ?, texte = ?, img = ?, permalink = ?, date_post = ?, message = ?, par = ?, cree_le = ?,
             statut = 'attente', reponse = NULL, traite_le = NULL, traite_par = NULL, ad_id = NULL WHERE id = ?", array_merge($vals, [$ex['id']]));
     } else {
-        Db::exec('INSERT INTO social_boost_demande (compte, canal, titre, texte, img, permalink, date_post, message, par, cree_le, shop_id, meta_id, statut)
+        Db::exec('INSERT INTO mar_sa_boost_demande (compte, canal, titre, texte, img, permalink, date_post, message, par, cree_le, shop_id, meta_id, statut)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,\'attente\')', array_merge($vals, [$shop, $meta]));
     }
     socLog('Franchisé · ' . (string) (socShop($shop)['name'] ?? $shop), 'Publicité', 'Propose de booster « ' . $vals[2] . ' » (' . $vals[1] . ')');

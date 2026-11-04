@@ -22,7 +22,7 @@ declare(strict_types=1);
  *
  * Les tables propres au module sont préfixées `social_` et créées au premier
  * appel (comme le BO, sans migration). Toutes les données ET les clés du module
- * (token Meta, secret de l'app…) y sont stockées et lues : `social_parametre`.
+ * (token Meta, secret de l'app…) y sont stockées et lues : `mar_sa_parametre`.
  */
 
 const SOCIAL_VERSION = '1.0.0';
@@ -173,31 +173,174 @@ function boSetting(string $key, mixed $default = null): mixed
     return $r === null ? $default : json_decode((string) $r['value'], true);
 }
 
+/* --- réglages et clés : mar_variable, mar_keys (module « social ») --------------
+ *
+ * Le module se déplace avec l'ensemble Marketing : ses réglages vivent dans les tables communes
+ * `mar_variable` (en clair) et ses secrets dans `mar_keys` (chiffrés), ligne `module = social`.
+ * Même format que le module Marketing (Marketing\Support\Keys) : `x1:` XChaCha20-Poly1305 ou `g1:`
+ * AES-256-GCM, données associées `mar_keys:social:{nom}`, même clé maîtresse — un fichier hors de la
+ * base (`SOCIAL_KEYS_FILE`, sinon `MAR_KEYS_FILE`, sinon celui du module Marketing sur ce serveur).
+ *
+ * L'ancienne table (`mar_sa_parametre`, ex-`social_parametre`) reste en repli : un réglage pas encore
+ * versé s'y lit encore, et une clé y reste tant qu'elle ne peut pas être chiffrée (clé maîtresse
+ * illisible). `socMigrerParametres()` (schema.php) y verse tout au démarrage, sans rien écraser.
+ */
+
+final class SocCles
+{
+    private static ?string $master = null;
+    private static bool $lue = false;
+
+    public static function fichier(): string
+    {
+        return (string) (getenv('SOCIAL_KEYS_FILE') ?: (getenv('MAR_KEYS_FILE') ?: '/var/www/private/marketing/master.key'));
+    }
+
+    /** La clé maîtresse (32 octets), ou null si le fichier manque ou est illisible. */
+    public static function maitresse(): ?string
+    {
+        if (self::$lue) { return self::$master; }
+        self::$lue = true;
+        $f = self::fichier();
+        if (!is_readable($f)) { return null; }
+        $c = trim((string) @file_get_contents($f));
+        $k = strlen($c) === 64 && ctype_xdigit($c) ? hex2bin($c) : base64_decode($c, true);
+        return self::$master = (is_string($k) && strlen($k) === 32) ? $k : null;
+    }
+
+    public static function oublier(): void { self::$master = null; self::$lue = false; }
+
+    public static function chiffrer(string $clair, string $nom): ?string
+    {
+        $k = self::maitresse();
+        if ($k === null) { return null; }
+        $ad = 'mar_keys:social:' . $nom;
+        if (function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_encrypt')) {
+            $n = random_bytes(24);
+            return 'x1:' . base64_encode($n . sodium_crypto_aead_xchacha20poly1305_ietf_encrypt($clair, $ad, $n, $k));
+        }
+        $iv = random_bytes(12); $tag = '';
+        $ct = openssl_encrypt($clair, 'aes-256-gcm', $k, OPENSSL_RAW_DATA, $iv, $tag, $ad, 16);
+        return $ct === false ? null : 'g1:' . base64_encode($iv . $tag . $ct);
+    }
+
+    public static function dechiffrer(string $chiffre, string $nom): ?string
+    {
+        $k = self::maitresse();
+        if ($k === null || strlen($chiffre) < 4 || $chiffre[2] !== ':') { return null; }
+        $raw = base64_decode(substr($chiffre, 3), true);
+        $ad = 'mar_keys:social:' . $nom;
+        if ($raw === false) { return null; }
+        if (str_starts_with($chiffre, 'x1:') && strlen($raw) > 24 && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_decrypt')) {
+            $p = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt(substr($raw, 24), $ad, substr($raw, 0, 24), $k);
+            return $p === false ? null : $p;
+        }
+        if (str_starts_with($chiffre, 'g1:') && strlen($raw) > 28) {
+            $p = openssl_decrypt(substr($raw, 28), 'aes-256-gcm', $k, OPENSSL_RAW_DATA, substr($raw, 0, 12), substr($raw, 12, 16), $ad);
+            return $p === false ? null : $p;
+        }
+        return null;
+    }
+}
+
+/** Les réglages du module, lus une fois par requête (et relus après chaque écriture). */
+function socParamsLus(bool $oublier = false): array
+{
+    static $cache = null;
+    if ($oublier) { $cache = null; return []; }
+    if ($cache !== null) { return $cache; }
+    $cache = ['vars' => [], 'keys' => [], 'ancien' => []];
+    if (Db::hasTable('mar_variable')) {
+        foreach (Db::rows("SELECT name, value FROM mar_variable WHERE module = 'social'") as $r) { $cache['vars'][(string) $r['name']] = (string) $r['value']; }
+    }
+    if (Db::hasTable('mar_keys')) {
+        foreach (Db::rows("SELECT name, ciphertext FROM mar_keys WHERE module = 'social'") as $r) { $cache['keys'][(string) $r['name']] = (string) $r['ciphertext']; }
+    }
+    if (Db::hasTable('mar_sa_parametre')) {
+        foreach (Db::rows('SELECT cle, valeur, secret FROM mar_sa_parametre') as $r) { $cache['ancien'][(string) $r['cle']] = ['valeur' => (string) $r['valeur'], 'secret' => (int) $r['secret'] === 1]; }
+    }
+    return $cache;
+}
+
 /**
- * Un paramètre du module (`social_parametre`) : réglages ET clés d'accès.
- * C'est la seule source des clés Meta du module — ni fichier, ni environnement.
+ * Un réglage du module (ou une clé d'accès : token Meta, secret de l'app, clé IA…). C'est la seule
+ * source des clés du module — ni fichier, ni environnement.
  */
 function socSetting(string $key, mixed $default = null): mixed
 {
-    $r = Db::row('SELECT valeur FROM social_parametre WHERE cle = ?', [$key]);
-    return $r === null ? $default : json_decode((string) $r['valeur'], true);
+    $p = socParamsLus();
+    if (isset($p['keys'][$key])) {
+        $clair = SocCles::dechiffrer($p['keys'][$key], $key);
+        if ($clair !== null) { return json_decode($clair, true); }
+    }
+    if (array_key_exists($key, $p['vars'])) { return json_decode($p['vars'][$key], true); }
+    if (isset($p['ancien'][$key]) && $p['ancien'][$key]['valeur'] !== '') { return json_decode($p['ancien'][$key]['valeur'], true); }
+    return $default;
 }
 
-/** Écrit un paramètre. `$secret` : la valeur n'est jamais renvoyée au navigateur. */
+/** Vrai si le réglage est une clé (jamais renvoyée au navigateur). */
+function socSettingSecret(string $key): bool
+{
+    $p = socParamsLus();
+    return isset($p['keys'][$key]) || (($p['ancien'][$key]['secret'] ?? false) === true);
+}
+
+/**
+ * Écrit un réglage. `$secret` : true → clé chiffrée (mar_keys), false → réglage (mar_variable),
+ * null → là où il est déjà. Sans clé maîtresse lisible, une clé reste dans l'ancienne table plutôt
+ * que d'être écrite en clair dans mar_variable.
+ */
 function socSettingPut(string $key, mixed $value, ?bool $secret = null): void
 {
-    Db::exec('INSERT INTO social_parametre (cle, valeur, secret, maj_le) VALUES (?, ?, ?, ?)
-              ON DUPLICATE KEY UPDATE valeur = VALUES(valeur), maj_le = VALUES(maj_le)' . ($secret !== null ? ', secret = VALUES(secret)' : ''),
-        [$key, json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $secret ? 1 : 0, date('Y-m-d H:i:s')]);
+    $secret ??= socSettingSecret($key);
+    $json = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $nouvelles = Db::hasTable('mar_variable') && Db::hasTable('mar_keys')
+        // Une valeur trop grande pour la colonne (un cache) reste dans l'ancienne table.
+        && ($secret || !function_exists('socVariableMax') || strlen((string) $json) <= socVariableMax());
+    $chiffre = $secret && $nouvelles ? SocCles::chiffrer($json, $key) : null;
+
+    if ($nouvelles && (!$secret || $chiffre !== null)) {
+        if ($secret) {
+            $indice = is_string($value) && strlen($value) >= 12 ? '••••' . substr($value, -4) : null;
+            Db::exec("INSERT INTO mar_keys (module, name, ciphertext, hint) VALUES ('social', ?, ?, ?)
+                      ON DUPLICATE KEY UPDATE ciphertext = VALUES(ciphertext), hint = VALUES(hint)", [$key, $chiffre, $indice]);
+            Db::exec("DELETE FROM mar_variable WHERE module = 'social' AND name = ?", [$key]);
+        } else {
+            Db::exec("INSERT INTO mar_variable (module, name, value) VALUES ('social', ?, ?)
+                      ON DUPLICATE KEY UPDATE value = VALUES(value)", [$key, $json]);
+            Db::exec("DELETE FROM mar_keys WHERE module = 'social' AND name = ?", [$key]);
+        }
+        // Versé : l'ancienne ligne ne doit plus faire repli (ni garder une clé en clair).
+        if (Db::hasTable('mar_sa_parametre')) { Db::exec('DELETE FROM mar_sa_parametre WHERE cle = ?', [$key]); }
+    } else {
+        Db::exec('INSERT INTO mar_sa_parametre (cle, valeur, secret, maj_le) VALUES (?, ?, ?, ?)
+                  ON DUPLICATE KEY UPDATE valeur = VALUES(valeur), secret = VALUES(secret), maj_le = VALUES(maj_le)',
+            [$key, $json, $secret ? 1 : 0, date('Y-m-d H:i:s')]);
+        if ($secret && $nouvelles) { error_log('[social] clé « ' . $key . ' » gardée hors de mar_keys : clé maîtresse illisible (' . SocCles::fichier() . ')'); }
+    }
+    socParamsLus(true);
 }
 
-/** Les paramètres non secrets, pour l'écran. */
+/** Retire un réglage, où qu'il soit. */
+function socSettingDelete(string $key): void
+{
+    if (Db::hasTable('mar_variable')) { Db::exec("DELETE FROM mar_variable WHERE module = 'social' AND name = ?", [$key]); }
+    if (Db::hasTable('mar_keys')) { Db::exec("DELETE FROM mar_keys WHERE module = 'social' AND name = ?", [$key]); }
+    if (Db::hasTable('mar_sa_parametre')) { Db::exec('DELETE FROM mar_sa_parametre WHERE cle = ?', [$key]); }
+    socParamsLus(true);
+}
+
+/** Les paramètres pour l'écran : les réglages en clair, les clés réduites à « définie ». */
 function socParams(): array
 {
+    $p = socParamsLus();
     $out = [];
-    foreach (Db::rows('SELECT cle, valeur, secret FROM social_parametre ORDER BY cle') as $r) {
-        $out[$r['cle']] = (int) $r['secret'] === 1 ? ['defini' => json_decode((string) $r['valeur'], true) !== ''] : json_decode((string) $r['valeur'], true);
+    foreach ($p['ancien'] as $cle => $r) {
+        $out[$cle] = $r['secret'] ? ['defini' => json_decode($r['valeur'], true) !== '' && $r['valeur'] !== ''] : json_decode($r['valeur'], true);
     }
+    foreach ($p['vars'] as $cle => $v) { $out[$cle] = json_decode($v, true); }
+    foreach ($p['keys'] as $cle => $c) { $out[$cle] = ['defini' => SocCles::dechiffrer($c, $cle) !== null]; }
+    ksort($out);
     return $out;
 }
 
@@ -246,14 +389,14 @@ function socUser(): string
 /* --- journal ----------------------------------------------------------------------- */
 
 /**
- * Trace un geste : dans `social_activite` (journal de l'écran Paramètres) et dans
+ * Trace un geste : dans `mar_sa_activite` (journal de l'écran Paramètres) et dans
  * `ceo_journal_entry` (écran Journal du cockpit). Le journal du BO est un
  * miroir best-effort : son absence ne bloque rien.
  */
 function socLog(string $who, string $what, string $detail, ?string $at = null): void
 {
     $at = $at ?? date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO social_activite (le, qui, quoi, detail) VALUES (?,?,?,?)',
+    Db::exec('INSERT INTO mar_sa_activite (le, qui, quoi, detail) VALUES (?,?,?,?)',
         [$at, mb_substr($who, 0, 120), mb_substr($what, 0, 60), mb_substr($detail, 0, 1000)]);
     if (($f = socHote('journal')) !== null) {
         try { $f($at, $who, $what, $detail); } catch (Throwable $e) { /* miroir best-effort */ }

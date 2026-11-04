@@ -11,19 +11,19 @@ declare(strict_types=1);
  *  - l'ADRESSE et la POSITION viennent de la caisse du panel (`shops`, via
  *    `ceo_shop.pwa_shop_id`) quand elle les porte ;
  *  - ce qui n'existe que pour le social (langues, horaires, compte Instagram,
- *    compte publicitaire, pixel, état des connexions) vit dans `social_boutique`.
+ *    compte publicitaire, pixel, état des connexions) vit dans `mar_sa_boutique`.
  *
  * Le module n'écrit JAMAIS dans `ceo_shop` ni dans `brand_guard_pages`.
  */
 
-/** Les champs de `social_boutique` que l'écran peut modifier. */
+/** Les champs de `mar_sa_boutique` que l'écran peut modifier. */
 const SOC_SHOP_CHAMPS = ['langs', 'address', 'hours', 'hoursNl', 'ig', 'page', 'geo', 'name'];
 const SOC_IDS = ['page_id', 'ad_account_id', 'instagram_user_id', 'pixel_id'];
 
 function socShopOverrides(): array
 {
     $out = [];
-    foreach (Db::rows('SELECT shop_id, data FROM social_boutique') as $r) {
+    foreach (Db::rows('SELECT shop_id, data FROM mar_sa_boutique') as $r) {
         $d = json_decode((string) $r['data'], true);
         $out[(string) $r['shop_id']] = is_array($d) ? $d : [];
     }
@@ -39,7 +39,7 @@ function socShopPut(string $id, array $patch): void
         ($ids['page_id'] ?? '') ?: null, ($ids['ad_account_id'] ?? '') ?: null, ($ids['instagram_user_id'] ?? '') ?: null, ($ids['pixel_id'] ?? '') ?: null,
         $conn['fb'] ?? null, $conn['igs'] ?? null, $conn['ads'] ?? null, $conn['at'] ?? null,
         json_encode($d, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s')];
-    Db::exec('INSERT INTO social_boutique (shop_id, langues, adresse, horaires, horaires_nl, page_id, ad_account_id, instagram_user_id, pixel_id,
+    Db::exec('INSERT INTO mar_sa_boutique (shop_id, langues, adresse, horaires, horaires_nl, page_id, ad_account_id, instagram_user_id, pixel_id,
                 conn_facebook, conn_instagram, conn_publicite, verifie_le, data, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
               ON DUPLICATE KEY UPDATE langues = VALUES(langues), adresse = VALUES(adresse), horaires = VALUES(horaires), horaires_nl = VALUES(horaires_nl),
                 page_id = VALUES(page_id), ad_account_id = VALUES(ad_account_id), instagram_user_id = VALUES(instagram_user_id), pixel_id = VALUES(pixel_id),
@@ -63,7 +63,7 @@ function socCol(array $row, array $noms): ?string
  * Ordre des sources, champ par champ :
  *  1. l'API TFBuddy (socApiShops) — la liste des boutiques, leur identifiant
  *     (celui de la caisse), adresse, horaires, e-mail, téléphone, TVA ;
- *  2. le module (social_boutique) — langues, identifiants Meta, connexions,
+ *  2. le module (mar_sa_boutique) — langues, identifiants Meta, connexions,
  *     et ce que l'API ne donne pas ;
  *  3. le BO, s'il partage la base — franchisé et zone (ceo_shop), page
  *     Facebook résolue par Brand Guard, position GPS de la caisse (shops).
@@ -133,7 +133,7 @@ function socShops(): array
         if ($a) { $sources[] = 'API ' . ($a['source'] ?? 'shops'); }
         if ($x) { $sources[] = 'BO ceo_shop'; }
         if ($p) { $sources[] = 'Brand Guard'; }
-        if ($o) { $sources[] = 'social_boutique'; }
+        if ($o) { $sources[] = 'mar_sa_boutique'; }
         $nom = (string) (($a['name'] ?? '') ?: ($p['boutique'] ?? '') ?: ($x['name'] ?? $id));
         $adresse = (string) (($a['address'] ?? '') ?: ($o['address'] ?? ''));
         if ($adresse === '' && $c) {
@@ -197,7 +197,7 @@ function socNomDePage(string $nom): string
  * par le cron, `meta_portefeuille`) qui n'est ni la Page de la marque ni celle d'une boutique
  * de l'API — un magasin de test, une boutique pas encore ouverte en caisse. Identifiant
  * stable tiré de la Page (`pg` + ses 14 derniers chiffres) ; ses réglages (langues,
- * identifiants Meta, connexions) se gardent dans social_boutique comme pour les autres.
+ * identifiants Meta, connexions) se gardent dans mar_sa_boutique comme pour les autres.
  * Sans caisse : ni webshop, ni ventes, ni accès franchisé.
  */
 function socShopsHorsCaisse(array $boutiques, array $ov): array
@@ -239,7 +239,7 @@ function socShopsHorsCaisse(array $boutiques, array $ov): array
 /**
  * La MARQUE (L'Atelier By) : sa Page, son compte Instagram, son compte
  * publicitaire (le compte réseau des publicités) et son pixel — une ligne
- * « marque » de social_boutique, à côté des boutiques.
+ * « marque » de mar_sa_boutique, à côté des boutiques.
  */
 function socBrand(): array
 {

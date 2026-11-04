@@ -14,20 +14,33 @@ declare(strict_types=1);
  *    d'avis, écart à la cible (`reputationCible` du BO, 4,5 par défaut), avis 5★ requis
  *    x ≥ n(C − A)/(5 − C) arrondi au supérieur, répartition par étoiles des avis LUS (Google ne publie pas
  *    l'histogramme d'une fiche : le nombre lu voyage avec la répartition).
- *  - Chaque avis entre dans `social_commentaire` (canal `gg`) et y est classé vert / orange / rouge comme un
+ *  - Chaque avis entre dans `mar_sa_commentaire` (canal `gg`) et y est classé vert / orange / rouge comme un
  *    commentaire (src/commentaires.php), la note en étoiles et la fiche servant de contexte.
  *  - Faire venir des avis : un lien court par boutique (`/avis/{boutique}`, public) qui compte les scans du QR code
  *    et de l'affiche puis ouvre la fenêtre d'avis de la fiche ; l'historique quotidien de la note
- *    (`social_google_suivi`) dit combien d'avis chaque boutique a gagnés.
+ *    (`mar_sa_google_suivi`) dit combien d'avis chaque boutique a gagnés.
  *  - La synchronisation chez Google se fait aussi toute seule, une fois par jour (réglable, activée par défaut).
  */
 
 const SOC_GG_CIBLE = 4.5;
 
 /** Les tables de réputation du BO sont-elles dans cette base ? */
+
+/**
+ * Les tables des avis du cockpit : `mar_avis_fiche` et `mar_avis` depuis que le cockpit range ses tables
+ * marketing sous `mar_` (13/10/2026) ; `ceo_shop_reputation` et `ceo_shop_review` avant. Lues seulement.
+ * Sans ce repli, l'écran perdait ses avis en silence le jour du renommage.
+ */
+function socAvisTable(string $quoi): ?string
+{
+    $noms = $quoi === 'fiche' ? ['mar_avis_fiche', 'ceo_shop_reputation'] : ['mar_avis', 'ceo_shop_review'];
+    foreach ($noms as $t) { if (Db::hasTable($t)) { return $t; } }
+    return null;
+}
+
 function socGoogleDispo(): bool
 {
-    return Db::hasTable('ceo_shop_reputation') && Db::hasTable('ceo_shop_review');
+    return socAvisTable('fiche') !== null && socAvisTable('avis') !== null;
 }
 
 /**
@@ -85,17 +98,17 @@ function socGoogleBo(): array
     $fiches = []; $par = []; $avis = [];
     if (socGoogleDispo()) {
         $derniere = null;
-        foreach (Db::rows('SELECT * FROM ceo_shop_reputation') as $r) {
+        foreach (Db::rows('SELECT * FROM ' . socAvisTable('fiche')) as $r) {
             $fiches[$vers((string) $r['shop_id'])] = ['note' => $r['rating_avg'] !== null ? (float) $r['rating_avg'] : null, 'avis' => (int) $r['rating_count'],
                 'raccorde' => (string) ($r['place_id'] ?? '') !== '', 'placeId' => (string) ($r['place_id'] ?? ''), 'url' => ($r['profile_url'] ?? null) ?: null,
                 'synchro' => $r['synced_at'] !== null ? substr((string) $r['synced_at'], 0, 16) : null];
             if ($r['synced_at'] !== null && ($derniere === null || $r['synced_at'] > $derniere)) { $derniere = (string) $r['synced_at']; }
         }
-        foreach (Db::rows('SELECT shop_id, rating, COUNT(*) n FROM ceo_shop_review GROUP BY shop_id, rating') as $r) {
+        foreach (Db::rows('SELECT shop_id, rating, COUNT(*) n FROM ' . socAvisTable('avis') . ' GROUP BY shop_id, rating') as $r) {
             $sid = $vers((string) $r['shop_id']);
             $par[$sid][(int) $r['rating']] = ($par[$sid][(int) $r['rating']] ?? 0) + (int) $r['n'];
         }
-        foreach (Db::rows('SELECT shop_id, author, rating, comment, reviewed_at FROM ceo_shop_review ORDER BY reviewed_at DESC, id DESC LIMIT 2000') as $r) {
+        foreach (Db::rows('SELECT shop_id, author, rating, comment, reviewed_at FROM ' . socAvisTable('avis') . ' ORDER BY reviewed_at DESC, id DESC LIMIT 2000') as $r) {
             $avis[] = ['shop' => $vers((string) $r['shop_id']), 'auteur' => (string) ($r['author'] ?? ''), 'note' => (int) $r['rating'], 'texte' => (string) ($r['comment'] ?? ''), 'le' => (string) $r['reviewed_at']];
         }
         $g = boSetting('google');
@@ -175,7 +188,7 @@ function socGoogleReputation(?string $shop = null, ?array $bo = null): array
 }
 
 /**
- * Recopie les avis rapatriés par le BO dans `social_commentaire` (canal `gg`), pour les classer et les suivre
+ * Recopie les avis rapatriés par le BO dans `mar_sa_commentaire` (canal `gg`), pour les classer et les suivre
  * comme les commentaires. Un avis déjà connu garde son classement et son suivi. Rend ['lus', 'indispo', 'source'].
  */
 function socGoogleAvisSync(): array
@@ -193,7 +206,7 @@ function socGoogleAvisSync(): array
             ? ' (note de la fiche : ' . number_format((float) $f['note'], 1, ',', '') . ' sur ' . (int) $f['avis'] . ' avis)' : '');
         $lien = (string) ($f['url'] ?? '');
         $note = max(1, min(5, (int) $a['note']));
-        Db::exec('INSERT INTO social_commentaire (id, canal, objet_id, shop_id, post_id, pub_id, auteur, message, cree_le, masque, maj_le, compte, compte_nom, objet_texte, objet_lien, lien, note, vu_le)'
+        Db::exec('INSERT INTO mar_sa_commentaire (id, canal, objet_id, shop_id, post_id, pub_id, auteur, message, cree_le, masque, maj_le, compte, compte_nom, objet_texte, objet_lien, lien, note, vu_le)'
             . ' VALUES (?,?,?,?,NULL,NULL,?,?,?,0,?,?,?,?,?,?,?,NOW())'
             . ' ON DUPLICATE KEY UPDATE note = VALUES(note), shop_id = VALUES(shop_id), compte = VALUES(compte), compte_nom = VALUES(compte_nom),'
             . ' objet_texte = VALUES(objet_texte), objet_lien = VALUES(objet_lien), lien = VALUES(lien)',
@@ -206,7 +219,7 @@ function socGoogleAvisSync(): array
 }
 
 /**
- * L'historique de la note : une ligne par boutique et par jour (`social_google_suivi`), écrite à chaque lecture de la
+ * L'historique de la note : une ligne par boutique et par jour (`mar_sa_google_suivi`), écrite à chaque lecture de la
  * réputation (la dernière du jour fait foi). C'est lui qui dit combien d'avis une boutique a gagnés : Google ne publie
  * que le total du moment.
  */
@@ -215,7 +228,7 @@ function socGoogleSuiviNoter(array $bo): void
     $jour = date('Y-m-d');
     foreach ($bo['fiches'] ?? [] as $sid => $f) {
         if ($f['note'] === null && (int) $f['avis'] === 0) { continue; }
-        Db::exec('INSERT INTO social_google_suivi (jour, shop_id, note, avis) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE note = VALUES(note), avis = VALUES(avis)',
+        Db::exec('INSERT INTO mar_sa_google_suivi (jour, shop_id, note, avis) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE note = VALUES(note), avis = VALUES(avis)',
             [$jour, mb_substr((string) $sid, 0, 16), $f['note'], (int) $f['avis']]);
     }
 }
@@ -226,14 +239,14 @@ function socGoogleSuiviNoter(array $bo): void
  */
 function socGoogleGagnes(int $jours): array
 {
-    $depuis = Db::row('SELECT MIN(jour) j FROM social_google_suivi')['j'] ?? null;
+    $depuis = Db::row('SELECT MIN(jour) j FROM mar_sa_google_suivi')['j'] ?? null;
     if ($depuis === null) { return ['shops' => [], 'depuis' => null]; }
     $debut = date('Y-m-d', strtotime('-' . $jours . ' days'));
     $out = [];
-    foreach (Db::rows('SELECT s.shop_id, s.avis FROM social_google_suivi s JOIN (SELECT shop_id, MAX(jour) j FROM social_google_suivi GROUP BY shop_id) d'
+    foreach (Db::rows('SELECT s.shop_id, s.avis FROM mar_sa_google_suivi s JOIN (SELECT shop_id, MAX(jour) j FROM mar_sa_google_suivi GROUP BY shop_id) d'
         . ' ON d.shop_id = s.shop_id AND d.j = s.jour') as $r) {
-        $avant = Db::row('SELECT avis FROM social_google_suivi WHERE shop_id = ? AND jour <= ? ORDER BY jour DESC LIMIT 1', [$r['shop_id'], $debut])
-            ?? Db::row('SELECT avis FROM social_google_suivi WHERE shop_id = ? ORDER BY jour ASC LIMIT 1', [$r['shop_id']]);
+        $avant = Db::row('SELECT avis FROM mar_sa_google_suivi WHERE shop_id = ? AND jour <= ? ORDER BY jour DESC LIMIT 1', [$r['shop_id'], $debut])
+            ?? Db::row('SELECT avis FROM mar_sa_google_suivi WHERE shop_id = ? ORDER BY jour ASC LIMIT 1', [$r['shop_id']]);
         $out[(string) $r['shop_id']] = max(0, (int) $r['avis'] - (int) ($avant['avis'] ?? $r['avis']));
     }
     return ['shops' => $out, 'depuis' => (string) $depuis > $debut ? (string) $depuis : null];
@@ -243,7 +256,7 @@ function socGoogleGagnes(int $jours): array
 function socGoogleScans(int $jours): array
 {
     $out = [];
-    foreach (Db::rows('SELECT shop_id, COUNT(*) n FROM social_avis_scan WHERE le >= ? GROUP BY shop_id', [date('Y-m-d H:i:s', strtotime('-' . $jours . ' days'))]) as $r) {
+    foreach (Db::rows('SELECT shop_id, COUNT(*) n FROM mar_sa_avis_scan WHERE le >= ? GROUP BY shop_id', [date('Y-m-d H:i:s', strtotime('-' . $jours . ' days'))]) as $r) {
         $out[(string) $r['shop_id']] = (int) $r['n'];
     }
     return $out;
@@ -273,7 +286,7 @@ function socGoogleAvisRedirige(string $shop, string $source): SocRedirection
     $f = $bo['fiches'][$shop] ?? null;
     $lien = $f ? socGoogleLienAvis((string) ($f['placeId'] ?? '')) : null;
     if ($lien === null) { throw new HttpError(404, 'Pas de fiche Google pour cette boutique.'); }
-    Db::exec('INSERT INTO social_avis_scan (shop_id, source, le) VALUES (?,?,?)',
+    Db::exec('INSERT INTO mar_sa_avis_scan (shop_id, source, le) VALUES (?,?,?)',
         [mb_substr($shop, 0, 16), in_array($source, ['qr', 'affiche', 'lien', 'ticket', 'webshop'], true) ? $source : 'lien', date('Y-m-d H:i:s')]);
     return new SocRedirection($lien);
 }

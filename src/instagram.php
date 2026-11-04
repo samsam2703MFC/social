@@ -6,7 +6,7 @@ declare(strict_types=1);
  *
  *  - La grille (écran « Grille Instagram ») : les publications déjà en ligne sont
  *    relues chez Instagram (`GET /{ig_user_id}/media`) et gardées dans
- *    `social_instagram_media` ; les posts programmés viennent du calendrier.
+ *    `mar_sa_instagram_media` ; les posts programmés viennent du calendrier.
  *  - La frise : un visuel découpé en 3 posts qui forment une ligne du profil.
  *    Ils partent à la suite, de droite à gauche (le plus récent s'affiche en haut
  *    à gauche), et aucun autre post Instagram de la boutique ne doit tomber dans
@@ -34,7 +34,7 @@ function socIgMediaSync(?string $shopId = null, int $limite = 30): array
                 if (!is_array($m) || empty($m['id'])) { continue; }
                 $vus[] = (string) $m['id'];
                 $quand = strtotime((string) ($m['timestamp'] ?? '')) ?: time();
-                Db::exec('INSERT INTO social_instagram_media (media_id, shop_id, type, media_url, vignette_url, permalink, publie_le, legende, maj_le)'
+                Db::exec('INSERT INTO mar_sa_instagram_media (media_id, shop_id, type, media_url, vignette_url, permalink, publie_le, legende, maj_le)'
                     . ' VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE shop_id = VALUES(shop_id), type = VALUES(type), media_url = VALUES(media_url),'
                     . ' vignette_url = VALUES(vignette_url), permalink = VALUES(permalink), publie_le = VALUES(publie_le), legende = VALUES(legende), maj_le = VALUES(maj_le)',
                     [(string) $m['id'], (string) $s['id'], mb_substr((string) ($m['media_type'] ?? ''), 0, 20), mb_substr((string) ($m['media_url'] ?? ''), 0, 1000) ?: null,
@@ -44,9 +44,9 @@ function socIgMediaSync(?string $shopId = null, int $limite = 30): array
             // Seules les dernières publications comptent pour la grille : le reste est oublié
             // (dont celles supprimées dans l'application Instagram).
             if ($vus) {
-                Db::exec('DELETE FROM social_instagram_media WHERE shop_id = ? AND media_id NOT IN (' . implode(',', array_fill(0, count($vus), '?')) . ')', array_merge([(string) $s['id']], $vus));
+                Db::exec('DELETE FROM mar_sa_instagram_media WHERE shop_id = ? AND media_id NOT IN (' . implode(',', array_fill(0, count($vus), '?')) . ')', array_merge([(string) $s['id']], $vus));
             } else {
-                Db::exec('DELETE FROM social_instagram_media WHERE shop_id = ?', [(string) $s['id']]);
+                Db::exec('DELETE FROM mar_sa_instagram_media WHERE shop_id = ?', [(string) $s['id']]);
             }
             socShopPut((string) $s['id'], ['ig_grille_le' => date('Y-m-d H:i:s')]);
             $out[(string) $s['id']] = count($vus);
@@ -60,7 +60,7 @@ function socIgMediaSync(?string $shopId = null, int $limite = 30): array
 /** La grille d'une boutique telle qu'Instagram l'a rendue à la dernière lecture (du plus récent au plus ancien). */
 function socIgGrille(string $shopId): array
 {
-    $rows = Db::rows('SELECT media_id, type, media_url, vignette_url, permalink, publie_le, legende FROM social_instagram_media WHERE shop_id = ? ORDER BY publie_le DESC, media_id DESC', [$shopId]);
+    $rows = Db::rows('SELECT media_id, type, media_url, vignette_url, permalink, publie_le, legende FROM mar_sa_instagram_media WHERE shop_id = ? ORDER BY publie_le DESC, media_id DESC', [$shopId]);
     $media = array_map(static fn ($r) => ['id' => (string) $r['media_id'], 'type' => (string) $r['type'],
         'src' => (string) (($r['type'] === 'VIDEO' ? $r['vignette_url'] : $r['media_url']) ?: ($r['media_url'] ?? '')),
         'permalink' => (string) ($r['permalink'] ?? ''), 'at' => substr((string) $r['publie_le'], 0, 16), 'caption' => mb_substr((string) $r['legende'], 0, 140)], $rows);

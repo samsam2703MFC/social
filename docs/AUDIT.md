@@ -10,7 +10,7 @@ auditée : `https://atelierby.tfbuddy.com/api/v1` (swagger
 |---|---|
 | Module /social | en ligne, recette automatique 113/113, déploiement GitHub Actions opérationnel |
 | Données | boutiques, catalogue (531 produits et gammes, prix, noms NL) et ventes **lus dans l'API TFBuddy** ; la base du BO ne sert plus qu'en complément et en repli |
-| Stockage | toutes les données et clés du module dans des tables `social_*` (clés dans `social_parametre`) |
+| Stockage | toutes les données et clés du module dans des tables `mar_sa_*` (clés dans `mar_variable` / `mar_keys` (module `social`)) |
 | API TFBuddy | **275 routes GET fonctionnent sur 600** ; 0 panne serveur réelle ; 266 non testables automatiquement (identifiant à fournir) |
 | Meta | **aucun token Meta** sur le serveur (ni dans le BO, ni dans le module) : rien ne peut être publié tant qu'il n'est pas saisi |
 | Sécurité | 3 points critiques (§3) dont le mot de passe des boîtes mail des boutiques exposé par l'API |
@@ -108,11 +108,11 @@ liens Drive), `marketing-campaigns` (campagnes de l'ERP), `owner/network/dashboa
 | Liste des boutiques, adresse, horaires, contact | API TFBuddy | BO `ceo_shop` |
 | Franchisé, zone | BO `ceo_shop` | — |
 | Page Facebook | Portefeuille Meta (bouton Rafraîchir) | Brand Guard du BO |
-| Identifiants Meta (Page, compte pub, Instagram, pixel), marque comprise | `social_boutique` | — |
-| Catalogue et gammes | API TFBuddy | `social_parametre.catalogue`, puis le catalogue livré |
+| Identifiants Meta (Page, compte pub, Instagram, pixel), marque comprise | `mar_sa_boutique` | — |
+| Catalogue et gammes | API TFBuddy | `catalogue` (`mar_variable`, module `social`), puis le catalogue livré |
 | Ventes (retour sur campagne) | API TFBuddy | caisse dans la base du BO |
-| Posts, campagnes, pubs, formulaires, leads, résultats | tables `social_*` | — |
-| Clés Meta, comptes API, réglages | `social_parametre` | recopiés une fois du BO au premier lancement |
+| Posts, campagnes, pubs, formulaires, leads, résultats | tables `mar_sa_*` | — |
+| Clés Meta, comptes API, réglages | `mar_variable` / `mar_keys` (module `social`) | recopiés une fois du BO au premier lancement |
 | Session utilisateur | cookie du cockpit | — |
 
 ## 5. Meta
@@ -136,11 +136,11 @@ liens Drive), `marketing-campaigns` (campagnes de l'ERP), `owner/network/dashboa
 ## 6. Déménagement vers le serveur atelierby.tfbuddy.com
 
 Le module est prêt à être déplacé : tout ce qu'il lui faut est **une base
-MySQL** (ses tables `social_*`) et **l'accès HTTPS à l'API TFBuddy et à Meta**.
+MySQL** (ses tables `mar_sa_*`) et **l'accès HTTPS à l'API TFBuddy et à Meta**.
 
 1. Copier le dossier, et dans `config/config.php` pointer `db` vers la base
    (le module n'a plus besoin du BO pour fonctionner).
-2. Exporter les tables `social_*` de l'ancienne base et les importer :
+2. Exporter les tables `mar_sa_*` de l'ancienne base et les importer :
    paramètres, clés, posts, file de publication, historique.
 3. Mettre à jour `url_publique` (Paramètres → API Meta) : Meta y télécharge les visuels.
 4. Ce qui ne suivra pas sans le BO : franchisé et zone (`ceo_shop`), pages

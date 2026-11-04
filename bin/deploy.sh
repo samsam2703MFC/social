@@ -9,7 +9,7 @@
 # (/var/www/social) et à sa propre adresse (/social). Il n'a aucun secret à
 # lui : il lit la base dans le config du BO (/var/www/consulant_bo/config/
 # config.php), et TOUT le reste — données et clés Meta — est en base, tables
-# social_* (social_parametre pour les clés).
+# mar_sa_* (réglages dans mar_variable, secrets chiffrés dans mar_keys).
 set -euo pipefail
 
 TARGET_DIR="${TARGET_DIR:-/var/www/social}"            # dépôt complet, hors webroot
@@ -72,7 +72,7 @@ CFG="$TARGET_DIR/config/config.php"
 BO_DIR="$BO_DIR" BO_URL="$BO_URL" PUBLIC_URL="$PUBLIC_URL" php -r '
   $cfg = ["boDir" => getenv("BO_DIR"), "boUrl" => getenv("BO_URL"), "publicUrl" => getenv("PUBLIC_URL"),
           "db" => null, "auth" => null, "userName" => "Franchiseur"];
-  echo "<?php\n// Écrit par bin/deploy.sh — les données et les clés sont en base (social_parametre).\nreturn " . var_export($cfg, true) . ";\n";
+  echo "<?php\n// Écrit par bin/deploy.sh — les données et les clés sont en base (mar_variable / mar_keys).\nreturn " . var_export($cfg, true) . ";\n";
 ' > "$CFG"
 chmod 640 "$CFG"; chown www-data:www-data "$CFG"
 
@@ -98,8 +98,8 @@ a2enconf social >/dev/null
 apache2ctl configtest
 systemctl reload apache2 || systemctl restart apache2
 
-# --- 6. Installation des tables social_* (premier appel) ---------------------------
-log "Installation des tables social_* et des paramètres…"
+# --- 6. Installation des tables mar_sa_* (premier appel) ---------------------------
+log "Installation des tables mar_sa_* et des paramètres…"
 runuser -u www-data -- php -r 'require "'"$TARGET_DIR"'/src/api.php"; socInstall(); echo "tables OK\n";' || warn "Installation des tables en échec (base injoignable ?)"
 
 # --- 7. Cron : file de publication, synchro Meta, contrôle des connexions ----------

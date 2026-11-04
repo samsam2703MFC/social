@@ -9,11 +9,11 @@
  * `franchise_session`, seul le franchiseur l'ouvre (aperçu « Voir comme cette boutique »).
  *
  * Chaque entrée est facultative et ne remplace QU'UN point. Rien d'autre à modifier
- * dans le module : ses tables (social_*), son API et ses écrans restent identiques.
+ * dans le module : ses tables (mar_sa_*), son API et ses écrans restent identiques.
  * Détails : docs/INTEGRATION-ERP.md.
  */
 return [
-    // La base de données de l'ERP (les tables social_* y vivent).
+    // La base de données de l'ERP (les tables mar_sa_* y vivent).
     // 'pdo' => static fn (): PDO => Erp\Db::pdo(),
 
     // La session de l'utilisateur franchiseur (accès à /social et à son API).
@@ -22,7 +22,7 @@ return [
     // Le nom affiché dans le journal pour les gestes faits depuis les écrans.
     // 'utilisateur' => static fn (): string => Erp\Auth::user()->fullName(),
 
-    // Le journal de l'ERP (le module garde aussi le sien, social_activite).
+    // Le journal de l'ERP (le module garde aussi le sien, mar_sa_activite).
     // 'journal' => static function (string $at, string $qui, string $quoi, string $detail): void {
     //     Erp\Journal::add($at, $qui, 'Social & Ads', $quoi . ' · ' . $detail);
     // },
