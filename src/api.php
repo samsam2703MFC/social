@@ -41,6 +41,7 @@ require_once __DIR__ . '/boost.php';
 require_once __DIR__ . '/messages.php';
 require_once __DIR__ . '/plan.php';
 require_once __DIR__ . '/repost.php';
+require_once __DIR__ . '/mediatheque.php';
 
 date_default_timezone_set('Europe/Brussels');
 
@@ -132,7 +133,7 @@ function socRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/google/deconnecter') { GoogleApi::deconnecter(); socLog(socUser(), 'Connexion', 'Google déconnecté'); return [200, socGapiEcran()]; }
     if ($method === 'POST' && $path === '/parametres') {
         // Les réglages non secrets modifiables depuis l'écran.
-        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'marketing_api' => 'string', 'webshop_url' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool', 'lien_texte' => 'array', 'lien_fiche' => 'bool', 'etiquettes_modeles' => 'etiquettes', 'charte_editoriale' => 'charte', 'ia_modele' => 'string', 'visuels_modeles' => 'visuels'];
+        $permis = ['url_publique' => 'string', 'url_bo' => 'string', 'marketing_api' => 'string', 'marketing_media_api' => 'string', 'webshop_url' => 'string', 'utilisateur' => 'string', 'marge' => 'float', 'catalogue' => 'array', 'instagram_unique' => 'bool', 'lien_texte' => 'array', 'lien_fiche' => 'bool', 'etiquettes_modeles' => 'etiquettes', 'charte_editoriale' => 'charte', 'ia_modele' => 'string', 'visuels_modeles' => 'visuels'];
         $faits = [];
         foreach (body() as $k => $v) {
             if (!isset($permis[$k])) { continue; }
@@ -162,6 +163,19 @@ function socRoute(string $method, string $path): array
     if ($method === 'GET' && $path === '/google') { return [200, socGoogleEcran($_GET)]; }
     // Le bilan des boutiques sur la semaine, le mois, le trimestre ou l'année (?periode=, src/bilan.php).
     // Le kit du mois de l'espace franchisé (src/kit.php).
+    // Médiathèque commune du marketing (module Marketing, par le jeton de service).
+    if (str_starts_with($path, '/mediatheque')) {
+        try {
+            if ($method === 'GET' && $path === '/mediatheque') { return [200, socMediathequeListe($_GET)]; }
+            if ($method === 'GET' && $path === '/mediatheque/bibliotheque') { return [200, socMediathequeBibliotheque()]; }
+            if ($method === 'POST' && $path === '/mediatheque') { $r = socMediathequeDeposer(socEnvoiBrut() ? [] : body()); return [$r['duplicate'] ? 200 : 201, $r]; }
+            if ($method === 'PUT' && preg_match('#^/mediatheque/(\d{1,12})/couverture$#', $path, $m)) { return [200, socMediathequeCouverture($m[1])]; }
+            if ($method === 'PATCH' && preg_match('#^/mediatheque/(\d{1,12})$#', $path, $m)) { return [200, socMediathequeModifier($m[1], body())]; }
+            if ($method === 'DELETE' && preg_match('#^/mediatheque/(\d{1,12})$#', $path, $m)) { return [200, socMediathequeRetirer($m[1])]; }
+        } catch (MarketingMediaError $e) {
+            throw new HttpError($e->status, $e->getMessage());
+        }
+    }
     if ($method === 'GET' && $path === '/kit') { return [200, socKitVue()]; }
     if ($method === 'POST' && $path === '/kit') { return [200, socKitPut((array) (body()['items'] ?? []))]; }
     // La publicité pilotée (src/boost.php) : règle de pause, meilleurs posts à booster, demandes des boutiques.

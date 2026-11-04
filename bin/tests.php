@@ -3041,6 +3041,96 @@ check('journal : activité tracée, miroir dans le journal du cockpit', count($b
 [$code, $b] = (static function () { try { return socRoute('GET', '/inconnue'); } catch (HttpError $e) { return [$e->status, null]; } })();
 check('route inconnue → 404', $code === 404);
 
+echo "Médiathèque commune (module Marketing, par le jeton de service)\n";
+$mmAppels = [];
+$mmReponse = static fn (int $code, array $j): array => [$code, (string) json_encode($j)];
+MarketingMedia::$transport = static function (string $method, string $url, array $headers, ?string $body) use (&$mmAppels, $mmReponse): array {
+    $mmAppels[] = ['method' => $method, 'url' => $url, 'headers' => $headers, 'body' => $body];
+    $chemin = (string) parse_url($url, PHP_URL_PATH);
+    if ($method === 'POST' && str_ends_with($chemin, '/media-assets')) {
+        if ($body !== null && str_starts_with($body, '<?php')) {
+            return $mmReponse(422, ['success' => false, 'error' => ['code' => 'VALIDATION_FAILED', 'message' => 'Dépôt refusé.', 'details' => [['field' => 'content', 'message' => 'Format non reconnu.']]]]);
+        }
+        return $mmReponse(201, ['success' => true, 'data' => ['id' => '7', 'kind' => str_contains(implode("\n", $headers), 'video/') ? 'video' : 'image', 'thumbnailUrl' => null, 'name' => 'Vitrine'], 'meta' => ['duplicate' => false]]);
+    }
+    if ($method === 'PUT' && str_ends_with($chemin, '/media-assets/7/thumbnail')) {
+        return $mmReponse(200, ['success' => true, 'data' => ['id' => '7', 'kind' => 'video', 'thumbnailUrl' => 'https://h/marketing/uploads/media/x.thumb.jpg']]);
+    }
+    if ($method === 'GET' && str_ends_with($chemin, '/media-assets')) {
+        return $mmReponse(200, ['success' => true, 'data' => [], 'meta' => ['pagination' => ['page' => 1, 'perPage' => 25, 'total' => 0, 'totalPages' => 0]]]);
+    }
+    return $mmReponse(404, ['success' => false, 'error' => ['code' => 'RESOURCE_NOT_FOUND', 'message' => 'Fichier introuvable dans la médiathèque.', 'details' => []]]);
+};
+$mmRoute = static function (string $method, string $path, array $b = [], array $get = []): array {
+    $GLOBALS['SOC_BODY'] = $b; $_GET = $get;
+    try { return socRoute($method, $path); } catch (HttpError $e) { return [$e->status, ['error' => $e->getMessage()]]; }
+    finally { unset($GLOBALS['SOC_BODY']); $_GET = []; }
+};
+$mmJeton = $tmp . '/service-token';
+socSettingPut('marketing_service_token_file', $mmJeton);
+@unlink($mmJeton);
+[$code, $r] = $mmRoute('GET', '/mediatheque');
+check('médiathèque sans jeton de service : 503 dit, aucun appel', $code === 503 && str_contains((string) $r['error'], 'jeton') && $mmAppels === []);
+
+file_put_contents($mmJeton, str_repeat('j', 40));
+socSettingPut('url_publique', 'https://atelier.example.test/social/');
+[$code, $r] = $mmRoute('GET', '/mediatheque', [], ['page' => '2', 'perPage' => '50', 'filter' => ['kind' => ['eq' => 'image']], 'jeton' => 'pirate']);
+$appel = $mmAppels[0] ?? [];
+parse_str((string) parse_url((string) ($appel['url'] ?? ''), PHP_URL_QUERY), $mmQuery);
+check('liste : relayée au Marketing du serveur avec le jeton, filtres transmis, paramètres étrangers retenus',
+    $code === 200 && str_starts_with((string) ($appel['url'] ?? ''), 'http://127.0.0.1/marketing/api/v1/marketing/media-assets?')
+        && in_array('X-Marketing-Service: ' . str_repeat('j', 40), $appel['headers'] ?? [], true)
+        && in_array('X-Forwarded-Host: atelier.example.test', $appel['headers'] ?? [], true) && in_array('X-Forwarded-Proto: https', $appel['headers'] ?? [], true)
+        && ($mmQuery['filter']['kind']['eq'] ?? '') === 'image' && ($mmQuery['page'] ?? '') === '2' && !isset($mmQuery['jeton']),
+    json_encode($appel['url'] ?? null));
+
+$mmAppels = [];
+$png = base64_encode("\x89PNG\r\n\x1a\nPAYLOAD");
+[$code, $r] = $mmRoute('POST', '/mediatheque', ['content' => 'data:image/png;base64,' . $png, 'name' => 'Vitrine', 'category' => 'ambiance-boutique', 'cutout' => true, 'path' => '/etc']);
+$appel = $mmAppels[0] ?? [];
+parse_str((string) parse_url((string) ($appel['url'] ?? ''), PHP_URL_QUERY), $mmQuery);
+check('dépôt : le fichier part en corps brut (sans base64), type image/png, classements en query, source social',
+    $code === 201 && ($appel['method'] ?? '') === 'POST' && ($appel['body'] ?? '') === "\x89PNG\r\n\x1a\nPAYLOAD"
+        && in_array('Content-Type: image/png', $appel['headers'] ?? [], true)
+        && ($mmQuery['source'] ?? '') === 'social' && ($mmQuery['category'] ?? '') === 'ambiance-boutique' && ($mmQuery['cutout'] ?? '') === 'true' && !isset($mmQuery['path']),
+    json_encode([$code, $mmQuery]));
+
+$mmAppels = [];
+[$code, $r] = $mmRoute('POST', '/mediatheque', ['content' => 'data:video/mp4;base64,' . base64_encode('ftypmp42....'), 'poster' => 'data:image/jpeg;base64,' . base64_encode("\xFF\xD8\xFFposter")]);
+check('dépôt d\'une vidéo : sa couverture suit (PUT …/thumbnail, image en corps brut)',
+    $code === 201 && count($mmAppels) === 2 && ($mmAppels[1]['method'] ?? '') === 'PUT' && ($mmAppels[1]['body'] ?? '') === "\xFF\xD8\xFFposter"
+        && ($r['data']['thumbnailUrl'] ?? '') !== '');
+
+$mmAppels = [];
+$GLOBALS['SOC_RAW'] = "\xFF\xD8\xFForiginal-pleine-definition"; $GLOBALS['SOC_RAW_TYPE'] = 'image/jpeg';
+[$code, $r] = $mmRoute('POST', '/mediatheque', [], ['name' => 'Bûche', 'season' => 'noel', 'jeton' => 'x']);
+$appel = $mmAppels[0] ?? [];
+parse_str((string) parse_url((string) ($appel['url'] ?? ''), PHP_URL_QUERY), $mmQuery);
+check('dépôt en corps brut (l\'original, sans réduction) : relayé octet pour octet, classements de la query',
+    $code === 201 && ($appel['body'] ?? '') === "\xFF\xD8\xFForiginal-pleine-definition" && in_array('Content-Type: image/jpeg', $appel['headers'] ?? [], true)
+        && ($mmQuery['name'] ?? '') === 'Bûche' && ($mmQuery['season'] ?? '') === 'noel' && !isset($mmQuery['jeton']),
+    json_encode([$code, $mmQuery]));
+$mmAppels = [];
+$GLOBALS['SOC_RAW'] = "\xFF\xD8\xFFposter"; $GLOBALS['SOC_RAW_TYPE'] = 'image/jpeg';
+[$code] = $mmRoute('PUT', '/mediatheque/7/couverture');
+$GLOBALS['SOC_RAW_TYPE'] = 'text/html';
+[$codeRefus] = $mmRoute('PUT', '/mediatheque/7/couverture');
+unset($GLOBALS['SOC_RAW'], $GLOBALS['SOC_RAW_TYPE']);
+check('couverture d\'une vidéo en corps brut ; un autre type que JPEG, PNG ou WebP refusé (422)',
+    $code === 200 && ($mmAppels[0]['method'] ?? '') === 'PUT' && ($mmAppels[0]['body'] ?? '') === "\xFF\xD8\xFFposter" && $codeRefus === 422);
+
+[$code, $r] = $mmRoute('POST', '/mediatheque', ['content' => 'data:image/png;base64,' . base64_encode('<?php echo 1;')]);
+check('un refus du Marketing remonte avec son statut et son explication', $code === 422 && str_contains((string) $r['error'], 'Format non reconnu'), json_encode([$code, $r]));
+[$code] = $mmRoute('POST', '/mediatheque', ['content' => 'pas un fichier']);
+check('dépôt sans data: refusé avant tout appel (422)', $code === 422);
+[$code, $r] = $mmRoute('DELETE', '/mediatheque/999');
+check('fichier inconnu : 404 remonté', $code === 404 && str_contains((string) $r['error'], 'introuvable'));
+[$code] = $mmRoute('DELETE', '/mediatheque/../../etc');
+check('identifiant hors forme : route inconnue (404), rien relayé', $code === 404);
+MarketingMedia::$transport = null;
+socSettingPut('url_publique', '');
+@unlink($mmJeton);
+
 echo "Authentification partagée avec le cockpit\n";
 Db::exec("INSERT INTO ceo_app_setting VALUES ('authSecret', ?), ('authPasswordHash', ?)", [json_encode('S3CR3T'), json_encode(password_hash('x', PASSWORD_DEFAULT))]);
 $exp = (string) (time() + 3600);

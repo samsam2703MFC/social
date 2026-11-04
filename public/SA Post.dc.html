@@ -1110,6 +1110,14 @@
             <button onClick="{{ closeLib }}" style="background:#8D1D2C;color:#FFFFFF;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;" style-hover="background:#7A1826;">Terminer</button>
           </div>
         </div>
+        <sc-if value="{{ libBandeau }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 20px;background:{{ libBandeauBg }};border-bottom:0.5px solid rgba(34,34,34,0.10);font-size:12.5px;line-height:1.45;color:#4A443D;flex-wrap:wrap;">
+            <span style="flex:1 1 420px;">{{ libBandeauTexte }}</span>
+            <sc-if value="{{ libVerserVisible }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ libVerser }}" style="background:#FFFFFF;border:0.5px solid rgba(34,34,34,0.25);color:#222222;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:500;cursor:pointer;" style-hover="border-color:#222222;">{{ libVerserLabel }}</button>
+            </sc-if>
+          </div>
+        </sc-if>
 
         <div style="flex:1 1 auto;min-height:0;display:flex;">
 
@@ -1265,7 +1273,7 @@ class Component extends DCLogic {
       objectif: '', inspi: (() => { try { const x = localStorage.getItem('sa.inspi'); return x === null ? null : x === '1'; } catch (e) { return null; } })(),
       cutBusy: null, couleurRole: null, couleurNom: '', pvVue: 'post', tel: false, grilleData: {}, grilleSnap: null, vidBusy: false, vidAnim: null, idees: null, ideesTout: false, ideesBusy: false, ideesErr: '', reco: null, recoLu: false, recoBusy: false, recoErr: '', ideeId: '', ideeCat: null, ideeOffre: null,
       nav: null, navKey: null, navLoading: false, navErr: '', navMode: 'cat', navG: null, navC: null, navGam: null, navQ: '', navSel: null, offres: null, offresKey: '', offresLoading: false, offreUsed: '',
-      libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false };
+      libOpen: false, lib: [], libPick: [], lq: '', lcat: '', query: '', fCat: '', fSeason: '', mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false, editId: null, toast: '', errors: [], saving: false, partage: false, partageErr: '', versement: null };
     if (!SA) return base;
     SA.SHOPS.forEach(s => { base.ch[s.id] = { fb: s.fb === 'connected', ig: s.igs === 'connected' }; });
     // Magasins test : hors du réseau, jamais cochés d'office ; jamais sur l'Instagram du réseau.
@@ -1313,6 +1321,7 @@ class Component extends DCLogic {
     const fresh = (window.DS_ILLUS || []).filter(x => !have.has(x.id) && !rm.has(x.id));
     if (fresh.length) { lib = lib.concat(fresh); this.saveLib(lib); }
     this.setState({ lib });
+    this.chargerPartagee();
   }
   // ── Médiathèque (la même que Posts Facebook : IndexedDB « latelier-fbpost » + illustrations du design system) ──
   CATS = {
@@ -1326,11 +1335,85 @@ class Component extends DCLogic {
     'Illustrations': ['Produits', 'Fruits', 'Légumes', 'Saisonnier', 'Pictos', 'Services', 'Décoratif'],
   };
   saveLib(list) {
+    // Ce qui est dans la médiathèque commune vit sur le serveur : le navigateur ne garde que le reste.
+    list = (list || []).filter(x => !x.shared);
     try { const r = indexedDB.open('latelier-fbpost', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv');
       r.onsuccess = () => { const db = r.result, tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(list, 'library'); tx.oncomplete = () => db.close(); tx.onerror = () => db.close(); }; } catch (e) {}
   }
   updateLib(fn) { const lib = fn(this.state.lib.slice()); this.setState({ lib }); this.saveLib(lib); }
-  editItem(patch) { const id = this.state.editId; this.updateLib(l => l.map(x => x.id === id ? Object.assign({}, x, patch) : x)); }
+  editItem(patch) {
+    const id = this.state.editId, it = this.state.lib.find(x => x.id === id);
+    this.updateLib(l => l.map(x => x.id === id ? Object.assign({}, x, patch) : x));
+    if (it && it.shared && this.partageOk()) {
+      // Le nom se tape lettre à lettre : il n'est enregistré qu'une fois la frappe finie.
+      clearTimeout(this._edT); const fiche = Object.assign({}, it, patch);
+      this._edT = setTimeout(() => this.reclasser(fiche), patch.name !== undefined ? 700 : 0);
+    }
+  }
+  // ── Médiathèque commune du marketing (module Marketing) ──
+  // En ligne, les photos et les vidéos sont celles de tout le marketing : posts, pubs, campagnes, brochures,
+  // bâches. Ce navigateur ne garde plus que ce qui n'a pas pu y être versé (hors ligne, refus du serveur).
+  partageOk() { return !!(window.SA && window.SA.live && this.state.partage); }
+  async chargerPartagee() {
+    const SA = window.SA; if (!SA || !SA.live) return;
+    try {
+      const refs = await SA.api('GET', '/mediatheque/bibliotheque'); this._refs = (refs && refs.data) || null;
+      let items = [], page = 1, pages = 1;
+      do {
+        const r = await SA.api('GET', '/mediatheque?perPage=100&page=' + page);
+        items = items.concat((r && r.data) || []);
+        pages = (r && r.meta && r.meta.pagination && r.meta.pagination.totalPages) || 1; page++;
+      } while (page <= pages && page <= 30);
+      if (this._dead) return;
+      const shared = items.map(m => this.depuisPartage(m));
+      this.setState(st => ({ lib: st.lib.filter(x => !x.shared).concat(shared), partage: true, partageErr: '' }));
+    } catch (e) { if (!this._dead) this.setState({ partage: false, partageErr: String((e && e.message) || e) }); }
+  }
+  /** Une fiche de la médiathèque commune, à la forme des visuels de l'écran (le post prend la version web, 2 048 px). */
+  depuisPartage(m) {
+    return { id: 'm' + m.id, mid: String(m.id), shared: true, src: m.kind === 'video' ? m.url : (m.webUrl || m.url), orig: m.url, thumb: m.thumbnailUrl || null,
+      name: m.name, cat: m.category ? m.category.label : '', sub: m.subcategory ? m.subcategory.label : '', season: m.season ? m.season.label : "Toute l'année",
+      cut: !!m.cutout, kind: m.kind === 'video' ? 'video' : undefined, poster: m.thumbnailUrl || null };
+  }
+  /** Les classements de l'écran (libellés) en codes de la médiathèque commune. */
+  versCodes(x) {
+    const R = this._refs || { categories: [], seasons: [] }, c = (R.categories || []).find(k => k.label === x.cat) || null;
+    const sb = c ? (c.subcategories || []).find(k => k.label === x.sub) || null : null, se = (R.seasons || []).find(k => k.label === x.season) || null;
+    return { category: c ? c.code : null, subcategory: sb ? sb.code : null, season: se ? se.code : null };
+  }
+  /** Verse un visuel dans la médiathèque commune (le fichier d'origine s'il est là) ; rend sa fiche partagée, ou null. */
+  async verser(x, file) {
+    const SA = window.SA, k = this.versCodes(x), champs = { name: String(x.name || '').trim() || (x.kind === 'video' ? 'Vidéo' : 'Photo'), cutout: !!x.cut, category: k.category, subcategory: k.subcategory, season: k.season };
+    try {
+      const r = file ? await SA.envoyer('POST', '/mediatheque', file, champs) : await SA.api('POST', '/mediatheque', Object.assign({ content: x.src, poster: x.poster || undefined }, champs));
+      let m = r && r.data; if (!m || !m.id) return null;
+      if (file && m.kind === 'video' && !m.thumbnailUrl && x.poster && /^data:image\//.test(x.poster)) {
+        try { const blob = await (await fetch(x.poster)).blob(); const c = await SA.envoyer('PUT', '/mediatheque/' + m.id + '/couverture', blob); if (c && c.data) m = c.data; } catch (e) {}
+      }
+      return this.depuisPartage(m);
+    } catch (e) { this.toast('Médiathèque commune : ' + ((e && e.message) || e) + ' — gardé dans ce navigateur.'); return null; }
+  }
+  async reclasser(x) {
+    if (!String(x.name || '').trim()) return;
+    const k = this.versCodes(x);
+    try { await window.SA.api('PATCH', '/mediatheque/' + x.mid, { name: String(x.name).trim(), cutout: !!x.cut, category: k.category, subcategory: k.subcategory, season: k.season }); }
+    catch (e) { this.toast('Classement non enregistré dans la médiathèque commune : ' + ((e && e.message) || e)); }
+  }
+  /** Ce navigateur avait sa propre médiathèque : ses visuels rejoignent la médiathèque commune. */
+  async verserLocaux() {
+    if (!this.partageOk() || this.state.versement) return;
+    const locaux = this.state.lib.filter(x => !x.shared && !x.ds);
+    if (!locaux.length) return;
+    this.setState({ versement: { fait: 0, total: locaux.length } });
+    let ok = 0;
+    for (const x of locaux) {
+      const m = await this.verser(x, null);
+      if (m) { ok++; this.updateLib(l => l.filter(y => y.id !== x.id && y.id !== m.id).concat(m)); }
+      this.setState(st => ({ versement: { fait: ((st.versement && st.versement.fait) || 0) + 1, total: locaux.length } }));
+    }
+    this.setState({ versement: null });
+    this.toast(ok === locaux.length ? ok + (ok > 1 ? ' visuels versés' : ' visuel versé') + ' dans la médiathèque commune.' : ok + ' sur ' + locaux.length + ' versés ; les autres restent dans ce navigateur.');
+  }
   norm(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
   matches(it, q, cat, sub, season) {
     if (cat === '—') { if (it.cat) return false; } else if (cat && it.cat !== cat) return false;
@@ -1370,16 +1453,25 @@ class Component extends DCLogic {
   async addFilesLib(files, toPost) {
     const tous = Array.from(files || []), arr = tous.filter(f => /^image\//.test(f.type)).slice(0, 30), vids = tous.filter(f => /^video\//.test(f.type)).slice(0, 3);
     if (!arr.length && !vids.length) return;
-    const read = (await Promise.all(arr.map(f => this.readFile(f)))).filter(Boolean);
-    const lus = (await Promise.all(vids.map(f => this.lireVideo(f)))).filter(Boolean);
+    const lusP = await Promise.all(arr.map(f => this.readFile(f)));
+    const lusV = await Promise.all(vids.map(f => this.lireVideo(f)));
     const id = (i) => 'u' + Date.now() + '-' + i + Math.random().toString(36).slice(2, 6);
-    const added = read.map((x, i) => ({ id: id(i), src: x.src, name: String(x.name || 'Photo').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '), cat: '', sub: '', season: "Toute l'année", cut: !!x.cut }))
-      .concat(lus.map((x, i) => ({ id: id('v' + i), kind: 'video', src: x.src, poster: x.poster, name: x.name, cat: '', sub: '', season: "Toute l'année", cut: false })));
-    if (!added.length) return;
-    const lib = this.state.lib.concat(added); this.saveLib(lib);
-    const photos = added.filter(x => x.kind !== 'video');
+    const paires = [];
+    arr.forEach((f, i) => { const x = lusP[i]; if (x) paires.push([{ id: id(i), src: x.src, name: String(x.name || 'Photo').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '), cat: '', sub: '', season: "Toute l'année", cut: !!x.cut }, f]); });
+    vids.forEach((f, i) => { const x = lusV[i]; if (x) paires.push([{ id: id('v' + i), kind: 'video', src: x.src, poster: x.poster, name: x.name, cat: '', sub: '', season: "Toute l'année", cut: false }, f]); });
+    if (!paires.length) return;
+    let added = paires.map(p => p[0]);
+    // En ligne, chaque fichier rejoint la médiathèque commune, en original : une affiche ou une bâche en a besoin.
+    if (this.partageOk()) {
+      this.toast(paires.length > 1 ? 'Envoi de ' + paires.length + ' fichiers à la médiathèque commune…' : 'Envoi à la médiathèque commune…');
+      const faits = [];
+      for (const [x, f] of paires) { const m = await this.verser(x, f); faits.push(m || x); }
+      added = faits;
+    }
+    const lib = this.state.lib.filter(y => !added.some(a => a.id === y.id)).concat(added); this.saveLib(lib);
+    const photos = added.filter(x => x.kind !== 'video'), vid = added.find(x => x.kind === 'video');
     this.setState(st => ({ lib, photos: toPost ? st.photos.concat(photos.map(x => ({ src: x.src, cut: x.cut, name: x.name }))) : st.photos, editId: toPost ? st.editId : added[0].id }));
-    if (toPost && lus.length) this.choisirVideo(lus[0]);
+    if (toPost && vid) this.choisirVideo(vid);
   }
   componentDidUpdate() { this.montagePreview(); }
   componentWillUnmount() { clearTimeout(this._tt); clearTimeout(this._mT); this._dead = true; }
@@ -2188,7 +2280,7 @@ class Component extends DCLogic {
     const norm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     const libItems = s.lib.filter(it => (!s.lcat || it.cat === s.lcat) && (!s.lq || norm([it.name, it.cat, it.sub, it.season].join(' ')).includes(norm(s.lq)))).slice(0, 120).map(it => {
       const idx = s.libPick.indexOf(it.id);
-      return { src: it.src, name: it.name, tags: [it.cat, it.sub, it.season].filter(Boolean).join(' · '), on: idx >= 0, order: idx + 1, ring: idx >= 0 ? '#8D1D2C' : 'transparent',
+      return { src: it.thumb || it.src, name: it.name, tags: [it.cat, it.sub, it.season].filter(Boolean).join(' · '), on: idx >= 0, order: idx + 1, ring: idx >= 0 ? '#8D1D2C' : 'transparent',
         toggle: () => this.setState({ libPick: idx >= 0 ? s.libPick.filter(x => x !== it.id) : s.libPick.concat(it.id) }) };
     });
     const isNlEd = s.edLang === 'nl', LOCK = ['eyebrow', 'title', 'phrase', 'unit', 'promoSub'];
@@ -2551,7 +2643,7 @@ class Component extends DCLogic {
         const togglePost = (it) => { if (locked) return;
           if (estVid(it)) { if (inPost(it)) this.setState({ video: null }); else this.choisirVideo(it); return; }
           this.setState(st => ({ photos: st.photos.some(p => p.src === it.src) ? st.photos.filter(p => p.src !== it.src) : st.photos.concat({ src: it.src, cut: it.cut !== false, name: it.name }) })); };
-        const vign = (it) => estVid(it) ? it.poster || 'img/illus/decorative/bubble.png' : it.src;
+        const vign = (it) => estVid(it) ? it.poster || 'img/illus/decorative/bubble.png' : (it.thumb || it.src);
         const tags = (it) => [it.cat || 'Non classée', it.sub, it.season].filter(Boolean).join(' · ');
         const set = (k) => (e) => this.setState({ [k]: e.target.value });
         const found = libAll.filter(it => this.matches(it, s.query, s.fCat, '', s.fSeason));
@@ -2579,6 +2671,15 @@ class Component extends DCLogic {
             return { name: cat, count: items.length, bg: navBg(active && !s.mSub), fg: navFg(active), w: navW(active), open: active, pick: () => this.setState({ mCat: cat, mSub: '', mOnlyPost: false }),
               subs: (this.CATS[cat] || []).map(sub => { const on = active && s.mSub === sub; return { name: sub, count: items.filter(it => it.sub === sub).length, bg: navBg(on), fg: navFg(on), w: navW(on), pick: (e) => { e.stopPropagation(); this.setState({ mCat: cat, mSub: sub, mOnlyPost: false }); } }; }).filter(x => x.count > 0) }; }),
           unclassifiedCount: libAll.filter(it => !it.cat).length,
+          ...(() => {
+            const live = !!(window.SA && window.SA.live), locaux = libAll.filter(it => !it.shared && !it.ds).length, vt = s.versement;
+            const texte = !live ? '' : s.partage
+              ? 'Médiathèque commune du marketing : ce que vous déposez ici sert aussi aux campagnes, aux brochures et aux bâches (Marketing › Médiathèque).' + (locaux ? ' ' + locaux + (locaux > 1 ? ' visuels n’existent' : ' visuel n’existe') + ' encore que dans ce navigateur.' : '')
+              : s.partageErr ? 'Médiathèque commune indisponible (' + s.partageErr + '). Les fichiers déposés restent dans ce navigateur.' : 'Chargement de la médiathèque commune…';
+            return { libBandeau: live, libBandeauTexte: texte, libBandeauBg: s.partageErr ? '#FCE7C8' : '#F4EFE8',
+              libVerserVisible: !!(s.partage && locaux), libVerserLabel: vt ? 'Versement… ' + vt.fait + ' / ' + vt.total : 'Les verser dans la médiathèque commune',
+              libVerser: () => this.verserLocaux() };
+          })(),
           restoreDs: () => { try { localStorage.removeItem('latelier.fbpost.dsRemoved'); } catch (e) {} const have = new Set(s.lib.map(x => x.id)); const fresh = (window.DS_ILLUS || []).filter(x => !have.has(x.id)); if (fresh.length) this.updateLib(l => l.concat(fresh)); },
           mQuery: s.mQuery, setMQuery: set('mQuery'), mSeason: s.mSeason, setMSeason: set('mSeason'),
           hasFilter: !!(s.mQuery || s.mCat || s.mSub || s.mSeason || s.mOnlyPost), clearFilters: () => this.setState({ mQuery: '', mCat: '', mSub: '', mSeason: '', mOnlyPost: false }),
@@ -2594,6 +2695,12 @@ class Component extends DCLogic {
           ecBg, ecFg, efBg, efFg, editCutOn: () => this.editItem({ cut: true }), editCutOff: () => this.editItem({ cut: false }),
           editToggleLabel: ed && inPost(ed) ? 'Retirer du post' : 'Ajouter au post', editToggle: () => { if (ed) togglePost(ed); },
           editDelete: () => { if (!ed) return; const id = ed.id;
+            if (ed.shared) {
+              if (!this.partageOk()) { this.toast('Médiathèque commune indisponible : rien n’a été retiré.'); return; }
+              window.SA.api('DELETE', '/mediatheque/' + ed.mid).then(() => { this.setState({ editId: null }); this.updateLib(l => l.filter(x => x.id !== id)); this.toast('Retiré de la médiathèque commune — un post qui l’utilise le garde.'); })
+                .catch(e => this.toast('Retrait refusé : ' + ((e && e.message) || e)));
+              return;
+            }
             if (ed.ds) { try { const r = JSON.parse(localStorage.getItem('latelier.fbpost.dsRemoved') || '[]'); if (!r.includes(id)) r.push(id); localStorage.setItem('latelier.fbpost.dsRemoved', JSON.stringify(r)); } catch (e) {} }
             this.setState({ editId: null }); this.updateLib(l => l.filter(x => x.id !== id)); },
           clearPhotos: () => { if (!locked) this.setState({ photos: [] }); },
