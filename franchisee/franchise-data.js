@@ -529,6 +529,18 @@
     if (c) { c.reponseEnvoyee = message; c.reponseLe = le; c.reponsePar = 'vous'; c.traite = true; c.traiteLe = le; c.traitePar = 'vous'; c.enRetard = false; }
     return Promise.resolve({ ok: true, le });
   }
+  // Avis Google : une réponse proposée, et « J'ai répondu sur la fiche ».
+  function commentaireProposer(id) {
+    if (!DEMO) return api('POST', '/franchise/commentaires/proposer', { shop: STATE.shop.id, id });
+    const c = (DEMO_GG || []).find(x => x.id === id) || {};
+    return Promise.resolve({ reponse: (c.note || 5) >= 4 ? 'Merci beaucoup pour ce bel avis ! Au plaisir de vous revoir très bientôt.' : 'Nous sommes désolés que votre visite ne vous ait pas satisfait : écrivez-nous en message privé, que nous puissions en parler.', source: 'modele', langue: 'fr' });
+  }
+  function avisRepondu(id, message) {
+    if (!DEMO) return api('POST', '/franchise/commentaires/repondu', { shop: STATE.shop.id, id, message });
+    const c = (DEMO_GG || []).find(x => x.id === id), le = STATE.today + ' ' + pad(new Date().getHours()) + ':' + pad(new Date().getMinutes());
+    if (c) { c.reponseEnvoyee = message; c.reponseSource = 'manuel'; c.reponseLe = le; c.reponsePar = 'vous'; c.traite = true; c.traiteLe = le; c.traitePar = 'vous'; c.enRetard = false; }
+    return Promise.resolve({ ok: true, publieSur: 'fiche', le });
+  }
   function commentaireTraiter(id, traite) {
     if (!DEMO) return api('POST', '/franchise/commentaires/traiter', { shop: STATE.shop.id, id, traite });
     const c = (DEMO_COM || []).concat(DEMO_GG || []).find(x => x.id === id);
@@ -596,7 +608,7 @@
   }
   function reset() { if (DEMO) { try { localStorage.removeItem('sf.demo.state'); } catch (e) {} location.reload(); } }
 
-  window.SF = { live: !DEMO, demo: DEMO, embed: EMBED, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, publicites, commentaires, commentaireTraiter, commentaireRepondre, maSemaine, reposts, repostRepondre, kit, boost, boostProposer, messages, messageConversation, messageRepondre, messageTraiter, google, webshopUrl, photoLocale,
+  window.SF = { live: !DEMO, demo: DEMO, embed: EMBED, error: ERR, cfg: CFG, state: () => STATE, api, href, media, fill, check, createPost, cancelPost, fermerApercu, reset, emit, suivi, vues, instagram, instagramAbonnes, offres, datesSerie, serieDates, calendrier, calStats, operations, publicites, commentaires, commentaireTraiter, commentaireRepondre, commentaireProposer, avisRepondu, maSemaine, reposts, repostRepondre, kit, boost, boostProposer, messages, messageConversation, messageRepondre, messageTraiter, google, webshopUrl, photoLocale,
     MONTHS, DAYS, iso, d2, addDays, dLabel, dShort, at, eur, pad,
     STATUS: { 'À valider': { bg: '#FAC775', fg: '#6b3d0a' }, 'Programmé': { bg: '#F2C9A0', fg: '#6b4420' }, 'Publié': { bg: '#E2F0E8', fg: '#0F6B4A' }, 'Refusé': { bg: '#F6DCDF', fg: '#8D1D2C' }, 'Échec': { bg: '#8D1D2C', fg: '#FFFFFF' }, 'Brouillon': { bg: '#F4EFE8', fg: '#555555' } } };
 })();

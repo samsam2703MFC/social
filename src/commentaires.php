@@ -262,7 +262,10 @@ function socCommentairesListe(array $q): array
             'reponse' => (string) ($r['reponse'] ?? ''), 'analyse' => (string) ($r['analyse'] ?? ''), 'note' => $r['note'] !== null ? (int) $r['note'] : null, 'traite' => $r['traite_le'] !== null,
             // Qui traite, depuis quand, en retard ou non ; la réponse publiée depuis l'outil.
             'vuLe' => substr($vu, 0, 16), 'ageH' => $age, 'enRetard' => $retard, 'responsable' => $resp, 'escalade' => $retard && $resp === 'franchise' && $r['canal'] === 'gg',
-            'peutRepondre' => in_array($r['canal'], ['fb', 'ig'], true), 'reponseEnvoyee' => (string) ($r['reponse_envoyee'] ?? ''),
+            'peutRepondre' => in_array($r['canal'], ['fb', 'ig'], true) || ($r['canal'] === 'gg' && (string) ($r['google_review'] ?? '') !== '' && socGbpEtat((string) $r['shop_id'])['active']),
+            // D'où vient la réponse d'un avis : publiée par le module (gbp), lue sur la fiche (fiche), notée ici (manuel).
+            'reponseSource' => (string) ($r['reponse_id'] ?? '') === 'gbp' || (string) ($r['reponse_id'] ?? '') === 'fiche' || (string) ($r['reponse_id'] ?? '') === 'manuel' ? (string) $r['reponse_id'] : ($r['reponse_envoyee'] ? 'meta' : ''),
+            'reponseEnvoyee' => (string) ($r['reponse_envoyee'] ?? ''),
             'reponseLe' => $r['reponse_le'] !== null ? substr((string) $r['reponse_le'], 0, 16) : null, 'reponsePar' => (string) ($r['reponse_par'] ?? ''),
             'traiteLe' => $r['traite_le'] !== null ? substr((string) $r['traite_le'], 0, 16) : null, 'traitePar' => (string) ($r['traite_par'] ?? '')];
     }, $rows);
@@ -341,7 +344,7 @@ function socCommentairesAlertes(?string $shop = null): array
 
 /**
  * Publie une réponse sous un commentaire Facebook ou Instagram, au nom de la Page (ou du compte Instagram) qui l'a
- * reçu, puis le marque traité. Les avis Google ne se répondent pas par API (la fiche, dans Google Business Profile).
+ * reçu, puis le marque traité. Un avis Google se répond sur sa fiche, par l'API des fiches (src/googleavis.php).
  */
 function socCommentaireRepondre(string $id, string $message, ?string $qui = null): array
 {
@@ -349,7 +352,8 @@ function socCommentaireRepondre(string $id, string $message, ?string $qui = null
     if (!$r) { throw new HttpError(404, 'commentaire inconnu'); }
     $message = trim(preg_replace('/[ \t]+/u', ' ', $message));
     if ($message === '' || mb_strlen($message) > 2000) { throw new HttpError(422, 'Écrivez une réponse (2 000 caractères au plus).'); }
-    if ($r['canal'] === 'gg') { throw new HttpError(422, 'Un avis Google se répond depuis la fiche Google de la boutique (lien « Fiche Google »).'); }
+    // Un avis Google : sur la fiche, par l'API des fiches (src/googleavis.php), quand elle est branchée.
+    if ($r['canal'] === 'gg') { return socGbpRepondre($r, $message, $qui ?? socUser()); }
     if (!Meta::configured()) { throw new HttpError(409, 'Token Meta absent : Paramètres → Clés d’accès.'); }
     $tokens = Meta::pageTokens();
     $token = null;

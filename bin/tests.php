@@ -1994,7 +1994,7 @@ check('Meta refuse (permission) : 422 avec la permission à accorder ; réponse 
     && Db::row("SELECT traite_le FROM mar_sa_commentaire WHERE id = '111_c1_1'")['traite_le'] === null, $mP);
 Db::exec("INSERT INTO mar_sa_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, couleur, note) VALUES ('gg_test', 'gg', 'gg:4', '4', 'X', 'Bof', NOW(), 0, NOW(), 'orange', 3)");
 [$cG, $mG] = $err('/commentaires/repondre', ['id' => 'gg_test', 'message' => 'Merci']);
-check('avis Google : pas de réponse par API (la fiche Google), dit pourquoi', $cG === 422 && str_contains($mG, 'fiche Google'));
+check('avis Google, Google pas connecté : pas de réponse directe (409), la marche à suivre est dite', $cG === 409 && str_contains($mG, 'pas connecté') && str_contains($mG, 'J’ai répondu sur la fiche'), $mG);
 Db::exec("DELETE FROM mar_sa_commentaire WHERE id = 'gg_test'");
 // Espace franchisé
 sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
@@ -2846,6 +2846,123 @@ socSettingPut('google_refresh_token', 'REFRESH-G', true);
 check('déconnecter : Google révoque, le module oublie le jeton', $code === 200 && !$g['statut']['configure'] && !$g['statut']['jetonDefini']
     && in_array('https://oauth2.googleapis.com/revoke', array_column($gAppels, 1), true));
 foreach (['google_client_id', 'google_ads_mcc', 'google_decouverte', 'google_ids', 'google_verification'] as $k) { socSettingPut($k, null, false); }
+foreach (['google_client_secret', 'google_refresh_token', 'google_access_token'] as $k) { socSettingPut($k, '', true); }
+GoogleApi::$transport = null;
+
+echo "Avis Google : répondre depuis le module (fiches Business Profile, Google simulé)\n";
+$ga = static function (string $m, string $p, array $b = []) { $GLOBALS['SOC_BODY'] = $b; try { return socRoute($m, $p); } catch (HttpError $e) { return [$e->status, ['error' => $e->getMessage()]]; } finally { unset($GLOBALS['SOC_BODY']); } };
+Db::exec("DELETE FROM mar_sa_commentaire WHERE canal = 'gg'");
+// L'avis tel que le BO (Google Places) l'a vu : même auteur, même note, même jour que chez Google.
+$idPlaces = socGoogleAvisId('4', 'Marie Dupont', '2026-10-20 10:12:00', 2);
+Db::exec("INSERT INTO mar_sa_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, compte, compte_nom, note, couleur, vu_le) VALUES (?, 'gg', 'gg:4', '4', 'Marie Dupont', 'Pain rassis et accueil froid.', '2026-10-20 10:12:00', 0, NOW(), '4', 'Google · Halle', 2, 'orange', NOW())", [$idPlaces]);
+$idNl = socGoogleAvisId('4', 'Jan Peeters', '2026-10-21 08:00:00', 5);
+Db::exec("INSERT INTO mar_sa_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, compte, compte_nom, note, couleur, vu_le) VALUES (?, 'gg', 'gg:4', '4', 'Jan Peeters', 'Heel lekker brood en altijd vriendelijk personeel!', '2026-10-21 08:00:00', 0, NOW(), '4', 'Google · Halle', 5, 'vert', NOW())", [$idNl]);
+$etat0 = socGbpEtat('4');
+check('pas connecté : la réponse directe n’est pas présentée comme branchée, la raison est dite', !$etat0['active'] && str_contains($etat0['raison'], 'pas connecté'), json_encode($etat0));
+[$code, $r] = $ga('POST', '/commentaires/repondre', ['id' => $idPlaces, 'message' => 'Merci']);
+check('pas connecté : publier sur Google refusé (409), avec la marche à suivre', $code === 409 && str_contains($r['error'], 'J’ai répondu sur la fiche'), json_encode($r));
+[$code, $p] = $ga('POST', '/commentaires/proposer', ['id' => $idPlaces]);
+check('réponse proposée sans Claude : modèle selon la note (2★ : excuses, message privé), prénom et boutique, en français',
+    $code === 200 && $p['source'] === 'modele' && $p['langue'] === 'fr' && str_contains($p['reponse'], 'Marie') && str_contains($p['reponse'], 'Halle') && str_contains($p['reponse'], 'message privé'), json_encode($p));
+[$code, $pn] = $ga('POST', '/commentaires/proposer', ['id' => $idNl]);
+check('avis en néerlandais : réponse en néerlandais', $code === 200 && $pn['langue'] === 'nl' && str_contains(mb_strtolower($pn['reponse']), 'bedankt'), json_encode($pn));
+[$code, $m] = $ga('POST', '/commentaires/repondu', ['id' => $idNl, 'message' => 'Hartelijk bedankt Jan!']);
+[, $ecran] = $ga('GET', '/google');
+$parId = array_column($ecran['avis'], null, 'id');
+check('« J’ai répondu sur la fiche » : réponse gardée, notée à la main, avis traité',
+    $code === 200 && $parId[$idNl]['reponseSource'] === 'manuel' && $parId[$idNl]['traite'] && $parId[$idNl]['reponseEnvoyee'] === 'Hartelijk bedankt Jan!'
+        && !$parId[$idPlaces]['peutRepondre'] && $ecran['reponses']['active'] === false, json_encode([$parId[$idNl], $ecran['reponses']]));
+check('refus : un commentaire Facebook ne se « répond sur la fiche » pas, réponse vide refusée, avis inconnu 404',
+    $ga('POST', '/commentaires/repondu', ['id' => $idPlaces, 'message' => '  '])[0] === 422 && $ga('POST', '/commentaires/proposer', ['id' => 'inconnu'])[0] === 404);
+
+// Connexion : client, jeton, vérification (fiches ouvertes par Google), fiche de Halle rattachée.
+$gbpAppels = []; $gbpReponses = [];
+GoogleApi::$sleep = static function (int $s): void {};
+GoogleApi::$transport = static function (string $m, string $url, array $h, ?string $body) use (&$gbpAppels, &$gbpReponses): array {
+    $gbpAppels[] = [$m, $url, $body];
+    if ($url === 'https://oauth2.googleapis.com/token') { return [200, ['access_token' => 'AT-gbp', 'expires_in' => 3599]]; }
+    if (!preg_grep('/^Authorization: Bearer AT-gbp$/', $h)) { return [401, ['error' => ['code' => 401, 'message' => 'invalid', 'status' => 'UNAUTHENTICATED']]]; }
+    $base = 'https://mybusiness.googleapis.com/v4/accounts/111/locations/901/reviews';
+    if ($m === 'GET' && str_starts_with($url, $base . '?')) {
+        $rep = static fn (string $n) => isset($gbpReponses[$n]) ? ['reviewReply' => ['comment' => $gbpReponses[$n], 'updateTime' => '2026-11-05T08:00:00Z']] : [];
+        if (!str_contains($url, 'pageToken=')) {
+            return [200, ['reviews' => [
+                ['name' => 'accounts/111/locations/901/reviews/R1', 'reviewId' => 'R1', 'reviewer' => ['displayName' => 'Marie Dupont'], 'starRating' => 'TWO',
+                    'comment' => 'Pain rassis et accueil froid.', 'createTime' => '2026-10-20T09:12:00Z', 'updateTime' => '2026-10-20T09:12:00Z'] + $rep('R1'),
+                ['name' => 'accounts/111/locations/901/reviews/R2', 'reviewId' => 'R2', 'reviewer' => ['displayName' => 'Paul Martin'], 'starRating' => 'FIVE',
+                    'comment' => 'Les meilleurs croissants !', 'createTime' => '2026-11-01T07:00:00Z', 'updateTime' => '2026-11-01T07:00:00Z',
+                    'reviewReply' => ['comment' => 'Merci Paul !', 'updateTime' => '2026-11-02T10:00:00Z']]],
+                'nextPageToken' => 'P2']];
+        }
+        return [200, ['reviews' => [['name' => 'accounts/111/locations/901/reviews/R3', 'reviewId' => 'R3', 'reviewer' => ['isAnonymous' => true], 'starRating' => 'THREE',
+            'createTime' => '2026-11-03T12:00:00Z', 'updateTime' => '2026-11-03T12:00:00Z'] + $rep('R3')]]];
+    }
+    if ($m === 'PUT' && preg_match('#^' . preg_quote($base, '#') . '/(R\d)/reply$#', $url, $mm)) {
+        if ($mm[1] === 'R3') { return [404, ['error' => ['code' => 404, 'message' => 'Requested entity was not found.', 'status' => 'NOT_FOUND']]]; }
+        $c = (string) (json_decode((string) $body, true)['comment'] ?? '');
+        $gbpReponses[$mm[1]] = $c;
+        return [200, ['comment' => $c, 'updateTime' => '2026-11-05T09:00:00Z']];
+    }
+    return [404, ['error' => ['code' => 404, 'message' => 'inconnu', 'status' => 'NOT_FOUND']]];
+};
+socSettingPut('google_client_id', '123456789012-abcdefghij.apps.googleusercontent.com', false);
+socSettingPut('google_client_secret', 'CS-G', true); socSettingPut('google_refresh_token', 'REFRESH-G', true);
+socSettingPut('google_verification', ['le' => date('Y-m-d H:i'), 'valide' => false, 'apis' => []], false);
+check('connecté mais pas vérifié : toujours pas branché', !socGbpEtat('4')['active'] && str_contains(socGbpEtat('4')['raison'], 'vérifiée'));
+socSettingPut('google_verification', ['le' => date('Y-m-d H:i'), 'valide' => true, 'autorisations' => ['fiches' => true], 'apis' => ['fiches' => ['ok' => false, 'erreur' => 'quota à 0']]], false);
+check('vérifié mais fiches pas encore ouvertes par Google (quota à 0) : pas branché, dit pourquoi', !socGbpEtat('4')['active'] && str_contains(socGbpEtat('4')['raison'], 'Business Profile'));
+socSettingPut('google_verification', ['le' => date('Y-m-d H:i'), 'valide' => true, 'autorisations' => ['fiches' => true], 'apis' => ['fiches' => ['ok' => true, 'erreur' => null]]], false);
+check('fiches ouvertes, fiche pas rattachée : pas branché pour la boutique', !socGbpEtat('4')['active'] && str_contains(socGbpEtat('4')['raison'], 'rattachée'));
+socSettingPut('google_ids', ['boutiques' => ['4' => ['fiche' => 'accounts/111/locations/901', 'ads' => '']], 'reseau' => ['ads' => '', 'ga4' => '']], false);
+check('fiche rattachée : branché pour Halle, pas pour Wavre', socGbpEtat('4')['active'] && !socGbpEtat('5')['active']);
+$sync = socGbpAvisSync();
+$avisH = array_column(Db::rows("SELECT * FROM mar_sa_commentaire WHERE canal = 'gg' AND shop_id = '4'"), null, 'google_review');
+check('relecture chez Google : tous les avis (deux pages), l’avis du BO retrouvé (pas de doublon), la réponse écrite ailleurs reprise',
+    $sync['lus'] === 3 && $sync['nouveaux'] === 2 && $sync['repondus'] === 1 && $sync['erreurs'] === []
+        && (int) Db::row("SELECT COUNT(*) n FROM mar_sa_commentaire WHERE canal = 'gg' AND shop_id = '4'")['n'] === 4
+        && ($avisH['accounts/111/locations/901/reviews/R1']['id'] ?? '') === $idPlaces
+        && ($avisH['accounts/111/locations/901/reviews/R2']['reponse_id'] ?? '') === 'fiche' && $avisH['accounts/111/locations/901/reviews/R2']['traite_le'] !== null
+        && ($avisH['accounts/111/locations/901/reviews/R3']['auteur'] ?? 'x') === '' && (int) $avisH['accounts/111/locations/901/reviews/R3']['note'] === 3,
+    json_encode([$sync, array_map(static fn ($a) => [$a['id'], $a['reponse_id']], $avisH)]));
+[, $ecran] = $ga('GET', '/google');
+$parId = array_column($ecran['avis'], null, 'id');
+check('écran : réponse directe branchée, l’avis relu chez Google se répond depuis le module', $ecran['reponses']['active'] && $parId[$idPlaces]['peutRepondre'] && !$parId[$idNl]['peutRepondre']);
+[$code, $pub] = $ga('POST', '/commentaires/repondre', ['id' => $idPlaces, 'message' => 'Bonjour Marie, nous sommes désolés…']);
+$put = array_values(array_filter($gbpAppels, static fn ($a) => $a[0] === 'PUT'));
+$apres = Db::row('SELECT * FROM mar_sa_commentaire WHERE id = ?', [$idPlaces]);
+check('publier : la réponse part sur la fiche (PUT …/reviews/R1/reply), l’avis est traité, publiée par le module',
+    $code === 200 && $pub['publieSur'] === 'google' && count($put) === 1 && str_ends_with($put[0][1], '/reviews/R1/reply')
+        && json_decode((string) $put[0][2], true) === ['comment' => 'Bonjour Marie, nous sommes désolés…']
+        && $apres['reponse_id'] === 'gbp' && $apres['traite_le'] !== null, json_encode([$code, $pub, $put]));
+$r3 = Db::row("SELECT id FROM mar_sa_commentaire WHERE google_review = 'accounts/111/locations/901/reviews/R3'")['id'];
+[$code, $err] = $ga('POST', '/commentaires/repondre', ['id' => $r3, 'message' => 'Merci !']);
+check('avis disparu chez Google : refusé (409), expliqué', $code === 409 && str_contains($err['error'], 'supprimé'), json_encode($err));
+socGbpAvisSync();
+$apres2 = Db::row('SELECT reponse_id, reponse_par FROM mar_sa_commentaire WHERE id = ?', [$idPlaces]);
+check('relu ensuite : la réponse publiée par le module le reste (pas « écrite ailleurs »)', $apres2['reponse_id'] === 'gbp' && $apres2['reponse_par'] !== 'sur la fiche Google', json_encode($apres2));
+// Une réponse notée « à la main » mais absente de la fiche : la fiche fait foi, l'avis revient dans le suivi.
+$idNlRelu = $idNl;
+Db::exec("UPDATE mar_sa_commentaire SET google_review = 'accounts/111/locations/901/reviews/R3', reponse_id = 'manuel', reponse_envoyee = 'x', traite_le = NOW() WHERE id = ?", [$r3]);
+socGbpAvisSync();
+$r3b = Db::row('SELECT reponse_id, traite_le FROM mar_sa_commentaire WHERE id = ?', [$r3]);
+check('réponse absente de la fiche : l’avis redevient à traiter', $r3b['reponse_id'] === null && $r3b['traite_le'] === null, json_encode($r3b));
+// Espace franchisé : ses avis seulement ; publier si le réseau le permet.
+sfSessionOuvrir(['4'], 'Gérant Halle', 'code');
+[$code, $fg] = $fr('GET', '/franchise/google');
+check('franchisé : la réponse directe est dite branchée, sans détail technique', $code === 200 && $fg['reponses']['active'] && !isset($fg['reponses']['fiches']), json_encode($fg['reponses'] ?? null));
+$regAvant2 = sfRegles();
+sfReglesPut(array_merge(sfRegles(), ['repondreCommentaires' => false]));
+[$code] = $fr('POST', '/franchise/commentaires/repondre', ['id' => $r3, 'message' => 'Merci']);
+check('franchisé : publier fermé par le réseau → refusé (403)', $code === 403);
+sfReglesPut($regAvant2);
+Db::exec("INSERT INTO mar_sa_commentaire (id, canal, objet_id, shop_id, auteur, message, cree_le, masque, maj_le, note, couleur) VALUES ('gg_wavre', 'gg', 'gg:5', '5', 'Y', 'Bof', NOW(), 0, NOW(), 3, 'orange')");
+check('franchisé : l’avis d’une autre boutique ne se propose ni ne se note (404)', $fr('POST', '/franchise/commentaires/proposer', ['id' => 'gg_wavre'])[0] === 404
+    && $fr('POST', '/franchise/commentaires/repondu', ['id' => 'gg_wavre', 'message' => 'x'])[0] === 404);
+[$code, $pf] = $fr('POST', '/franchise/commentaires/proposer', ['id' => $r3]);
+check('franchisé : réponse proposée pour son avis', $code === 200 && $pf['reponse'] !== '');
+sfSessionFermer(); unset($_COOKIE[SF_COOKIE]);
+Db::exec("DELETE FROM mar_sa_commentaire WHERE canal = 'gg'");
+foreach (['google_client_id', 'google_ids', 'google_verification', 'google_gbp_relus'] as $k) { socSettingPut($k, null, false); }
 foreach (['google_client_secret', 'google_refresh_token', 'google_access_token'] as $k) { socSettingPut($k, '', true); }
 GoogleApi::$transport = null;
 

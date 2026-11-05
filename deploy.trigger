@@ -147,3 +147,4 @@ Relivraison : stories et posts récurrents (espace boutique) — 2026-10-16T09:2
 2026-11-01T12:43:45Z publicites Meta : choix de la langue de la pub
 2026-11-04T21:43:05Z mediatheque commune du marketing (Creer un post)
 2026-11-04T22:00:01Z tables sous le prefixe mar_sa_, reglages dans mar_variable / mar_keys
+2026-11-05T19:03:53Z avis Google : repondre depuis le module (proposer, publier sur Google quand branche, repondu sur la fiche)
