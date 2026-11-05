@@ -457,8 +457,12 @@ function sfGoogle(string $shop, array $q): array
     // Les clics sur le lien d'avis (scans du QR code, de l'affiche, du lien) ne sont pas montrés dans l'espace boutique.
     foreach (array_keys($r['magasins'] ?? []) as $k) { unset($r['magasins'][$k]['scans7'], $r['magasins'][$k]['scans30']); }
     $relu = is_array($e['relu']) ? ['le' => $e['relu']['le'] ?? null] : null;
+    // Répondre depuis l'espace boutique : branché ou non (le détail technique reste au réseau).
+    $rep = $e['reponses'] ?? ['active' => false];
     return ['hidden' => false, 'reputation' => $r, 'jours' => $e['jours'], 'avis' => $e['avis'], 'totaux' => $e['totaux'], 'relu' => $relu,
-        'ia' => ['configure' => (bool) ($e['ia']['configure'] ?? false)]];
+        'ia' => ['configure' => (bool) ($e['ia']['configure'] ?? false)],
+        'reponses' => ['active' => !empty($rep['active']), 'peutPublier' => (bool) sfRegles()['repondreCommentaires'],
+            'raison' => !empty($rep['active']) ? '' : 'La réponse directe sur Google n’est pas encore branchée par le réseau : copiez la réponse, publiez-la sur votre fiche, puis « J’ai répondu sur la fiche ».']];
 }
 
 /**
@@ -1129,6 +1133,11 @@ function sfRoute(string $method, string $path): ?array
     if ($method === 'POST' && $path === '/franchise/boost') { $b = body(); return [200, sfBoostDemander($shop, (string) ($b['id'] ?? ''), (string) ($b['compte'] ?? ''), (string) ($b['message'] ?? ''), $session)]; }
     if ($method === 'GET' && $path === '/franchise/google') { return [200, sfGoogle($shop, $_GET)]; }
     if ($method === 'POST' && $path === '/franchise/commentaires/repondre') { $b = body(); return [200, sfCommentaireRepondre($shop, (string) ($b['id'] ?? ''), (string) ($b['message'] ?? ''), $session)]; }
+    if ($method === 'POST' && $path === '/franchise/commentaires/proposer') { $b = body(); sfCommentairePropre($shop, (string) ($b['id'] ?? '')); return [200, socAvisProposer((string) ($b['id'] ?? ''))]; }
+    if ($method === 'POST' && $path === '/franchise/commentaires/repondu') {
+        $b = body(); sfCommentairePropre($shop, (string) ($b['id'] ?? ''));
+        return [200, socAvisReponduAlaMain((string) ($b['id'] ?? ''), (string) ($b['message'] ?? ''), (string) ($session['name'] ?? 'Boutique'))];
+    }
     if ($method === 'POST' && $path === '/franchise/commentaires/traiter') { $b = body(); return [200, sfCommentaireTraiter($shop, (string) ($b['id'] ?? ''), !empty($b['traite']))]; }
     // Les publications de la marque que le réseau propose à la boutique (repost automatique, src/repost.php).
     if ($method === 'GET' && $path === '/franchise/reposts') { return [200, socRepostVueFranchise($shop)]; }

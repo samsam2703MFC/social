@@ -395,5 +395,7 @@ function socGoogleEcran(array $q, ?string $shop = null): array
     $l = socCommentairesListe(['source' => 'google', 'jours' => $q['jours'] ?? 365, 'couleur' => $q['couleur'] ?? '', 'nonTraites' => $q['nonTraites'] ?? '',
         'shop' => $shop ?? ($q['shop'] ?? '')]);
     return ['reputation' => socGoogleReputation($shop), 'jours' => $l['jours'], 'avis' => $l['commentaires'], 'totaux' => $l['totaux'],
-        'relu' => socSetting('google_avis_relus'), 'ia' => $l['ia'], 'reglages' => socGoogleReglages()];
+        'relu' => socSetting('google_avis_relus'), 'ia' => $l['ia'], 'reglages' => socGoogleReglages(),
+        // Répondre depuis le module : branché ou non, et pourquoi (src/googleavis.php).
+        'reponses' => socGbpEtat($shop) + ['relus' => socSetting('google_gbp_relus')]];
 }

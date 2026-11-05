@@ -35,6 +35,7 @@ require_once __DIR__ . '/detourage.php';
 require_once __DIR__ . '/commentaires.php';
 require_once __DIR__ . '/google.php';
 require_once __DIR__ . '/googleapi.php';
+require_once __DIR__ . '/googleavis.php';
 require_once __DIR__ . '/bilan.php';
 require_once __DIR__ . '/kit.php';
 require_once __DIR__ . '/boost.php';
@@ -158,6 +159,9 @@ function socRoute(string $method, string $path): array
         return [200, ['sync' => $sync + ['dark' => $dark['lus'] ?? 0], 'analyse' => socCommentairesAnalyser()] + socCommentairesListe(['jours' => $b['jours'] ?? 14])];
     }
     if ($method === 'POST' && $path === '/commentaires/repondre') { $b = body(); return [200, socCommentaireRepondre((string) ($b['id'] ?? ''), (string) ($b['message'] ?? ''))]; }
+    // Avis Google : une réponse proposée (Claude ou modèle), et « J'ai répondu sur la fiche » tant que Google n'est pas branché.
+    if ($method === 'POST' && $path === '/commentaires/proposer') { $b = body(); return [200, socAvisProposer((string) ($b['id'] ?? ''))]; }
+    if ($method === 'POST' && $path === '/commentaires/repondu') { $b = body(); return [200, socAvisReponduAlaMain((string) ($b['id'] ?? ''), (string) ($b['message'] ?? ''))]; }
     if ($method === 'POST' && $path === '/commentaires/traiter') { $b = body(); return [200, socCommentaireTraiter((string) ($b['id'] ?? ''), !empty($b['traite']))]; }
     // Les avis Google : la Réputation digitale du BO (ses tables, lues) et les avis classés (src/google.php).
     if ($method === 'GET' && $path === '/google') { return [200, socGoogleEcran($_GET)]; }
@@ -214,12 +218,12 @@ function socRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/google/reglages') { return [200, ['reglages' => socGoogleReglagesPut(body())]]; }
     if ($method === 'POST' && $path === '/google/relire') {
         $b = body();
-        return [200, ['sync' => socGoogleAvisSync(), 'analyse' => socCommentairesAnalyser()] + socGoogleEcran(['jours' => $b['jours'] ?? 365])];
+        return [200, ['sync' => socGoogleAvisSync(), 'gbp' => socGbpAvisSync(), 'analyse' => socCommentairesAnalyser()] + socGoogleEcran(['jours' => $b['jours'] ?? 365])];
     }
     if ($method === 'POST' && $path === '/google/synchroniser') {
         $b = body();
         $bo = socGoogleSynchroniser();
-        return [200, ['bo' => $bo, 'sync' => socGoogleAvisSync(), 'analyse' => socCommentairesAnalyser()] + socGoogleEcran(['jours' => $b['jours'] ?? 365])];
+        return [200, ['bo' => $bo, 'sync' => socGoogleAvisSync(), 'gbp' => socGbpAvisSync(), 'analyse' => socCommentairesAnalyser()] + socGoogleEcran(['jours' => $b['jours'] ?? 365])];
     }
     if ($method === 'GET' && $path === '/meta/comptes') { return [200, ['comptes' => socComptesMinimums(!empty($_GET['forcer']))]]; }
     if ($method === 'GET' && $path === '/meta/campagnes') { return [200, ['import' => socSetting('meta_campagnes_import'), 'comptes' => array_values(socComptesPub())]]; }

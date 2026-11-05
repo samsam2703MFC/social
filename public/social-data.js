@@ -796,6 +796,18 @@
     if (c) { c.reponseEnvoyee = message; c.reponseLe = le; c.reponsePar = 'Vous'; c.traite = true; c.traiteLe = le; c.traitePar = 'Vous'; c.enRetard = false; }
     return Promise.resolve({ ok: true, le });
   }
+  // Avis Google : une réponse proposée (Claude ou modèle selon la note), et « J'ai répondu sur la fiche ».
+  function commentaireProposer(id) {
+    if (LIVE) return api('POST', '/commentaires/proposer', { id });
+    const c = (DEMO_GG || []).find(x => x.id === id) || {};
+    return Promise.resolve({ reponse: (c.note || 5) >= 4 ? 'Merci beaucoup pour ce bel avis ! Au plaisir de vous revoir très bientôt.' : 'Nous sommes désolés que votre visite ne vous ait pas satisfait : écrivez-nous en message privé, que nous puissions en parler.', source: 'modele', langue: 'fr' });
+  }
+  function avisRepondu(id, message) {
+    if (LIVE) return api('POST', '/commentaires/repondu', { id, message });
+    const c = (DEMO_GG || []).find(x => x.id === id), le = TODAY + ' ' + new Date().toTimeString().slice(0, 5);
+    if (c) { c.reponseEnvoyee = message; c.reponseSource = 'manuel'; c.reponseLe = le; c.reponsePar = 'Vous'; c.traite = true; c.traiteLe = le; c.traitePar = 'Vous'; c.enRetard = false; }
+    return Promise.resolve({ ok: true, publieSur: 'fiche', le });
+  }
   function commentaireTraiter(id, traite) {
     if (LIVE) return api('POST', '/commentaires/traiter', { id, traite });
     const c = (DEMO_COM || []).concat(DEMO_GG || []).find(x => x.id === id);
@@ -990,7 +1002,7 @@
   window.SA = { __ready: true, live: !!LIVE, mode: LIVE ? 'live' : 'demo', user: LIVE ? LIVE.user : { name: 'Sarah Lambert', role: 'Franchiseur', shops: SHOPS.length },
     api, envoyer, refresh, retryPost, testConnexions, importMeta, metaImport: () => IMPORT,
     prixBoutiques, repost, repostReglage, repostRelire, repostRelancer, repostForcer, repostRetirer,
-    commentaires, commentairesRelire, commentaireTraiter, commentaireRepondre, bilan, kit, kitSave, google, googleRelire, googleSynchroniser, googleReglages,
+    commentaires, commentairesRelire, commentaireTraiter, commentaireRepondre, commentaireProposer, avisRepondu, bilan, kit, kitSave, google, googleRelire, googleSynchroniser, googleReglages,
     pubRegles, pubReglesSave, pubMeilleurs, pubDemandes, pubRefuser, pubDemandeBoostee,
     comptesMeta: () => LIVE ? api('GET', '/meta/comptes').then(r => { META.comptes = (r && r.comptes) || META.comptes; return META.comptes; }) : Promise.resolve(META.comptes), calendriers, postStats, supprimerPost, catalogueNav, catalogueOffres, photoLocale, lienTexte, placerLien, LIEN_DEF, charte, relire, ia: () => (LIVE && LIVE.ia) || { configure: false, modele: '' }, suivi, avatar,
     // Instagram unique : un seul compte (la marque) pour tout le réseau — décidé par le serveur ; la démonstration fait de même.

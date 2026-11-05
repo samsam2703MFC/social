@@ -97,10 +97,27 @@ dont le nom cite la boutique) et **Enregistrer les rattachements**.
 
 Le compte connecté doit avoir au moins le rôle **Lecteur** sur la propriété GA4 du webshop.
 
+## Répondre aux avis depuis le module
+
+Écran **Avis Google** (réseau) et **Avis Google** de l'espace boutique (src/googleavis.php) :
+
+- **Proposer une réponse** : Claude si une clé est réglée (langue de l'avis, charte éditoriale, trois phrases
+  au plus, excuses et message privé pour une déception), sinon un modèle selon la note et la langue (français
+  ou néerlandais). Rien n'est publié sans un geste : la réponse se relit et se corrige.
+- **Tant que Google n'est pas branché** (les quatre conditions ci-dessous), le bandeau le dit et la réponse se
+  publie à la main : « Copier et ouvrir la fiche », coller sous l'avis, puis **J'ai répondu sur la fiche** — la
+  réponse est gardée, l'avis est traité, le réseau voit qui l'a fait et quand.
+- **Une fois branché** : connexion vérifiée (étape 6), accès aux fiches accordé par Google (étape 7a), fiche de
+  la boutique rattachée. Le module relit alors chaque heure TOUS les avis de chaque fiche et leurs réponses
+  (API « reviews », pas seulement les cinq de Places), retrouve ceux que le BO a déjà lus (même auteur, même
+  note, même jour), et **Publier sur Google** met la réponse sous l'avis (`PUT …/reviews/{id}/reply`), après
+  confirmation. Une réponse écrite ailleurs (dans Google) est reprise ; une réponse retirée de la fiche remet
+  l'avis à traiter : la fiche fait foi.
+- Espace boutique : ses avis seulement ; les rouges que le réseau garde (règle « rouges ») ne s'y répondent
+  pas ; publier depuis la boutique suit la règle « répondre aux commentaires » du réseau.
+
 ## Ensuite
 
-Une fois la connexion vérifiée et les rattachements enregistrés, le module pourra (prochaines étapes) :
-lire tous les avis de chaque fiche et **y répondre depuis le module** (franchisé ou réseau), publier une
-offre ou un événement sur la fiche, afficher les statistiques des fiches (appels, itinéraires, clics),
-montrer les campagnes Google Ads à côté de celles de Meta dans « Publicités », et lire les visites et
+Publier une offre ou un événement sur la fiche, afficher les statistiques des fiches (appels, itinéraires,
+clics), montrer les campagnes Google Ads à côté de celles de Meta dans « Publicités », et lire les visites et
 commandes du webshop dans Google Analytics.
